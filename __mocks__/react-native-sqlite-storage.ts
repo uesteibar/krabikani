@@ -56,22 +56,77 @@ function parseInsert(sql: string, params: (string | number | null)[]): {
   tableName: string;
   columns: string[];
   values: (string | number | null)[];
+  isReplace: boolean;
+  isIgnore: boolean;
 } | null {
-  // Match: INSERT [OR IGNORE] INTO tableName (columns) VALUES (?)
-  const matchWithCols = sql.match(/INSERT\s+(?:OR\s+\w+\s+)?INTO\s+(\w+)\s*\(([^)]+)\)\s*VALUES\s*\(([^)]+)\)/i);
+  // Match: INSERT [OR REPLACE/IGNORE] INTO tableName (columns) VALUES (?)
+  const matchWithCols = sql.match(/INSERT\s+(?:OR\s+(\w+)\s+)?INTO\s+(\w+)\s*\(([^)]+)\)\s*VALUES\s*\(([^)]+)\)/i);
   if (matchWithCols) {
-    const tableName = matchWithCols[1];
-    const columns = matchWithCols[2].split(',').map(c => c.trim());
-    return { tableName, columns, values: params };
+    const modifier = matchWithCols[1]?.toUpperCase();
+    const tableName = matchWithCols[2];
+    const columns = matchWithCols[3].split(',').map(c => c.trim());
+    return {
+      tableName,
+      columns,
+      values: params,
+      isReplace: modifier === 'REPLACE',
+      isIgnore: modifier === 'IGNORE',
+    };
   }
 
   // Match: INSERT [OR IGNORE] INTO tableName (column) VALUES (value) - single static value
-  const matchStatic = sql.match(/INSERT\s+(?:OR\s+\w+\s+)?INTO\s+(\w+)\s*\((\w+)\)\s*VALUES\s*\((\d+)\)/i);
+  const matchStatic = sql.match(/INSERT\s+(?:OR\s+(\w+)\s+)?INTO\s+(\w+)\s*\((\w+)\)\s*VALUES\s*\((\d+)\)/i);
   if (matchStatic) {
+    const modifier = matchStatic[1]?.toUpperCase();
     return {
-      tableName: matchStatic[1],
-      columns: [matchStatic[2]],
-      values: [parseInt(matchStatic[3], 10)],
+      tableName: matchStatic[2],
+      columns: [matchStatic[3]],
+      values: [parseInt(matchStatic[4], 10)],
+      isReplace: modifier === 'REPLACE',
+      isIgnore: modifier === 'IGNORE',
+    };
+  }
+
+  return null;
+}
+
+// Helper to parse WHERE clause and extract conditions
+function parseWhereClause(sql: string, params: (string | number | null)[]): {
+  column: string;
+  value: string | number | null;
+  operator: string;
+} | null {
+  // Try matching with placeholder first
+  const whereMatchPlaceholder = sql.match(/WHERE\s+(\w+)\s*(=|<=|>=|<|>)\s*\?/i);
+  if (whereMatchPlaceholder) {
+    const column = whereMatchPlaceholder[1];
+    const operator = whereMatchPlaceholder[2].toUpperCase();
+
+    // Find the parameter index for this WHERE clause
+    const beforeWhere = sql.substring(0, sql.toUpperCase().indexOf('WHERE'));
+    const paramCount = (beforeWhere.match(/\?/g) || []).length;
+    const value = params[paramCount] ?? null;
+
+    return { column, value, operator };
+  }
+
+  // Try matching with literal value (e.g., WHERE id = 1)
+  const whereMatchLiteral = sql.match(/WHERE\s+(\w+)\s*(=|<=|>=|<|>)\s*(\d+)/i);
+  if (whereMatchLiteral) {
+    return {
+      column: whereMatchLiteral[1],
+      operator: whereMatchLiteral[2].toUpperCase(),
+      value: parseInt(whereMatchLiteral[3], 10),
+    };
+  }
+
+  // Try matching IS NULL / IS NOT NULL
+  const whereMatchNull = sql.match(/WHERE\s+(\w+)\s+(IS NULL|IS NOT NULL)/i);
+  if (whereMatchNull) {
+    return {
+      column: whereMatchNull[1],
+      operator: whereMatchNull[2].toUpperCase(),
+      value: null,
     };
   }
 
@@ -101,89 +156,258 @@ function createResultSet(rows: MockRow[] = [], rowsAffected = 0, insertId: numbe
   };
 }
 
-// Mock database instance
-const mockDbInstance = {
-  executeSql: jest.fn(async (sql: string, params: (string | number | null)[] = []): Promise<[MockResultSet]> => {
-    mockDatabase.executedStatements.push(sql);
+// Execute SQL implementation shared between direct and transaction calls
+function executeSqlImpl(sql: string, params: (string | number | null)[] = []): [MockResultSet] {
+  mockDatabase.executedStatements.push(sql);
 
-    // Handle CREATE TABLE
-    if (sql.match(/CREATE TABLE/i)) {
-      const parsed = parseCreateTable(sql);
-      if (parsed && !mockDatabase.tables[parsed.tableName]) {
-        mockDatabase.tables[parsed.tableName] = {
-          columns: parsed.columns,
-          rows: [],
-          autoIncrement: {},
-        };
-      }
-      return [createResultSet()];
+  // Handle CREATE TABLE
+  if (sql.match(/CREATE TABLE/i)) {
+    const parsed = parseCreateTable(sql);
+    if (parsed && !mockDatabase.tables[parsed.tableName]) {
+      mockDatabase.tables[parsed.tableName] = {
+        columns: parsed.columns,
+        rows: [],
+        autoIncrement: {},
+      };
     }
+    return [createResultSet()];
+  }
 
-    // Handle CREATE INDEX
-    if (sql.match(/CREATE INDEX/i)) {
-      return [createResultSet()];
-    }
+  // Handle CREATE INDEX
+  if (sql.match(/CREATE INDEX/i)) {
+    return [createResultSet()];
+  }
 
-    // Handle INSERT
-    if (sql.match(/INSERT/i)) {
-      const parsed = parseInsert(sql, params);
-      if (parsed) {
-        const table = mockDatabase.tables[parsed.tableName];
-        if (table) {
-          const row: MockRow = {};
-          let insertId: number | null = null;
+  // Handle INSERT
+  if (sql.match(/INSERT/i)) {
+    const parsed = parseInsert(sql, params);
+    if (parsed) {
+      const table = mockDatabase.tables[parsed.tableName];
+      if (table) {
+        const row: MockRow = {};
+        let insertId: number | null = null;
 
-          parsed.columns.forEach((col, i) => {
-            row[col] = parsed.values[i] ?? null;
-          });
+        // Initialize all table columns with null first
+        for (const col of table.columns) {
+          row[col] = null;
+        }
 
-          // Handle AUTOINCREMENT for id
-          if (!row.id && table.columns.includes('id')) {
+        // Then set the provided values
+        parsed.columns.forEach((col, i) => {
+          // Handle COALESCE subquery pattern - skip the extra id param
+          row[col] = parsed.values[i] ?? null;
+        });
+
+        // Handle AUTOINCREMENT for id if not provided
+        if (row.id === null || row.id === undefined) {
+          if (table.columns.includes('id')) {
             const autoInc = (table.autoIncrement.id || 0) + 1;
             table.autoIncrement.id = autoInc;
             row.id = autoInc;
             insertId = autoInc;
           }
-
-          // Check for OR IGNORE with existing id
-          const isIgnore = sql.match(/OR\s+IGNORE/i);
-          const existingRow = table.rows.find(r => r.id === row.id);
-          if (!existingRow || !isIgnore) {
-            if (!existingRow) {
-              table.rows.push(row);
-            }
-          }
-
-          return [createResultSet([], 1, insertId)];
+        } else {
+          insertId = row.id as number;
         }
-      }
-      return [createResultSet()];
-    }
 
-    // Handle SELECT
-    if (sql.match(/SELECT/i)) {
-      const tableMatch = sql.match(/FROM\s+(\w+)/i);
-      if (tableMatch) {
-        const tableName = tableMatch[1];
-        const table = mockDatabase.tables[tableName];
-        if (table) {
-          return [createResultSet(table.rows)];
+        // Add created_at timestamp if column exists and not provided
+        if (table.columns.includes('created_at') && !row.created_at) {
+          row.created_at = new Date().toISOString();
         }
+
+        // Check for existing row with same ID
+        const existingIndex = table.rows.findIndex(r => r.id === row.id);
+
+        if (parsed.isReplace && existingIndex >= 0) {
+          // Replace existing row
+          table.rows[existingIndex] = row;
+        } else if (parsed.isIgnore && existingIndex >= 0) {
+          // Ignore - do nothing
+        } else if (existingIndex < 0) {
+          // Insert new row
+          table.rows.push(row);
+        }
+
+        return [createResultSet([], 1, insertId)];
       }
-      return [createResultSet()];
     }
-
-    // Handle UPDATE
-    if (sql.match(/UPDATE/i)) {
-      return [createResultSet([], 1)];
-    }
-
-    // Handle DELETE
-    if (sql.match(/DELETE/i)) {
-      return [createResultSet([], 1)];
-    }
-
     return [createResultSet()];
+  }
+
+  // Handle SELECT
+  if (sql.match(/SELECT/i)) {
+    const tableMatch = sql.match(/FROM\s+(\w+)/i);
+    if (tableMatch) {
+      const tableName = tableMatch[1];
+      const table = mockDatabase.tables[tableName];
+      if (table) {
+        let rows = [...table.rows];
+
+        // Handle WHERE clause
+        const whereCondition = parseWhereClause(sql, params);
+        if (whereCondition) {
+          rows = rows.filter(r => {
+            const rowValue = r[whereCondition.column];
+            switch (whereCondition.operator) {
+              case '=':
+                return rowValue === whereCondition.value;
+              case '<=':
+                if (rowValue === null || whereCondition.value === null) return false;
+                return rowValue <= whereCondition.value;
+              case '>=':
+                if (rowValue === null || whereCondition.value === null) return false;
+                return rowValue >= whereCondition.value;
+              case '<':
+                if (rowValue === null || whereCondition.value === null) return false;
+                return rowValue < whereCondition.value;
+              case '>':
+                if (rowValue === null || whereCondition.value === null) return false;
+                return rowValue > whereCondition.value;
+              case 'IS NULL':
+                return rowValue === null;
+              case 'IS NOT NULL':
+                return rowValue !== null;
+              default:
+                return true;
+            }
+          });
+        }
+
+        // Handle IN clause
+        const inMatch = sql.match(/WHERE\s+(\w+)\s+IN\s*\(/i);
+        if (inMatch) {
+          const column = inMatch[1];
+          rows = rows.filter(r => params.includes(r[column]));
+        }
+
+        // Handle COUNT(*)
+        if (sql.match(/COUNT\s*\(\s*\*\s*\)/i)) {
+          return [createResultSet([{ count: rows.length }])];
+        }
+
+        // Handle MAX(version)
+        if (sql.match(/MAX\s*\(\s*(\w+)\s*\)/i)) {
+          const maxMatch = sql.match(/MAX\s*\(\s*(\w+)\s*\)/i);
+          if (maxMatch) {
+            const column = maxMatch[1];
+            const values = rows.map(r => r[column]).filter(v => v !== null) as number[];
+            const maxValue = values.length > 0 ? Math.max(...values) : null;
+            return [createResultSet([{ [column]: maxValue }])];
+          }
+        }
+
+        return [createResultSet(rows)];
+      }
+    }
+    return [createResultSet()];
+  }
+
+  // Handle UPDATE
+  if (sql.match(/UPDATE/i)) {
+    const tableMatch = sql.match(/UPDATE\s+(\w+)/i);
+    if (tableMatch) {
+      const tableName = tableMatch[1];
+      const table = mockDatabase.tables[tableName];
+      if (table) {
+        const whereCondition = parseWhereClause(sql, params);
+        let rowsAffected = 0;
+
+        // Parse SET clause
+        const setMatch = sql.match(/SET\s+([\s\S]+?)(?:\s+WHERE|$)/i);
+        if (setMatch) {
+          const setClause = setMatch[1];
+          const assignments = setClause.split(',').map(s => s.trim());
+
+          table.rows.forEach((row, index) => {
+            // Check WHERE condition
+            if (whereCondition) {
+              const rowValue = row[whereCondition.column];
+              if (whereCondition.operator === '=' && rowValue !== whereCondition.value) {
+                return;
+              }
+            }
+
+            // Apply updates
+            let paramIndex = 0;
+            assignments.forEach(assignment => {
+              const match = assignment.match(/(\w+)\s*=\s*(\?|CURRENT_TIMESTAMP|NULL)/i);
+              if (match) {
+                const column = match[1];
+                const valueType = match[2].toUpperCase();
+
+                if (valueType === '?') {
+                  table.rows[index][column] = params[paramIndex];
+                  paramIndex++;
+                } else if (valueType === 'CURRENT_TIMESTAMP') {
+                  table.rows[index][column] = new Date().toISOString();
+                } else if (valueType === 'NULL') {
+                  table.rows[index][column] = null;
+                }
+              }
+            });
+
+            rowsAffected++;
+          });
+        }
+
+        return [createResultSet([], rowsAffected)];
+      }
+    }
+    return [createResultSet([], 1)];
+  }
+
+  // Handle DELETE
+  if (sql.match(/DELETE/i)) {
+    const tableMatch = sql.match(/FROM\s+(\w+)/i);
+    if (tableMatch) {
+      const tableName = tableMatch[1];
+      const table = mockDatabase.tables[tableName];
+      if (table) {
+        const whereCondition = parseWhereClause(sql, params);
+
+        if (whereCondition) {
+          const initialCount = table.rows.length;
+          table.rows = table.rows.filter(r => {
+            const rowValue = r[whereCondition.column];
+            if (whereCondition.operator === '=') {
+              return rowValue !== whereCondition.value;
+            }
+            return true;
+          });
+          return [createResultSet([], initialCount - table.rows.length)];
+        } else {
+          // DELETE all
+          const count = table.rows.length;
+          table.rows = [];
+          return [createResultSet([], count)];
+        }
+      }
+    }
+    return [createResultSet([], 1)];
+  }
+
+  return [createResultSet()];
+}
+
+// Mock transaction
+interface MockTransaction {
+  executeSql: (sql: string, params?: (string | number | null)[], success?: () => void, error?: () => void) => void;
+}
+
+// Mock database instance
+const mockDbInstance = {
+  executeSql: jest.fn(async (sql: string, params: (string | number | null)[] = []): Promise<[MockResultSet]> => {
+    return executeSqlImpl(sql, params);
+  }),
+
+  transaction: jest.fn(async (callback: (tx: MockTransaction) => void): Promise<void> => {
+    const tx: MockTransaction = {
+      executeSql: (sql: string, params: (string | number | null)[] = [], success?: () => void) => {
+        executeSqlImpl(sql, params);
+        if (success) success();
+      },
+    };
+    callback(tx);
   }),
 
   close: jest.fn(async (): Promise<void> => {
@@ -210,6 +434,7 @@ export const __resetMockDatabase = (): void => {
   };
   isOpen = false;
   mockDbInstance.executeSql.mockClear();
+  mockDbInstance.transaction.mockClear();
   mockDbInstance.close.mockClear();
   openDatabase.mockClear();
   enablePromise.mockClear();
@@ -220,6 +445,23 @@ export const __getMockDatabase = (): MockDatabase => mockDatabase;
 export const __getExecutedStatements = (): string[] => mockDatabase.executedStatements;
 
 export const __isOpen = (): boolean => isOpen;
+
+// Helper to directly insert a row for testing (bypasses SQL parsing)
+export const __insertRow = (tableName: string, row: MockRow): void => {
+  if (!mockDatabase.tables[tableName]) {
+    mockDatabase.tables[tableName] = {
+      columns: Object.keys(row),
+      rows: [],
+      autoIncrement: {},
+    };
+  }
+  mockDatabase.tables[tableName].rows.push(row);
+};
+
+// Helper to get rows from a table
+export const __getTableRows = (tableName: string): MockRow[] => {
+  return mockDatabase.tables[tableName]?.rows || [];
+};
 
 export default {
   enablePromise,
