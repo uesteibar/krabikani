@@ -325,3 +325,35 @@
   - Browser verification not available (no dev-browser skill configured)
 
 ---
+
+## 2026-01-25 - US-012: Dashboard Screen - Navigation and Refresh
+- What was implemented:
+  - Made DashboardStats pressable using TouchableOpacity for lessons and reviews buttons
+  - Added onLessonsPress and onReviewsPress callbacks to DashboardStats component
+  - Disabled navigation when count is 0 (with reduced opacity visual feedback)
+  - Created placeholder LessonsScreen and ReviewsScreen components
+  - Added Lessons and Reviews screens to RootNavigator
+  - Implemented pull-to-refresh using ScrollView with RefreshControl
+  - RefreshData function syncs subjects and assignments from WaniKani API when online
+  - Refresh only triggers when online and API key is available
+  - HomeScreen navigation callbacks use useCallback for performance
+- Files changed:
+  - src/screens/LessonsScreen.tsx (new - placeholder lessons screen)
+  - src/screens/ReviewsScreen.tsx (new - placeholder reviews screen)
+  - src/navigation/RootNavigator.tsx (updated - added Lessons and Reviews screens)
+  - src/components/DashboardStats.tsx (updated - made pressable with callbacks)
+  - src/screens/HomeScreen.tsx (updated - added navigation, pull-to-refresh, ScrollView)
+  - __mocks__/react-native-keychain.ts (updated - added __setStoredApiKey and __resetMock helpers)
+  - __tests__/screens/LessonsScreen.test.tsx (new - 3 tests)
+  - __tests__/screens/ReviewsScreen.test.tsx (new - 3 tests)
+  - __tests__/components/DashboardStats.test.tsx (updated - 5 new tests for press handlers)
+  - __tests__/screens/HomeScreen.test.tsx (updated - 9 new tests for navigation and pull-to-refresh)
+- **Learnings for future iterations:**
+  - Use TouchableOpacity with disabled prop for conditional navigation
+  - ScrollView with RefreshControl enables pull-to-refresh functionality
+  - Use contentContainerStyle with flexGrow: 1 for ScrollView to maintain layout
+  - Mocking sync modules with jest.mock() allows isolated testing of refresh behavior
+  - Use renderWithFullNavigator pattern when testing actual navigation between screens
+  - Browser verification not available (no dev-browser skill configured)
+
+---
