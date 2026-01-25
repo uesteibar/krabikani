@@ -21,6 +21,7 @@ import {
   getAllPendingReviews,
   deletePendingReview,
   deleteAllPendingReviews,
+  saveCachedUserLevel,
   type SubjectInput,
   type AssignmentInput,
   type PendingLessonInput,
@@ -382,8 +383,13 @@ export async function syncAssignments(
 export async function getUserLevel(client: WaniKaniClient): Promise<number> {
   console.log('[getUserLevel] Fetching user info...');
   const user = await client.getUser();
-  console.log('[getUserLevel] User level:', user.data.level);
-  return user.data.level;
+  const level = user.data.level;
+  console.log('[getUserLevel] User level:', level);
+
+  // Cache the level for display on home screen
+  await saveCachedUserLevel(level);
+
+  return level;
 }
 
 // ============================================

@@ -25,6 +25,7 @@ import {
   NextReviewIndicator,
   PendingSyncIndicator,
   SyncingIndicator,
+  LevelIndicator,
 } from '../components';
 import {
   COLORS,
@@ -45,6 +46,7 @@ import {
   getNextReviewTime,
   getPendingReviewCount,
   getPendingLessonCount,
+  getCachedUserLevel,
 } from '../storage';
 import {
   syncSubjects,
@@ -93,6 +95,7 @@ export function HomeScreen() {
     pendingLessonsCount: 0,
     pendingReviewsCount: 0,
   });
+  const [userLevel, setUserLevel] = useState<number | null>(null);
   const isSyncingPending = useRef(false);
 
   const loadDashboardData = useCallback(async () => {
@@ -105,6 +108,7 @@ export function HomeScreen() {
         nextReviewTimeStr,
         pendingLessonsCount,
         pendingReviewsCount,
+        cachedLevel,
       ] = await Promise.all([
         getSyncStatus(),
         getSubjectCount(),
@@ -113,6 +117,7 @@ export function HomeScreen() {
         getNextReviewTime(),
         getPendingLessonCount(),
         getPendingReviewCount(),
+        getCachedUserLevel(),
       ]);
 
       const lastSync =
@@ -130,6 +135,7 @@ export function HomeScreen() {
         pendingLessonsCount,
         pendingReviewsCount,
       });
+      setUserLevel(cachedLevel);
 
       // Check if we're offline with no cached data
       const online = isOnline();
@@ -157,11 +163,11 @@ export function HomeScreen() {
       }
 
       const client = new WaniKaniClient(apiKey);
-      const userLevel = await getUserLevel(client);
+      const fetchedLevel = await getUserLevel(client);
 
       // Sync subjects and assignments in parallel
       await Promise.all([
-        syncSubjects(client, { maxLevel: userLevel }),
+        syncSubjects(client, { maxLevel: fetchedLevel }),
         syncAssignments(client),
       ]);
 
@@ -308,6 +314,7 @@ export function HomeScreen() {
             testID="home-logo"
           />
           <View style={styles.dashboardContainer}>
+            <LevelIndicator level={userLevel} />
             <DashboardStats
               lessonsCount={dashboardData.lessonsCount}
               reviewsCount={dashboardData.reviewsCount}
