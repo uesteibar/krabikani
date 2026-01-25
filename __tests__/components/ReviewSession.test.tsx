@@ -2177,4 +2177,210 @@ describe('ReviewSession', () => {
       }
     });
   });
+
+  describe('Component Radicals on Incorrect Kanji Answers', () => {
+    // Create a kanji item with component radicals
+    const kanjiWithRadicals: ReviewItem = {
+      id: 100,
+      assignmentId: 1100,
+      subjectType: 'kanji',
+      characters: '森',
+      meanings: createMeanings([{ meaning: 'Forest', primary: true }]),
+      readings: createKanjiReadings([
+        { reading: 'もり', primary: true, type: 'kunyomi' },
+      ]),
+      meaningMnemonic: 'Three trees make a forest',
+      readingMnemonic: 'Reading mnemonic for mori',
+      componentRadicals: [
+        { id: 1, characters: '木', meaning: 'Tree', characterImages: null },
+        { id: 2, characters: '木', meaning: 'Tree', characterImages: null },
+        { id: 3, characters: '木', meaning: 'Tree', characterImages: null },
+      ],
+    };
+
+    let callIndex = 0;
+    beforeEach(() => {
+      callIndex = 0;
+      // Control randomization: meaning first
+      (Math.random as jest.Mock).mockImplementation(() => {
+        const values = [0.1, 0.1, 0.1, 0.1, 0.1];
+        return values[callIndex++ % values.length];
+      });
+    });
+
+    it('shows component radicals on incorrect kanji meaning answer', () => {
+      const { getByTestId, getByText } = render(
+        <ReviewSession
+          items={[kanjiWithRadicals]}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      const type = getByTestId('review-session-question-type').props.children;
+
+      // If it's a meaning question, submit wrong answer
+      if (type === 'MEANING') {
+        const input = getByTestId('review-session-input');
+        fireEvent.changeText(input, 'wrong');
+        fireEvent(input, 'submitEditing');
+
+        act(() => {
+          jest.runAllTimers();
+        });
+
+        // Should show incorrect feedback
+        expect(getByTestId('review-session-incorrect-feedback')).toBeTruthy();
+
+        // Should show component radicals section
+        expect(getByTestId('review-session-component-radicals')).toBeTruthy();
+        expect(getByText('Made up of:')).toBeTruthy();
+
+        // Should show each component radical
+        expect(getByTestId('review-session-component-1')).toBeTruthy();
+        expect(getByTestId('review-session-component-2')).toBeTruthy();
+        expect(getByTestId('review-session-component-3')).toBeTruthy();
+      }
+    });
+
+    it('does not show component radicals for kanji without components', () => {
+      const kanjiWithoutRadicals: ReviewItem = {
+        ...sampleKanji,
+        componentRadicals: undefined,
+      };
+
+      // Reset random to meaning first
+      callIndex = 0;
+      (Math.random as jest.Mock).mockImplementation(() => {
+        const values = [0.1, 0.1, 0.1, 0.1, 0.1];
+        return values[callIndex++ % values.length];
+      });
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession
+          items={[kanjiWithoutRadicals]}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      const type = getByTestId('review-session-question-type').props.children;
+
+      if (type === 'MEANING') {
+        const input = getByTestId('review-session-input');
+        fireEvent.changeText(input, 'wrong');
+        fireEvent(input, 'submitEditing');
+
+        act(() => {
+          jest.runAllTimers();
+        });
+
+        // Should show incorrect feedback
+        expect(getByTestId('review-session-incorrect-feedback')).toBeTruthy();
+
+        // Should not show component radicals section
+        expect(queryByTestId('review-session-component-radicals')).toBeNull();
+      }
+    });
+
+    it('does not show component radicals for radicals', () => {
+      // Reset random
+      callIndex = 0;
+      (Math.random as jest.Mock).mockImplementation(() => {
+        const values = [0.1, 0.1, 0.1, 0.1, 0.1];
+        return values[callIndex++ % values.length];
+      });
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession
+          items={[sampleRadical]}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      const input = getByTestId('review-session-input');
+      fireEvent.changeText(input, 'wrong');
+      fireEvent(input, 'submitEditing');
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Should show incorrect feedback
+      expect(getByTestId('review-session-incorrect-feedback')).toBeTruthy();
+
+      // Should not show component radicals section
+      expect(queryByTestId('review-session-component-radicals')).toBeNull();
+    });
+
+    it('does not show component radicals for vocabulary', () => {
+      // Reset random to meaning first
+      callIndex = 0;
+      (Math.random as jest.Mock).mockImplementation(() => {
+        const values = [0.1, 0.1, 0.1, 0.1, 0.1];
+        return values[callIndex++ % values.length];
+      });
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession
+          items={[sampleVocabulary]}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      const type = getByTestId('review-session-question-type').props.children;
+
+      if (type === 'MEANING') {
+        const input = getByTestId('review-session-input');
+        fireEvent.changeText(input, 'wrong');
+        fireEvent(input, 'submitEditing');
+
+        act(() => {
+          jest.runAllTimers();
+        });
+
+        // Should show incorrect feedback
+        expect(getByTestId('review-session-incorrect-feedback')).toBeTruthy();
+
+        // Should not show component radicals section
+        expect(queryByTestId('review-session-component-radicals')).toBeNull();
+      }
+    });
+
+    it('displays radical characters correctly', () => {
+      // Reset random to meaning first
+      callIndex = 0;
+      (Math.random as jest.Mock).mockImplementation(() => {
+        const values = [0.1, 0.1, 0.1, 0.1, 0.1];
+        return values[callIndex++ % values.length];
+      });
+
+      const { getByTestId, getAllByText } = render(
+        <ReviewSession
+          items={[kanjiWithRadicals]}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      const type = getByTestId('review-session-question-type').props.children;
+
+      if (type === 'MEANING') {
+        const input = getByTestId('review-session-input');
+        fireEvent.changeText(input, 'wrong');
+        fireEvent(input, 'submitEditing');
+
+        act(() => {
+          jest.runAllTimers();
+        });
+
+        // Should display radical characters
+        const treeTexts = getAllByText('木');
+        // There should be at least 3 tree radicals displayed
+        expect(treeTexts.length).toBeGreaterThanOrEqual(3);
+      }
+    });
+  });
 });

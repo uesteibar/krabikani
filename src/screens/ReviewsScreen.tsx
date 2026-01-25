@@ -14,6 +14,7 @@ import { WaniKaniClient } from '../api/wanikaniApi';
 import {
   ReviewSession,
   type ReviewItem,
+  type ReviewComponentRadical,
   type ItemProgress,
 } from '../components';
 import {
@@ -36,6 +37,7 @@ type ReviewPhase = 'loading' | 'reviewing' | 'syncing' | 'complete' | 'error';
 interface ReviewSessionData {
   assignments: DatabaseAssignment[];
   subjects: DatabaseSubject[];
+  componentRadicals: Map<number, ReviewComponentRadical>;
 }
 
 interface SyncResult {
@@ -50,11 +52,24 @@ interface SyncResult {
 function subjectToReviewItem(
   subject: DatabaseSubject,
   assignment: DatabaseAssignment,
+  componentRadicalsMap: Map<number, ReviewComponentRadical>,
 ): ReviewItem {
   const meanings: Meaning[] = JSON.parse(subject.meanings);
   const readings: Reading[] | KanjiReading[] | null = subject.readings
     ? JSON.parse(subject.readings)
     : null;
+
+  // Parse component_subject_ids and get component radicals for kanji items
+  const componentSubjectIds: number[] | undefined = subject.component_subject_ids
+    ? JSON.parse(subject.component_subject_ids)
+    : undefined;
+
+  const componentRadicals =
+    subject.object_type === 'kanji' && componentSubjectIds
+      ? componentSubjectIds
+          .map(id => componentRadicalsMap.get(id))
+          .filter((r): r is ReviewComponentRadical => r !== undefined)
+      : undefined;
 
   return {
     id: subject.id,
@@ -66,6 +81,7 @@ function subjectToReviewItem(
     meaningMnemonic: subject.meaning_mnemonic,
     readingMnemonic: subject.reading_mnemonic,
     auxiliaryMeanings: [] as AuxiliaryMeaning[],
+    componentRadicals,
   };
 }
 
@@ -115,9 +131,38 @@ export function ReviewsScreen() {
         return;
       }
 
+      // Collect all component subject IDs from kanji items
+      const componentIds = new Set<number>();
+      for (const subject of validSubjects) {
+        if (subject.object_type === 'kanji' && subject.component_subject_ids) {
+          const ids: number[] = JSON.parse(subject.component_subject_ids);
+          ids.forEach(id => componentIds.add(id));
+        }
+      }
+
+      // Fetch component radicals if any kanji items have components
+      let componentRadicals = new Map<number, ReviewComponentRadical>();
+      if (componentIds.size > 0) {
+        const componentSubjects = await getSubjectsByIds(Array.from(componentIds));
+        for (const subject of componentSubjects) {
+          if (subject.object_type === 'radical') {
+            const meanings: Meaning[] = JSON.parse(subject.meanings);
+            const primaryMeaning =
+              meanings.find(m => m.primary)?.meaning ?? meanings[0]?.meaning ?? '';
+            componentRadicals.set(subject.id, {
+              id: subject.id,
+              characters: subject.characters,
+              meaning: primaryMeaning,
+              characterImages: subject.character_images,
+            });
+          }
+        }
+      }
+
       setSessionData({
         assignments: validAssignments,
         subjects: validSubjects,
+        componentRadicals,
       });
       setPhase('reviewing');
     } catch (error) {
@@ -144,7 +189,11 @@ export function ReviewsScreen() {
     if (!sessionData) return [];
 
     return sessionData.subjects.map((subject, index) =>
-      subjectToReviewItem(subject, sessionData.assignments[index]),
+      subjectToReviewItem(
+        subject,
+        sessionData.assignments[index],
+        sessionData.componentRadicals,
+      ),
     );
   }, [sessionData]);
 

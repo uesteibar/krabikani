@@ -73,9 +73,20 @@ function subjectToLessonItem(
 /**
  * Converts a LessonItem to a QuizItem for the quiz phase.
  */
-function lessonItemToQuizItem(item: LessonItem): QuizItem {
+function lessonItemToQuizItem(
+  item: LessonItem,
+  componentRadicals: Map<number, ComponentRadical>,
+): QuizItem {
   // For QuizItem, we need to include auxiliaryMeanings if available
   // but our database doesn't store them separately, so we pass empty array
+  // Also include component radicals for kanji items
+  const itemComponentRadicals =
+    item.subjectType === 'kanji' && item.componentSubjectIds
+      ? item.componentSubjectIds
+          .map(id => componentRadicals.get(id))
+          .filter((r): r is ComponentRadical => r !== undefined)
+      : undefined;
+
   return {
     id: item.id,
     subjectType: item.subjectType,
@@ -85,6 +96,7 @@ function lessonItemToQuizItem(item: LessonItem): QuizItem {
     meaningMnemonic: item.meaningMnemonic,
     readingMnemonic: item.readingMnemonic,
     auxiliaryMeanings: [] as AuxiliaryMeaning[],
+    componentRadicals: itemComponentRadicals,
   };
 }
 
@@ -202,6 +214,7 @@ export function LessonsScreen() {
           id: subject.id,
           characters: subject.characters,
           meaning: primaryMeaning,
+          characterImages: subject.character_images,
         });
       }
     }
@@ -214,6 +227,7 @@ export function LessonsScreen() {
           id,
           characters: null,
           meaning: 'Radical',
+          characterImages: null,
         });
       }
     }
@@ -345,7 +359,9 @@ export function LessonsScreen() {
 
   // Render quiz phase
   if (phase === 'quiz' && session) {
-    const quizItems = currentBatch.items.map(lessonItemToQuizItem);
+    const quizItems = currentBatch.items.map(item =>
+      lessonItemToQuizItem(item, componentRadicals),
+    );
 
     return (
       <View style={styles.container} testID="lessons-screen">
