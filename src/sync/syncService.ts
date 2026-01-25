@@ -17,9 +17,14 @@ import {
   getAllPendingLessons,
   deletePendingLessonByAssignmentId,
   deleteAllPendingLessons,
+  insertPendingReview,
+  getAllPendingReviews,
+  deletePendingReview,
+  deleteAllPendingReviews,
   type SubjectInput,
   type AssignmentInput,
   type PendingLessonInput,
+  type PendingReviewInput,
 } from '../storage/database';
 
 // ============================================
@@ -538,4 +543,225 @@ export async function syncPendingLessons(
  */
 export async function clearPendingLessons(): Promise<void> {
   await deleteAllPendingLessons();
+}
+
+// ============================================
+// Review Submission Types
+// ============================================
+
+export interface ReviewToSubmit {
+  /** The assignment ID for the review */
+  assignmentId: number;
+  /** The subject ID for the review */
+  subjectId: number;
+  /** Number of incorrect meaning answers */
+  incorrectMeaningAnswers: number;
+  /** Number of incorrect reading answers */
+  incorrectReadingAnswers: number;
+}
+
+export interface SubmitReviewsOptions {
+  /** Progress callback for UI updates */
+  onProgress?: (submitted: number, total: number) => void;
+}
+
+export interface SubmitReviewsResult {
+  success: boolean;
+  submittedCount: number;
+  queuedCount: number;
+  error?: string;
+}
+
+export interface SyncPendingReviewsResult {
+  success: boolean;
+  syncedCount: number;
+  failedCount: number;
+  error?: string;
+}
+
+// ============================================
+// Review Submission Functions
+// ============================================
+
+/**
+ * Submits review results to WaniKani API.
+ *
+ * If online: submits immediately with retry support via WaniKaniClient.
+ * If offline (client is null): queues reviews for later sync.
+ *
+ * @param client WaniKani API client (null if offline)
+ * @param reviews Array of reviews to submit
+ * @param options Optional configuration including progress callback
+ * @returns Result with counts of submitted and queued reviews
+ */
+export async function submitReviews(
+  client: WaniKaniClient | null,
+  reviews: ReviewToSubmit[],
+  options: SubmitReviewsOptions = {},
+): Promise<SubmitReviewsResult> {
+  const { onProgress } = options;
+
+  if (reviews.length === 0) {
+    return {
+      success: true,
+      submittedCount: 0,
+      queuedCount: 0,
+    };
+  }
+
+  if (client === null) {
+    // Offline mode: queue reviews for later sync
+    try {
+      for (let i = 0; i < reviews.length; i++) {
+        const review = reviews[i];
+        const pendingReview: PendingReviewInput = {
+          assignment_id: review.assignmentId,
+          subject_id: review.subjectId,
+          incorrect_meaning_answers: review.incorrectMeaningAnswers,
+          incorrect_reading_answers: review.incorrectReadingAnswers,
+        };
+        await insertPendingReview(pendingReview);
+        onProgress?.(i + 1, reviews.length);
+      }
+
+      return {
+        success: true,
+        submittedCount: 0,
+        queuedCount: reviews.length,
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error queuing reviews';
+      return {
+        success: false,
+        submittedCount: 0,
+        queuedCount: 0,
+        error: errorMessage,
+      };
+    }
+  }
+
+  // Online mode: submit immediately with retry support (handled by WaniKaniClient)
+  let submittedCount = 0;
+
+  try {
+    for (let i = 0; i < reviews.length; i++) {
+      const review = reviews[i];
+
+      // Call the WaniKani API to create the review
+      const response = await client.createReview({
+        assignment_id: review.assignmentId,
+        incorrect_meaning_answers: review.incorrectMeaningAnswers,
+        incorrect_reading_answers: review.incorrectReadingAnswers,
+      });
+
+      // Update local database with the assignment from the response
+      const updatedAssignment = response.resources_updated.assignment;
+      await upsertAssignment({
+        id: updatedAssignment.id,
+        subject_id: updatedAssignment.data.subject_id,
+        srs_stage: updatedAssignment.data.srs_stage,
+        available_at: updatedAssignment.data.available_at,
+        started_at: updatedAssignment.data.started_at,
+        unlocked_at: updatedAssignment.data.unlocked_at,
+        data_updated_at: updatedAssignment.data_updated_at,
+      });
+
+      submittedCount++;
+      onProgress?.(submittedCount, reviews.length);
+    }
+
+    return {
+      success: true,
+      submittedCount,
+      queuedCount: 0,
+    };
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error submitting reviews';
+    return {
+      success: false,
+      submittedCount,
+      queuedCount: 0,
+      error: errorMessage,
+    };
+  }
+}
+
+/**
+ * Syncs all pending reviews that were queued while offline.
+ *
+ * @param client WaniKani API client
+ * @returns Result with counts of synced and failed reviews
+ */
+export async function syncPendingReviews(
+  client: WaniKaniClient,
+): Promise<SyncPendingReviewsResult> {
+  try {
+    const pendingReviews = await getAllPendingReviews();
+
+    if (pendingReviews.length === 0) {
+      return {
+        success: true,
+        syncedCount: 0,
+        failedCount: 0,
+      };
+    }
+
+    let syncedCount = 0;
+    let failedCount = 0;
+
+    for (const pending of pendingReviews) {
+      try {
+        // Call the WaniKani API to create the review
+        const response = await client.createReview({
+          assignment_id: pending.assignment_id,
+          incorrect_meaning_answers: pending.incorrect_meaning_answers,
+          incorrect_reading_answers: pending.incorrect_reading_answers,
+        });
+
+        // Update local database with the assignment from the response
+        const updatedAssignment = response.resources_updated.assignment;
+        await upsertAssignment({
+          id: updatedAssignment.id,
+          subject_id: updatedAssignment.data.subject_id,
+          srs_stage: updatedAssignment.data.srs_stage,
+          available_at: updatedAssignment.data.available_at,
+          started_at: updatedAssignment.data.started_at,
+          unlocked_at: updatedAssignment.data.unlocked_at,
+          data_updated_at: updatedAssignment.data_updated_at,
+        });
+
+        // Remove from pending queue
+        await deletePendingReview(pending.id);
+        syncedCount++;
+      } catch {
+        // Continue with next review on failure
+        failedCount++;
+      }
+    }
+
+    return {
+      success: failedCount === 0,
+      syncedCount,
+      failedCount,
+    };
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error syncing pending reviews';
+    return {
+      success: false,
+      syncedCount: 0,
+      failedCount: 0,
+      error: errorMessage,
+    };
+  }
+}
+
+/**
+ * Clears all pending reviews from the queue.
+ * Useful after successful sync or for cleanup.
+ */
+export async function clearPendingReviews(): Promise<void> {
+  await deleteAllPendingReviews();
 }

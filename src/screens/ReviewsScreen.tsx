@@ -10,6 +10,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../navigation/types';
 import type { Meaning, Reading, KanjiReading, AuxiliaryMeaning } from '../api/types';
+import { WaniKaniClient } from '../api/wanikaniApi';
 import {
   ReviewSession,
   type ReviewItem,
@@ -18,20 +19,29 @@ import {
 import {
   getAvailableReviews,
   getSubjectsByIds,
+  getApiKey,
   type DatabaseAssignment,
   type DatabaseSubject,
 } from '../storage';
+import { submitReviews, type ReviewToSubmit } from '../sync';
+import { isOnline } from '../utils/networkStatus';
 
 type ReviewsScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'Reviews'
 >;
 
-type ReviewPhase = 'loading' | 'reviewing' | 'complete' | 'error';
+type ReviewPhase = 'loading' | 'reviewing' | 'syncing' | 'complete' | 'error';
 
 interface ReviewSessionData {
   assignments: DatabaseAssignment[];
   subjects: DatabaseSubject[];
+}
+
+interface SyncResult {
+  submittedCount: number;
+  queuedCount: number;
+  wasOnline: boolean;
 }
 
 /**
@@ -72,6 +82,7 @@ export function ReviewsScreen() {
   const [sessionData, setSessionData] = useState<ReviewSessionData | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [sessionResults, setSessionResults] = useState<Map<number, ItemProgress> | null>(null);
+  const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
 
   const loadReviews = useCallback(async () => {
     try {
@@ -131,11 +142,73 @@ export function ReviewsScreen() {
     );
   }, [sessionData]);
 
-  // Handle session completion
-  const handleSessionComplete = useCallback((itemProgress: Map<number, ItemProgress>) => {
+  // Handle session completion - submit reviews to WaniKani API
+  const handleSessionComplete = useCallback(async (itemProgress: Map<number, ItemProgress>) => {
     setSessionResults(itemProgress);
-    setPhase('complete');
-  }, []);
+    setPhase('syncing');
+
+    // Build reviews to submit from the item progress
+    const reviewsToSubmit: ReviewToSubmit[] = [];
+    if (sessionData) {
+      for (const [subjectId, progress] of itemProgress) {
+        // Find the assignment for this subject
+        const assignment = sessionData.assignments.find(
+          a => a.subject_id === subjectId,
+        );
+        if (assignment) {
+          reviewsToSubmit.push({
+            assignmentId: assignment.id,
+            subjectId,
+            incorrectMeaningAnswers: progress.incorrectMeaningAnswers,
+            incorrectReadingAnswers: progress.incorrectReadingAnswers,
+          });
+        }
+      }
+    }
+
+    try {
+      // Check if online and get API key
+      const online = await isOnline();
+      const apiKey = await getApiKey();
+
+      // Create client if online with valid API key
+      const client = online && apiKey ? new WaniKaniClient(apiKey) : null;
+
+      // Submit reviews (will queue if offline)
+      const result = await submitReviews(client, reviewsToSubmit);
+
+      if (result.success) {
+        setSyncResult({
+          submittedCount: result.submittedCount,
+          queuedCount: result.queuedCount,
+          wasOnline: client !== null,
+        });
+        setPhase('complete');
+      } else {
+        // Submission failed but we still show completion (reviews may be partially submitted)
+        setSyncResult({
+          submittedCount: result.submittedCount,
+          queuedCount: result.queuedCount,
+          wasOnline: client !== null,
+        });
+        setPhase('complete');
+      }
+    } catch {
+      // Even on error, try to queue reviews for later
+      try {
+        const queueResult = await submitReviews(null, reviewsToSubmit);
+        setSyncResult({
+          submittedCount: 0,
+          queuedCount: queueResult.queuedCount,
+          wasOnline: false,
+        });
+      } catch {
+        // Complete without sync result
+        setSyncResult(null);
+      }
+      setPhase('complete');
+    }
+  }, [sessionData]);
 
   // Handle return to dashboard
   const handleReturnToDashboard = useCallback(() => {
@@ -148,6 +221,16 @@ export function ReviewsScreen() {
       <View style={styles.centerContainer} testID="reviews-screen-loading">
         <ActivityIndicator size="large" color="#8f5bc4" />
         <Text style={styles.loadingText}>Loading reviews...</Text>
+      </View>
+    );
+  }
+
+  // Render syncing state
+  if (phase === 'syncing') {
+    return (
+      <View style={styles.centerContainer} testID="reviews-screen-syncing">
+        <ActivityIndicator size="large" color="#8f5bc4" />
+        <Text style={styles.loadingText}>Submitting reviews...</Text>
       </View>
     );
   }
@@ -176,6 +259,16 @@ export function ReviewsScreen() {
       totalIncorrect += progress.incorrectMeaningAnswers + progress.incorrectReadingAnswers;
     });
 
+    // Determine sync status message
+    let syncStatusMessage: string | null = null;
+    if (syncResult) {
+      if (syncResult.wasOnline && syncResult.submittedCount > 0) {
+        syncStatusMessage = 'Synced with WaniKani';
+      } else if (!syncResult.wasOnline && syncResult.queuedCount > 0) {
+        syncStatusMessage = 'Queued for sync when online';
+      }
+    }
+
     return (
       <View style={styles.centerContainer} testID="reviews-screen-complete">
         <Text style={styles.completeTitle}>Session Complete!</Text>
@@ -185,6 +278,11 @@ export function ReviewsScreen() {
         {totalIncorrect > 0 && (
           <Text style={styles.incorrectStats}>
             {totalIncorrect} incorrect {totalIncorrect === 1 ? 'answer' : 'answers'}
+          </Text>
+        )}
+        {syncStatusMessage && (
+          <Text style={styles.syncStatus} testID="reviews-screen-sync-status">
+            {syncStatusMessage}
           </Text>
         )}
         <Text
@@ -261,5 +359,10 @@ const styles = StyleSheet.create({
   incorrectStats: {
     fontSize: 16,
     color: '#f44336',
+  },
+  syncStatus: {
+    fontSize: 14,
+    color: '#4caf50',
+    marginTop: 8,
   },
 });

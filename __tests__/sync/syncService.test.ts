@@ -7,6 +7,9 @@ import {
   completeLessons,
   syncPendingLessons,
   clearPendingLessons,
+  submitReviews,
+  syncPendingReviews,
+  clearPendingReviews,
 } from '../../src/sync/syncService';
 import { WaniKaniClient, WaniKaniApiError } from '../../src/api/wanikaniApi';
 import type {
@@ -27,6 +30,8 @@ import {
   _resetDatabaseInstance,
   getAllPendingLessons,
   getPendingLessonCount,
+  getAllPendingReviews,
+  getPendingReviewCount,
 } from '../../src/storage/database';
 import { __resetMockDatabase } from '../../__mocks__/react-native-sqlite-storage';
 
@@ -1302,6 +1307,456 @@ describe('syncService', () => {
       await clearPendingLessons();
 
       pendingCount = await getPendingLessonCount();
+      expect(pendingCount).toBe(0);
+    });
+  });
+
+  describe('submitReviews', () => {
+    // Helper function to create a mock review API response
+    function createMockReviewResponse(
+      reviewId: number,
+      assignmentId: number,
+      subjectId: number,
+      newSrsStage: number = 2,
+    ) {
+      return {
+        id: reviewId,
+        object: 'review',
+        url: `https://api.wanikani.com/v2/reviews/${reviewId}`,
+        data_updated_at: '2024-01-15T10:00:00.000000Z',
+        data: {
+          assignment_id: assignmentId,
+          subject_id: subjectId,
+          created_at: '2024-01-15T10:00:00.000000Z',
+          incorrect_meaning_answers: 1,
+          incorrect_reading_answers: 0,
+          spaced_repetition_system_id: 1,
+          starting_srs_stage: 1,
+          ending_srs_stage: newSrsStage,
+        },
+        resources_updated: {
+          assignment: {
+            id: assignmentId,
+            object: 'assignment',
+            url: `https://api.wanikani.com/v2/assignments/${assignmentId}`,
+            data_updated_at: '2024-01-15T10:00:00.000000Z',
+            data: {
+              subject_id: subjectId,
+              srs_stage: newSrsStage,
+              available_at: '2024-01-15T18:00:00.000000Z',
+              started_at: '2024-01-01T10:00:00.000000Z',
+              unlocked_at: '2024-01-01T00:00:00.000000Z',
+            },
+          },
+          review_statistic: {
+            id: 1000,
+            object: 'review_statistic',
+            data: {},
+          },
+        },
+      };
+    }
+
+    it('should submit reviews online and update local database', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      // Mock the createReview API response
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => createMockReviewResponse(1000, 100, 1, 2),
+      });
+
+      const result = await submitReviews(client, [
+        {
+          assignmentId: 100,
+          subjectId: 1,
+          incorrectMeaningAnswers: 1,
+          incorrectReadingAnswers: 0,
+        },
+      ]);
+
+      expect(result.success).toBe(true);
+      expect(result.submittedCount).toBe(1);
+      expect(result.queuedCount).toBe(0);
+
+      // Verify assignment was updated in local database
+      const assignment = await getAssignmentById(100);
+      expect(assignment).not.toBeNull();
+      expect(assignment?.srs_stage).toBe(2);
+      expect(assignment?.available_at).toBe('2024-01-15T18:00:00.000000Z');
+    });
+
+    it('should submit multiple reviews online', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      // Mock responses for two reviews
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => createMockReviewResponse(1000, 100, 1, 2),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => createMockReviewResponse(1001, 101, 2, 3),
+        });
+
+      const result = await submitReviews(client, [
+        {
+          assignmentId: 100,
+          subjectId: 1,
+          incorrectMeaningAnswers: 1,
+          incorrectReadingAnswers: 0,
+        },
+        {
+          assignmentId: 101,
+          subjectId: 2,
+          incorrectMeaningAnswers: 0,
+          incorrectReadingAnswers: 1,
+        },
+      ]);
+
+      expect(result.success).toBe(true);
+      expect(result.submittedCount).toBe(2);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('should queue reviews when offline (client is null)', async () => {
+      const result = await submitReviews(null, [
+        {
+          assignmentId: 100,
+          subjectId: 1,
+          incorrectMeaningAnswers: 1,
+          incorrectReadingAnswers: 0,
+        },
+        {
+          assignmentId: 101,
+          subjectId: 2,
+          incorrectMeaningAnswers: 2,
+          incorrectReadingAnswers: 1,
+        },
+      ]);
+
+      expect(result.success).toBe(true);
+      expect(result.submittedCount).toBe(0);
+      expect(result.queuedCount).toBe(2);
+
+      // Verify reviews were queued
+      const pendingCount = await getPendingReviewCount();
+      expect(pendingCount).toBe(2);
+
+      const pendingReviews = await getAllPendingReviews();
+      expect(pendingReviews).toHaveLength(2);
+      expect(pendingReviews[0].assignment_id).toBe(100);
+      expect(pendingReviews[0].incorrect_meaning_answers).toBe(1);
+      expect(pendingReviews[0].incorrect_reading_answers).toBe(0);
+      expect(pendingReviews[1].assignment_id).toBe(101);
+      expect(pendingReviews[1].incorrect_meaning_answers).toBe(2);
+      expect(pendingReviews[1].incorrect_reading_answers).toBe(1);
+    });
+
+    it('should call progress callback', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+      const onProgress = jest.fn();
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => createMockReviewResponse(1000, 100, 1, 2),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => createMockReviewResponse(1001, 101, 2, 3),
+        });
+
+      await submitReviews(
+        client,
+        [
+          {
+            assignmentId: 100,
+            subjectId: 1,
+            incorrectMeaningAnswers: 0,
+            incorrectReadingAnswers: 0,
+          },
+          {
+            assignmentId: 101,
+            subjectId: 2,
+            incorrectMeaningAnswers: 0,
+            incorrectReadingAnswers: 0,
+          },
+        ],
+        { onProgress },
+      );
+
+      expect(onProgress).toHaveBeenCalledTimes(2);
+      expect(onProgress).toHaveBeenNthCalledWith(1, 1, 2);
+      expect(onProgress).toHaveBeenNthCalledWith(2, 2, 2);
+    });
+
+    it('should return empty result for empty reviews array', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      const result = await submitReviews(client, []);
+
+      expect(result.success).toBe(true);
+      expect(result.submittedCount).toBe(0);
+      expect(result.queuedCount).toBe(0);
+    });
+
+    it('should handle API error and return partial progress', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => createMockReviewResponse(1000, 100, 1, 2),
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+        });
+
+      const result = await submitReviews(client, [
+        {
+          assignmentId: 100,
+          subjectId: 1,
+          incorrectMeaningAnswers: 0,
+          incorrectReadingAnswers: 0,
+        },
+        {
+          assignmentId: 101,
+          subjectId: 2,
+          incorrectMeaningAnswers: 0,
+          incorrectReadingAnswers: 0,
+        },
+      ]);
+
+      expect(result.success).toBe(false);
+      expect(result.submittedCount).toBe(1);
+      expect(result.error).toBeDefined();
+    });
+
+    it('should send correct incorrect answer counts in API request', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => createMockReviewResponse(1000, 100, 1, 1),
+      });
+
+      await submitReviews(client, [
+        {
+          assignmentId: 100,
+          subjectId: 1,
+          incorrectMeaningAnswers: 3,
+          incorrectReadingAnswers: 2,
+        },
+      ]);
+
+      // Verify the API was called with correct parameters
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const [_url, options] = mockFetch.mock.calls[0];
+      const body = JSON.parse(options.body);
+      expect(body.review.assignment_id).toBe(100);
+      expect(body.review.incorrect_meaning_answers).toBe(3);
+      expect(body.review.incorrect_reading_answers).toBe(2);
+    });
+  });
+
+  describe('syncPendingReviews', () => {
+    // Helper function to create a mock review API response
+    function createMockReviewResponse(
+      reviewId: number,
+      assignmentId: number,
+      subjectId: number,
+      newSrsStage: number = 2,
+    ) {
+      return {
+        id: reviewId,
+        object: 'review',
+        url: `https://api.wanikani.com/v2/reviews/${reviewId}`,
+        data_updated_at: '2024-01-15T10:00:00.000000Z',
+        data: {
+          assignment_id: assignmentId,
+          subject_id: subjectId,
+          created_at: '2024-01-15T10:00:00.000000Z',
+          incorrect_meaning_answers: 0,
+          incorrect_reading_answers: 0,
+          spaced_repetition_system_id: 1,
+          starting_srs_stage: 1,
+          ending_srs_stage: newSrsStage,
+        },
+        resources_updated: {
+          assignment: {
+            id: assignmentId,
+            object: 'assignment',
+            url: `https://api.wanikani.com/v2/assignments/${assignmentId}`,
+            data_updated_at: '2024-01-15T10:00:00.000000Z',
+            data: {
+              subject_id: subjectId,
+              srs_stage: newSrsStage,
+              available_at: '2024-01-15T18:00:00.000000Z',
+              started_at: '2024-01-01T10:00:00.000000Z',
+              unlocked_at: '2024-01-01T00:00:00.000000Z',
+            },
+          },
+          review_statistic: {
+            id: 1000,
+            object: 'review_statistic',
+            data: {},
+          },
+        },
+      };
+    }
+
+    it('should sync pending reviews from queue', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      // Queue a review offline first
+      await submitReviews(null, [
+        {
+          assignmentId: 100,
+          subjectId: 1,
+          incorrectMeaningAnswers: 1,
+          incorrectReadingAnswers: 0,
+        },
+      ]);
+
+      // Verify it was queued
+      let pendingCount = await getPendingReviewCount();
+      expect(pendingCount).toBe(1);
+
+      // Mock the API response for syncing
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => createMockReviewResponse(1000, 100, 1, 2),
+      });
+
+      const result = await syncPendingReviews(client);
+
+      expect(result.success).toBe(true);
+      expect(result.syncedCount).toBe(1);
+      expect(result.failedCount).toBe(0);
+
+      // Verify pending review was removed from queue
+      pendingCount = await getPendingReviewCount();
+      expect(pendingCount).toBe(0);
+    });
+
+    it('should return success for empty queue', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      const result = await syncPendingReviews(client);
+
+      expect(result.success).toBe(true);
+      expect(result.syncedCount).toBe(0);
+      expect(result.failedCount).toBe(0);
+    });
+
+    it('should continue syncing on individual review failure', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      // Queue two reviews offline
+      await submitReviews(null, [
+        {
+          assignmentId: 100,
+          subjectId: 1,
+          incorrectMeaningAnswers: 0,
+          incorrectReadingAnswers: 0,
+        },
+        {
+          assignmentId: 101,
+          subjectId: 2,
+          incorrectMeaningAnswers: 0,
+          incorrectReadingAnswers: 0,
+        },
+      ]);
+
+      // First fails, second succeeds
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => createMockReviewResponse(1001, 101, 2, 2),
+        });
+
+      const result = await syncPendingReviews(client);
+
+      expect(result.success).toBe(false); // Not all succeeded
+      expect(result.syncedCount).toBe(1);
+      expect(result.failedCount).toBe(1);
+
+      // First review should still be in queue, second should be removed
+      const pendingReviews = await getAllPendingReviews();
+      expect(pendingReviews).toHaveLength(1);
+      expect(pendingReviews[0].assignment_id).toBe(100);
+    });
+
+    it('should update local database with API response', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      // Queue a review offline
+      await submitReviews(null, [
+        {
+          assignmentId: 100,
+          subjectId: 1,
+          incorrectMeaningAnswers: 0,
+          incorrectReadingAnswers: 0,
+        },
+      ]);
+
+      // Mock the API response
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => createMockReviewResponse(1000, 100, 1, 5),
+      });
+
+      await syncPendingReviews(client);
+
+      // Verify local assignment was updated with API response
+      const assignment = await getAssignmentById(100);
+      expect(assignment).not.toBeNull();
+      expect(assignment?.srs_stage).toBe(5);
+      expect(assignment?.available_at).toBe('2024-01-15T18:00:00.000000Z');
+    });
+  });
+
+  describe('clearPendingReviews', () => {
+    it('should clear all pending reviews', async () => {
+      // Queue some reviews
+      await submitReviews(null, [
+        {
+          assignmentId: 100,
+          subjectId: 1,
+          incorrectMeaningAnswers: 0,
+          incorrectReadingAnswers: 0,
+        },
+        {
+          assignmentId: 101,
+          subjectId: 2,
+          incorrectMeaningAnswers: 1,
+          incorrectReadingAnswers: 1,
+        },
+      ]);
+
+      let pendingCount = await getPendingReviewCount();
+      expect(pendingCount).toBe(2);
+
+      await clearPendingReviews();
+
+      pendingCount = await getPendingReviewCount();
       expect(pendingCount).toBe(0);
     });
   });

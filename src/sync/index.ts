@@ -7,6 +7,9 @@ export {
   completeLessons,
   syncPendingLessons,
   clearPendingLessons,
+  submitReviews,
+  syncPendingReviews,
+  clearPendingReviews,
   type SyncProgressCallback,
   type SyncSubjectsOptions,
   type SyncSubjectsResult,
@@ -16,4 +19,8 @@ export {
   type CompleteLessonsOptions,
   type CompleteLessonsResult,
   type SyncPendingLessonsResult,
+  type ReviewToSubmit,
+  type SubmitReviewsOptions,
+  type SubmitReviewsResult,
+  type SyncPendingReviewsResult,
 } from './syncService';
