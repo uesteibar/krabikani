@@ -16,3 +16,10 @@ export {
   processRomajiInput,
   type RomajiInputState,
 } from './romajiToHiragana';
+
+export {
+  validateMeaningAnswer,
+  validateReadingAnswer,
+  type MeaningValidationResult,
+  type ReadingValidationResult,
+} from './answerValidation';

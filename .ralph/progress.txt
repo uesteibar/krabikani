@@ -386,3 +386,30 @@
   - processRomajiInput recalculates entire string on each call - handles backspace naturally
 
 ---
+
+## 2026-01-25 - US-014: Answer Validation Logic
+- What was implemented:
+  - validateMeaningAnswer() function for meaning validation
+    - Case-insensitive comparison
+    - Whitespace trimming (leading, trailing, and multiple internal spaces)
+    - Accepts all meanings with accepted_answer: true
+    - Handles auxiliary meanings (whitelist accepted, blacklist rejected)
+    - Returns matched meaning and flags (isAuxiliary, isBlacklisted)
+  - validateReadingAnswer() function for reading validation
+    - Exact hiragana match required
+    - Whitespace trimming
+    - Accepts all readings with accepted_answer: true
+    - Works with both Reading[] and KanjiReading[] types
+  - TypeScript types: MeaningValidationResult, ReadingValidationResult
+- Files changed:
+  - src/utils/answerValidation.ts (new - validation functions and types)
+  - src/utils/index.ts (updated - added exports for new module)
+  - __tests__/utils/answerValidation.test.ts (new - 55 comprehensive tests)
+- **Learnings for future iterations:**
+  - Meaning validation uses Meaning type with { meaning, primary, accepted_answer } structure
+  - AuxiliaryMeaning has { meaning, type: 'whitelist' | 'blacklist' } structure
+  - Blacklist check should happen before whitelist to reject blacklisted answers first
+  - Reading validation uses exact match - no case transformation needed for hiragana
+  - KanjiReading extends Reading with additional type field (onyomi/kunyomi/nanori)
+
+---
