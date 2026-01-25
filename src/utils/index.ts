@@ -60,3 +60,9 @@ export {
   parseCharacterImages,
   type CharacterImage,
 } from './imageCache';
+
+export {
+  damerauLevenshtein,
+  isWithinDistance,
+  type DistanceOptions,
+} from './stringDistance';
