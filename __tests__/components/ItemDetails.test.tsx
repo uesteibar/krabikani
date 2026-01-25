@@ -1,4 +1,5 @@
 import React from 'react';
+import { View } from 'react-native';
 import { render } from '@testing-library/react-native';
 
 import { ItemDetails } from '../../src/components/ItemDetails';
@@ -476,7 +477,7 @@ describe('ItemDetails', () => {
 
       // Count divider elements by looking for views that are positioned between sections
       // Dividers have height: 1 which is applied as a style
-      const allViews = UNSAFE_root.findAllByType('View');
+      const allViews = UNSAFE_root.findAllByType(View);
       const dividerViews = allViews.filter(view => {
         const style = view.props.style;
         if (style && typeof style === 'object' && !Array.isArray(style)) {

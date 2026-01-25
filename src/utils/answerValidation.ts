@@ -2,7 +2,7 @@
  * Answer validation utilities for WaniKani lessons and reviews.
  *
  * Handles validation of user answers for both meaning and reading questions:
- * - Meaning: case-insensitive, whitespace-trimmed, supports multiple meanings and auxiliary meanings
+ * - Meaning: case-insensitive, whitespace-trimmed, supports multiple meanings, auxiliary meanings, and user synonyms
  * - Reading: exact hiragana match, whitespace-trimmed, supports multiple readings
  */
 
@@ -23,6 +23,8 @@ export interface MeaningValidationResult {
   isBlacklisted?: boolean;
   /** True if the answer was accepted via typo forgiveness (fuzzy match) */
   isFuzzyMatch?: boolean;
+  /** True if the answer matched a user-defined synonym */
+  isUserSynonym?: boolean;
 }
 
 export interface ReadingValidationResult {
@@ -79,6 +81,7 @@ function getAllowedEditDistance(wordLength: number): number {
  * - Multiple internal spaces normalized to single space
  * - Accepts all meanings with accepted_answer: true
  * - Accepts auxiliary meanings with type: 'whitelist' (marked as auxiliary)
+ * - Accepts user-defined synonyms (marked as isUserSynonym)
  * - Rejects auxiliary meanings with type: 'blacklist' (marked as blacklisted)
  * - Typo forgiveness: accepts answers within edit distance threshold:
  *   - 1-3 chars: exact match only
@@ -88,12 +91,14 @@ function getAllowedEditDistance(wordLength: number): number {
  * @param answer - The user's answer
  * @param meanings - Array of valid meanings from WaniKani
  * @param auxiliaryMeanings - Optional array of auxiliary meanings (whitelist/blacklist)
+ * @param userSynonyms - Optional array of user-defined synonym strings
  * @returns Validation result with matched meaning info
  */
 export function validateMeaningAnswer(
   answer: string,
   meanings: Meaning[],
   auxiliaryMeanings: AuxiliaryMeaning[] = [],
+  userSynonyms: string[] = [],
 ): MeaningValidationResult {
   const normalizedAnswer = normalizeMeaningAnswer(answer);
 
@@ -120,6 +125,13 @@ export function validateMeaningAnswer(
   for (const aux of auxiliaryMeanings) {
     if (aux.type === 'whitelist' && normalizeMeaningAnswer(aux.meaning) === normalizedAnswer) {
       return { isCorrect: true, isAuxiliary: true, matchedMeaning: aux.meaning };
+    }
+  }
+
+  // Check against user-defined synonyms - exact match
+  for (const synonym of userSynonyms) {
+    if (normalizeMeaningAnswer(synonym) === normalizedAnswer) {
+      return { isCorrect: true, isUserSynonym: true, matchedMeaning: synonym };
     }
   }
 
@@ -150,6 +162,17 @@ export function validateMeaningAnswer(
         if (distance <= allowedDistance) {
           return { isCorrect: true, isAuxiliary: true, matchedMeaning: aux.meaning, isFuzzyMatch: true };
         }
+      }
+    }
+
+    // Check user synonyms with fuzzy matching
+    for (const synonym of userSynonyms) {
+      const normalizedSynonym = normalizeMeaningAnswer(synonym);
+      const distance = damerauLevenshtein(normalizedAnswer, normalizedSynonym, {
+        maxDistance: allowedDistance,
+      });
+      if (distance <= allowedDistance) {
+        return { isCorrect: true, isUserSynonym: true, matchedMeaning: synonym, isFuzzyMatch: true };
       }
     }
   }

@@ -593,6 +593,138 @@ describe('answerValidation', () => {
         });
       });
     });
+
+    describe('user synonyms', () => {
+      const meanings: Meaning[] = [
+        { meaning: 'dog', primary: true, accepted_answer: true },
+      ];
+
+      describe('exact matching', () => {
+        it('accepts exact match on user synonym', () => {
+          const userSynonyms = ['puppy', 'pooch'];
+          const result = validateMeaningAnswer('puppy', meanings, [], userSynonyms);
+          expect(result.isCorrect).toBe(true);
+          expect(result.isUserSynonym).toBe(true);
+          expect(result.matchedMeaning).toBe('puppy');
+        });
+
+        it('accepts all user synonyms', () => {
+          const userSynonyms = ['puppy', 'pooch'];
+          const result = validateMeaningAnswer('pooch', meanings, [], userSynonyms);
+          expect(result.isCorrect).toBe(true);
+          expect(result.isUserSynonym).toBe(true);
+          expect(result.matchedMeaning).toBe('pooch');
+        });
+
+        it('is case insensitive for user synonyms', () => {
+          const userSynonyms = ['puppy'];
+          const result = validateMeaningAnswer('PUPPY', meanings, [], userSynonyms);
+          expect(result.isCorrect).toBe(true);
+          expect(result.isUserSynonym).toBe(true);
+        });
+
+        it('trims whitespace for user synonyms', () => {
+          const userSynonyms = ['puppy'];
+          const result = validateMeaningAnswer('  puppy  ', meanings, [], userSynonyms);
+          expect(result.isCorrect).toBe(true);
+          expect(result.isUserSynonym).toBe(true);
+        });
+      });
+
+      describe('fuzzy matching', () => {
+        it('accepts fuzzy match on user synonym', () => {
+          const userSynonyms = ['canine'];
+          const result = validateMeaningAnswer('cannie', meanings, [], userSynonyms);
+          expect(result.isCorrect).toBe(true);
+          expect(result.isUserSynonym).toBe(true);
+          expect(result.isFuzzyMatch).toBe(true);
+          expect(result.matchedMeaning).toBe('canine');
+        });
+
+        it('requires exact match for short user synonyms (3 chars)', () => {
+          const userSynonyms = ['pup'];
+          const result = validateMeaningAnswer('pub', meanings, [], userSynonyms);
+          expect(result.isCorrect).toBe(false);
+        });
+      });
+
+      describe('priority order', () => {
+        it('primary meaning match takes priority over user synonym', () => {
+          const userSynonyms = ['hound'];
+          const result = validateMeaningAnswer('dog', meanings, [], userSynonyms);
+          expect(result.isCorrect).toBe(true);
+          expect(result.isUserSynonym).toBeUndefined();
+          expect(result.matchedMeaning).toBe('dog');
+        });
+
+        it('auxiliary whitelist takes priority over user synonym', () => {
+          const auxiliaryMeanings: AuxiliaryMeaning[] = [
+            { meaning: 'hound', type: 'whitelist' },
+          ];
+          const userSynonyms = ['hound'];
+          const result = validateMeaningAnswer('hound', meanings, auxiliaryMeanings, userSynonyms);
+          expect(result.isCorrect).toBe(true);
+          expect(result.isAuxiliary).toBe(true);
+          expect(result.isUserSynonym).toBeUndefined();
+        });
+
+        it('blacklist takes priority over user synonym', () => {
+          const auxiliaryMeanings: AuxiliaryMeaning[] = [
+            { meaning: 'wolf', type: 'blacklist' },
+          ];
+          const userSynonyms = ['wolf'];
+          const result = validateMeaningAnswer('wolf', meanings, auxiliaryMeanings, userSynonyms);
+          expect(result.isCorrect).toBe(false);
+          expect(result.isBlacklisted).toBe(true);
+        });
+      });
+
+      describe('combined with other meanings', () => {
+        it('works with both auxiliary and user synonyms', () => {
+          const auxiliaryMeanings: AuxiliaryMeaning[] = [
+            { meaning: 'hound', type: 'whitelist' },
+          ];
+          const userSynonyms = ['pooch'];
+
+          const result1 = validateMeaningAnswer('hound', meanings, auxiliaryMeanings, userSynonyms);
+          expect(result1.isCorrect).toBe(true);
+          expect(result1.isAuxiliary).toBe(true);
+
+          const result2 = validateMeaningAnswer('pooch', meanings, auxiliaryMeanings, userSynonyms);
+          expect(result2.isCorrect).toBe(true);
+          expect(result2.isUserSynonym).toBe(true);
+        });
+
+        it('handles empty user synonyms array', () => {
+          const result = validateMeaningAnswer('dog', meanings, [], []);
+          expect(result.isCorrect).toBe(true);
+          expect(result.isUserSynonym).toBeUndefined();
+        });
+      });
+
+      describe('return value structure', () => {
+        it('returns correct structure for user synonym match', () => {
+          const userSynonyms = ['puppy'];
+          const result = validateMeaningAnswer('puppy', meanings, [], userSynonyms);
+          expect(result).toEqual<MeaningValidationResult>({
+            isCorrect: true,
+            isUserSynonym: true,
+            matchedMeaning: 'puppy',
+          });
+        });
+
+        it('returns correct structure for fuzzy user synonym match', () => {
+          const userSynonyms = ['canine'];
+          const result = validateMeaningAnswer('cannie', meanings, [], userSynonyms);
+          expect(result).toEqual<MeaningValidationResult>({
+            isCorrect: true,
+            isUserSynonym: true,
+            matchedMeaning: 'canine',
+            isFuzzyMatch: true,
+          });
+        });
+      });
+    });
   });
 
   // ============================================

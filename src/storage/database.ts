@@ -93,6 +93,49 @@ const CREATE_PENDING_LESSONS_TABLE = `
 `;
 
 /**
+ * User synonyms table stores custom synonyms that have been synced to WaniKani.
+ * These are meaning synonyms that the user has added for subjects.
+ */
+const CREATE_USER_SYNONYMS_TABLE = `
+  CREATE TABLE IF NOT EXISTS user_synonyms (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    subject_id INTEGER NOT NULL,
+    synonym TEXT NOT NULL,
+    synced_at TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(subject_id, synonym)
+  )
+`;
+
+/**
+ * Pending synonyms table stores synonyms that need to be synced to WaniKani.
+ * Once synced, they are moved to user_synonyms table.
+ */
+const CREATE_PENDING_SYNONYMS_TABLE = `
+  CREATE TABLE IF NOT EXISTS pending_synonyms (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    subject_id INTEGER NOT NULL,
+    synonym TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(subject_id, synonym)
+  )
+`;
+
+/**
+ * Index on user_synonyms for fast lookup by subject_id.
+ */
+const CREATE_USER_SYNONYMS_SUBJECT_INDEX = `
+  CREATE INDEX IF NOT EXISTS idx_user_synonyms_subject_id ON user_synonyms(subject_id)
+`;
+
+/**
+ * Index on pending_synonyms for fast lookup by subject_id.
+ */
+const CREATE_PENDING_SYNONYMS_SUBJECT_INDEX = `
+  CREATE INDEX IF NOT EXISTS idx_pending_synonyms_subject_id ON pending_synonyms(subject_id)
+`;
+
+/**
  * Index on assignments for fast lookup by subject_id and available_at.
  */
 const CREATE_ASSIGNMENTS_SUBJECT_INDEX = `
@@ -121,10 +164,14 @@ const SCHEMA_STATEMENTS = [
   CREATE_PENDING_REVIEWS_TABLE,
   CREATE_PENDING_LESSONS_TABLE,
   CREATE_SYNC_STATUS_TABLE,
+  CREATE_USER_SYNONYMS_TABLE,
+  CREATE_PENDING_SYNONYMS_TABLE,
   CREATE_ASSIGNMENTS_SUBJECT_INDEX,
   CREATE_ASSIGNMENTS_AVAILABLE_INDEX,
   CREATE_SUBJECTS_LEVEL_INDEX,
   CREATE_SUBJECTS_TYPE_INDEX,
+  CREATE_USER_SYNONYMS_SUBJECT_INDEX,
+  CREATE_PENDING_SYNONYMS_SUBJECT_INDEX,
 ];
 
 // ============================================
@@ -181,6 +228,21 @@ export interface DatabasePendingLesson {
   assignment_id: number;
   subject_id: number;
   started_at: string;
+  created_at: string;
+}
+
+export interface DatabaseUserSynonym {
+  id: number;
+  subject_id: number;
+  synonym: string;
+  synced_at: string | null;
+  created_at: string;
+}
+
+export interface DatabasePendingSynonym {
+  id: number;
+  subject_id: number;
+  synonym: string;
   created_at: string;
 }
 
@@ -281,10 +343,14 @@ export const SCHEMA = {
   CREATE_PENDING_REVIEWS_TABLE,
   CREATE_PENDING_LESSONS_TABLE,
   CREATE_SYNC_STATUS_TABLE,
+  CREATE_USER_SYNONYMS_TABLE,
+  CREATE_PENDING_SYNONYMS_TABLE,
   CREATE_ASSIGNMENTS_SUBJECT_INDEX,
   CREATE_ASSIGNMENTS_AVAILABLE_INDEX,
   CREATE_SUBJECTS_LEVEL_INDEX,
   CREATE_SUBJECTS_TYPE_INDEX,
+  CREATE_USER_SYNONYMS_SUBJECT_INDEX,
+  CREATE_PENDING_SYNONYMS_SUBJECT_INDEX,
 };
 
 // ============================================
@@ -829,6 +895,214 @@ export async function getPendingLessonCount(): Promise<number> {
 }
 
 // ============================================
+// User Synonym CRUD Operations
+// ============================================
+
+export interface UserSynonymInput {
+  subject_id: number;
+  synonym: string;
+  synced_at?: string | null;
+}
+
+/**
+ * Adds a user synonym.
+ * Uses INSERT OR REPLACE to handle duplicates.
+ * Returns the ID of the inserted/updated row.
+ */
+export async function addUserSynonym(synonym: UserSynonymInput): Promise<number> {
+  const result = await executeSql(
+    `INSERT OR REPLACE INTO user_synonyms (subject_id, synonym, synced_at)
+     VALUES (?, ?, ?)`,
+    [synonym.subject_id, synonym.synonym, synonym.synced_at ?? null],
+  );
+  return result.insertId ?? 0;
+}
+
+/**
+ * Retrieves a user synonym by ID.
+ */
+export async function getUserSynonymById(
+  id: number,
+): Promise<DatabaseUserSynonym | null> {
+  const result = await executeSql(
+    'SELECT * FROM user_synonyms WHERE id = ?',
+    [id],
+  );
+  if (result.rows.length === 0) {
+    return null;
+  }
+  return result.rows[0] as unknown as DatabaseUserSynonym;
+}
+
+/**
+ * Retrieves all user synonyms for a subject.
+ */
+export async function getUserSynonymsBySubjectId(
+  subjectId: number,
+): Promise<DatabaseUserSynonym[]> {
+  const result = await executeSql(
+    'SELECT * FROM user_synonyms WHERE subject_id = ? ORDER BY created_at',
+    [subjectId],
+  );
+  return result.rows as unknown as DatabaseUserSynonym[];
+}
+
+/**
+ * Retrieves all user synonyms.
+ */
+export async function getAllUserSynonyms(): Promise<DatabaseUserSynonym[]> {
+  const result = await executeSql(
+    'SELECT * FROM user_synonyms ORDER BY created_at',
+    [],
+  );
+  return result.rows as unknown as DatabaseUserSynonym[];
+}
+
+/**
+ * Marks a user synonym as synced by updating synced_at timestamp.
+ */
+export async function markSynonymSynced(
+  subjectId: number,
+  synonym: string,
+): Promise<void> {
+  await executeSql(
+    `UPDATE user_synonyms SET synced_at = CURRENT_TIMESTAMP
+     WHERE subject_id = ? AND synonym = ?`,
+    [subjectId, synonym],
+  );
+}
+
+/**
+ * Deletes a user synonym by ID.
+ */
+export async function deleteUserSynonym(id: number): Promise<void> {
+  await executeSql('DELETE FROM user_synonyms WHERE id = ?', [id]);
+}
+
+/**
+ * Deletes all user synonyms for a subject.
+ */
+export async function deleteUserSynonymsBySubjectId(
+  subjectId: number,
+): Promise<void> {
+  await executeSql('DELETE FROM user_synonyms WHERE subject_id = ?', [subjectId]);
+}
+
+/**
+ * Gets the count of user synonyms.
+ */
+export async function getUserSynonymCount(): Promise<number> {
+  const result = await executeSql(
+    'SELECT COUNT(*) as count FROM user_synonyms',
+    [],
+  );
+  return (result.rows[0] as { count: number }).count;
+}
+
+// ============================================
+// Pending Synonym CRUD Operations
+// ============================================
+
+export interface PendingSynonymInput {
+  subject_id: number;
+  synonym: string;
+}
+
+/**
+ * Inserts a pending synonym.
+ * Uses INSERT OR IGNORE to avoid duplicates.
+ * Returns the ID of the inserted row (0 if ignored).
+ */
+export async function insertPendingSynonym(
+  synonym: PendingSynonymInput,
+): Promise<number> {
+  const result = await executeSql(
+    `INSERT OR IGNORE INTO pending_synonyms (subject_id, synonym)
+     VALUES (?, ?)`,
+    [synonym.subject_id, synonym.synonym],
+  );
+  return result.insertId ?? 0;
+}
+
+/**
+ * Retrieves a pending synonym by ID.
+ */
+export async function getPendingSynonymById(
+  id: number,
+): Promise<DatabasePendingSynonym | null> {
+  const result = await executeSql(
+    'SELECT * FROM pending_synonyms WHERE id = ?',
+    [id],
+  );
+  if (result.rows.length === 0) {
+    return null;
+  }
+  return result.rows[0] as unknown as DatabasePendingSynonym;
+}
+
+/**
+ * Retrieves all pending synonyms.
+ */
+export async function getPendingSynonyms(): Promise<DatabasePendingSynonym[]> {
+  const result = await executeSql(
+    'SELECT * FROM pending_synonyms ORDER BY created_at',
+    [],
+  );
+  return result.rows as unknown as DatabasePendingSynonym[];
+}
+
+/**
+ * Retrieves all pending synonyms for a subject.
+ */
+export async function getPendingSynonymsBySubjectId(
+  subjectId: number,
+): Promise<DatabasePendingSynonym[]> {
+  const result = await executeSql(
+    'SELECT * FROM pending_synonyms WHERE subject_id = ? ORDER BY created_at',
+    [subjectId],
+  );
+  return result.rows as unknown as DatabasePendingSynonym[];
+}
+
+/**
+ * Deletes a pending synonym by ID.
+ */
+export async function deletePendingSynonym(id: number): Promise<void> {
+  await executeSql('DELETE FROM pending_synonyms WHERE id = ?', [id]);
+}
+
+/**
+ * Deletes a pending synonym by subject ID and synonym text.
+ */
+export async function deletePendingSynonymBySubjectAndSynonym(
+  subjectId: number,
+  synonym: string,
+): Promise<void> {
+  await executeSql(
+    'DELETE FROM pending_synonyms WHERE subject_id = ? AND synonym = ?',
+    [subjectId, synonym],
+  );
+}
+
+/**
+ * Deletes all pending synonyms.
+ */
+export async function deleteAllPendingSynonyms(): Promise<void> {
+  await executeSql('DELETE FROM pending_synonyms', []);
+}
+
+/**
+ * Gets the count of pending synonyms.
+ */
+export async function getPendingSynonymCount(): Promise<number> {
+  const result = await executeSql(
+    'SELECT COUNT(*) as count FROM pending_synonyms',
+    [],
+  );
+  return (result.rows[0] as { count: number }).count;
+}
+
+// ============================================
 // Sync Status CRUD Operations
 // ============================================
 
@@ -922,13 +1196,15 @@ export async function resetSyncStatus(): Promise<void> {
 /**
  * Clears all user data from the database.
  * This removes all subjects, assignments, pending reviews, pending lessons,
- * and resets sync status. Used when logging out or changing API keys.
+ * synonyms, and resets sync status. Used when logging out or changing API keys.
  */
 export async function clearAllData(): Promise<void> {
   const database = getDatabase();
   await database.transaction(async tx => {
     await tx.execute('DELETE FROM pending_reviews');
     await tx.execute('DELETE FROM pending_lessons');
+    await tx.execute('DELETE FROM pending_synonyms');
+    await tx.execute('DELETE FROM user_synonyms');
     await tx.execute('DELETE FROM assignments');
     await tx.execute('DELETE FROM subjects');
     await tx.execute(
@@ -965,6 +1241,16 @@ const MIGRATIONS: Migration[] = [
     version: 3,
     description: 'Add user_level column to sync_status table',
     up: ['ALTER TABLE sync_status ADD COLUMN user_level INTEGER'],
+  },
+  {
+    version: 4,
+    description: 'Add user_synonyms and pending_synonyms tables',
+    up: [
+      CREATE_USER_SYNONYMS_TABLE,
+      CREATE_PENDING_SYNONYMS_TABLE,
+      CREATE_USER_SYNONYMS_SUBJECT_INDEX,
+      CREATE_PENDING_SYNONYMS_SUBJECT_INDEX,
+    ],
   },
 ];
 
