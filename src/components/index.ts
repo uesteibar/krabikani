@@ -29,3 +29,14 @@ export {
   type LessonItem,
   type ComponentRadical,
 } from './LessonBatch';
+
+export {
+  LessonQuiz,
+  generateQuizQuestions,
+  shuffleArray,
+  type LessonQuizProps,
+  type QuizItem,
+  type QuizQuestion,
+  type QuestionType,
+  type AnswerResult,
+} from './LessonQuiz';
