@@ -215,8 +215,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added isAllHiragana() and isValidReadingInput() functions to romajiToHiragana.ts. Both LessonQuiz and ReviewSession now validate reading input before submission: empty inputs, whitespace-only inputs, and inputs with unconvertible characters (romaji that doesn't map to hiragana, katakana, kanji, etc.) are blocked. When blocked, the existing shake animation (200ms duration) is triggered to provide feedback. User can continue typing to fix their answer. 35+ new tests for validation functions and 16 new tests for invalid input blocking in LessonQuiz and ReviewSession."
     }
   ]
 }

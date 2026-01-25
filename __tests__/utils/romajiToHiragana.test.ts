@@ -1,6 +1,8 @@
 import {
   romajiToHiragana,
   processRomajiInput,
+  isAllHiragana,
+  isValidReadingInput,
   type RomajiInputState,
 } from '../../src/utils/romajiToHiragana';
 
@@ -764,6 +766,138 @@ describe('processRomajiInput', () => {
       const state = processRomajiInput('nihonno', false);
       expect(state.hiragana).toBe('にほんの');
       expect(state.pending).toBe('');
+    });
+  });
+});
+
+describe('isAllHiragana', () => {
+  describe('valid hiragana', () => {
+    it('returns true for single hiragana character', () => {
+      expect(isAllHiragana('あ')).toBe(true);
+    });
+
+    it('returns true for multiple hiragana characters', () => {
+      expect(isAllHiragana('わたし')).toBe(true);
+    });
+
+    it('returns true for small kana', () => {
+      expect(isAllHiragana('きゃ')).toBe(true);
+      expect(isAllHiragana('っ')).toBe(true);
+    });
+
+    it('returns true for ん', () => {
+      expect(isAllHiragana('ん')).toBe(true);
+      expect(isAllHiragana('にほん')).toBe(true);
+    });
+  });
+
+  describe('invalid input', () => {
+    it('returns false for empty string', () => {
+      expect(isAllHiragana('')).toBe(false);
+    });
+
+    it('returns false for romaji characters', () => {
+      expect(isAllHiragana('a')).toBe(false);
+      expect(isAllHiragana('watashi')).toBe(false);
+    });
+
+    it('returns false for mixed hiragana and romaji', () => {
+      expect(isAllHiragana('あa')).toBe(false);
+      expect(isAllHiragana('aあ')).toBe(false);
+      expect(isAllHiragana('わたしka')).toBe(false);
+    });
+
+    it('returns false for katakana', () => {
+      expect(isAllHiragana('ア')).toBe(false);
+      expect(isAllHiragana('ワタシ')).toBe(false);
+    });
+
+    it('returns false for mixed hiragana and katakana', () => {
+      expect(isAllHiragana('あア')).toBe(false);
+    });
+
+    it('returns false for kanji', () => {
+      expect(isAllHiragana('日')).toBe(false);
+      expect(isAllHiragana('日本')).toBe(false);
+    });
+
+    it('returns false for numbers', () => {
+      expect(isAllHiragana('1')).toBe(false);
+      expect(isAllHiragana('123')).toBe(false);
+    });
+
+    it('returns false for special characters', () => {
+      expect(isAllHiragana('!')).toBe(false);
+      expect(isAllHiragana('@')).toBe(false);
+    });
+
+    it('returns false for whitespace', () => {
+      expect(isAllHiragana(' ')).toBe(false);
+      expect(isAllHiragana('あ い')).toBe(false);
+    });
+  });
+});
+
+describe('isValidReadingInput', () => {
+  describe('valid reading input', () => {
+    it('returns true for valid romaji that converts to hiragana', () => {
+      expect(isValidReadingInput('a')).toBe(true);
+      expect(isValidReadingInput('watashi')).toBe(true);
+      expect(isValidReadingInput('nihon')).toBe(true);
+    });
+
+    it('returns true for hiragana input directly', () => {
+      expect(isValidReadingInput('あ')).toBe(true);
+      expect(isValidReadingInput('わたし')).toBe(true);
+    });
+
+    it('returns true for romaji with double consonants', () => {
+      expect(isValidReadingInput('gakkou')).toBe(true);
+      expect(isValidReadingInput('kitte')).toBe(true);
+    });
+
+    it('returns true for romaji with youon', () => {
+      expect(isValidReadingInput('kyou')).toBe(true);
+      expect(isValidReadingInput('ryokou')).toBe(true);
+    });
+  });
+
+  describe('invalid reading input', () => {
+    it('returns false for empty string', () => {
+      expect(isValidReadingInput('')).toBe(false);
+    });
+
+    it('returns false for whitespace only', () => {
+      expect(isValidReadingInput(' ')).toBe(false);
+      expect(isValidReadingInput('   ')).toBe(false);
+    });
+
+    it('returns false for unconvertible romaji', () => {
+      expect(isValidReadingInput('xyz')).toBe(false);
+      expect(isValidReadingInput('hello')).toBe(false);
+    });
+
+    it('returns false for partial romaji that cannot fully convert', () => {
+      expect(isValidReadingInput('ky')).toBe(false);
+      expect(isValidReadingInput('sh')).toBe(false);
+    });
+
+    it('returns false for katakana', () => {
+      expect(isValidReadingInput('ワタシ')).toBe(false);
+    });
+
+    it('returns false for kanji', () => {
+      expect(isValidReadingInput('日本')).toBe(false);
+    });
+
+    it('returns false for mixed valid and invalid characters', () => {
+      expect(isValidReadingInput('あx')).toBe(false);
+      expect(isValidReadingInput('watashix')).toBe(false);
+    });
+
+    it('returns false for numbers', () => {
+      expect(isValidReadingInput('123')).toBe(false);
+      expect(isValidReadingInput('a1')).toBe(false);
     });
   });
 });

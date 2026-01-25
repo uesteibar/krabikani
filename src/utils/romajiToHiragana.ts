@@ -222,6 +222,32 @@ function isHiragana(char: string): boolean {
 }
 
 /**
+ * Checks if every character in a string is hiragana.
+ * Returns false for empty strings.
+ */
+export function isAllHiragana(text: string): boolean {
+  if (text.length === 0) return false;
+  for (let i = 0; i < text.length; i++) {
+    if (!isHiragana(text[i])) return false;
+  }
+  return true;
+}
+
+/**
+ * Validates reading input for submission.
+ * Returns true if the input is non-empty and contains only valid hiragana
+ * after romaji conversion.
+ *
+ * @param input The raw romaji input to validate
+ * @returns true if the converted input is valid for submission
+ */
+export function isValidReadingInput(input: string): boolean {
+  if (input.trim().length === 0) return false;
+  const converted = romajiToHiragana(input);
+  return isAllHiragana(converted);
+}
+
+/**
  * Converts a complete romaji string to hiragana.
  * This handles the full conversion including trailing 'n' → 'ん'.
  */

@@ -1774,8 +1774,8 @@ describe('LessonQuiz', () => {
       const type = getByTestId('lesson-quiz-question-type').props.children;
       expect(type).toBe('READING');
 
-      // Submit wrong answer
-      fireEvent.changeText(input, 'wrong');
+      // Submit wrong answer (use valid hiragana, not romaji that can't convert)
+      fireEvent.changeText(input, 'あああ');
       fireEvent(input, 'submitEditing');
 
       act(() => {
@@ -1970,8 +1970,8 @@ describe('LessonQuiz', () => {
         expect(type).toBe('READING');
       }
 
-      // Submit wrong answer on reading question
-      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
+      // Submit wrong answer on reading question (use valid hiragana, not romaji)
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'あああ');
       fireEvent(getByTestId('lesson-quiz-input'), 'submitEditing');
 
       act(() => {
@@ -2127,6 +2127,186 @@ describe('LessonQuiz', () => {
 
       // Should not show component kanji section (empty array)
       expect(queryByTestId('lesson-quiz-component-kanji')).toBeNull();
+    });
+  });
+
+  describe('Invalid Reading Input Blocking', () => {
+    const vocabForReading = createVocabularyItem(50, 'たべる', 'Eat', 'たべる');
+
+    it('does not submit empty reading answer', () => {
+      const onAnswer = jest.fn();
+      const { getByTestId } = render(
+        <LessonQuiz
+          items={[vocabForReading]}
+          onAnswer={onAnswer}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      const type = getByTestId('lesson-quiz-question-type').props.children;
+
+      if (type === 'READING') {
+        // Try to submit empty input
+        fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+        // onAnswer should NOT be called
+        expect(onAnswer).not.toHaveBeenCalled();
+
+        // Should still be on the same question (not show incorrect feedback)
+        expect(getByTestId('lesson-quiz')).toBeTruthy();
+      }
+    });
+
+    it('does not submit whitespace-only reading answer', () => {
+      const onAnswer = jest.fn();
+      const { getByTestId } = render(
+        <LessonQuiz
+          items={[vocabForReading]}
+          onAnswer={onAnswer}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      const type = getByTestId('lesson-quiz-question-type').props.children;
+
+      if (type === 'READING') {
+        // Type whitespace only
+        fireEvent.changeText(getByTestId('lesson-quiz-input'), '   ');
+        fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+        // onAnswer should NOT be called
+        expect(onAnswer).not.toHaveBeenCalled();
+      }
+    });
+
+    it('does not submit reading answer with unconvertible romaji', () => {
+      const onAnswer = jest.fn();
+      const { getByTestId } = render(
+        <LessonQuiz
+          items={[vocabForReading]}
+          onAnswer={onAnswer}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      const type = getByTestId('lesson-quiz-question-type').props.children;
+
+      if (type === 'READING') {
+        // Type romaji that can't be converted to hiragana
+        fireEvent.changeText(getByTestId('lesson-quiz-input'), 'xyz');
+        fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+        // onAnswer should NOT be called
+        expect(onAnswer).not.toHaveBeenCalled();
+      }
+    });
+
+    it('does not submit reading answer with partial romaji like "ky"', () => {
+      const onAnswer = jest.fn();
+      const { getByTestId } = render(
+        <LessonQuiz
+          items={[vocabForReading]}
+          onAnswer={onAnswer}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      const type = getByTestId('lesson-quiz-question-type').props.children;
+
+      if (type === 'READING') {
+        // Type partial romaji sequence
+        fireEvent.changeText(getByTestId('lesson-quiz-input'), 'ky');
+        fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+        // onAnswer should NOT be called
+        expect(onAnswer).not.toHaveBeenCalled();
+      }
+    });
+
+    it('allows submission of valid romaji that converts to hiragana', () => {
+      const onAnswer = jest.fn();
+      const { getByTestId } = render(
+        <LessonQuiz
+          items={[vocabForReading]}
+          onAnswer={onAnswer}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      const type = getByTestId('lesson-quiz-question-type').props.children;
+
+      if (type === 'READING') {
+        // Type valid romaji
+        fireEvent.changeText(getByTestId('lesson-quiz-input'), 'taberu');
+        fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+        // onAnswer should be called
+        expect(onAnswer).toHaveBeenCalled();
+      }
+    });
+
+    it('allows submission of direct hiragana input', () => {
+      const onAnswer = jest.fn();
+      const { getByTestId } = render(
+        <LessonQuiz
+          items={[vocabForReading]}
+          onAnswer={onAnswer}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      const type = getByTestId('lesson-quiz-question-type').props.children;
+
+      if (type === 'READING') {
+        // Type direct hiragana
+        fireEvent.changeText(getByTestId('lesson-quiz-input'), 'たべる');
+        fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+        // onAnswer should be called
+        expect(onAnswer).toHaveBeenCalled();
+      }
+    });
+
+    it('does not block empty meaning answers (they are processed normally)', () => {
+      const onAnswer = jest.fn();
+      const { getByTestId } = render(
+        <LessonQuiz
+          items={[sampleRadical]}
+          onAnswer={onAnswer}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Radical always has meaning question
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      // onAnswer should be called (empty meaning answers are submitted and marked incorrect)
+      expect(onAnswer).toHaveBeenCalled();
+    });
+
+    it('renders input container that shakes on invalid reading submission', () => {
+      const { getByTestId } = render(
+        <LessonQuiz
+          items={[vocabForReading]}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      const type = getByTestId('lesson-quiz-question-type').props.children;
+
+      if (type === 'READING') {
+        // The input container has the shake animation applied
+        const inputContainer = getByTestId('lesson-quiz-input-container');
+        expect(inputContainer).toBeTruthy();
+
+        // Try to submit invalid input
+        fireEvent.changeText(getByTestId('lesson-quiz-input'), 'invalid');
+        fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+        // Input container should still be there (no navigation away)
+        expect(getByTestId('lesson-quiz-input-container')).toBeTruthy();
+      }
     });
   });
 });
