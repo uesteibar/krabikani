@@ -39,6 +39,30 @@
 
 ---
 
+## 2026-01-25 - US-004: Handle sync errors with retry option
+- What was implemented:
+  - Added syncError state to SettingsScreen to track sync error messages
+  - Refactored sync logic into performSync() function using useCallback, can be reused for retry
+  - Added handleRetry() callback that calls performSync with the saved API key
+  - Error UI shows "Sync Failed" title, error message from caught exception, and Retry button
+  - No skip option - user must retry until sync succeeds
+  - Error message extracted from Error.message or defaults to "An unknown error occurred"
+  - When retry is pressed, transitions back to syncing state (clearing error)
+  - API key remains saved even if sync fails (saveApiKey happens before performSync)
+- Files changed:
+  - src/screens/SettingsScreen.tsx (added syncError state, performSync function, handleRetry, error UI with retry button, styles)
+  - __tests__/screens/SettingsScreen.test.tsx (added 9 tests in "Sync error handling" describe block)
+  - .ralph/prd.json (marked US-004 as passes: true)
+  - .ralph/progress.txt (added this entry)
+- **Learnings for future iterations:**
+  - Test IDs for error UI: sync-error-view, sync-error-title, sync-error-message, retry-button
+  - Theme colors: COLORS.feedback.incorrect for error title (not status.incorrect)
+  - FONT_SIZES uses xs, sm, base, lg, xl, xxl, xxxl - no 'md' (use 'base' instead)
+  - To test retry, mock function to reject first, then resolve: mockFn.mockRejectedValueOnce(...).mockResolvedValueOnce(...)
+  - SettingsScreenState type now includes 'syncError' state
+
+---
+
 ## 2026-01-25 - US-003: Navigate to Home after successful sync
 - What was implemented:
   - Added useNavigation hook with typed NativeStackNavigationProp to SettingsScreen

@@ -670,4 +670,313 @@ describe('SettingsScreen', () => {
       expect(queryByTestId('api-key-input')).toBeNull();
     });
   });
+
+  describe('Sync error handling', () => {
+    it('should show error UI when sync fails', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockWanikaniApi.validateApiKey.mockResolvedValue({
+        success: true,
+        user: { id: 1, username: 'testuser', level: 10 },
+      });
+      mockSyncService.getUserLevel.mockRejectedValue(
+        new Error('Network request failed'),
+      );
+
+      const { getByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('api-key-input'), 'valid-api-key');
+      fireEvent.press(getByTestId('save-button'));
+
+      // Should show error UI
+      await waitFor(() => {
+        expect(getByTestId('sync-error-view')).toBeTruthy();
+      });
+
+      expect(getByTestId('sync-error-title').props.children).toBe('Sync Failed');
+      expect(getByTestId('sync-error-message').props.children).toBe(
+        'Network request failed',
+      );
+      expect(getByTestId('retry-button')).toBeTruthy();
+    });
+
+    it('should show error UI when syncSubjects fails', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockWanikaniApi.validateApiKey.mockResolvedValue({
+        success: true,
+        user: { id: 1, username: 'testuser', level: 10 },
+      });
+      mockSyncService.getUserLevel.mockResolvedValue(10);
+      mockSyncService.syncSubjects.mockRejectedValue(
+        new Error('Failed to sync subjects'),
+      );
+
+      const { getByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('api-key-input'), 'valid-api-key');
+      fireEvent.press(getByTestId('save-button'));
+
+      await waitFor(() => {
+        expect(getByTestId('sync-error-view')).toBeTruthy();
+      });
+
+      expect(getByTestId('sync-error-message').props.children).toBe(
+        'Failed to sync subjects',
+      );
+    });
+
+    it('should show error UI when syncAssignments fails', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockWanikaniApi.validateApiKey.mockResolvedValue({
+        success: true,
+        user: { id: 1, username: 'testuser', level: 10 },
+      });
+      mockSyncService.getUserLevel.mockResolvedValue(10);
+      mockSyncService.syncSubjects.mockResolvedValue({
+        success: true,
+        syncedCount: 100,
+      });
+      mockSyncService.syncAssignments.mockRejectedValue(
+        new Error('Failed to sync assignments'),
+      );
+
+      const { getByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('api-key-input'), 'valid-api-key');
+      fireEvent.press(getByTestId('save-button'));
+
+      await waitFor(() => {
+        expect(getByTestId('sync-error-view')).toBeTruthy();
+      });
+
+      expect(getByTestId('sync-error-message').props.children).toBe(
+        'Failed to sync assignments',
+      );
+    });
+
+    it('should show generic error message for non-Error exceptions', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockWanikaniApi.validateApiKey.mockResolvedValue({
+        success: true,
+        user: { id: 1, username: 'testuser', level: 10 },
+      });
+      mockSyncService.getUserLevel.mockRejectedValue('string error');
+
+      const { getByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('api-key-input'), 'valid-api-key');
+      fireEvent.press(getByTestId('save-button'));
+
+      await waitFor(() => {
+        expect(getByTestId('sync-error-view')).toBeTruthy();
+      });
+
+      expect(getByTestId('sync-error-message').props.children).toBe(
+        'An unknown error occurred',
+      );
+    });
+
+    it('should retry sync when retry button is pressed', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockWanikaniApi.validateApiKey.mockResolvedValue({
+        success: true,
+        user: { id: 1, username: 'testuser', level: 10 },
+      });
+      // First call fails, second succeeds
+      mockSyncService.getUserLevel
+        .mockRejectedValueOnce(new Error('Network error'))
+        .mockResolvedValueOnce(10);
+      mockSyncService.syncSubjects.mockResolvedValue({
+        success: true,
+        syncedCount: 100,
+      });
+      mockSyncService.syncAssignments.mockResolvedValue({
+        success: true,
+        syncedCount: 50,
+      });
+
+      const { getByTestId, queryByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('api-key-input'), 'valid-api-key');
+      fireEvent.press(getByTestId('save-button'));
+
+      // Should show error UI first
+      await waitFor(() => {
+        expect(getByTestId('sync-error-view')).toBeTruthy();
+      });
+
+      // Press retry
+      fireEvent.press(getByTestId('retry-button'));
+
+      // Should navigate to Home after successful retry
+      await waitFor(() => {
+        expect(getByTestId('home-screen')).toBeTruthy();
+      });
+
+      // Error view should be gone
+      expect(queryByTestId('sync-error-view')).toBeNull();
+
+      // getUserLevel should have been called twice (initial + retry)
+      expect(mockSyncService.getUserLevel).toHaveBeenCalledTimes(2);
+    });
+
+    it('should show syncing UI during retry', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockWanikaniApi.validateApiKey.mockResolvedValue({
+        success: true,
+        user: { id: 1, username: 'testuser', level: 10 },
+      });
+      // First call fails
+      mockSyncService.getUserLevel.mockRejectedValueOnce(
+        new Error('Network error'),
+      );
+
+      const { getByTestId, queryByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('api-key-input'), 'valid-api-key');
+      fireEvent.press(getByTestId('save-button'));
+
+      // Should show error UI
+      await waitFor(() => {
+        expect(getByTestId('sync-error-view')).toBeTruthy();
+      });
+
+      // Make retry never complete so we can see syncing UI
+      mockSyncService.getUserLevel.mockImplementation(() => new Promise(() => {}));
+
+      // Press retry
+      fireEvent.press(getByTestId('retry-button'));
+
+      // Should show syncing UI during retry
+      await waitFor(() => {
+        expect(getByTestId('syncing-view')).toBeTruthy();
+      });
+
+      // Error view should be hidden during syncing
+      expect(queryByTestId('sync-error-view')).toBeNull();
+    });
+
+    it('should preserve API key after sync failure', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockWanikaniApi.validateApiKey.mockResolvedValue({
+        success: true,
+        user: { id: 1, username: 'testuser', level: 10 },
+      });
+      mockSyncService.getUserLevel.mockRejectedValue(
+        new Error('Sync failed'),
+      );
+
+      const { getByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('api-key-input'), 'valid-api-key');
+      fireEvent.press(getByTestId('save-button'));
+
+      await waitFor(() => {
+        expect(getByTestId('sync-error-view')).toBeTruthy();
+      });
+
+      // API key should have been saved before sync attempt
+      expect(mockSecureStorage.saveApiKey).toHaveBeenCalledWith('valid-api-key');
+
+      // clearApiKey should NOT have been called - key remains saved
+      expect(mockSecureStorage.clearApiKey).not.toHaveBeenCalled();
+    });
+
+    it('should show error UI again if retry also fails', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockWanikaniApi.validateApiKey.mockResolvedValue({
+        success: true,
+        user: { id: 1, username: 'testuser', level: 10 },
+      });
+      // Both calls fail
+      mockSyncService.getUserLevel
+        .mockRejectedValueOnce(new Error('First error'))
+        .mockRejectedValueOnce(new Error('Second error'));
+
+      const { getByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('api-key-input'), 'valid-api-key');
+      fireEvent.press(getByTestId('save-button'));
+
+      // Should show first error
+      await waitFor(() => {
+        expect(getByTestId('sync-error-message').props.children).toBe(
+          'First error',
+        );
+      });
+
+      // Press retry
+      fireEvent.press(getByTestId('retry-button'));
+
+      // Should show second error after retry fails
+      await waitFor(() => {
+        expect(getByTestId('sync-error-message').props.children).toBe(
+          'Second error',
+        );
+      });
+
+      // Retry button should still be available
+      expect(getByTestId('retry-button')).toBeTruthy();
+    });
+
+    it('should not have a skip option on error UI', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockWanikaniApi.validateApiKey.mockResolvedValue({
+        success: true,
+        user: { id: 1, username: 'testuser', level: 10 },
+      });
+      mockSyncService.getUserLevel.mockRejectedValue(
+        new Error('Sync failed'),
+      );
+
+      const { getByTestId, queryByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('api-key-input'), 'valid-api-key');
+      fireEvent.press(getByTestId('save-button'));
+
+      await waitFor(() => {
+        expect(getByTestId('sync-error-view')).toBeTruthy();
+      });
+
+      // There should be no skip button - user must retry
+      expect(queryByTestId('skip-button')).toBeNull();
+      // Only retry button should be available
+      expect(getByTestId('retry-button')).toBeTruthy();
+    });
+  });
 });

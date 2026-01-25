@@ -26,7 +26,8 @@ export type SettingsScreenState =
   | 'loading'
   | 'idle'
   | 'validating'
-  | 'syncing';
+  | 'syncing'
+  | 'syncError';
 
 export function SettingsScreen() {
   const navigation = useNavigation<SettingsScreenNavigationProp>();
@@ -35,6 +36,7 @@ export function SettingsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   const loadStoredKey = useCallback(async () => {
     setIsLoading(true);
@@ -55,6 +57,38 @@ export function SettingsScreen() {
   useEffect(() => {
     loadStoredKey();
   }, [loadStoredKey]);
+
+  const performSync = useCallback(async (keyToUse: string) => {
+    setIsSyncing(true);
+    setSyncError(null);
+
+    try {
+      const client = new WaniKaniClient(keyToUse);
+      const userLevel = await getUserLevel(client);
+
+      // Sync subjects and assignments in parallel
+      await Promise.all([
+        syncSubjects(client, { maxLevel: userLevel }),
+        syncAssignments(client),
+      ]);
+
+      // Navigate to Home screen after successful sync
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Home' }],
+      });
+    } catch (error) {
+      setIsSyncing(false);
+      const errorMessage =
+        error instanceof Error ? error.message : 'An unknown error occurred';
+      setSyncError(errorMessage);
+    }
+  }, [navigation]);
+
+  const handleRetry = useCallback(() => {
+    const trimmedKey = apiKey.trim();
+    performSync(trimmedKey);
+  }, [apiKey, performSync]);
 
   const handleSave = async () => {
     const trimmedKey = apiKey.trim();
@@ -77,29 +111,9 @@ export function SettingsScreen() {
       const saveResult = await saveApiKey(trimmedKey);
       if (saveResult.success) {
         setHasStoredKey(true);
-        // Transition to syncing state instead of showing Alert
         setIsSaving(false);
-        setIsSyncing(true);
-
         // Perform the actual sync
-        try {
-          const client = new WaniKaniClient(trimmedKey);
-          const userLevel = await getUserLevel(client);
-
-          // Sync subjects and assignments in parallel
-          await Promise.all([
-            syncSubjects(client, { maxLevel: userLevel }),
-            syncAssignments(client),
-          ]);
-
-          // Navigate to Home screen after successful sync
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'Home' }],
-          });
-        } catch {
-          // Sync errors will be handled in US-004
-        }
+        await performSync(trimmedKey);
       } else {
         Alert.alert('Error', saveResult.error || 'Failed to save API key');
         setIsSaving(false);
@@ -155,6 +169,26 @@ export function SettingsScreen() {
         <Text style={styles.syncingText} testID="syncing-message">
           Syncing your WaniKani data...
         </Text>
+      </View>
+    );
+  }
+
+  // Show sync error UI with retry option
+  if (syncError) {
+    return (
+      <View style={styles.syncingContainer} testID="sync-error-view">
+        <Text style={styles.errorTitle} testID="sync-error-title">
+          Sync Failed
+        </Text>
+        <Text style={styles.errorMessage} testID="sync-error-message">
+          {syncError}
+        </Text>
+        <TouchableOpacity
+          style={[styles.button, styles.retryButton]}
+          onPress={handleRetry}
+          testID="retry-button">
+          <Text style={styles.buttonText}>Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -223,6 +257,24 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.lg,
     color: COLORS.text.secondary,
     textAlign: 'center',
+  },
+  errorTitle: {
+    fontSize: FONT_SIZES.xl,
+    fontWeight: '600',
+    color: COLORS.feedback.incorrect,
+    marginBottom: SPACING.md,
+    textAlign: 'center',
+  },
+  errorMessage: {
+    fontSize: FONT_SIZES.base,
+    color: COLORS.text.secondary,
+    textAlign: 'center',
+    marginBottom: SPACING.xl,
+    paddingHorizontal: SPACING.lg,
+  },
+  retryButton: {
+    backgroundColor: COLORS.subject.vocabulary,
+    minWidth: 150,
   },
   content: {
     padding: 20,
