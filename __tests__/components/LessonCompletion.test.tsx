@@ -167,4 +167,138 @@ describe('LessonCompletion', () => {
       expect(getByTestId('lesson-completion-dashboard')).toBeTruthy();
     });
   });
+
+  describe('no auto-advance behavior (regression)', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('should not call any navigation callback automatically on mount', () => {
+      const onReturnToDashboard = jest.fn();
+      const onContinueLessons = jest.fn();
+
+      render(
+        <LessonCompletion
+          {...defaultProps}
+          onReturnToDashboard={onReturnToDashboard}
+          onContinueLessons={onContinueLessons}
+        />,
+      );
+
+      // No callbacks should be called on mount
+      expect(onReturnToDashboard).not.toHaveBeenCalled();
+      expect(onContinueLessons).not.toHaveBeenCalled();
+    });
+
+    it('should not auto-advance after waiting (no timers or effects trigger navigation)', () => {
+      const onReturnToDashboard = jest.fn();
+      const onContinueLessons = jest.fn();
+
+      render(
+        <LessonCompletion
+          {...defaultProps}
+          onReturnToDashboard={onReturnToDashboard}
+          onContinueLessons={onContinueLessons}
+        />,
+      );
+
+      // Advance time significantly - simulating user waiting on the screen
+      jest.advanceTimersByTime(10000); // 10 seconds
+
+      // Still no callbacks should be called
+      expect(onReturnToDashboard).not.toHaveBeenCalled();
+      expect(onContinueLessons).not.toHaveBeenCalled();
+    });
+
+    it('should remain visible until user explicitly presses a button', () => {
+      const onReturnToDashboard = jest.fn();
+      const onContinueLessons = jest.fn();
+
+      const { getByTestId, rerender } = render(
+        <LessonCompletion
+          {...defaultProps}
+          onReturnToDashboard={onReturnToDashboard}
+          onContinueLessons={onContinueLessons}
+        />,
+      );
+
+      // Verify screen is visible
+      expect(getByTestId('lesson-completion')).toBeTruthy();
+
+      // Wait a long time
+      jest.advanceTimersByTime(60000); // 1 minute
+
+      // Re-render to ensure no state changes occurred
+      rerender(
+        <LessonCompletion
+          {...defaultProps}
+          onReturnToDashboard={onReturnToDashboard}
+          onContinueLessons={onContinueLessons}
+        />,
+      );
+
+      // Screen should still be visible
+      expect(getByTestId('lesson-completion')).toBeTruthy();
+
+      // No auto-navigation
+      expect(onReturnToDashboard).not.toHaveBeenCalled();
+      expect(onContinueLessons).not.toHaveBeenCalled();
+    });
+
+    it('should only navigate when user presses Continue button', () => {
+      const onReturnToDashboard = jest.fn();
+      const onContinueLessons = jest.fn();
+
+      const { getByTestId } = render(
+        <LessonCompletion
+          {...defaultProps}
+          onReturnToDashboard={onReturnToDashboard}
+          onContinueLessons={onContinueLessons}
+        />,
+      );
+
+      // Wait some time
+      jest.advanceTimersByTime(5000);
+
+      // No callbacks yet
+      expect(onContinueLessons).not.toHaveBeenCalled();
+
+      // Now press the button
+      fireEvent.press(getByTestId('lesson-completion-continue'));
+
+      // Only now should the callback be called
+      expect(onContinueLessons).toHaveBeenCalledTimes(1);
+      expect(onReturnToDashboard).not.toHaveBeenCalled();
+    });
+
+    it('should only navigate when user presses Dashboard button', () => {
+      const onReturnToDashboard = jest.fn();
+      const onContinueLessons = jest.fn();
+
+      const { getByTestId } = render(
+        <LessonCompletion
+          {...defaultProps}
+          onReturnToDashboard={onReturnToDashboard}
+          onContinueLessons={onContinueLessons}
+        />,
+      );
+
+      // Wait some time
+      jest.advanceTimersByTime(5000);
+
+      // No callbacks yet
+      expect(onReturnToDashboard).not.toHaveBeenCalled();
+
+      // Now press the button
+      fireEvent.press(getByTestId('lesson-completion-dashboard'));
+
+      // Only now should the callback be called
+      expect(onReturnToDashboard).toHaveBeenCalledTimes(1);
+      expect(onContinueLessons).not.toHaveBeenCalled();
+    });
+  });
 });
