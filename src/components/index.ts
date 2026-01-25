@@ -66,6 +66,11 @@ export {
 } from './PendingSyncIndicator';
 
 export {
+  SyncingIndicator,
+  type SyncingIndicatorProps,
+} from './SyncingIndicator';
+
+export {
   LoadingSpinner,
   type LoadingSpinnerProps,
 } from './LoadingSpinner';
