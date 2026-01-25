@@ -125,6 +125,42 @@
       "priority": 7,
       "passes": true,
       "notes": "Implementation verified - no auto-advance bug existed. Added regression tests to confirm LessonCompletion component waits for user input before navigation."
+    },
+    {
+      "id": "US-008",
+      "title": "Auto-focus input on question change",
+      "description": "As a user, I want the input textbox to automatically focus when a new question appears so I can keep typing without tapping the input field.",
+      "acceptanceCriteria": [
+        "TextInput automatically receives focus when a new question is displayed",
+        "Focus is triggered after advancing from correct answer feedback",
+        "Focus is triggered after tapping Continue on incorrect feedback",
+        "Keyboard remains open between questions (no dismiss/reopen flicker)",
+        "Works in both LessonQuiz and ReviewSession components",
+        "Unit tests verify focus is called on question change",
+        "All tests pass",
+        "All quality checks pass"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "Implemented using useRef and useEffect. Focus is triggered with a 100ms delay after question changes to ensure the input is rendered and ready. Focus is only triggered when not showing feedback and when the quiz/session is not complete."
+    },
+    {
+      "id": "US-009",
+      "title": "Fix input positioning to prevent keyboard overlap",
+      "description": "As a user, I want the input field positioned near the top of its area (below the question prompt) so it is never covered by the on-screen keyboard.",
+      "acceptanceCriteria": [
+        "Input field positioned immediately below the question prompt with appropriate spacing",
+        "Input is NOT vertically centered in remaining space",
+        "Input remains fully visible when keyboard is open",
+        "Layout works correctly on both iOS and Android",
+        "Reading conversion display (hiragana) still appears above input when typing",
+        "Works in both LessonQuiz and ReviewSession components",
+        "All tests pass",
+        "All quality checks pass"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
     }
   ]
 }

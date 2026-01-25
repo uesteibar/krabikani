@@ -14,6 +14,7 @@ import {
   Platform,
   TouchableOpacity,
   ScrollView,
+  type TextInput as TextInputType,
 } from 'react-native';
 
 import type {
@@ -284,6 +285,9 @@ export function ReviewSession({
   // Track answer counts to report
   const answeredQuestionsCount = useRef(0);
 
+  // Ref for TextInput to enable auto-focus
+  const inputRef = useRef<TextInputType>(null);
+
   // Reset state when items change
   useEffect(() => {
     const newQuestions = generateReviewQuestions(items);
@@ -358,6 +362,18 @@ export function ReviewSession({
     }
     return count;
   }, [isWrappingUp, introducedItemIds, _itemProgress]);
+
+  // Auto-focus input when question changes (including after advancing from correct/incorrect feedback)
+  useEffect(() => {
+    // Don't focus if showing feedback or session is complete
+    if (!incorrectFeedback && !showCorrectFeedback && !isComplete) {
+      // Small delay to ensure the input is rendered and ready
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [currentQuestionIndex, incorrectFeedback, showCorrectFeedback, isComplete]);
 
   // Handle wrap-up button press
   const handleWrapUpToggle = useCallback(() => {
@@ -967,6 +983,7 @@ export function ReviewSession({
           </Text>
         )}
         <TextInput
+          ref={inputRef}
           style={[styles.input, { borderColor: backgroundColor }]}
           value={inputValue}
           onChangeText={handleInputChange}

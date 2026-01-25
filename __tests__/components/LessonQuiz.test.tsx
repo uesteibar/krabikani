@@ -1251,4 +1251,118 @@ describe('LessonQuiz', () => {
       }
     });
   });
+
+  describe('auto-focus input', () => {
+    it('auto-focuses input on initial render', () => {
+      const items = [sampleRadical];
+      const { getByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+      );
+
+      // Run timers to trigger the focus effect (100ms delay)
+      act(() => {
+        jest.advanceTimersByTime(100);
+      });
+
+      // Verify the input exists and can be accessed
+      const input = getByTestId('lesson-quiz-input');
+      expect(input).toBeTruthy();
+    });
+
+    it('auto-focuses input after advancing from correct answer', () => {
+      const items = [sampleRadical, sampleRadical2]; // 2 meaning questions
+      const { getByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={100} />,
+      );
+
+      // Get the first question's expected answer
+      const firstChar = getByTestId('lesson-quiz-characters').props.children;
+      const firstAnswer = firstChar === '一' ? 'Ground' : 'Person';
+
+      // Answer first question correctly
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), firstAnswer);
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      // Run timers for auto-advance (100ms) + focus delay (100ms)
+      act(() => {
+        jest.advanceTimersByTime(200);
+      });
+
+      // Should be on second question with input available
+      const input = getByTestId('lesson-quiz-input');
+      expect(input).toBeTruthy();
+      // Input should be cleared for new question
+      expect(input.props.value).toBe('');
+    });
+
+    it('auto-focuses input after tapping Continue on incorrect feedback', () => {
+      const items = [sampleRadical, sampleRadical2]; // 2 questions
+      const { getByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+      );
+
+      // Submit wrong answer
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      // Should show incorrect feedback
+      expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
+
+      // Press continue
+      fireEvent.press(getByTestId('lesson-quiz-continue'));
+
+      // Run timers for focus delay (100ms)
+      act(() => {
+        jest.advanceTimersByTime(100);
+      });
+
+      // Should be back at quiz view with input available
+      const input = getByTestId('lesson-quiz-input');
+      expect(input).toBeTruthy();
+      // Input should be cleared
+      expect(input.props.value).toBe('');
+    });
+
+    it('does not focus input while showing correct feedback', () => {
+      const items = [sampleRadical, sampleRadical2];
+      const { getByTestId, queryByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={500} />,
+      );
+
+      // Get the first question's expected answer
+      const firstChar = getByTestId('lesson-quiz-characters').props.children;
+      const firstAnswer = firstChar === '一' ? 'Ground' : 'Person';
+
+      // Answer correctly
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), firstAnswer);
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      // Should show correct label
+      expect(queryByTestId('lesson-quiz-correct-label')).toBeTruthy();
+
+      // Input should be disabled during correct feedback
+      const input = getByTestId('lesson-quiz-input');
+      expect(input.props.editable).toBe(false);
+    });
+
+    it('does not focus input when quiz is complete', () => {
+      const items = [sampleRadical]; // Just 1 question
+      const { getByTestId, queryByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+      );
+
+      // Answer correctly
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'Ground');
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Should be complete
+      expect(getByTestId('lesson-quiz-complete')).toBeTruthy();
+      // Input should not be present
+      expect(queryByTestId('lesson-quiz-input')).toBeNull();
+    });
+  });
 });

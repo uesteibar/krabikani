@@ -137,3 +137,22 @@ Started: Sun Jan 25 10:42:13 CET 2026
   - Regression tests using fake timers (jest.useFakeTimers/advanceTimersByTime) effectively verify no timer-based auto-navigation
   - When verifying UI stays visible, use rerender() with same props after advancing timers to ensure no state changes occurred
 ---
+
+## 2026-01-25 - US-008
+- **What was implemented**: Added auto-focus functionality to TextInput on question change
+  - Created inputRef using useRef<TextInputType>(null) in both LessonQuiz and ReviewSession
+  - Added useEffect that triggers focus with 100ms delay when currentQuestionIndex changes
+  - Focus is suppressed when showing incorrect feedback, correct feedback, or when quiz/session is complete
+  - Focus is triggered after auto-advance from correct answer feedback
+  - Focus is triggered after tapping Continue on incorrect feedback
+- **Files changed**:
+  - src/components/LessonQuiz.tsx (added inputRef, auto-focus useEffect, ref prop on TextInput)
+  - src/components/ReviewSession.tsx (added inputRef, auto-focus useEffect, ref prop on TextInput)
+  - __tests__/components/LessonQuiz.test.tsx (added 5 auto-focus tests)
+  - __tests__/components/ReviewSession.test.tsx (added 5 auto-focus tests)
+- **Learnings for future iterations**:
+  - React Native TextInput type is `type TextInput as TextInputType` from react-native to use with useRef
+  - Use a small setTimeout (100ms) before focusing to ensure input is mounted and ready
+  - Focus suppression based on state flags (incorrectFeedback, showCorrectFeedback, isComplete) prevents unwanted keyboard flashes
+  - ReviewSession tests must handle random question order - read displayed character to determine correct answer
+---

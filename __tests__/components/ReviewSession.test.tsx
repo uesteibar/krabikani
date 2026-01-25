@@ -1653,4 +1653,133 @@ describe('ReviewSession', () => {
       jest.useRealTimers();
     });
   });
+
+  describe('auto-focus input', () => {
+    it('auto-focuses input on initial render', () => {
+      jest.useFakeTimers();
+      const items = [sampleRadical];
+      const { getByTestId } = render(
+        <ReviewSession items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+      );
+
+      // Run timers to trigger the focus effect (100ms delay)
+      act(() => {
+        jest.advanceTimersByTime(100);
+      });
+
+      // Verify the input exists and can be accessed
+      const input = getByTestId('review-session-input');
+      expect(input).toBeTruthy();
+
+      jest.useRealTimers();
+    });
+
+    it('auto-focuses input after advancing from correct answer', () => {
+      jest.useFakeTimers();
+      const items = [sampleRadical, sampleRadical2]; // 2 items
+      const { getByTestId } = render(
+        <ReviewSession items={items} onAnswer={jest.fn()} autoAdvanceDelay={100} />,
+      );
+
+      // Get the displayed character to determine the correct answer
+      const displayedChar = getByTestId('review-session-characters').props.children;
+      const correctAnswer = displayedChar === '一' ? 'Ground' : 'Person';
+
+      // Answer first question correctly (radical only has meaning question)
+      fireEvent.changeText(getByTestId('review-session-input'), correctAnswer);
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Run timers for auto-advance (100ms) + focus delay (100ms)
+      act(() => {
+        jest.advanceTimersByTime(200);
+      });
+
+      // Should have advanced to next question with input available
+      const input = getByTestId('review-session-input');
+      expect(input).toBeTruthy();
+      // Input should be cleared for new question
+      expect(input.props.value).toBe('');
+
+      jest.useRealTimers();
+    });
+
+    it('auto-focuses input after tapping Continue on incorrect feedback', () => {
+      jest.useFakeTimers();
+      const items = [sampleRadical, sampleRadical2]; // 2 questions
+      const { getByTestId } = render(
+        <ReviewSession items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+      );
+
+      // Submit wrong answer
+      fireEvent.changeText(getByTestId('review-session-input'), 'wrong');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Should show incorrect feedback
+      expect(getByTestId('review-session-incorrect-feedback')).toBeTruthy();
+
+      // Press continue
+      fireEvent.press(getByTestId('review-session-continue'));
+
+      // Run timers for focus delay (100ms)
+      act(() => {
+        jest.advanceTimersByTime(100);
+      });
+
+      // Should be back at session view with input available
+      const input = getByTestId('review-session-input');
+      expect(input).toBeTruthy();
+      // Input should be cleared
+      expect(input.props.value).toBe('');
+
+      jest.useRealTimers();
+    });
+
+    it('does not focus input while showing correct feedback', () => {
+      jest.useFakeTimers();
+      const items = [sampleRadical, sampleRadical2];
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={items} onAnswer={jest.fn()} autoAdvanceDelay={500} />,
+      );
+
+      // Get the displayed character to determine the correct answer
+      const displayedChar = getByTestId('review-session-characters').props.children;
+      const correctAnswer = displayedChar === '一' ? 'Ground' : 'Person';
+
+      // Answer correctly
+      fireEvent.changeText(getByTestId('review-session-input'), correctAnswer);
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Should show correct label
+      expect(queryByTestId('review-session-correct-label')).toBeTruthy();
+
+      // Input should be disabled during correct feedback
+      const input = getByTestId('review-session-input');
+      expect(input.props.editable).toBe(false);
+
+      jest.useRealTimers();
+    });
+
+    it('does not focus input when session is complete', () => {
+      jest.useFakeTimers();
+      const items = [sampleRadical]; // Just 1 item with 1 question (meaning only)
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+      );
+
+      // Answer correctly (only Ground possible since we have single radical)
+      fireEvent.changeText(getByTestId('review-session-input'), 'Ground');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Should be complete
+      expect(getByTestId('review-session-complete')).toBeTruthy();
+      // Input should not be present
+      expect(queryByTestId('review-session-input')).toBeNull();
+
+      jest.useRealTimers();
+    });
+  });
 });

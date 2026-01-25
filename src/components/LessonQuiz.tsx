@@ -14,6 +14,7 @@ import {
   Platform,
   TouchableOpacity,
   ScrollView,
+  type TextInput as TextInputType,
 } from 'react-native';
 
 import type {
@@ -220,6 +221,9 @@ export function LessonQuiz({
   // Track answer counts to report in final results
   const answeredQuestionsCount = useRef(0);
 
+  // Ref for TextInput to enable auto-focus
+  const inputRef = useRef<TextInputType>(null);
+
   // Reset state when items change
   useEffect(() => {
     const newQuestions = generateQuizQuestions(items);
@@ -238,6 +242,18 @@ export function LessonQuiz({
   const currentQuestion = questionQueue[currentQuestionIndex];
   const totalOriginalQuestions = initialQuestions.length;
   const isComplete = completedQuestionKeys.size >= totalOriginalQuestions;
+
+  // Auto-focus input when question changes (including after advancing from correct/incorrect feedback)
+  useEffect(() => {
+    // Don't focus if showing feedback or quiz is complete
+    if (!incorrectFeedback && !showCorrectFeedback && !isComplete) {
+      // Small delay to ensure the input is rendered and ready
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [currentQuestionIndex, incorrectFeedback, showCorrectFeedback, isComplete]);
 
   // Handle input change for reading questions (romaji to hiragana)
   const handleReadingInputChange = useCallback((text: string) => {
@@ -617,6 +633,7 @@ export function LessonQuiz({
           </Text>
         )}
         <TextInput
+          ref={inputRef}
           style={[styles.input, { borderColor: backgroundColor }]}
           value={inputValue}
           onChangeText={handleInputChange}
