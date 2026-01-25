@@ -682,3 +682,31 @@
   - Browser verification not available (no dev-browser skill configured)
 
 ---
+
+## 2026-01-25 - US-024: Review Submission - Online Sync
+- What was implemented:
+  - submitReviews() function in syncService that submits review results to WaniKani API
+  - Online mode: calls POST /reviews for each completed item with incorrect_meaning_answers and incorrect_reading_answers counts
+  - Updates local database with API response (new SRS stage, next available_at time)
+  - Offline mode: queues reviews in pending_reviews table (preparation for US-025)
+  - syncPendingReviews() function for syncing queued offline reviews
+  - clearPendingReviews() utility function
+  - ReviewsScreen integration:
+    - On session complete, builds ReviewToSubmit array from ItemProgress map
+    - Submits reviews via submitReviews() (syncs if online, queues if offline)
+    - Shows sync status on completion screen ("Synced with WaniKani" or "Queued for sync when online")
+  - Types: ReviewToSubmit, SubmitReviewsOptions, SubmitReviewsResult, SyncPendingReviewsResult
+  - 17 new tests for review submission functions
+- Files changed:
+  - src/sync/syncService.ts (added submitReviews, syncPendingReviews, clearPendingReviews, new types)
+  - src/sync/index.ts (updated exports)
+  - src/screens/ReviewsScreen.tsx (integrated submission, fixed lint errors, added sync status display)
+  - __tests__/sync/syncService.test.ts (added 17 new tests)
+- **Learnings for future iterations:**
+  - WaniKani POST /reviews response includes resources_updated.assignment with updated SRS data
+  - Use the assignment from resources_updated to update local database after review submission
+  - Retry support is handled by WaniKaniClient via exponential backoff (already implemented in US-005)
+  - ReviewsScreen already had partial sync implementation - just needed tests and sync status display
+  - Browser verification not available (no dev-browser skill configured)
+
+---
