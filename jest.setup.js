@@ -31,6 +31,8 @@ jest.mock('react-native-reanimated', () => {
       cubic: {},
       linear: {},
       poly: jest.fn(() => ({})),
+      back: jest.fn(() => ({})),
+      ease: {},
     },
     interpolateColor: jest.fn((progress, inputRange, outputRange) => {
       // Return the second color (end color) by default

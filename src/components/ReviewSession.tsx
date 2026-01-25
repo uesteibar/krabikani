@@ -48,6 +48,7 @@ import { MnemonicText } from './MnemonicText';
 import { ComponentDisplay } from './ComponentDisplay';
 import { SrsLevelBadge } from './SrsLevelBadge';
 import { AnimatedSrsLevelBadge } from './AnimatedSrsLevelBadge';
+import { ReviewCompletion } from './ReviewCompletion';
 import { getSrsLevelInfo, calculateSrsStageAfterIncorrect } from '../theme';
 
 // ============================================
@@ -158,6 +159,10 @@ export interface ReviewSessionProps {
   autoAdvanceDelay?: number;
   /** Callback when wrap-up mode is toggled */
   onWrapUpToggle?: (isWrappingUp: boolean) => void;
+  /** Callback when user wants to return to dashboard from completion screen */
+  onReturnToDashboard?: () => void;
+  /** Whether the reviews were synced online or queued offline (for completion screen) */
+  syncedOnline?: boolean;
 }
 
 /**
@@ -266,6 +271,8 @@ export function ReviewSession({
   onSessionComplete,
   autoAdvanceDelay = 500,
   onWrapUpToggle,
+  onReturnToDashboard,
+  syncedOnline = false,
 }: ReviewSessionProps) {
   // Generate initial questions once when items change
   const initialQuestions = useMemo(
@@ -956,13 +963,35 @@ export function ReviewSession({
 
   // Handle session completion
   if (isComplete) {
+    // Calculate total incorrect count from item progress
+    const itemsToCount = isWrappingUp
+      ? introducedItemIds
+      : new Set(_itemProgress.keys());
+    let totalIncorrect = 0;
+    for (const itemId of itemsToCount) {
+      const progress = _itemProgress.get(itemId);
+      if (progress) {
+        totalIncorrect +=
+          progress.incorrectMeaningAnswers + progress.incorrectReadingAnswers;
+      }
+    }
+
+    // Number of unique items reviewed
+    const itemsReviewedCount = isWrappingUp
+      ? introducedItemIds.size
+      : completedItemCount;
+
+    const handleReturnToDashboard = () => {
+      onReturnToDashboard?.();
+    };
+
     return (
-      <View style={styles.container} testID="review-session-complete">
-        <Text style={styles.completeText}>Session Complete!</Text>
-        <Text style={styles.completeSubtext}>
-          {answeredQuestionsCount.current} questions answered
-        </Text>
-      </View>
+      <ReviewCompletion
+        itemsReviewed={itemsReviewedCount}
+        incorrectCount={totalIncorrect}
+        syncedOnline={syncedOnline}
+        onReturnToDashboard={handleReturnToDashboard}
+      />
     );
   }
 

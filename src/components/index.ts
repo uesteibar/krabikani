@@ -108,3 +108,8 @@ export {
   AnimatedSrsLevelBadge,
   type AnimatedSrsLevelBadgeProps,
 } from './AnimatedSrsLevelBadge';
+
+export {
+  ReviewCompletion,
+  type ReviewCompletionProps,
+} from './ReviewCompletion';

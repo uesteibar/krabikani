@@ -443,7 +443,7 @@ describe('ReviewSession', () => {
       });
 
       // Should show completion (only 1 item)
-      expect(queryByTestId('review-session-complete')).toBeTruthy();
+      expect(queryByTestId('review-completion')).toBeTruthy();
 
       jest.useRealTimers();
     });
@@ -464,7 +464,7 @@ describe('ReviewSession', () => {
       fireEvent.press(submit);
 
       // Session should NOT be complete (question was re-queued)
-      expect(queryByTestId('review-session-complete')).toBeNull();
+      expect(queryByTestId('review-completion')).toBeNull();
     });
   });
 
@@ -495,7 +495,7 @@ describe('ReviewSession', () => {
       });
 
       // Should show complete state
-      expect(getByTestId('review-session-complete')).toBeTruthy();
+      expect(getByTestId('review-completion')).toBeTruthy();
 
       jest.useRealTimers();
     });
@@ -531,7 +531,7 @@ describe('ReviewSession', () => {
       });
 
       // Item not complete yet (other question still pending)
-      expect(queryByTestId('review-session-complete')).toBeNull();
+      expect(queryByTestId('review-completion')).toBeNull();
 
       // Now answer second question
       fireEvent.changeText(getByTestId('review-session-input'), secondAnswer);
@@ -543,7 +543,7 @@ describe('ReviewSession', () => {
       });
 
       // Now should be complete
-      expect(queryByTestId('review-session-complete')).toBeTruthy();
+      expect(queryByTestId('review-completion')).toBeTruthy();
 
       jest.useRealTimers();
     });
@@ -672,9 +672,10 @@ describe('ReviewSession', () => {
         jest.runAllTimers();
       });
 
-      expect(getByTestId('review-session-complete')).toBeTruthy();
-      expect(getByText('Session Complete!')).toBeTruthy();
-      expect(getByText('1 questions answered')).toBeTruthy();
+      expect(getByTestId('review-completion')).toBeTruthy();
+      expect(getByText('Reviews Complete!')).toBeTruthy();
+      expect(getByText('1')).toBeTruthy();
+      expect(getByText('item reviewed')).toBeTruthy();
       jest.useRealTimers();
     });
   });
@@ -865,7 +866,7 @@ describe('ReviewSession', () => {
         });
 
         // Check if complete after each submission
-        if (queryByTestId('review-session-complete')) {
+        if (queryByTestId('review-completion')) {
           break;
         }
       }
@@ -947,7 +948,7 @@ describe('ReviewSession', () => {
       });
 
       // After timer, should show completion (single item session)
-      expect(queryByTestId('review-session-complete')).toBeTruthy();
+      expect(queryByTestId('review-completion')).toBeTruthy();
       expect(onSessionComplete).toHaveBeenCalled();
     });
 
@@ -1029,7 +1030,7 @@ describe('ReviewSession', () => {
       });
 
       // Should NOT be complete yet (still has second question)
-      expect(queryByTestId('review-session-complete')).toBeNull();
+      expect(queryByTestId('review-completion')).toBeNull();
 
       // Should be showing the next question
       expect(getByTestId('review-session-input')).toBeTruthy();
@@ -1059,7 +1060,7 @@ describe('ReviewSession', () => {
       act(() => {
         jest.advanceTimersByTime(300);
       });
-      expect(queryByTestId('review-session-complete')).toBeTruthy();
+      expect(queryByTestId('review-completion')).toBeTruthy();
     });
 
     it('should hide subject type label during correct feedback', () => {
@@ -1367,7 +1368,7 @@ describe('ReviewSession', () => {
       fireEvent.press(getByTestId('review-session-continue'));
 
       // Should still be showing a question (not complete) because question was re-queued
-      expect(queryByTestId('review-session-complete')).toBeNull();
+      expect(queryByTestId('review-completion')).toBeNull();
       expect(queryByTestId('review-session')).toBeTruthy();
 
       jest.useRealTimers();
@@ -1474,7 +1475,7 @@ describe('ReviewSession', () => {
       });
 
       // Should show completion
-      expect(queryByTestId('review-session-complete')).toBeTruthy();
+      expect(queryByTestId('review-completion')).toBeTruthy();
       expect(onSessionComplete).toHaveBeenCalled();
 
       jest.useRealTimers();
@@ -1589,7 +1590,7 @@ describe('ReviewSession', () => {
       });
 
       // Session should be complete
-      expect(queryByTestId('review-session-complete')).toBeTruthy();
+      expect(queryByTestId('review-completion')).toBeTruthy();
       expect(onSessionComplete).toHaveBeenCalled();
 
       // The progress map should only contain the introduced radical
@@ -1647,7 +1648,7 @@ describe('ReviewSession', () => {
 
       // If it was a radical, session should be complete
       // If not, we should still see the same item (second question)
-      if (!queryByTestId('review-session-complete')) {
+      if (!queryByTestId('review-completion')) {
         // Session not complete, which means we're still working on the introduced item
         const currentChar = getByTestId('review-session-characters').props
           .children;
@@ -1697,7 +1698,7 @@ describe('ReviewSession', () => {
       });
 
       // If not complete, we're on second item
-      if (!queryByTestId('review-session-complete')) {
+      if (!queryByTestId('review-completion')) {
         // Now activate wrap up with 2 items introduced
         // (depends on if question queue gave us both items already)
         fireEvent.press(getByTestId('review-session-wrap-up'));
@@ -1823,7 +1824,7 @@ describe('ReviewSession', () => {
       );
 
       // Session should be complete (single item radical)
-      expect(queryByTestId('review-session-complete')).toBeTruthy();
+      expect(queryByTestId('review-completion')).toBeTruthy();
 
       jest.useRealTimers();
     });
@@ -1867,7 +1868,7 @@ describe('ReviewSession', () => {
       fireEvent.press(getByTestId('review-session-mark-correct'));
 
       // Session should be complete immediately (re-queued question was removed)
-      expect(queryByTestId('review-session-complete')).toBeTruthy();
+      expect(queryByTestId('review-completion')).toBeTruthy();
 
       jest.useRealTimers();
     });
@@ -2123,7 +2124,7 @@ describe('ReviewSession', () => {
       });
 
       // Should be complete
-      expect(getByTestId('review-session-complete')).toBeTruthy();
+      expect(getByTestId('review-completion')).toBeTruthy();
       // Input should not be present
       expect(queryByTestId('review-session-input')).toBeNull();
 
