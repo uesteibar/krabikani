@@ -413,3 +413,29 @@
   - KanjiReading extends Reading with additional type field (onyomi/kunyomi/nanori)
 
 ---
+
+## 2026-01-25 - US-015: Lesson Learning Phase - Card Display
+- What was implemented:
+  - LessonCard component for displaying lesson items with full details
+  - Characters display with large 72px font size, centered in colored header
+  - WaniKani-inspired subject type colors (blue for radicals, pink for kanji, purple for vocabulary)
+  - Meaning section showing primary meaning and "Also: X, Y" for additional accepted meanings
+  - Reading section showing primary reading and alternates (hidden for radicals)
+  - Meaning mnemonic section with descriptive text
+  - Reading mnemonic section (hidden for radicals or when null)
+  - Next button at bottom with subject-colored background
+  - Scrollable content area for long mnemonics
+  - Helper functions: getSubjectColor(), getPrimaryMeaning(), getPrimaryReading(), getAcceptedMeanings(), getAcceptedReadings()
+- Files changed:
+  - src/components/LessonCard.tsx (new - lesson card component with all display logic)
+  - src/components/index.ts (updated - added LessonCard export)
+  - __tests__/components/LessonCard.test.tsx (new - 51 comprehensive tests)
+- **Learnings for future iterations:**
+  - Use SubjectType from api/types.ts for type-safe subject handling
+  - Meaning and Reading types have accepted_answer boolean to filter display
+  - KanjiReading extends Reading with onyomi/kunyomi/nanori type field
+  - Radicals have no readings - check subjectType !== 'radical' to conditionally render
+  - readingMnemonic can be null even for kanji/vocabulary - check for null separately
+  - Browser verification not available (no dev-browser skill configured)
+
+---
