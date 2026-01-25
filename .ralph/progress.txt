@@ -13,6 +13,18 @@ Started: Sun Jan 25 20:13:24 CET 2026
 
 ---
 
+## 2026-01-25 - US-002
+- **What was implemented**: Added support for `<reading>` tags in MnemonicText component that render in italic style (no color, no bold)
+- **Files changed**:
+  - `src/components/MnemonicText.tsx` - Added 'reading' to TAG_PATTERN regex, added special case for italic rendering, added `reading` style
+  - `__tests__/components/MnemonicText.test.tsx` - Added 7 new tests for reading tag parsing
+- **Learnings for future iterations:**
+  - MnemonicText is used in LessonCard (lessons), LessonQuiz (incorrect answers), and ReviewSession (incorrect answers)
+  - Reading tags use fontStyle: 'italic' while other tags use color + fontWeight: 'bold'
+  - The TAG_PATTERN regex uses backreference `\1` to match opening/closing tags
+
+---
+
 ## 2026-01-25 - US-001
 - **What was implemented**: Fixed radicals displaying '?' by implementing RadicalImage component that renders images from WaniKani CDN for radicals without Unicode characters
 - **Files changed**:

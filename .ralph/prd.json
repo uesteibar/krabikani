@@ -35,8 +35,8 @@
         "All quality checks pass"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added <reading> tag support to MnemonicText regex pattern, renders with fontStyle: italic (no color, no bold). MnemonicText is used in LessonCard, LessonQuiz, and ReviewSession."
     },
     {
       "id": "US-003",
