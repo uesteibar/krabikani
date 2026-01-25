@@ -12,6 +12,7 @@ import { MnemonicText } from './MnemonicText';
 import { RadicalImage } from './RadicalImage';
 import {
   getSubjectColor,
+  SUBJECT_COLORS,
   COLORS,
   SHADOW,
   BORDER_RADIUS,
@@ -19,6 +20,18 @@ import {
   FONT_SIZES,
   MIN_TOUCH_TARGET,
 } from '../theme';
+
+/** Data for a component radical */
+export interface ComponentRadical {
+  /** Subject ID */
+  id: number;
+  /** Radical characters (null for image-only radicals) */
+  characters: string | null;
+  /** Primary meaning of the radical */
+  meaning: string;
+  /** JSON string of character images (for radicals without Unicode characters) */
+  characterImages?: string | null;
+}
 
 export interface LessonCardProps {
   /** The subject type (radical, kanji, vocabulary, kana_vocabulary) */
@@ -35,6 +48,8 @@ export interface LessonCardProps {
   readingMnemonic: string | null;
   /** JSON string of character images (for radicals without Unicode characters) */
   characterImages?: string | null;
+  /** Component radicals for kanji items */
+  componentRadicals?: ComponentRadical[];
   /** Callback when Next button is pressed */
   onNext: () => void;
   /** Optional callback when Back button is pressed (hides button if not provided) */
@@ -89,6 +104,7 @@ export function LessonCard({
   meaningMnemonic,
   readingMnemonic,
   characterImages,
+  componentRadicals,
   onNext,
   onBack,
 }: LessonCardProps) {
@@ -122,6 +138,37 @@ export function LessonCard({
           {subjectType.replace('_', ' ')}
         </Text>
       </View>
+
+      {/* Component radicals display for kanji (below character block) */}
+      {componentRadicals && componentRadicals.length > 0 && (
+        <View
+          style={styles.componentsContainer}
+          testID="lesson-card-components">
+          <Text style={styles.componentsTitle}>Made up of:</Text>
+          <View style={styles.componentsRow}>
+            {componentRadicals.map(radical => (
+              <View
+                key={radical.id}
+                style={styles.componentItem}
+                testID={`lesson-card-component-${radical.id}`}>
+                {radical.characters === null && radical.characterImages ? (
+                  <RadicalImage
+                    characterImages={radical.characterImages}
+                    fallbackText={radical.meaning}
+                    size={FONT_SIZES.xxl}
+                    testID={`lesson-card-component-${radical.id}-image`}
+                  />
+                ) : (
+                  <Text style={styles.componentCharacter}>
+                    {radical.characters ?? '?'}
+                  </Text>
+                )}
+                <Text style={styles.componentMeaning}>{radical.meaning}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
 
       <ScrollView
         style={styles.content}
@@ -224,6 +271,45 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.8)',
     marginTop: SPACING.sm,
     textTransform: 'capitalize',
+  },
+  componentsContainer: {
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    backgroundColor: '#E8F4FF', // Light blue tint for radical components
+    borderBottomWidth: 1,
+    borderBottomColor: '#B8D4F0',
+  },
+  componentsTitle: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.text.secondary,
+    marginBottom: SPACING.sm,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  componentsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.md,
+  },
+  componentItem: {
+    alignItems: 'center',
+    minWidth: 60,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    backgroundColor: SUBJECT_COLORS.radical,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  componentCharacter: {
+    fontSize: FONT_SIZES.xxl,
+    fontWeight: 'bold',
+    color: COLORS.text.inverse,
+  },
+  componentMeaning: {
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginTop: SPACING.xs,
+    textAlign: 'center',
   },
   content: {
     flex: 1,
