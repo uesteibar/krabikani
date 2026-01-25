@@ -1,9 +1,19 @@
 import { WaniKaniClient } from '../api/wanikaniApi';
-import type { SubjectData, WaniKaniResource, Meaning, Reading, KanjiReading } from '../api/types';
+import type {
+  SubjectData,
+  WaniKaniResource,
+  Meaning,
+  Reading,
+  KanjiReading,
+  AssignmentData,
+} from '../api/types';
 import {
   upsertSubjects,
+  upsertAssignments,
   updateSyncStatus,
+  getSyncStatus,
   type SubjectInput,
+  type AssignmentInput,
 } from '../storage/database';
 
 // ============================================
@@ -32,9 +42,42 @@ export interface SyncSubjectsResult {
   error?: string;
 }
 
+export interface SyncAssignmentsOptions {
+  /** Progress callback for UI updates */
+  onProgress?: SyncProgressCallback;
+  /** Updated after timestamp for incremental sync */
+  updatedAfter?: string;
+}
+
+export interface SyncAssignmentsResult {
+  success: boolean;
+  syncedCount: number;
+  error?: string;
+  /** Whether the sync was resumed from a previous incomplete sync */
+  resumed?: boolean;
+}
+
 // ============================================
 // Helpers
 // ============================================
+
+/**
+ * Converts a WaniKani API assignment to database input format.
+ */
+export function convertAssignmentToInput(
+  resource: WaniKaniResource<AssignmentData>,
+): AssignmentInput {
+  const data = resource.data;
+  return {
+    id: resource.id,
+    subject_id: data.subject_id,
+    srs_stage: data.srs_stage,
+    available_at: data.available_at,
+    started_at: data.started_at,
+    unlocked_at: data.unlocked_at,
+    data_updated_at: resource.data_updated_at,
+  };
+}
 
 /**
  * Converts a WaniKani API subject to database input format.
@@ -157,6 +200,103 @@ export async function syncSubjects(
       success: false,
       syncedCount: 0,
       error: errorMessage,
+    };
+  }
+}
+
+/**
+ * Syncs all assignments from the WaniKani API.
+ *
+ * This function fetches all assignments for unlocked subjects and stores them
+ * in the local database. It supports:
+ * - Progress callbacks for UI updates
+ * - Incremental sync via updatedAfter parameter
+ * - Resume capability for interrupted syncs (uses last_assignments_sync timestamp)
+ *
+ * @param client WaniKani API client
+ * @param options Sync options including progress callback
+ * @returns Result of the sync operation
+ */
+export async function syncAssignments(
+  client: WaniKaniClient,
+  options: SyncAssignmentsOptions = {},
+): Promise<SyncAssignmentsResult> {
+  const { onProgress } = options;
+  let { updatedAfter } = options;
+  let resumed = false;
+
+  try {
+    // If no updatedAfter is provided, check if we have a previous incomplete sync
+    // to resume from. This allows resuming interrupted syncs.
+    if (!updatedAfter) {
+      const syncStatus = await getSyncStatus();
+      if (syncStatus?.last_assignments_sync) {
+        // We have a previous sync timestamp - use it for incremental sync
+        updatedAfter = syncStatus.last_assignments_sync;
+        resumed = true;
+      }
+    }
+
+    // Fetch first page to get total count
+    // We only fetch unlocked assignments (unlocked=true)
+    const firstPage = await client.getAssignments({
+      unlocked: true,
+      updated_after: updatedAfter,
+    });
+
+    const totalCount = firstPage.total_count;
+    let syncedCount = 0;
+
+    // Process first page
+    const assignmentsToInsert: AssignmentInput[] = [];
+    for (const assignment of firstPage.data) {
+      assignmentsToInsert.push(convertAssignmentToInput(assignment));
+    }
+
+    if (assignmentsToInsert.length > 0) {
+      await upsertAssignments(assignmentsToInsert);
+      syncedCount += assignmentsToInsert.length;
+      onProgress?.(syncedCount, totalCount);
+    }
+
+    // Fetch remaining pages
+    let currentPage = firstPage;
+    while (currentPage.pages.next_url) {
+      const nextPage = await client.getNextPage(currentPage);
+      if (!nextPage) break;
+
+      const pageAssignments: AssignmentInput[] = [];
+      for (const assignment of nextPage.data) {
+        pageAssignments.push(convertAssignmentToInput(assignment));
+      }
+
+      if (pageAssignments.length > 0) {
+        await upsertAssignments(pageAssignments);
+        syncedCount += pageAssignments.length;
+        onProgress?.(syncedCount, totalCount);
+      }
+
+      currentPage = nextPage;
+    }
+
+    // Update sync status
+    await updateSyncStatus({
+      last_assignments_sync: new Date().toISOString(),
+    });
+
+    return {
+      success: true,
+      syncedCount,
+      resumed,
+    };
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error during sync';
+    return {
+      success: false,
+      syncedCount: 0,
+      error: errorMessage,
+      resumed,
     };
   }
 }
