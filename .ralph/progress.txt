@@ -524,3 +524,50 @@
   - Browser verification not available (no dev-browser skill configured)
 
 ---
+
+## 2026-01-25 - US-019: Lesson Completion and Sync
+- What was implemented:
+  - completeLessons() function in syncService that calls PUT /assignments/:id/start for each completed lesson
+  - Online mode: syncs immediately with WaniKani API and updates local database with response
+  - Offline mode: queues lessons in pending_lessons table and updates local database optimistically
+  - syncPendingLessons() function to sync queued lessons when coming back online
+  - clearPendingLessons() utility function to clear the pending queue
+  - pending_lessons table schema: id, assignment_id (UNIQUE), subject_id, started_at, created_at
+  - Pending lessons CRUD operations: insertPendingLesson, insertPendingLessons, getPendingLessonById, getPendingLessonByAssignmentId, getAllPendingLessons, deletePendingLesson, deletePendingLessonByAssignmentId, deleteAllPendingLessons, getPendingLessonCount
+  - LessonCompletion component showing:
+    - Success icon and "Lessons Complete!" title
+    - Number of items learned (X items learned / item learned for singular)
+    - Sync status ("Synced with WaniKani" or "Queued for sync when online")
+    - Continue button (shown when more lessons available) with count
+    - Return to Dashboard button
+  - LessonsScreen integration:
+    - Phase-based state machine: loading -> learning -> quiz -> syncing -> complete -> error
+    - Loads available lessons from database on mount
+    - Renders LessonBatch for learning phase
+    - Renders LessonQuiz for quiz phase
+    - Shows syncing spinner during API calls
+    - Renders LessonCompletion after successful sync
+    - Supports continuing to next batch or returning to dashboard
+    - Error handling with back link
+  - Types: LessonToComplete, CompleteLessonsOptions, CompleteLessonsResult, SyncPendingLessonsResult, PendingLessonInput, DatabasePendingLesson
+- Files changed:
+  - src/storage/database.ts (added pending_lessons table and CRUD operations)
+  - src/storage/index.ts (updated exports for pending lessons)
+  - src/sync/syncService.ts (added completeLessons, syncPendingLessons, clearPendingLessons)
+  - src/sync/index.ts (updated exports)
+  - src/components/LessonCompletion.tsx (new - completion summary component)
+  - src/components/index.ts (updated exports)
+  - src/screens/LessonsScreen.tsx (full implementation of lesson flow)
+  - __tests__/sync/syncService.test.ts (added 17 new tests for lesson completion)
+  - __tests__/storage/databaseCrud.test.ts (added 13 new tests for pending lessons CRUD)
+  - __tests__/components/LessonCompletion.test.tsx (new - 13 tests)
+  - __tests__/screens/LessonsScreen.test.tsx (updated - 9 tests for full flow)
+- **Learnings for future iterations:**
+  - Use phase-based state machine for complex multi-step flows (loading, learning, quiz, syncing, complete, error)
+  - When offline (client is null), queue operations in pending tables and update local DB optimistically
+  - Database mock doesn't enforce UNIQUE constraints - tests should account for this limitation
+  - Use useCallback for loadLessons to satisfy exhaustive-deps and avoid stale closures
+  - Mark unused function parameters with underscore prefix (_assignment) to satisfy ESLint
+  - Browser verification not available (no dev-browser skill configured)
+
+---
