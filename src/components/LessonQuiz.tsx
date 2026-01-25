@@ -102,7 +102,7 @@ export interface LessonQuizProps {
   onAnswer?: (result: AnswerResult) => void;
   /** Callback when the quiz is complete (all questions answered correctly) */
   onQuizComplete?: (results: AnswerResult[]) => void;
-  /** Auto-advance delay in ms for correct answers (default: 300) */
+  /** Auto-advance delay in ms for correct answers (default: 500) */
   autoAdvanceDelay?: number;
 }
 
@@ -193,7 +193,7 @@ export function LessonQuiz({
   items,
   onAnswer,
   onQuizComplete,
-  autoAdvanceDelay = 300,
+  autoAdvanceDelay = 500,
 }: LessonQuizProps) {
   // Generate initial questions once when items change
   const initialQuestions = useMemo(() => generateQuizQuestions(items), [items]);

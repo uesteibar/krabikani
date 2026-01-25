@@ -536,6 +536,39 @@ describe('LessonQuiz', () => {
       expect(progressText.props.children).toEqual([2, ' / ', 2]);
     });
 
+    it('should use default autoAdvanceDelay of 500ms', () => {
+      const items = [sampleRadical, sampleRadical2];
+      const { getByTestId, queryByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} />,
+      );
+
+      // Determine which radical is shown first and answer correctly
+      const firstChar = getByTestId('lesson-quiz-characters').props.children;
+      const firstAnswer = firstChar === '一' ? 'Ground' : 'Person';
+
+      // Answer correctly
+      const input = getByTestId('lesson-quiz-input');
+      fireEvent.changeText(input, firstAnswer);
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      // Feedback should be showing
+      expect(queryByTestId('lesson-quiz-correct-label')).toBeTruthy();
+
+      // Advance time by less than 500ms - should still show feedback
+      act(() => {
+        jest.advanceTimersByTime(300);
+      });
+      expect(queryByTestId('lesson-quiz-correct-label')).toBeTruthy();
+
+      // Advance past 500ms - should advance to next question
+      act(() => {
+        jest.advanceTimersByTime(300);
+      });
+
+      // Should have advanced - correct label should no longer be visible
+      expect(queryByTestId('lesson-quiz-correct-label')).toBeNull();
+    });
+
     it('calls onQuizComplete when all questions answered correctly', () => {
       const onQuizComplete = jest.fn();
       const items = [sampleRadical]; // Just 1 question

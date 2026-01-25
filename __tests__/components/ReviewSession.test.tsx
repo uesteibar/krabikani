@@ -1033,7 +1033,7 @@ describe('ReviewSession', () => {
       expect(getByTestId('review-session-input')).toBeTruthy();
     });
 
-    it('should use default autoAdvanceDelay of 50ms', () => {
+    it('should use default autoAdvanceDelay of 500ms', () => {
       const { getByTestId, queryByTestId } = render(
         <ReviewSession items={[sampleRadical]} />,
       );
@@ -1047,15 +1047,15 @@ describe('ReviewSession', () => {
       // Feedback should be showing
       expect(queryByTestId('review-session-correct-label')).toBeTruthy();
 
-      // Advance time by less than 50ms - should still show feedback
+      // Advance time by less than 500ms - should still show feedback
       act(() => {
-        jest.advanceTimersByTime(30);
+        jest.advanceTimersByTime(300);
       });
       expect(queryByTestId('review-session-correct-label')).toBeTruthy();
 
-      // Advance past 50ms - should complete
+      // Advance past 500ms - should complete
       act(() => {
-        jest.advanceTimersByTime(30);
+        jest.advanceTimersByTime(300);
       });
       expect(queryByTestId('review-session-complete')).toBeTruthy();
     });

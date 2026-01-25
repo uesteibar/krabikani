@@ -1,3 +1,45 @@
 # Ralph Progress Log
 Started: Sun Jan 25 10:42:13 CET 2026
 ---
+
+## Codebase Patterns
+- Quiz components (LessonQuiz, ReviewSession) have nearly identical UIs but different question ordering logic
+- Question types are 'meaning' or 'reading', stored in QuestionType/ReviewQuestionType
+- Subject colors use COLORS.neutral.black and COLORS.neutral.white from theme/colors.ts
+- Styles use StyleSheet.create with COLORS, SPACING, BORDER_RADIUS from theme
+- Test files use testID attributes for querying elements
+- Pre-existing test failures exist in progress text format assertions and SettingsScreen tests (unrelated to new features)
+
+## 2026-01-25 - US-001
+- **What was implemented**: Added visual indicator bar for question type
+  - Full-width 10px horizontal bar at top of quiz card
+  - Black bar (COLORS.neutral.black) for reading questions
+  - White bar (COLORS.neutral.white) with subtle border for meaning questions
+  - Bar shown in both normal quiz view and incorrect feedback view
+- **Files changed**:
+  - src/components/LessonQuiz.tsx (added questionTypeBar styles and JSX)
+  - src/components/ReviewSession.tsx (added questionTypeBar styles and JSX)
+  - __tests__/components/LessonQuiz.test.tsx (added 4 indicator bar tests)
+  - __tests__/components/ReviewSession.test.tsx (added 4 indicator bar tests)
+- **Learnings for future iterations**:
+  - LessonQuiz and ReviewSession have nearly identical rendering structures but use different testID prefixes (lesson-quiz-* vs review-session-*)
+  - Both components have two render paths: normal quiz view and incorrect feedback view - both need the indicator bar
+  - Test assertions on style arrays use expect.arrayContaining with expect.objectContaining for React Native style checks
+---
+
+## 2026-01-25 - US-002
+- **What was implemented**: Increased correct answer feedback duration from short delays to 500ms
+  - Changed LessonQuiz autoAdvanceDelay from 300ms to 500ms
+  - Changed ReviewSession autoAdvanceDelay from 50ms to 500ms
+  - Updated JSDoc comments to reflect new default values
+- **Files changed**:
+  - src/components/LessonQuiz.tsx (changed autoAdvanceDelay default to 500)
+  - src/components/ReviewSession.tsx (changed autoAdvanceDelay default to 500)
+  - __tests__/components/LessonQuiz.test.tsx (added timing test for 500ms default)
+  - __tests__/components/ReviewSession.test.tsx (updated timing test from 50ms to 500ms)
+- **Learnings for future iterations**:
+  - autoAdvanceDelay is a prop with a default value in both LessonQuiz and ReviewSession
+  - The delay controls how long the "Correct!" feedback is shown before auto-advancing
+  - Tests use jest.useFakeTimers() and jest.advanceTimersByTime() to verify timing behavior
+  - Pre-existing test failures (progress text format) don't affect new feature tests
+---

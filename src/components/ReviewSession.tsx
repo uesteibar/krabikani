@@ -116,7 +116,7 @@ export interface ReviewSessionProps {
   onAnswer?: (result: ReviewAnswerResult) => void;
   /** Callback when the session is complete (all items reviewed) */
   onSessionComplete?: (itemProgress: Map<number, ItemProgress>) => void;
-  /** Delay in ms before auto-advancing after correct answer (default: 50ms for near-instant feedback) */
+  /** Delay in ms before auto-advancing after correct answer (default: 500ms for appreciable feedback) */
   autoAdvanceDelay?: number;
   /** Callback when wrap-up mode is toggled */
   onWrapUpToggle?: (isWrappingUp: boolean) => void;
@@ -233,7 +233,7 @@ export function ReviewSession({
   items,
   onAnswer,
   onSessionComplete,
-  autoAdvanceDelay = 50,
+  autoAdvanceDelay = 500,
   onWrapUpToggle,
 }: ReviewSessionProps) {
   // Generate initial questions once when items change
