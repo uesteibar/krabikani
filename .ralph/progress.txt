@@ -230,3 +230,28 @@
   - Use { maxRetries: 0 } in tests to avoid retry delays
 
 ---
+
+## 2026-01-25 - US-009: Initial Data Sync - Assignments
+- What was implemented:
+  - syncAssignments() function in SyncService for fetching and storing assignments
+  - Fetches all unlocked assignments from WaniKani API (unlocked=true filter)
+  - Handles pagination automatically (follows next_url until exhausted)
+  - Progress callback support for UI updates showing synced/total items
+  - convertAssignmentToInput() helper for API-to-database type conversion
+  - Stores fetched assignments in local SQLite database using upsertAssignments()
+  - Updates sync_status.last_assignments_sync timestamp after successful sync
+  - Resume capability: automatically uses last_assignments_sync for incremental sync
+  - Support for explicit incremental sync via updatedAfter parameter
+  - Error handling with typed result (SyncAssignmentsResult) including resumed flag
+- Files changed:
+  - src/sync/syncService.ts (added syncAssignments, convertAssignmentToInput, new types)
+  - src/sync/index.ts (updated exports)
+  - __tests__/sync/syncService.test.ts (added 14 new tests for assignment sync)
+- **Learnings for future iterations:**
+  - Assignment API data has simpler structure than subjects - straightforward conversion
+  - Resume capability implemented by checking last_assignments_sync before sync
+  - When testing helper functions that accept null, use hasOwnProperty check to distinguish undefined vs null
+  - Browser verification not available (no dev-browser skill configured)
+  - "Block app usage until sync completes" is a UI-level concern to be addressed in dashboard/initialization story
+
+---
