@@ -18,6 +18,7 @@ import {
   type LessonItem,
   type ComponentRadical,
   type QuizItem,
+  type QuizComponentKanji,
 } from '../components';
 import {
   getAvailableLessons,
@@ -76,6 +77,7 @@ function subjectToLessonItem(
 function lessonItemToQuizItem(
   item: LessonItem,
   componentRadicals: Map<number, ComponentRadical>,
+  componentKanjiMap: Map<number, QuizComponentKanji>,
 ): QuizItem {
   // For QuizItem, we need to include auxiliaryMeanings if available
   // but our database doesn't store them separately, so we pass empty array
@@ -85,6 +87,15 @@ function lessonItemToQuizItem(
       ? item.componentSubjectIds
           .map(id => componentRadicals.get(id))
           .filter((r): r is ComponentRadical => r !== undefined)
+      : undefined;
+
+  // Include component kanji for vocabulary items
+  const itemComponentKanji =
+    (item.subjectType === 'vocabulary' || item.subjectType === 'kana_vocabulary') &&
+    item.componentSubjectIds
+      ? item.componentSubjectIds
+          .map(id => componentKanjiMap.get(id))
+          .filter((k): k is QuizComponentKanji => k !== undefined)
       : undefined;
 
   return {
@@ -97,6 +108,7 @@ function lessonItemToQuizItem(
     readingMnemonic: item.readingMnemonic,
     auxiliaryMeanings: [] as AuxiliaryMeaning[],
     componentRadicals: itemComponentRadicals,
+    componentKanji: itemComponentKanji,
   };
 }
 
@@ -235,6 +247,43 @@ export function LessonsScreen() {
     return radicalMap;
   }, [session, currentBatch.items]);
 
+  // Get component kanji for vocabulary items
+  const componentKanji = useMemo(() => {
+    if (!session) return new Map<number, QuizComponentKanji>();
+
+    // Collect all component subject IDs from vocabulary items in the current batch
+    const componentIds = new Set<number>();
+    for (const item of currentBatch.items) {
+      if ((item.subjectType === 'vocabulary' || item.subjectType === 'kana_vocabulary') &&
+          item.componentSubjectIds) {
+        item.componentSubjectIds.forEach(id => componentIds.add(id));
+      }
+    }
+
+    // Find kanji in the session subjects
+    const kanjiMap = new Map<number, QuizComponentKanji>();
+    for (const subject of session.subjects) {
+      if (componentIds.has(subject.id) && subject.object_type === 'kanji') {
+        const meanings: Meaning[] = JSON.parse(subject.meanings);
+        const readings: KanjiReading[] = subject.readings
+          ? JSON.parse(subject.readings)
+          : [];
+        const primaryMeaning =
+          meanings.find(m => m.primary)?.meaning ?? meanings[0]?.meaning ?? '';
+        const primaryReading =
+          readings.find(r => r.primary)?.reading ?? readings[0]?.reading ?? '';
+        kanjiMap.set(subject.id, {
+          id: subject.id,
+          characters: subject.characters ?? '?',
+          meaning: primaryMeaning,
+          reading: primaryReading,
+        });
+      }
+    }
+
+    return kanjiMap;
+  }, [session, currentBatch.items]);
+
   // Calculate remaining lessons after current batch
   const moreLessonsAvailable = useMemo(() => {
     if (!session) return 0;
@@ -360,7 +409,7 @@ export function LessonsScreen() {
   // Render quiz phase
   if (phase === 'quiz' && session) {
     const quizItems = currentBatch.items.map(item =>
-      lessonItemToQuizItem(item, componentRadicals),
+      lessonItemToQuizItem(item, componentRadicals, componentKanji),
     );
 
     return (

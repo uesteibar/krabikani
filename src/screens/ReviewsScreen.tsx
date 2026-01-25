@@ -15,6 +15,7 @@ import {
   ReviewSession,
   type ReviewItem,
   type ReviewComponentRadical,
+  type ReviewComponentKanji,
   type ItemProgress,
 } from '../components';
 import {
@@ -38,6 +39,7 @@ interface ReviewSessionData {
   assignments: DatabaseAssignment[];
   subjects: DatabaseSubject[];
   componentRadicals: Map<number, ReviewComponentRadical>;
+  componentKanji: Map<number, ReviewComponentKanji>;
 }
 
 interface SyncResult {
@@ -53,6 +55,7 @@ function subjectToReviewItem(
   subject: DatabaseSubject,
   assignment: DatabaseAssignment,
   componentRadicalsMap: Map<number, ReviewComponentRadical>,
+  componentKanjiMap: Map<number, ReviewComponentKanji>,
 ): ReviewItem {
   const meanings: Meaning[] = JSON.parse(subject.meanings);
   const readings: Reading[] | KanjiReading[] | null = subject.readings
@@ -71,6 +74,15 @@ function subjectToReviewItem(
           .filter((r): r is ReviewComponentRadical => r !== undefined)
       : undefined;
 
+  // Get component kanji for vocabulary items
+  const componentKanji =
+    (subject.object_type === 'vocabulary' || subject.object_type === 'kana_vocabulary') &&
+    componentSubjectIds
+      ? componentSubjectIds
+          .map(id => componentKanjiMap.get(id))
+          .filter((k): k is ReviewComponentKanji => k !== undefined)
+      : undefined;
+
   return {
     id: subject.id,
     assignmentId: assignment.id,
@@ -82,6 +94,7 @@ function subjectToReviewItem(
     readingMnemonic: subject.reading_mnemonic,
     auxiliaryMeanings: [] as AuxiliaryMeaning[],
     componentRadicals,
+    componentKanji,
   };
 }
 
@@ -131,21 +144,35 @@ export function ReviewsScreen() {
         return;
       }
 
-      // Collect all component subject IDs from kanji items
-      const componentIds = new Set<number>();
+      // Collect all component subject IDs from kanji items (for radicals)
+      const radicalComponentIds = new Set<number>();
       for (const subject of validSubjects) {
         if (subject.object_type === 'kanji' && subject.component_subject_ids) {
           const ids: number[] = JSON.parse(subject.component_subject_ids);
-          ids.forEach(id => componentIds.add(id));
+          ids.forEach(id => radicalComponentIds.add(id));
         }
       }
 
-      // Fetch component radicals if any kanji items have components
+      // Collect all component subject IDs from vocabulary items (for kanji)
+      const kanjiComponentIds = new Set<number>();
+      for (const subject of validSubjects) {
+        if ((subject.object_type === 'vocabulary' || subject.object_type === 'kana_vocabulary') &&
+            subject.component_subject_ids) {
+          const ids: number[] = JSON.parse(subject.component_subject_ids);
+          ids.forEach(id => kanjiComponentIds.add(id));
+        }
+      }
+
+      // Combine all component IDs for a single fetch
+      const allComponentIds = new Set([...radicalComponentIds, ...kanjiComponentIds]);
+
+      // Fetch all component subjects
       let componentRadicals = new Map<number, ReviewComponentRadical>();
-      if (componentIds.size > 0) {
-        const componentSubjects = await getSubjectsByIds(Array.from(componentIds));
+      let componentKanji = new Map<number, ReviewComponentKanji>();
+      if (allComponentIds.size > 0) {
+        const componentSubjects = await getSubjectsByIds(Array.from(allComponentIds));
         for (const subject of componentSubjects) {
-          if (subject.object_type === 'radical') {
+          if (subject.object_type === 'radical' && radicalComponentIds.has(subject.id)) {
             const meanings: Meaning[] = JSON.parse(subject.meanings);
             const primaryMeaning =
               meanings.find(m => m.primary)?.meaning ?? meanings[0]?.meaning ?? '';
@@ -156,6 +183,22 @@ export function ReviewsScreen() {
               characterImages: subject.character_images,
             });
           }
+          if (subject.object_type === 'kanji' && kanjiComponentIds.has(subject.id)) {
+            const meanings: Meaning[] = JSON.parse(subject.meanings);
+            const readings: KanjiReading[] = subject.readings
+              ? JSON.parse(subject.readings)
+              : [];
+            const primaryMeaning =
+              meanings.find(m => m.primary)?.meaning ?? meanings[0]?.meaning ?? '';
+            const primaryReading =
+              readings.find(r => r.primary)?.reading ?? readings[0]?.reading ?? '';
+            componentKanji.set(subject.id, {
+              id: subject.id,
+              characters: subject.characters ?? '?',
+              meaning: primaryMeaning,
+              reading: primaryReading,
+            });
+          }
         }
       }
 
@@ -163,6 +206,7 @@ export function ReviewsScreen() {
         assignments: validAssignments,
         subjects: validSubjects,
         componentRadicals,
+        componentKanji,
       });
       setPhase('reviewing');
     } catch (error) {
@@ -193,6 +237,7 @@ export function ReviewsScreen() {
         subject,
         sessionData.assignments[index],
         sessionData.componentRadicals,
+        sessionData.componentKanji,
       ),
     );
   }, [sessionData]);
