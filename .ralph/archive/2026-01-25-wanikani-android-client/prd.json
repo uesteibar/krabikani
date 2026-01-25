@@ -1,0 +1,478 @@
+{
+  "project": "UnaiNikani",
+  "branchName": "ralph/wanikani-android-client",
+  "description": "WaniKani Android Client - A clean, smooth React Native app for WaniKani lessons and reviews with full offline support",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Initialize React Native Project",
+      "description": "As a developer, I need a properly configured React Native project so that I can build the Android app.",
+      "acceptanceCriteria": [
+        "React Native project initialized with TypeScript support",
+        "Android build configuration working",
+        "Basic folder structure established (src/screens, src/components, src/api, src/storage, src/utils)",
+        "Navigation library installed and configured (React Navigation)",
+        "Project builds and runs on Android emulator",
+        "All quality checks pass"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "API Key Storage and Input Screen",
+      "description": "As a user, I want to enter my WaniKani API key so that the app can access my account data.",
+      "acceptanceCriteria": [
+        "Settings screen with API key input field",
+        "API key stored securely (encrypted storage using react-native-keychain or expo-secure-store)",
+        "API key persists across app restarts",
+        "Option to clear/change API key",
+        "All quality checks pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "API Key Validation",
+      "description": "As a user, I want my API key validated when I enter it so I know it works.",
+      "acceptanceCriteria": [
+        "Validate API key by making test request to WaniKani API GET /v2/user",
+        "Show success feedback after successful validation",
+        "Show error feedback if validation fails",
+        "All tests pass",
+        "All quality checks pass"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "WaniKani API Client - Core Setup",
+      "description": "As a developer, I need a typed API client foundation to communicate with WaniKani's API v2.",
+      "acceptanceCriteria": [
+        "API client handles authentication via API key header (Wanikani-Revision and Authorization headers)",
+        "TypeScript types for core API responses (User, Subject, Assignment)",
+        "Proper error handling with typed errors",
+        "All tests pass",
+        "All quality checks pass"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "WaniKani API Client - Endpoints",
+      "description": "As a developer, I need API client methods for all required WaniKani endpoints.",
+      "acceptanceCriteria": [
+        "Implements GET /v2/summary endpoint",
+        "Implements GET /v2/subjects endpoint with pagination support",
+        "Implements GET /v2/assignments endpoint with pagination support",
+        "Implements PUT /v2/assignments/:id/start endpoint",
+        "Implements POST /v2/reviews endpoint",
+        "TypeScript types for Review and Summary responses",
+        "Request retry logic for transient failures (exponential backoff: 1s, 2s, 4s, max 3 retries)",
+        "All tests pass",
+        "All quality checks pass"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Local Database Setup - Schema Definition",
+      "description": "As a developer, I need a local SQLite database schema for offline storage.",
+      "acceptanceCriteria": [
+        "SQLite database configured (expo-sqlite or react-native-sqlite-storage)",
+        "Schema for subjects table (id, object_type, characters, meanings, readings, meaning_mnemonic, reading_mnemonic, level, component_subject_ids)",
+        "Schema for assignments table (id, subject_id, srs_stage, available_at, started_at, unlocked_at)",
+        "Schema for pending_reviews table (id, assignment_id, subject_id, incorrect_meaning_answers, incorrect_reading_answers, created_at)",
+        "Schema for sync_status table (id, last_subjects_sync, last_assignments_sync, last_summary_sync)",
+        "All tests pass",
+        "All quality checks pass"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Local Database - CRUD Operations",
+      "description": "As a developer, I need database helper functions to read and write data.",
+      "acceptanceCriteria": [
+        "Functions to insert/update/query subjects",
+        "Functions to insert/update/query assignments",
+        "Functions to insert/query/delete pending_reviews",
+        "Functions to read/update sync_status",
+        "Database migrations system for future schema changes",
+        "All tests pass",
+        "All quality checks pass"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Initial Data Sync - Subjects",
+      "description": "As a user, I want subjects downloaded when I first connect so I can study offline.",
+      "acceptanceCriteria": [
+        "On first launch with valid API key, fetch all subjects up to user's current level",
+        "Store subjects in local database",
+        "Show progress indicator during sync (X of Y items)",
+        "Handle pagination for large datasets",
+        "All tests pass",
+        "All quality checks pass"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Initial Data Sync - Assignments",
+      "description": "As a user, I want my assignments downloaded so I know what to study.",
+      "acceptanceCriteria": [
+        "Fetch all assignments for unlocked subjects",
+        "Store assignments in local database",
+        "Show progress indicator during sync",
+        "Handle sync interruption gracefully (resume capability)",
+        "Block app usage until initial sync completes",
+        "All tests pass",
+        "All quality checks pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Offline Detection and Sync Status",
+      "description": "As a user, I want to know when I'm offline and when my data was last synced.",
+      "acceptanceCriteria": [
+        "Detect network connectivity status using @react-native-community/netinfo",
+        "Show offline indicator in UI when disconnected",
+        "Display 'Last synced: X minutes/hours ago' on dashboard",
+        "If app opened offline with no cached data, show error requiring connection",
+        "All tests pass",
+        "All quality checks pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Dashboard Screen - Layout",
+      "description": "As a user, I want to see my pending lessons and reviews count on a dashboard.",
+      "acceptanceCriteria": [
+        "Dashboard shows number of available lessons from local cache",
+        "Dashboard shows number of available reviews from local cache",
+        "Dashboard shows next review time (e.g., 'Next review in 2 hours')",
+        "Clear visual hierarchy with counts prominently displayed",
+        "All quality checks pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Dashboard Screen - Navigation and Refresh",
+      "description": "As a user, I want to navigate to study sessions and refresh my data from the dashboard.",
+      "acceptanceCriteria": [
+        "Tapping lessons count navigates to lessons session",
+        "Tapping reviews count navigates to reviews session",
+        "Data refreshes from API when online",
+        "Pull-to-refresh triggers sync when online",
+        "All tests pass",
+        "All quality checks pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Romaji to Hiragana Input Conversion",
+      "description": "As a user, I want to type romaji and have it automatically convert to hiragana.",
+      "acceptanceCriteria": [
+        "Input field converts romaji to hiragana in real-time",
+        "Wapuro-style conversion rules (ka→か, shi→し, si→し, tsu→つ, tu→つ, etc.)",
+        "Double consonant produces っ (kka→っか)",
+        "nn produces ん, n followed by vowel produces な/に/ぬ/ね/の",
+        "Long vowels work correctly (ou→おう, uu→うう)",
+        "Backspace works correctly (deleting partial romaji)",
+        "All tests pass",
+        "All quality checks pass"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "Answer Validation Logic",
+      "description": "As a user, I want my answers validated correctly with reasonable variations accepted.",
+      "acceptanceCriteria": [
+        "Meaning answers: case-insensitive comparison",
+        "Meaning answers: accept all valid meanings from WaniKani (primary + alternatives)",
+        "Meaning answers: trim whitespace",
+        "Reading answers: exact hiragana match required",
+        "Reading answers: accept all valid readings from WaniKani",
+        "Handle auxiliary meanings (accept but don't require)",
+        "All tests pass",
+        "All quality checks pass"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-015",
+      "title": "Lesson Learning Phase - Card Display",
+      "description": "As a user, I want to see lesson cards with item details before being quizzed.",
+      "acceptanceCriteria": [
+        "Each item shows: characters (large, readable), meaning, reading (if applicable)",
+        "Shows meaning mnemonic and reading mnemonic (if applicable)",
+        "Radicals only show meaning (no reading)",
+        "Kanji and vocabulary show both meaning and reading",
+        "Simple card layout with 'Next' button to advance",
+        "All quality checks pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-016",
+      "title": "Lesson Learning Phase - Batch Flow",
+      "description": "As a user, I want lessons presented in batches of 5 items.",
+      "acceptanceCriteria": [
+        "Lessons presented in batches of 5 items",
+        "For kanji: show component radicals",
+        "After viewing all 5 items, automatically proceed to quiz",
+        "Progress indicator shows current position in batch",
+        "All tests pass",
+        "All quality checks pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-017",
+      "title": "Lesson Quiz - Question Display",
+      "description": "As a user, I want to be quizzed on items I just learned.",
+      "acceptanceCriteria": [
+        "Quiz covers all 5 items from the learning phase",
+        "Meaning questions show characters, expect English answer",
+        "Reading questions show characters, expect hiragana answer (using romaji input)",
+        "Each item requires correct answers for both meaning and reading (except radicals: meaning only)",
+        "Order of questions is randomized",
+        "Order of meaning vs reading for same item is randomized",
+        "All quality checks pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-018",
+      "title": "Lesson Quiz - Answer Handling",
+      "description": "As a user, I want immediate feedback on my lesson quiz answers.",
+      "acceptanceCriteria": [
+        "Correct answer: auto-advance to next question (no tap required)",
+        "Incorrect answer: show correct answer + mnemonic, tap to continue",
+        "Incorrect items return later in quiz until answered correctly",
+        "All tests pass",
+        "All quality checks pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 18,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-019",
+      "title": "Lesson Completion and Sync",
+      "description": "As a user, I want my completed lessons registered with WaniKani.",
+      "acceptanceCriteria": [
+        "After passing quiz, call PUT /assignments/:id/start for each item",
+        "If online: sync immediately",
+        "If offline: queue for later sync",
+        "Show completion summary (X items learned)",
+        "Return to dashboard or offer to continue with next batch",
+        "All tests pass",
+        "All quality checks pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 19,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-020",
+      "title": "Review Session - Basic Flow",
+      "description": "As a user, I want to complete reviews with items presented in random order.",
+      "acceptanceCriteria": [
+        "Load available reviews from local cache (synced from API)",
+        "Show progress bar + remaining count at top",
+        "Order of items is randomized",
+        "Order of meaning vs reading for same item is randomized",
+        "Each item requires correct answers for both meaning and reading (except radicals: meaning only)",
+        "All tests pass",
+        "All quality checks pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 20,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-021",
+      "title": "Review Session - Correct Answer Handling",
+      "description": "As a user, I want correct answers to auto-advance immediately.",
+      "acceptanceCriteria": [
+        "Correct answer: auto-advance to next question immediately (< 100ms perceived delay)",
+        "Clear visual feedback for correct answer before advancing",
+        "All quality checks pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 21,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-022",
+      "title": "Review Session - Incorrect Answer Handling",
+      "description": "As a user, I want to see the correct answer and hint when I answer incorrectly.",
+      "acceptanceCriteria": [
+        "On incorrect answer, show the correct answer prominently",
+        "Show relevant mnemonic (meaning mnemonic for meaning questions, reading mnemonic for reading questions)",
+        "User must tap to continue to next question",
+        "Track number of incorrect answers per item (for API submission)",
+        "Item returns later in the session until answered correctly",
+        "All tests pass",
+        "All quality checks pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 22,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-023",
+      "title": "Review Session - Wrap Up Feature",
+      "description": "As a user, I want to end my review session early while completing started items.",
+      "acceptanceCriteria": [
+        "'Wrap Up' button visible during review session",
+        "When activated, stop introducing NEW items",
+        "Continue showing only items already presented that have pending answers",
+        "Show 'Wrapping up: X remaining' indicator",
+        "Session ends when all pending items are completed",
+        "All tests pass",
+        "All quality checks pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 23,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-024",
+      "title": "Review Submission - Online Sync",
+      "description": "As a user, I want my review results synced with WaniKani when online.",
+      "acceptanceCriteria": [
+        "After completing an item (both meaning and reading correct), prepare review submission",
+        "Submit via POST /reviews with incorrect_meaning_answers and incorrect_reading_answers counts",
+        "If online: submit immediately",
+        "Handle submission errors with retry",
+        "All tests pass",
+        "All quality checks pass"
+      ],
+      "priority": 24,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-025",
+      "title": "Review Submission - Offline Queue",
+      "description": "As a user, I want my offline reviews queued and synced when I reconnect.",
+      "acceptanceCriteria": [
+        "If offline: queue review in pending_reviews table",
+        "When coming back online, sync all pending reviews",
+        "Handle sync conflicts gracefully",
+        "Zero data loss for offline reviews",
+        "All tests pass",
+        "All quality checks pass"
+      ],
+      "priority": 25,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-026",
+      "title": "Background Sync",
+      "description": "As a user, I want my data to stay up-to-date automatically.",
+      "acceptanceCriteria": [
+        "On app foreground, check for new assignments/reviews if online",
+        "Sync any pending review submissions",
+        "Update local cache with new data",
+        "Fetch any new subjects unlocked since last sync",
+        "Do not interrupt active lesson/review sessions",
+        "All tests pass",
+        "All quality checks pass"
+      ],
+      "priority": 26,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-027",
+      "title": "UI Polish - Visual Design",
+      "description": "As a user, I want a clean, polished interface with WaniKani-inspired styling.",
+      "acceptanceCriteria": [
+        "Clear visual hierarchy (characters prominent, input clear)",
+        "Consistent color scheme (pink/magenta for radicals, purple for kanji, blue for vocabulary)",
+        "Large, readable Japanese characters (especially for kanji)",
+        "Touch-friendly button sizes (minimum 44x44 dp)",
+        "Proper loading states (skeleton screens or spinners)",
+        "All quality checks pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 27,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-028",
+      "title": "UI Polish - Animations and Transitions",
+      "description": "As a user, I want smooth transitions and feedback animations.",
+      "acceptanceCriteria": [
+        "Smooth transitions between screens",
+        "Subtle animations for correct/incorrect feedback",
+        "High contrast input fields with clear focus states",
+        "Dark mode support (respect system preference)",
+        "All quality checks pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 28,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
