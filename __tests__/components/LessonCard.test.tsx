@@ -324,10 +324,10 @@ describe('LessonCard', () => {
     });
 
     it('displays the meaning mnemonic text', () => {
-      const { getByTestId } = render(<LessonCard {...defaultRadicalProps} />);
-      expect(getByTestId('lesson-card-meaning-mnemonic').props.children).toBe(
-        'This radical looks like a big person with their arms spread wide.',
-      );
+      const { getByText } = render(<LessonCard {...defaultRadicalProps} />);
+      expect(
+        getByText('This radical looks like a big person with their arms spread wide.'),
+      ).toBeTruthy();
     });
   });
 
@@ -343,10 +343,10 @@ describe('LessonCard', () => {
     });
 
     it('displays the reading mnemonic text', () => {
-      const { getByTestId } = render(<LessonCard {...defaultKanjiProps} />);
-      expect(getByTestId('lesson-card-reading-mnemonic').props.children).toBe(
-        'When something is big, you say "OOH!" (おお) in amazement.',
-      );
+      const { getByText } = render(<LessonCard {...defaultKanjiProps} />);
+      expect(
+        getByText('When something is big, you say "OOH!" (おお) in amazement.'),
+      ).toBeTruthy();
     });
 
     it('renders reading mnemonic section for vocabulary', () => {

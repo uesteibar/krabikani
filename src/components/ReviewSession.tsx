@@ -41,6 +41,7 @@ import {
   PROGRESS_COLORS,
   MIN_TOUCH_TARGET,
 } from '../theme';
+import { MnemonicText } from './MnemonicText';
 
 // ============================================
 // Types
@@ -821,9 +822,11 @@ export function ReviewSession({
                 ? 'Meaning Mnemonic:'
                 : 'Reading Mnemonic:'}
             </Text>
-            <Text style={styles.mnemonicText} testID="review-session-mnemonic">
-              {incorrectFeedback.mnemonic}
-            </Text>
+            <MnemonicText
+              text={incorrectFeedback.mnemonic}
+              style={styles.mnemonicText}
+              testID="review-session-mnemonic"
+            />
           </View>
         </ScrollView>
 

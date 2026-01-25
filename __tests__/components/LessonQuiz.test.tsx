@@ -662,14 +662,14 @@ describe('LessonQuiz', () => {
 
     it('displays mnemonic in feedback', () => {
       const items = [sampleRadical];
-      const { getByTestId } = render(
+      const { getByTestId, getByText } = render(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
       fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
       fireEvent.press(getByTestId('lesson-quiz-submit'));
 
-      expect(getByTestId('lesson-quiz-mnemonic').props.children).toBe('Mnemonic for Ground');
+      expect(getByText('Mnemonic for Ground')).toBeTruthy();
       expect(getByTestId('lesson-quiz-mnemonic-label').props.children).toBe('Meaning Mnemonic:');
     });
 
@@ -775,7 +775,7 @@ describe('LessonQuiz', () => {
         readingMnemonic: 'This is the reading mnemonic',
       };
       const items = [vocabItem];
-      const { getByTestId } = render(
+      const { getByTestId, getByText } = render(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -788,7 +788,7 @@ describe('LessonQuiz', () => {
 
         // Should show reading mnemonic
         expect(getByTestId('lesson-quiz-mnemonic-label').props.children).toBe('Reading Mnemonic:');
-        expect(getByTestId('lesson-quiz-mnemonic').props.children).toBe('This is the reading mnemonic');
+        expect(getByText('This is the reading mnemonic')).toBeTruthy();
       } else {
         // Meaning question - answer wrong
         fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');

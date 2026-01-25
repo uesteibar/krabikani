@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 
 import type { SubjectType, Meaning, Reading, KanjiReading } from '../api/types';
+import { MnemonicText } from './MnemonicText';
 import {
   getSubjectColor,
   COLORS,
@@ -137,18 +138,22 @@ export function LessonCard({
         {/* Meaning mnemonic section */}
         <View style={styles.section} testID="lesson-card-meaning-mnemonic-section">
           <Text style={styles.sectionTitle}>Meaning Mnemonic</Text>
-          <Text style={styles.mnemonicText} testID="lesson-card-meaning-mnemonic">
-            {meaningMnemonic}
-          </Text>
+          <MnemonicText
+            text={meaningMnemonic}
+            style={styles.mnemonicText}
+            testID="lesson-card-meaning-mnemonic"
+          />
         </View>
 
         {/* Reading mnemonic section (only for kanji and vocabulary) */}
         {hasReading && readingMnemonic && (
           <View style={styles.section} testID="lesson-card-reading-mnemonic-section">
             <Text style={styles.sectionTitle}>Reading Mnemonic</Text>
-            <Text style={styles.mnemonicText} testID="lesson-card-reading-mnemonic">
-              {readingMnemonic}
-            </Text>
+            <MnemonicText
+              text={readingMnemonic}
+              style={styles.mnemonicText}
+              testID="lesson-card-reading-mnemonic"
+            />
           </View>
         )}
       </ScrollView>

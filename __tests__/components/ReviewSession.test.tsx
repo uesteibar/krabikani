@@ -1140,7 +1140,7 @@ describe('ReviewSession', () => {
     });
 
     it('should show meaning mnemonic for meaning questions', () => {
-      const { getByTestId } = render(
+      const { getByTestId, getByText } = render(
         <ReviewSession items={[sampleRadical]} />,
       );
 
@@ -1152,7 +1152,7 @@ describe('ReviewSession', () => {
 
       // Should show meaning mnemonic
       expect(getByTestId('review-session-mnemonic-label').props.children).toBe('Meaning Mnemonic:');
-      expect(getByTestId('review-session-mnemonic').props.children).toBe('Mnemonic for Ground');
+      expect(getByText('Mnemonic for Ground')).toBeTruthy();
     });
 
     it('should show reading mnemonic for reading questions', () => {
