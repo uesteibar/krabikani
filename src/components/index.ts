@@ -101,3 +101,5 @@ export {
   ComponentDisplay,
   type ComponentDisplayProps,
 } from './ComponentDisplay';
+
+export { SrsLevelBadge, type SrsLevelBadgeProps } from './SrsLevelBadge';

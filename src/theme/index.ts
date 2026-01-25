@@ -13,7 +13,11 @@ export {
   SPACING,
   BORDER_RADIUS,
   FONT_SIZES,
+  SRS_LEVELS,
+  getSrsLevelInfo,
 } from './colors';
+
+export type { SrsLevelKey, SrsLevelInfo } from './colors';
 
 export {
   ThemeProvider,

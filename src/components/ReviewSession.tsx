@@ -46,6 +46,7 @@ import {
 } from '../theme';
 import { MnemonicText } from './MnemonicText';
 import { ComponentDisplay } from './ComponentDisplay';
+import { SrsLevelBadge } from './SrsLevelBadge';
 
 // ============================================
 // Types
@@ -83,6 +84,8 @@ export interface ReviewItem {
   assignmentId: number;
   /** The subject type (radical, kanji, vocabulary, kana_vocabulary) */
   subjectType: SubjectType;
+  /** The SRS stage for this item (1-9) */
+  srsStage: number;
   /** The characters to display (e.g., "大", "たべる") - null for some radicals */
   characters: string | null;
   /** Array of meanings for the subject */
@@ -983,6 +986,12 @@ export function ReviewSession({
           style={[styles.characterContainer, styles.incorrectHeader]}
           testID="review-session-character-container"
         >
+          <View style={styles.srsLevelBadgeContainer}>
+            <SrsLevelBadge
+              stage={incorrectFeedback.question.item.srsStage}
+              testID="review-session-srs-badge"
+            />
+          </View>
           <Text style={styles.characters} testID="review-session-characters">
             {incorrectFeedback.question.item.characters ?? '?'}
           </Text>
@@ -1201,6 +1210,9 @@ export function ReviewSession({
         ]}
         testID="review-session-character-container"
       >
+        <View style={styles.srsLevelBadgeContainer}>
+          <SrsLevelBadge stage={item.srsStage} testID="review-session-srs-badge" />
+        </View>
         <Text style={styles.characters} testID="review-session-characters">
           {item.characters ?? '?'}
         </Text>
@@ -1374,6 +1386,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  srsLevelBadgeContainer: {
+    position: 'absolute',
+    top: SPACING.md,
+    right: SPACING.md,
   },
   characters: {
     fontSize: FONT_SIZES.display,

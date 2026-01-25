@@ -57,11 +57,13 @@ function createRadicalItem(
   id: number,
   character: string,
   meaning: string,
+  srsStage: number = 1,
 ): ReviewItem {
   return {
     id,
     assignmentId: id + 1000,
     subjectType: 'radical',
+    srsStage,
     characters: character,
     meanings: createMeanings([{ meaning, primary: true }]),
     readings: null,
@@ -75,11 +77,13 @@ function createKanjiItem(
   character: string,
   meaning: string,
   reading: string,
+  srsStage: number = 1,
 ): ReviewItem {
   return {
     id,
     assignmentId: id + 1000,
     subjectType: 'kanji',
+    srsStage,
     characters: character,
     meanings: createMeanings([{ meaning, primary: true }]),
     readings: createKanjiReadings([
@@ -95,11 +99,13 @@ function createVocabularyItem(
   characters: string,
   meaning: string,
   reading: string,
+  srsStage: number = 1,
 ): ReviewItem {
   return {
     id,
     assignmentId: id + 1000,
     subjectType: 'vocabulary',
+    srsStage,
     characters,
     meanings: createMeanings([{ meaning, primary: true }]),
     readings: createReadings([{ reading, primary: true }]),
@@ -113,11 +119,13 @@ function createKanaVocabularyItem(
   characters: string,
   meaning: string,
   reading: string,
+  srsStage: number = 1,
 ): ReviewItem {
   return {
     id,
     assignmentId: id + 1000,
     subjectType: 'kana_vocabulary',
+    srsStage,
     characters,
     meanings: createMeanings([{ meaning, primary: true }]),
     readings: createReadings([{ reading, primary: true }]),
@@ -2186,6 +2194,7 @@ describe('ReviewSession', () => {
       id: 100,
       assignmentId: 1100,
       subjectType: 'kanji',
+      srsStage: 1,
       characters: '森',
       meanings: createMeanings([{ meaning: 'Forest', primary: true }]),
       readings: createKanjiReadings([
@@ -2407,6 +2416,7 @@ describe('ReviewSession', () => {
       id: 200,
       assignmentId: 2000,
       subjectType: 'vocabulary',
+      srsStage: 1,
       characters: '大人',
       meanings: createMeanings([{ meaning: 'Adult', primary: true }]),
       readings: createReadings([{ reading: 'おとな', primary: true }]),
@@ -2616,6 +2626,7 @@ describe('ReviewSession', () => {
         id: 300,
         assignmentId: 3000,
         subjectType: 'kana_vocabulary',
+        srsStage: 1,
         characters: 'あめ',
         meanings: createMeanings([{ meaning: 'Candy', primary: true }]),
         readings: createReadings([{ reading: 'あめ', primary: true }]),

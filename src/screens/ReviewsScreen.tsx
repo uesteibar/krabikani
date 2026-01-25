@@ -87,6 +87,7 @@ function subjectToReviewItem(
     id: subject.id,
     assignmentId: assignment.id,
     subjectType: subject.object_type as ReviewItem['subjectType'],
+    srsStage: assignment.srs_stage,
     characters: subject.characters,
     meanings,
     readings,

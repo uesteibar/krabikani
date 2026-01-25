@@ -24,6 +24,76 @@ export const SUBJECT_COLORS = {
   kana_vocabulary: '#AA00FF',
 } as const;
 
+// ============================================
+// SRS Level Colors (WaniKani Official)
+// ============================================
+
+/**
+ * SRS level information with colors and names.
+ * Based on WaniKani's spaced repetition system stages.
+ */
+export const SRS_LEVELS = {
+  apprentice: {
+    name: 'Apprentice',
+    color: '#DD0093',
+    stages: [1, 2, 3, 4],
+  },
+  guru: {
+    name: 'Guru',
+    color: '#882D9E',
+    stages: [5, 6],
+  },
+  master: {
+    name: 'Master',
+    color: '#294DDB',
+    stages: [7],
+  },
+  enlightened: {
+    name: 'Enlightened',
+    color: '#0093DD',
+    stages: [8],
+  },
+  burned: {
+    name: 'Burned',
+    color: '#434343',
+    stages: [9],
+  },
+} as const;
+
+export type SrsLevelKey = keyof typeof SRS_LEVELS;
+
+export interface SrsLevelInfo {
+  key: SrsLevelKey;
+  name: string;
+  color: string;
+  stage: number;
+}
+
+/**
+ * Get the SRS level information for a given stage number.
+ * @param stage - The SRS stage number (1-9)
+ * @returns The SRS level info including name, color, and key
+ */
+export function getSrsLevelInfo(stage: number): SrsLevelInfo | null {
+  if (stage < 1 || stage > 9) {
+    return null;
+  }
+
+  for (const key of Object.keys(SRS_LEVELS) as SrsLevelKey[]) {
+    const level = SRS_LEVELS[key];
+    if ((level.stages as readonly number[]).includes(stage)) {
+      return {
+        key,
+        name: level.name,
+        color: level.color,
+        stage,
+      };
+    }
+  }
+
+  return null;
+}
+
 /**
  * Get the color for a subject type.
  * @param subjectType - The type of subject (radical, kanji, vocabulary, kana_vocabulary)
