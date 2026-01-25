@@ -11,6 +11,8 @@ Started:
 - react-native-reanimated requires: babel plugin, jest mocks (both reanimated and worklets), all hooks called before early returns
 - Reduced motion: Use AccessibilityInfo.isReduceMotionEnabled() + addEventListener('reduceMotionChanged') to respect accessibility settings
 - useEffect dependencies: Don't include reanimated shared values in deps - mocks create new objects causing effect to re-run (use eslint-disable comment)
+- Database CRUD: Follow pattern of XxxInput interface for inserts, Database interface for queries. Use INSERT OR REPLACE for upserts, INSERT OR IGNORE for duplicate prevention
+- Synonym storage: user_synonyms (synced to WaniKani) and pending_synonyms (awaiting sync) tables. Use getUserSynonymsBySubjectId() to get synonyms for validation
 
 ---
 
@@ -195,6 +197,87 @@ Started:
   - Patterns discovered: When a child component renders the same text as its parent, use testID to avoid "multiple elements with text" errors in tests
   - Gotchas encountered: TypeScript requires `as unknown as typeof X` pattern when mocking functions with complex return types
   - Useful context: ItemDetails reuses existing components (MnemonicText for formatted mnemonics, ComponentDisplay for radicals/kanji)
+
+---
+
+## 2026-01-26 - US-008
+- What was implemented: Create Pending Synonyms Storage
+  - Created user_synonyms table (subject_id, synonym, synced_at, created_at) for synced synonyms
+  - Created pending_synonyms table (subject_id, synonym, created_at) for offline-first synonym storage
+  - Added database functions:
+    - addUserSynonym(), getUserSynonymById(), getUserSynonymsBySubjectId(), getAllUserSynonyms()
+    - markSynonymSynced() to update synced_at timestamp after WaniKani sync
+    - deleteUserSynonym(), deleteUserSynonymsBySubjectId(), getUserSynonymCount()
+    - insertPendingSynonym(), getPendingSynonymById(), getPendingSynonyms(), getPendingSynonymsBySubjectId()
+    - deletePendingSynonym(), deletePendingSynonymBySubjectAndSynonym(), deleteAllPendingSynonyms(), getPendingSynonymCount()
+  - Updated answer validation to accept user synonyms (with fuzzy matching support)
+  - Added migration (version 4) for existing databases to add synonym tables
+  - Updated clearAllData() to also clear synonym tables
+  - Fixed TypeScript error in ItemDetails test (use View component instead of 'View' string)
+- Files changed:
+  - src/storage/database.ts (added tables, types, CRUD functions, migration)
+  - src/utils/answerValidation.ts (added userSynonyms parameter, isUserSynonym result field)
+  - __tests__/storage/databaseCrud.test.ts (added comprehensive tests for synonym CRUD)
+  - __tests__/utils/answerValidation.test.ts (added tests for user synonym validation)
+  - __tests__/components/ItemDetails.test.tsx (fixed TypeScript error)
+- **Learnings for future iterations:**
+  - Patterns discovered: Use INSERT OR IGNORE for pending tables to avoid duplicate queue entries
+  - Gotchas encountered: UNIQUE constraints on (subject_id, synonym) needed for both tables
+  - Useful context: validateMeaningAnswer() now accepts optional userSynonyms string array as 4th parameter
+
+---
+
+## 2026-01-26 - US-009
+- What was implemented: Add Synonym from Incorrect Answer Screen
+  - Added "Add as Synonym" text link on incorrect feedback screen (meaning questions only)
+  - Link visually de-emphasized: smaller font (FONT_SIZES.sm), tertiary text color, underlined
+  - Positioned below the button row for subtle placement
+  - State transitions: null → 'adding' → 'added' with visual feedback
+  - "Adding..." state shows with opacity 0.7 pulse effect
+  - "Synonym added ✓" state shows in green (feedback.correct color)
+  - After 400ms delay, auto-calls handleMarkAsCorrect() to mark correct and advance
+  - Synonym saved to both user_synonyms (local) and pending_synonyms (for sync) tables
+  - Link disabled once pressed to prevent double-tap
+  - Error handling: if database save fails, state resets to allow retry
+- Files changed:
+  - src/components/ReviewSession.tsx (added import, state, handler, UI, and styles)
+  - __tests__/components/ReviewSession.test.tsx (added 8 new tests, mock for database)
+- **Learnings for future iterations:**
+  - Patterns discovered: Use jest.mock at top of test file for database functions, can import module with `import * as database` to reference mocked functions
+  - Gotchas encountered: waitFor is needed when testing async state changes after database operations
+  - Useful context: handleMarkAsCorrect() already exists and handles removing re-queued questions, updating progress, and advancing
+
+---
+
+## 2026-01-26 - US-010
+- What was implemented: Sync Synonyms to WaniKani
+  - Added WaniKani Study Materials API types (StudyMaterialData, StudyMaterial, CreateStudyMaterialParams, UpdateStudyMaterialParams)
+  - Added Study Materials API methods to WaniKaniClient:
+    - getStudyMaterials(params) - GET with filters for subject_ids, ids, subject_types, hidden, updated_after
+    - getStudyMaterial(id) - GET single study material by ID
+    - createStudyMaterial(params) - POST to create new study material with meaning_synonyms
+    - updateStudyMaterial(id, params) - PUT to update existing study material
+  - Created syncPendingSynonyms() function in syncService:
+    - Groups pending synonyms by subject_id for efficient batching
+    - For each subject: GET existing study material, merge synonyms, POST or PUT
+    - Removes duplicates when merging existing and new synonyms
+    - Marks synonyms as synced in user_synonyms table (updates synced_at)
+    - Removes from pending_synonyms table after successful sync
+    - Continues processing remaining subjects if one fails
+  - Integrated synonym sync into syncPendingData() - syncs lessons, reviews, then synonyms
+  - Added SyncPendingSynonymsResult type and clearPendingSynonyms() utility
+  - Updated backgroundSync.test.ts mock to include new database functions
+- Files changed:
+  - src/api/types.ts (added StudyMaterial types)
+  - src/api/wanikaniApi.ts (added Study Materials API methods, StudyMaterialCollection type)
+  - src/sync/syncService.ts (added syncPendingSynonyms, clearPendingSynonyms, updated syncPendingData)
+  - __tests__/api/wanikaniApi.test.ts (added tests for Study Materials API)
+  - __tests__/sync/syncService.test.ts (added tests for syncPendingSynonyms and clearPendingSynonyms)
+  - __tests__/sync/backgroundSync.test.ts (added synonym-related database mocks)
+- **Learnings for future iterations:**
+  - Patterns discovered: Batch API calls by subject_id when syncing multiple synonyms to reduce API requests
+  - Gotchas encountered: markSynonymSynced() takes (subjectId, synonym) not just (id) - check function signatures in database.ts
+  - Useful context: Study Materials API allows meaning_synonyms to be set on POST or PUT; GET study_materials with subject_ids filter returns collection
 
 ---
 
