@@ -4,6 +4,10 @@
 - Folder structure: src/screens, src/components, src/api, src/storage, src/utils, src/navigation
 - Navigation uses @react-navigation/native with native-stack navigator
 - Quality checks: npm run typecheck, npm run lint, npm test
+- Use react-native-keychain for secure storage (API keys, tokens)
+- Use @testing-library/react-native for component tests
+- Mock native modules in __mocks__/ directory (e.g., react-native-keychain.ts)
+- Export modules via index.ts barrel files in each directory
 
 ---
 
@@ -30,5 +34,31 @@
   - React Native 0.83+ includes TypeScript by default (no separate template needed)
   - Android builds require Java Runtime and Android SDK (not available in all CI environments)
   - Navigation types should be defined in src/navigation/types.ts for app-wide type safety
+
+---
+
+## 2026-01-25 - US-002: API Key Storage and Input Screen
+- What was implemented:
+  - SecureStorage utility using react-native-keychain for encrypted storage
+  - SettingsScreen component with API key input, save, and clear functionality
+  - Navigation from HomeScreen to SettingsScreen
+  - Comprehensive test suite (11 tests for SettingsScreen, 9 tests for secureStorage)
+- Files changed:
+  - package.json, package-lock.json (added react-native-keychain, @testing-library/react-native)
+  - jest.config.js (added @testing-library to transformIgnorePatterns)
+  - src/storage/secureStorage.ts (new - secure storage functions)
+  - src/storage/index.ts (new - barrel exports)
+  - src/screens/SettingsScreen.tsx (new - settings UI)
+  - src/screens/HomeScreen.tsx (added navigation to Settings)
+  - src/navigation/RootNavigator.tsx (added Settings screen)
+  - __mocks__/react-native-keychain.ts (new - mock for testing)
+  - __tests__/storage/secureStorage.test.ts (new - unit tests)
+  - __tests__/screens/SettingsScreen.test.tsx (new - component tests)
+- **Learnings for future iterations:**
+  - react-native-keychain requires a mock for Jest tests (stored in __mocks__/)
+  - @testing-library/react-native provides render, fireEvent, waitFor, act for component testing
+  - Alert.alert callbacks need to be tested by extracting them from mock calls
+  - Use act() wrapper when testing async state updates from callbacks
+  - Browser verification not available (no dev-browser skill configured)
 
 ---
