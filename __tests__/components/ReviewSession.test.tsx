@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, act } from '@testing-library/react-native';
+import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
 
 import {
   ReviewSession,
@@ -10,6 +10,13 @@ import {
 } from '../../src/components/ReviewSession';
 import type { Meaning, Reading, KanjiReading } from '../../src/api/types';
 import { SUBJECT_COLORS, COLORS } from '../../src/theme';
+import * as database from '../../src/storage/database';
+
+// Mock database functions
+jest.mock('../../src/storage/database', () => ({
+  addUserSynonym: jest.fn().mockResolvedValue(1),
+  insertPendingSynonym: jest.fn().mockResolvedValue(1),
+}));
 
 // Helper to create test meanings
 function createMeanings(
@@ -2866,6 +2873,247 @@ describe('ReviewSession', () => {
         // Input container should still be there (no navigation away)
         expect(getByTestId('review-session-input-container')).toBeTruthy();
       }
+    });
+  });
+
+  describe('Add as Synonym functionality', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('shows "Add as Synonym" link only on meaning questions', () => {
+      // Force meaning question first
+      (Math.random as jest.Mock).mockReturnValue(0.1);
+
+      const { getByTestId } = render(<ReviewSession items={[sampleKanji]} />);
+
+      const type = getByTestId('review-session-question-type').props.children;
+
+      // Submit wrong answer based on question type
+      if (type === 'MEANING') {
+        fireEvent.changeText(getByTestId('review-session-input'), 'wrong');
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        // Should show "Add as Synonym" link for meaning questions
+        expect(getByTestId('review-session-add-synonym')).toBeTruthy();
+        expect(getByTestId('review-session-add-synonym-text').props.children).toContain(
+          'Add as Synonym',
+        );
+      }
+    });
+
+    it('does not show "Add as Synonym" link on reading questions', () => {
+      // Force reading question first
+      (Math.random as jest.Mock).mockReturnValue(0.9);
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[sampleKanji]} />,
+      );
+
+      const type = getByTestId('review-session-question-type').props.children;
+
+      // Submit wrong answer based on question type
+      if (type === 'READING') {
+        fireEvent.changeText(getByTestId('review-session-input'), 'あああ');
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        // Should NOT show "Add as Synonym" link for reading questions
+        expect(queryByTestId('review-session-add-synonym')).toBeNull();
+      }
+    });
+
+    it('shows "Adding..." state when synonym link is pressed', async () => {
+      // Force meaning question first
+      (Math.random as jest.Mock).mockReturnValue(0.1);
+
+      const { getByTestId } = render(<ReviewSession items={[sampleKanji]} />);
+
+      const type = getByTestId('review-session-question-type').props.children;
+
+      if (type === 'MEANING') {
+        fireEvent.changeText(getByTestId('review-session-input'), 'wrong');
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        // Press the "Add as Synonym" link
+        await act(async () => {
+          fireEvent.press(getByTestId('review-session-add-synonym'));
+        });
+
+        // Should show "Adding..." or "Synonym added ✓" state
+        const addSynonymText = getByTestId('review-session-add-synonym-text');
+        expect(
+          addSynonymText.props.children === 'Adding...' ||
+            addSynonymText.props.children === 'Synonym added ✓',
+        ).toBe(true);
+      }
+    });
+
+    it('saves synonym to database when link is pressed', async () => {
+      jest.useFakeTimers();
+      // Force meaning question first
+      (Math.random as jest.Mock).mockReturnValue(0.1);
+
+      const { getByTestId } = render(<ReviewSession items={[sampleKanji]} />);
+
+      const type = getByTestId('review-session-question-type').props.children;
+
+      if (type === 'MEANING') {
+        fireEvent.changeText(getByTestId('review-session-input'), 'wronganswer');
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        // Press the "Add as Synonym" link
+        await act(async () => {
+          fireEvent.press(getByTestId('review-session-add-synonym'));
+        });
+
+        // Should have called database functions
+        expect(database.addUserSynonym).toHaveBeenCalledWith({
+          subject_id: sampleKanji.id,
+          synonym: 'wronganswer',
+          synced_at: null,
+        });
+
+        expect(database.insertPendingSynonym).toHaveBeenCalledWith({
+          subject_id: sampleKanji.id,
+          synonym: 'wronganswer',
+        });
+      }
+
+      jest.useRealTimers();
+    });
+
+    it('shows "Synonym added ✓" after database save', async () => {
+      jest.useFakeTimers();
+      // Force meaning question first
+      (Math.random as jest.Mock).mockReturnValue(0.1);
+
+      const { getByTestId } = render(<ReviewSession items={[sampleKanji]} />);
+
+      const type = getByTestId('review-session-question-type').props.children;
+
+      if (type === 'MEANING') {
+        fireEvent.changeText(getByTestId('review-session-input'), 'wrong');
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        // Press the "Add as Synonym" link
+        await act(async () => {
+          fireEvent.press(getByTestId('review-session-add-synonym'));
+        });
+
+        // Should show "Synonym added ✓"
+        await waitFor(() => {
+          expect(
+            getByTestId('review-session-add-synonym-text').props.children,
+          ).toBe('Synonym added ✓');
+        });
+      }
+
+      jest.useRealTimers();
+    });
+
+    it('advances to next question after 400ms delay', async () => {
+      jest.useFakeTimers();
+      // Force meaning question first for kanji (has 2 questions)
+      (Math.random as jest.Mock).mockReturnValue(0.1);
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[sampleKanji]} autoAdvanceDelay={0} />,
+      );
+
+      const type = getByTestId('review-session-question-type').props.children;
+
+      if (type === 'MEANING') {
+        fireEvent.changeText(getByTestId('review-session-input'), 'wrong');
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        // Press the "Add as Synonym" link
+        await act(async () => {
+          fireEvent.press(getByTestId('review-session-add-synonym'));
+        });
+
+        // Still on incorrect feedback until 400ms passes
+        expect(queryByTestId('review-session-add-synonym')).toBeTruthy();
+
+        // Advance timers by 400ms
+        await act(async () => {
+          jest.advanceTimersByTime(400);
+        });
+
+        // Should have advanced (no longer showing incorrect feedback)
+        expect(queryByTestId('review-session-incorrect-feedback')).toBeNull();
+      }
+
+      jest.useRealTimers();
+    });
+
+    it('marks question as correct after adding synonym', async () => {
+      jest.useFakeTimers();
+      const onAnswer = jest.fn();
+      // Force meaning question first
+      (Math.random as jest.Mock).mockReturnValue(0.1);
+
+      const { getByTestId } = render(
+        <ReviewSession
+          items={[sampleRadical]}
+          onAnswer={onAnswer}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      fireEvent.changeText(getByTestId('review-session-input'), 'wrong');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // First call should be incorrect
+      expect(onAnswer).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isCorrect: false,
+        }),
+      );
+
+      // Press the "Add as Synonym" link
+      await act(async () => {
+        fireEvent.press(getByTestId('review-session-add-synonym'));
+      });
+
+      // Advance timers by 400ms
+      await act(async () => {
+        jest.advanceTimersByTime(400);
+      });
+
+      // Second call should be correct (overriding the incorrect answer via handleMarkAsCorrect)
+      expect(onAnswer).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          isCorrect: true,
+        }),
+      );
+
+      jest.useRealTimers();
+    });
+
+    it('disables link after being pressed', async () => {
+      jest.useFakeTimers();
+      // Force meaning question first
+      (Math.random as jest.Mock).mockReturnValue(0.1);
+
+      const { getByTestId } = render(<ReviewSession items={[sampleKanji]} />);
+
+      const type = getByTestId('review-session-question-type').props.children;
+
+      if (type === 'MEANING') {
+        fireEvent.changeText(getByTestId('review-session-input'), 'wrong');
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        // Press the "Add as Synonym" link
+        await act(async () => {
+          fireEvent.press(getByTestId('review-session-add-synonym'));
+        });
+
+        // Link should be disabled
+        const addSynonymLink = getByTestId('review-session-add-synonym');
+        expect(addSynonymLink.props.accessibilityState?.disabled).toBe(true);
+      }
+
+      jest.useRealTimers();
     });
   });
 });

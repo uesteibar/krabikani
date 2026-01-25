@@ -34,6 +34,7 @@ import {
   validateMeaningAnswer,
   validateReadingAnswer,
 } from '../utils/answerValidation';
+import { addUserSynonym, insertPendingSynonym } from '../storage/database';
 import {
   getSubjectColor,
   COLORS,
@@ -322,6 +323,11 @@ export function ReviewSession({
     toStage: number;
   } | null>(null);
 
+  // Synonym addition state: null | 'adding' | 'added'
+  const [synonymAddState, setSynonymAddState] = useState<
+    null | 'adding' | 'added'
+  >(null);
+
   // Wrap-up mode state
   const [isWrappingUp, setIsWrappingUp] = useState(false);
   // Track which items have been introduced (at least one question shown)
@@ -366,6 +372,7 @@ export function ReviewSession({
     setIncorrectFeedback(null);
     setLevelUpAnimation(null);
     setLevelDownAnimation(null);
+    setSynonymAddState(null);
     setIsWrappingUp(false);
     setIntroducedItemIds(new Set());
     answeredQuestionsCount.current = 0;
@@ -522,6 +529,7 @@ export function ReviewSession({
     setShowCorrectFeedback(false);
     setIsFuzzyMatch(false);
     setLevelDownAnimation(null);
+    setSynonymAddState(null);
   }, [
     findNextQuestionIndex,
     questionQueue,
@@ -664,6 +672,45 @@ export function ReviewSession({
     introducedItemIds,
     advanceToNextQuestion,
   ]);
+
+  // Handle "Add as Synonym" - save the user's answer as a synonym and mark correct
+  const handleAddAsSynonym = useCallback(async () => {
+    if (!incorrectFeedback || synonymAddState !== null) return;
+    if (incorrectFeedback.question.type !== 'meaning') return;
+
+    const { item } = incorrectFeedback.question;
+    const userAnswer = incorrectFeedback.userAnswer;
+
+    // Show "Adding..." state with pulse animation
+    setSynonymAddState('adding');
+
+    try {
+      // Save synonym to user_synonyms table (local storage)
+      await addUserSynonym({
+        subject_id: item.id,
+        synonym: userAnswer,
+        synced_at: null, // Not synced yet
+      });
+
+      // Queue for sync to WaniKani
+      await insertPendingSynonym({
+        subject_id: item.id,
+        synonym: userAnswer,
+      });
+
+      // Show "Synonym added ✓" state
+      setSynonymAddState('added');
+
+      // After 400ms, mark as correct and advance
+      setTimeout(() => {
+        handleMarkAsCorrect();
+      }, 400);
+    } catch (error) {
+      // On error, reset state (user can try again)
+      console.error('Failed to add synonym:', error);
+      setSynonymAddState(null);
+    }
+  }, [incorrectFeedback, synonymAddState, handleMarkAsCorrect]);
 
   // Trigger shake animation for invalid input
   const triggerShake = useCallback(() => {
@@ -1238,6 +1285,30 @@ export function ReviewSession({
             <Text style={styles.submitButtonText}>Continue</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Add as Synonym link - only for meaning questions */}
+        {incorrectFeedback.question.type === 'meaning' && (
+          <TouchableOpacity
+            style={styles.addSynonymContainer}
+            onPress={handleAddAsSynonym}
+            disabled={synonymAddState !== null}
+            activeOpacity={0.6}
+            testID="review-session-add-synonym"
+          >
+            <Text
+              style={[
+                styles.addSynonymText,
+                synonymAddState === 'adding' && styles.addSynonymTextPulse,
+                synonymAddState === 'added' && styles.addSynonymTextSuccess,
+              ]}
+              testID="review-session-add-synonym-text"
+            >
+              {synonymAddState === null && 'Add as Synonym'}
+              {synonymAddState === 'adding' && 'Adding...'}
+              {synonymAddState === 'added' && 'Synonym added ✓'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   }
@@ -1735,5 +1806,24 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm,
     fontWeight: 'bold',
     color: COLORS.text.secondary,
+  },
+  // Add as Synonym link styles
+  addSynonymContainer: {
+    alignItems: 'center',
+    paddingBottom: SPACING.lg,
+    paddingHorizontal: SPACING.lg,
+  },
+  addSynonymText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.tertiary,
+    textDecorationLine: 'underline',
+  },
+  addSynonymTextPulse: {
+    color: COLORS.text.secondary,
+    opacity: 0.7,
+  },
+  addSynonymTextSuccess: {
+    color: COLORS.feedback.correct,
+    textDecorationLine: 'none',
   },
 });
