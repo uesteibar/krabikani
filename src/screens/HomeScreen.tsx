@@ -18,6 +18,14 @@ import {
   NextReviewIndicator,
   PendingSyncIndicator,
 } from '../components';
+import {
+  COLORS,
+  DASHBOARD_COLORS,
+  SPACING,
+  FONT_SIZES,
+  BORDER_RADIUS,
+  MIN_TOUCH_TARGET,
+} from '../theme';
 import type { RootStackParamList } from '../navigation/types';
 import { getApiKey } from '../storage/secureStorage';
 import {
@@ -290,7 +298,7 @@ export function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.background.primary,
   },
   scrollContent: {
     flexGrow: 1,
@@ -301,48 +309,50 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 32,
+    fontSize: FONT_SIZES.xxxl,
     fontWeight: 'bold',
-    color: '#333',
+    color: COLORS.text.primary,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 8,
+    fontSize: FONT_SIZES.base,
+    color: COLORS.text.secondary,
+    marginTop: SPACING.sm,
   },
   dashboardContainer: {
-    marginTop: 24,
-    marginBottom: 16,
+    marginTop: SPACING.xxl,
+    marginBottom: SPACING.lg,
     alignItems: 'center',
   },
   settingsButton: {
-    marginTop: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    backgroundColor: '#8f5bc4',
-    borderRadius: 8,
+    marginTop: SPACING.lg,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.xxl,
+    minHeight: MIN_TOUCH_TARGET,
+    backgroundColor: DASHBOARD_COLORS.reviews,
+    borderRadius: BORDER_RADIUS.md,
+    justifyContent: 'center',
   },
   settingsButtonText: {
-    color: '#fff',
-    fontSize: 16,
+    color: COLORS.text.inverse,
+    fontSize: FONT_SIZES.base,
     fontWeight: '600',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 32,
+    padding: SPACING.xxxl,
   },
   errorTitle: {
-    fontSize: 24,
+    fontSize: FONT_SIZES.xxl,
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 16,
+    color: COLORS.text.primary,
+    marginBottom: SPACING.lg,
   },
   errorMessage: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: FONT_SIZES.base,
+    color: COLORS.text.secondary,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: FONT_SIZES.xxl,
   },
 });

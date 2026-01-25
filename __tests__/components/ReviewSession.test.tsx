@@ -9,6 +9,7 @@ import {
   shuffleArray,
 } from '../../src/components/ReviewSession';
 import type { Meaning, Reading, KanjiReading } from '../../src/api/types';
+import { SUBJECT_COLORS, COLORS } from '../../src/theme';
 
 // Helper to create test meanings
 function createMeanings(
@@ -680,7 +681,7 @@ describe('ReviewSession', () => {
       const container = getByTestId('review-session-character-container');
       expect(container.props.style).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ backgroundColor: '#00aaff' }),
+          expect.objectContaining({ backgroundColor: SUBJECT_COLORS.radical }),
         ]),
       );
     });
@@ -695,7 +696,7 @@ describe('ReviewSession', () => {
       const container = getByTestId('review-session-character-container');
       expect(container.props.style).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ backgroundColor: '#e8a4c9' }),
+          expect.objectContaining({ backgroundColor: SUBJECT_COLORS.kanji }),
         ]),
       );
     });
@@ -710,7 +711,7 @@ describe('ReviewSession', () => {
       const container = getByTestId('review-session-character-container');
       expect(container.props.style).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ backgroundColor: '#8f5bc4' }),
+          expect.objectContaining({ backgroundColor: SUBJECT_COLORS.vocabulary }),
         ]),
       );
     });
@@ -853,7 +854,7 @@ describe('ReviewSession', () => {
       const container = getByTestId('review-session-character-container');
       expect(container.props.style).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ backgroundColor: '#4caf50' }),
+          expect.objectContaining({ backgroundColor: COLORS.feedback.correct }),
         ]),
       );
     });
@@ -1173,7 +1174,7 @@ describe('ReviewSession', () => {
       const container = getByTestId('review-session-character-container');
       expect(container.props.style).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ backgroundColor: '#f44336' }),
+          expect.objectContaining({ backgroundColor: COLORS.feedback.incorrect }),
         ]),
       );
     });

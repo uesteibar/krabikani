@@ -3,6 +3,7 @@ import { render, fireEvent } from '@testing-library/react-native';
 
 import { LessonCard, LessonCardProps } from '../../src/components/LessonCard';
 import type { Meaning, Reading, KanjiReading } from '../../src/api/types';
+import { SUBJECT_COLORS } from '../../src/theme';
 
 // Helper to create test meanings
 function createMeanings(
@@ -149,7 +150,7 @@ describe('LessonCard', () => {
       const { getByTestId } = render(<LessonCard {...defaultRadicalProps} />);
       const header = getByTestId('lesson-card-header');
       expect(header.props.style).toEqual(
-        expect.arrayContaining([expect.objectContaining({ backgroundColor: '#00aaff' })]),
+        expect.arrayContaining([expect.objectContaining({ backgroundColor: SUBJECT_COLORS.radical })]),
       );
     });
 
@@ -157,7 +158,7 @@ describe('LessonCard', () => {
       const { getByTestId } = render(<LessonCard {...defaultKanjiProps} />);
       const header = getByTestId('lesson-card-header');
       expect(header.props.style).toEqual(
-        expect.arrayContaining([expect.objectContaining({ backgroundColor: '#e8a4c9' })]),
+        expect.arrayContaining([expect.objectContaining({ backgroundColor: SUBJECT_COLORS.kanji })]),
       );
     });
 
@@ -165,7 +166,7 @@ describe('LessonCard', () => {
       const { getByTestId } = render(<LessonCard {...defaultVocabularyProps} />);
       const header = getByTestId('lesson-card-header');
       expect(header.props.style).toEqual(
-        expect.arrayContaining([expect.objectContaining({ backgroundColor: '#8f5bc4' })]),
+        expect.arrayContaining([expect.objectContaining({ backgroundColor: SUBJECT_COLORS.vocabulary })]),
       );
     });
 
@@ -174,7 +175,7 @@ describe('LessonCard', () => {
       const { getByTestId } = render(<LessonCard {...props} />);
       const header = getByTestId('lesson-card-header');
       expect(header.props.style).toEqual(
-        expect.arrayContaining([expect.objectContaining({ backgroundColor: '#8f5bc4' })]),
+        expect.arrayContaining([expect.objectContaining({ backgroundColor: SUBJECT_COLORS.kana_vocabulary })]),
       );
     });
   });

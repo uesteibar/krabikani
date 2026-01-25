@@ -1,6 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../theme';
+
 export interface PendingSyncIndicatorProps {
   pendingLessonsCount: number;
   pendingReviewsCount: number;
@@ -48,21 +50,21 @@ export function PendingSyncIndicator({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff3e0',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginTop: 12,
+    backgroundColor: COLORS.status.pendingSyncBackground,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: BORDER_RADIUS.md,
+    marginTop: SPACING.md,
     alignItems: 'center',
   },
   text: {
-    fontSize: 14,
-    color: '#e65100',
+    fontSize: FONT_SIZES.sm,
+    color: '#E65100', // Darker orange for better contrast
     fontWeight: '500',
   },
   subtext: {
-    fontSize: 12,
-    color: '#f57c00',
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.status.pendingSync,
     marginTop: 2,
   },
 });

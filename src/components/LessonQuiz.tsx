@@ -13,6 +13,16 @@ import {
 import type { SubjectType, Meaning, Reading, KanjiReading, AuxiliaryMeaning } from '../api/types';
 import { processRomajiInput, romajiToHiragana } from '../utils/romajiToHiragana';
 import { validateMeaningAnswer, validateReadingAnswer } from '../utils/answerValidation';
+import {
+  getSubjectColor,
+  COLORS,
+  SHADOW,
+  BORDER_RADIUS,
+  SPACING,
+  FONT_SIZES,
+  PROGRESS_COLORS,
+  MIN_TOUCH_TARGET,
+} from '../theme';
 
 // ============================================
 // Types
@@ -76,28 +86,6 @@ export interface LessonQuizProps {
   onQuizComplete?: (results: AnswerResult[]) => void;
   /** Auto-advance delay in ms for correct answers (default: 300) */
   autoAdvanceDelay?: number;
-}
-
-// ============================================
-// Helper Functions
-// ============================================
-
-/**
- * Get the background color based on subject type.
- * Uses WaniKani-inspired colors.
- */
-function getSubjectColor(subjectType: SubjectType): string {
-  switch (subjectType) {
-    case 'radical':
-      return '#00aaff'; // WaniKani blue for radicals
-    case 'kanji':
-      return '#e8a4c9'; // Pink for kanji
-    case 'vocabulary':
-    case 'kana_vocabulary':
-      return '#8f5bc4'; // Purple for vocabulary
-    default:
-      return '#888';
-  }
 }
 
 /**
@@ -573,180 +561,181 @@ export function LessonQuiz({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.background.primary,
   },
   progressContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
-    backgroundColor: '#f8f8f8',
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.sm,
+    backgroundColor: COLORS.background.secondary,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: COLORS.border.light,
   },
   progressText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
     fontWeight: '500',
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
     textAlign: 'center',
   },
   progressBar: {
     height: 4,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 2,
+    backgroundColor: PROGRESS_COLORS.background,
+    borderRadius: BORDER_RADIUS.sm,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#4caf50',
-    borderRadius: 2,
+    backgroundColor: PROGRESS_COLORS.fill,
+    borderRadius: BORDER_RADIUS.sm,
   },
   characterContainer: {
     paddingVertical: 48,
-    paddingHorizontal: 16,
+    paddingHorizontal: SPACING.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   characters: {
-    fontSize: 72,
+    fontSize: FONT_SIZES.display,
     fontWeight: 'bold',
-    color: '#fff',
+    color: COLORS.text.inverse,
     textAlign: 'center',
   },
   subjectType: {
-    fontSize: 14,
+    fontSize: FONT_SIZES.sm,
     color: 'rgba(255, 255, 255, 0.8)',
-    marginTop: 8,
+    marginTop: SPACING.sm,
     textTransform: 'capitalize',
   },
   questionContainer: {
-    paddingVertical: 16,
-    paddingHorizontal: 16,
+    paddingVertical: SPACING.lg,
+    paddingHorizontal: SPACING.lg,
     alignItems: 'center',
   },
   questionPrompt: {
-    fontSize: 20,
+    fontSize: FONT_SIZES.xl,
     fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
+    color: COLORS.text.primary,
+    marginBottom: SPACING.xs,
   },
   questionType: {
-    fontSize: 12,
+    fontSize: FONT_SIZES.xs,
     fontWeight: '700',
-    color: '#888',
+    color: COLORS.text.tertiary,
     letterSpacing: 2,
   },
   inputContainer: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: SPACING.lg,
     justifyContent: 'center',
   },
   convertedDisplay: {
-    fontSize: 32,
+    fontSize: FONT_SIZES.xxxl,
     fontWeight: '500',
-    color: '#333',
+    color: COLORS.text.primary,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: SPACING.lg,
     minHeight: 40,
   },
   input: {
     borderWidth: 2,
-    borderRadius: 8,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    fontSize: 18,
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: SPACING.lg,
+    paddingHorizontal: SPACING.lg,
+    fontSize: FONT_SIZES.lg,
     textAlign: 'center',
-    backgroundColor: '#fafafa',
+    backgroundColor: COLORS.background.input,
   },
   submitButton: {
-    margin: 16,
-    paddingVertical: 16,
-    borderRadius: 8,
+    margin: SPACING.lg,
+    paddingVertical: SPACING.lg,
+    minHeight: MIN_TOUCH_TARGET,
+    borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowColor: SHADOW.color,
+    shadowOffset: SHADOW.offset,
+    shadowOpacity: SHADOW.opacity,
+    shadowRadius: SHADOW.radius,
+    elevation: SHADOW.elevation,
   },
   submitButtonText: {
-    fontSize: 18,
+    fontSize: FONT_SIZES.lg,
     fontWeight: 'bold',
-    color: '#fff',
+    color: COLORS.text.inverse,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: FONT_SIZES.base,
+    color: COLORS.text.secondary,
     textAlign: 'center',
-    marginTop: 32,
+    marginTop: SPACING.xxxl,
   },
   completeText: {
-    fontSize: 24,
+    fontSize: FONT_SIZES.xxl,
     fontWeight: 'bold',
-    color: '#333',
+    color: COLORS.text.primary,
     textAlign: 'center',
-    marginTop: 32,
+    marginTop: SPACING.xxxl,
   },
   completeSubtext: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: FONT_SIZES.base,
+    color: COLORS.text.secondary,
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: SPACING.sm,
   },
   // Correct feedback styles
   correctHeader: {
-    backgroundColor: '#4caf50',
+    backgroundColor: COLORS.feedback.correct,
   },
   correctLabel: {
-    fontSize: 18,
+    fontSize: FONT_SIZES.lg,
     fontWeight: 'bold',
-    color: '#fff',
-    marginTop: 8,
+    color: COLORS.text.inverse,
+    marginTop: SPACING.sm,
   },
   // Incorrect feedback styles
   incorrectHeader: {
-    backgroundColor: '#f44336',
+    backgroundColor: COLORS.feedback.incorrect,
   },
   incorrectLabel: {
-    fontSize: 18,
+    fontSize: FONT_SIZES.lg,
     fontWeight: 'bold',
-    color: '#fff',
-    marginTop: 8,
+    color: COLORS.text.inverse,
+    marginTop: SPACING.sm,
   },
   feedbackContainer: {
     flex: 1,
   },
   feedbackContent: {
-    padding: 16,
+    padding: SPACING.lg,
   },
   feedbackSection: {
-    marginBottom: 20,
+    marginBottom: SPACING.xl,
   },
   feedbackLabel: {
-    fontSize: 14,
+    fontSize: FONT_SIZES.sm,
     fontWeight: '600',
-    color: '#666',
-    marginBottom: 4,
+    color: COLORS.text.secondary,
+    marginBottom: SPACING.xs,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
   userAnswer: {
-    fontSize: 20,
-    color: '#f44336',
+    fontSize: FONT_SIZES.xl,
+    color: COLORS.feedback.incorrect,
     fontWeight: '500',
   },
   correctAnswerText: {
-    fontSize: 24,
-    color: '#4caf50',
+    fontSize: FONT_SIZES.xxl,
+    color: COLORS.feedback.correct,
     fontWeight: 'bold',
   },
   mnemonicText: {
-    fontSize: 16,
-    color: '#333',
-    lineHeight: 24,
+    fontSize: FONT_SIZES.base,
+    color: COLORS.text.primary,
+    lineHeight: FONT_SIZES.xxl,
   },
   continueButton: {
-    backgroundColor: '#666',
+    backgroundColor: COLORS.neutral.gray600,
   },
 });

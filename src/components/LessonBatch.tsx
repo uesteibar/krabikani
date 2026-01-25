@@ -3,6 +3,14 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import type { SubjectType, Meaning, Reading, KanjiReading } from '../api/types';
 import { LessonCard } from './LessonCard';
+import {
+  getSubjectColor,
+  SUBJECT_COLORS,
+  COLORS,
+  SPACING,
+  FONT_SIZES,
+  BORDER_RADIUS,
+} from '../theme';
 
 /** Data for a single lesson item */
 export interface LessonItem {
@@ -46,26 +54,8 @@ export interface LessonBatchProps {
 /** Default batch size for lessons */
 export const LESSON_BATCH_SIZE = 5;
 
-/**
- * Get the background color based on subject type.
- * Uses WaniKani-inspired colors.
- */
-function getSubjectColor(subjectType: SubjectType): string {
-  switch (subjectType) {
-    case 'radical':
-      return '#00aaff'; // WaniKani blue for radicals
-    case 'kanji':
-      return '#e8a4c9'; // Pink for kanji
-    case 'vocabulary':
-    case 'kana_vocabulary':
-      return '#8f5bc4'; // Purple for vocabulary
-    default:
-      return '#888';
-  }
-}
-
 /** Unvisited dot color */
-const UNVISITED_DOT_COLOR = '#ddd';
+const UNVISITED_DOT_COLOR = COLORS.neutral.gray300;
 
 /**
  * Get the dot color based on whether it's been visited.
@@ -191,44 +181,44 @@ export function LessonBatch({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.background.primary,
   },
   progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
-    backgroundColor: '#f8f8f8',
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.sm,
+    backgroundColor: COLORS.background.secondary,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: COLORS.border.light,
   },
   progressDots: {
     flexDirection: 'row',
-    gap: 8,
+    gap: SPACING.sm,
   },
   progressDot: {
     width: 12,
     height: 12,
-    borderRadius: 6,
+    borderRadius: BORDER_RADIUS.full,
   },
   progressText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
     fontWeight: '500',
   },
   componentsContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#f0f4ff',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    backgroundColor: '#E8F4FF', // Light blue tint for radical components
     borderBottomWidth: 1,
-    borderBottomColor: '#d0d8f0',
+    borderBottomColor: '#B8D4F0',
   },
   componentsTitle: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 8,
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.text.secondary,
+    marginBottom: SPACING.sm,
     fontWeight: '500',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -236,34 +226,34 @@ const styles = StyleSheet.create({
   componentsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: SPACING.md,
   },
   componentItem: {
     alignItems: 'center',
     minWidth: 60,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#00aaff',
-    borderRadius: 8,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    backgroundColor: SUBJECT_COLORS.radical,
+    borderRadius: BORDER_RADIUS.md,
   },
   componentCharacter: {
-    fontSize: 24,
+    fontSize: FONT_SIZES.xxl,
     fontWeight: 'bold',
-    color: '#fff',
+    color: COLORS.text.inverse,
   },
   componentMeaning: {
     fontSize: 10,
     color: 'rgba(255, 255, 255, 0.9)',
-    marginTop: 4,
+    marginTop: SPACING.xs,
     textAlign: 'center',
   },
   cardContainer: {
     flex: 1,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: FONT_SIZES.base,
+    color: COLORS.text.secondary,
     textAlign: 'center',
-    marginTop: 32,
+    marginTop: SPACING.xxxl,
   },
 });

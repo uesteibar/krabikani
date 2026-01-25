@@ -1,6 +1,16 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+import {
+  DASHBOARD_COLORS,
+  COLORS,
+  SHADOW,
+  BORDER_RADIUS,
+  SPACING,
+  FONT_SIZES,
+  MIN_TOUCH_TARGET,
+} from '../theme';
+
 export interface DashboardStatsProps {
   lessonsCount: number;
   reviewsCount: number;
@@ -11,8 +21,8 @@ export interface DashboardStatsProps {
 /**
  * Displays the lessons and reviews counts prominently on the dashboard.
  * Uses WaniKani-inspired colors:
- * - Pink/magenta for lessons (associated with new learning)
- * - Blue for reviews (associated with vocabulary)
+ * - Pink/magenta for lessons (kanji color - associated with new learning)
+ * - Purple for reviews (vocabulary color - associated with practice)
  */
 export function DashboardStats({
   lessonsCount,
@@ -57,8 +67,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 24,
-    paddingVertical: 16,
+    gap: SPACING.xxl,
+    paddingVertical: SPACING.lg,
   },
   statCard: {
     alignItems: 'center',
@@ -66,34 +76,36 @@ const styles = StyleSheet.create({
   statBox: {
     width: 100,
     height: 100,
-    borderRadius: 12,
+    minWidth: MIN_TOUCH_TARGET,
+    minHeight: MIN_TOUCH_TARGET,
+    borderRadius: BORDER_RADIUS.lg,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
     // Shadow for elevation
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowColor: SHADOW.color,
+    shadowOffset: SHADOW.offset,
+    shadowOpacity: SHADOW.opacity,
+    shadowRadius: SHADOW.radius,
+    elevation: SHADOW.elevation,
   },
   lessonsBox: {
-    backgroundColor: '#e8a4c9', // Pink/magenta for lessons
+    backgroundColor: DASHBOARD_COLORS.lessons,
   },
   reviewsBox: {
-    backgroundColor: '#8f5bc4', // Purple for reviews
+    backgroundColor: DASHBOARD_COLORS.reviews,
   },
   emptyBox: {
     opacity: 0.5,
   },
   countText: {
-    fontSize: 36,
+    fontSize: FONT_SIZES.xxxl + 4, // 36px
     fontWeight: 'bold',
-    color: '#fff',
+    color: COLORS.text.inverse,
   },
   labelText: {
-    fontSize: 16,
+    fontSize: FONT_SIZES.base,
     fontWeight: '600',
-    color: '#333',
+    color: COLORS.text.primary,
   },
 });

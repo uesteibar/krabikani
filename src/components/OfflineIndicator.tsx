@@ -5,6 +5,7 @@ import {
   addNetworkStatusListener,
   isOnline as getIsOnline,
 } from '../utils/networkStatus';
+import { COLORS, SPACING, FONT_SIZES } from '../theme';
 
 export interface OfflineIndicatorProps {
   testID?: string;
@@ -35,14 +36,14 @@ export function OfflineIndicator({ testID }: OfflineIndicatorProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#ef4444',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    backgroundColor: COLORS.status.offline,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
     alignItems: 'center',
   },
   text: {
-    color: '#ffffff',
-    fontSize: 14,
+    color: COLORS.text.inverse,
+    fontSize: FONT_SIZES.sm,
     fontWeight: '600',
   },
 });

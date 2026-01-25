@@ -9,6 +9,7 @@ import {
   LESSON_BATCH_SIZE,
 } from '../../src/components/LessonBatch';
 import type { Meaning, Reading, KanjiReading } from '../../src/api/types';
+import { SUBJECT_COLORS, COLORS } from '../../src/theme';
 
 // Helper to create test meanings
 function createMeanings(
@@ -182,7 +183,7 @@ describe('LessonBatch', () => {
       // First dot should be colored (blue for radical)
       const dot0 = getByTestId('lesson-batch-dot-0');
       expect(dot0.props.style).toEqual(
-        expect.arrayContaining([expect.objectContaining({ backgroundColor: '#00aaff' })]),
+        expect.arrayContaining([expect.objectContaining({ backgroundColor: SUBJECT_COLORS.radical })]),
       );
     });
 
@@ -191,7 +192,7 @@ describe('LessonBatch', () => {
       // Second dot should be gray (not visited yet)
       const dot1 = getByTestId('lesson-batch-dot-1');
       expect(dot1.props.style).toEqual(
-        expect.arrayContaining([expect.objectContaining({ backgroundColor: '#ddd' })]),
+        expect.arrayContaining([expect.objectContaining({ backgroundColor: COLORS.neutral.gray300 })]),
       );
     });
 
@@ -217,7 +218,7 @@ describe('LessonBatch', () => {
       // Dot 1 (kanji) should now be pink since we visited it
       const dot1 = getByTestId('lesson-batch-dot-1');
       expect(dot1.props.style).toEqual(
-        expect.arrayContaining([expect.objectContaining({ backgroundColor: '#e8a4c9' })]),
+        expect.arrayContaining([expect.objectContaining({ backgroundColor: SUBJECT_COLORS.kanji })]),
       );
     });
   });
@@ -495,7 +496,7 @@ describe('LessonBatch', () => {
 
       const dot = getByTestId('lesson-batch-dot-0');
       expect(dot.props.style).toEqual(
-        expect.arrayContaining([expect.objectContaining({ backgroundColor: '#00aaff' })]),
+        expect.arrayContaining([expect.objectContaining({ backgroundColor: SUBJECT_COLORS.radical })]),
       );
     });
 
@@ -511,7 +512,7 @@ describe('LessonBatch', () => {
 
       const dot = getByTestId('lesson-batch-dot-0');
       expect(dot.props.style).toEqual(
-        expect.arrayContaining([expect.objectContaining({ backgroundColor: '#e8a4c9' })]),
+        expect.arrayContaining([expect.objectContaining({ backgroundColor: SUBJECT_COLORS.kanji })]),
       );
     });
 
@@ -527,7 +528,7 @@ describe('LessonBatch', () => {
 
       const dot = getByTestId('lesson-batch-dot-0');
       expect(dot.props.style).toEqual(
-        expect.arrayContaining([expect.objectContaining({ backgroundColor: '#8f5bc4' })]),
+        expect.arrayContaining([expect.objectContaining({ backgroundColor: SUBJECT_COLORS.vocabulary })]),
       );
     });
 
@@ -551,7 +552,7 @@ describe('LessonBatch', () => {
 
       const dot = getByTestId('lesson-batch-dot-0');
       expect(dot.props.style).toEqual(
-        expect.arrayContaining([expect.objectContaining({ backgroundColor: '#8f5bc4' })]),
+        expect.arrayContaining([expect.objectContaining({ backgroundColor: SUBJECT_COLORS.kana_vocabulary })]),
       );
     });
   });

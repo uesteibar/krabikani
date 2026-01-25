@@ -8,6 +8,15 @@ import {
 } from 'react-native';
 
 import type { SubjectType, Meaning, Reading, KanjiReading } from '../api/types';
+import {
+  getSubjectColor,
+  COLORS,
+  SHADOW,
+  BORDER_RADIUS,
+  SPACING,
+  FONT_SIZES,
+  MIN_TOUCH_TARGET,
+} from '../theme';
 
 export interface LessonCardProps {
   /** The subject type (radical, kanji, vocabulary, kana_vocabulary) */
@@ -24,27 +33,6 @@ export interface LessonCardProps {
   readingMnemonic: string | null;
   /** Callback when Next button is pressed */
   onNext: () => void;
-}
-
-/**
- * Get the background color based on subject type.
- * Uses WaniKani-inspired colors:
- * - Pink/magenta for radicals
- * - Purple for kanji
- * - Blue for vocabulary
- */
-function getSubjectColor(subjectType: SubjectType): string {
-  switch (subjectType) {
-    case 'radical':
-      return '#00aaff'; // WaniKani blue for radicals
-    case 'kanji':
-      return '#e8a4c9'; // Pink for kanji
-    case 'vocabulary':
-    case 'kana_vocabulary':
-      return '#8f5bc4'; // Purple for vocabulary
-    default:
-      return '#888';
-  }
 }
 
 /**
@@ -180,76 +168,77 @@ export function LessonCard({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.background.primary,
   },
   header: {
-    paddingVertical: 32,
-    paddingHorizontal: 16,
+    paddingVertical: SPACING.xxxl,
+    paddingHorizontal: SPACING.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   characters: {
-    fontSize: 72,
+    fontSize: FONT_SIZES.display,
     fontWeight: 'bold',
-    color: '#fff',
+    color: COLORS.text.inverse,
     textAlign: 'center',
   },
   subjectType: {
-    fontSize: 14,
+    fontSize: FONT_SIZES.sm,
     color: 'rgba(255, 255, 255, 0.8)',
-    marginTop: 8,
+    marginTop: SPACING.sm,
     textTransform: 'capitalize',
   },
   content: {
     flex: 1,
   },
   contentContainer: {
-    padding: 16,
-    paddingBottom: 24,
+    padding: SPACING.lg,
+    paddingBottom: SPACING.xxl,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: SPACING.xxl,
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: FONT_SIZES.sm,
     fontWeight: '600',
-    color: '#666',
-    marginBottom: 8,
+    color: COLORS.text.secondary,
+    marginBottom: SPACING.sm,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
   primaryText: {
-    fontSize: 24,
+    fontSize: FONT_SIZES.xxl,
     fontWeight: 'bold',
-    color: '#333',
+    color: COLORS.text.primary,
   },
   secondaryText: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 4,
+    fontSize: FONT_SIZES.base,
+    color: COLORS.text.secondary,
+    marginTop: SPACING.xs,
   },
   mnemonicText: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#444',
+    fontSize: FONT_SIZES.base,
+    lineHeight: FONT_SIZES.xxl,
+    color: COLORS.text.primary,
   },
   nextButton: {
-    margin: 16,
+    margin: SPACING.lg,
     marginTop: 0,
-    paddingVertical: 16,
-    borderRadius: 8,
+    paddingVertical: SPACING.lg,
+    minHeight: MIN_TOUCH_TARGET,
+    borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
     justifyContent: 'center',
     // Shadow for elevation
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowColor: SHADOW.color,
+    shadowOffset: SHADOW.offset,
+    shadowOpacity: SHADOW.opacity,
+    shadowRadius: SHADOW.radius,
+    elevation: SHADOW.elevation,
   },
   nextButtonText: {
-    fontSize: 18,
+    fontSize: FONT_SIZES.lg,
     fontWeight: 'bold',
-    color: '#fff',
+    color: COLORS.text.inverse,
   },
 });

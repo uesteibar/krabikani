@@ -9,6 +9,7 @@ import {
   shuffleArray,
 } from '../../src/components/LessonQuiz';
 import type { Meaning, Reading, KanjiReading } from '../../src/api/types';
+import { SUBJECT_COLORS, COLORS } from '../../src/theme';
 
 // Helper to create test meanings
 function createMeanings(
@@ -830,7 +831,7 @@ describe('LessonQuiz', () => {
 
       const container = getByTestId('lesson-quiz-character-container');
       expect(container.props.style).toEqual(
-        expect.arrayContaining([expect.objectContaining({ backgroundColor: '#00aaff' })]),
+        expect.arrayContaining([expect.objectContaining({ backgroundColor: SUBJECT_COLORS.radical })]),
       );
     });
 
@@ -842,7 +843,7 @@ describe('LessonQuiz', () => {
 
       const container = getByTestId('lesson-quiz-character-container');
       expect(container.props.style).toEqual(
-        expect.arrayContaining([expect.objectContaining({ backgroundColor: '#e8a4c9' })]),
+        expect.arrayContaining([expect.objectContaining({ backgroundColor: SUBJECT_COLORS.kanji })]),
       );
     });
 
@@ -854,7 +855,7 @@ describe('LessonQuiz', () => {
 
       const container = getByTestId('lesson-quiz-character-container');
       expect(container.props.style).toEqual(
-        expect.arrayContaining([expect.objectContaining({ backgroundColor: '#8f5bc4' })]),
+        expect.arrayContaining([expect.objectContaining({ backgroundColor: SUBJECT_COLORS.vocabulary })]),
       );
     });
 
@@ -866,7 +867,7 @@ describe('LessonQuiz', () => {
 
       const container = getByTestId('lesson-quiz-character-container');
       expect(container.props.style).toEqual(
-        expect.arrayContaining([expect.objectContaining({ backgroundColor: '#8f5bc4' })]),
+        expect.arrayContaining([expect.objectContaining({ backgroundColor: SUBJECT_COLORS.kana_vocabulary })]),
       );
     });
   });

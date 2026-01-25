@@ -1,6 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { COLORS, SPACING, FONT_SIZES } from '../theme';
+
 export interface LastSyncedIndicatorProps {
   lastSyncedAt: Date | null;
   testID?: string;
@@ -66,11 +68,11 @@ export function LastSyncedIndicator({
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 4,
-    paddingHorizontal: 12,
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.md,
   },
   text: {
-    color: '#666',
-    fontSize: 12,
+    color: COLORS.text.secondary,
+    fontSize: FONT_SIZES.xs,
   },
 });

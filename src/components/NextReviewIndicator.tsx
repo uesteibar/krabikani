@@ -1,6 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { COLORS, SPACING, FONT_SIZES } from '../theme';
+
 export interface NextReviewIndicatorProps {
   /**
    * The timestamp of the next available review.
@@ -71,12 +73,12 @@ export function NextReviewIndicator({
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
   },
   text: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
     textAlign: 'center',
   },
 });
