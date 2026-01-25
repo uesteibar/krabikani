@@ -627,3 +627,58 @@
   - Browser verification not available (no dev-browser skill configured)
 
 ---
+
+## 2026-01-25 - US-022: Review Session - Incorrect Answer Handling
+- What was implemented:
+  - IncorrectFeedback type and state to track when to display incorrect feedback
+  - Red header with "Incorrect" label when answer is wrong
+  - Incorrect feedback screen showing:
+    - User's submitted answer (or "(empty)" for blank submissions)
+    - All accepted correct answers displayed prominently in green
+    - Relevant mnemonic (meaning mnemonic for meaning questions, reading mnemonic for reading questions)
+  - Continue button required to proceed after incorrect feedback
+  - handleContinue callback to dismiss feedback and advance to next question
+  - Incorrect questions re-queued to appear later until answered correctly
+  - Incorrect answer counts already tracked in ItemProgress from US-020 implementation
+  - ScrollView for feedback content (handles long mnemonics)
+  - Updated tests in ReviewsScreen.test.tsx to press Continue button after incorrect answers
+- Files changed:
+  - src/components/ReviewSession.tsx (added IncorrectFeedback type, incorrectFeedback state, handleContinue callback, incorrect feedback UI, new styles)
+  - src/components/index.ts (export ReviewIncorrectFeedback type)
+  - __tests__/components/ReviewSession.test.tsx (added 14 new tests for incorrect answer handling)
+  - __tests__/screens/ReviewsScreen.test.tsx (updated 2 tests to handle Continue button)
+- **Learnings for future iterations:**
+  - When introducing new feedback screens, existing tests that assume immediate advancement need updating
+  - Use conditional rendering (if incorrectFeedback) to show separate feedback view instead of modifying main view
+  - Keep progress indicator visible in both normal and feedback views for consistency
+  - Pattern from LessonQuiz can be reused for similar feedback screens in ReviewSession
+  - Browser verification not available (no dev-browser skill configured)
+
+---
+
+## 2026-01-25 - US-023: Review Session - Wrap Up Feature
+- What was implemented:
+  - Wrap Up button in ReviewSession component that toggles wrap-up mode
+  - isWrappingUp state and introducedItemIds Set to track which items have been shown
+  - wrapUpRemainingCount computed value showing incomplete introduced items count
+  - onWrapUpToggle callback prop for parent components to be notified
+  - "Wrapping up: X remaining" indicator replaces normal "X remaining" text when active
+  - Orange color scheme for wrap-up mode (text, progress bar)
+  - Wrap-up logic in findNextQuestionIndex() that skips questions for non-introduced items
+  - Session completion logic updated to complete when all introduced items are done in wrap-up mode
+  - Button shows "Cancel" when wrap-up is active to deactivate
+  - handleWrapUpToggle callback to toggle mode
+  - Progress display shows introduced items count instead of total items in wrap-up mode
+  - onSessionComplete callback includes only introduced items in wrap-up mode
+- Files changed:
+  - src/components/ReviewSession.tsx (added wrap-up state, UI, logic, styles)
+  - __tests__/components/ReviewSession.test.tsx (added 13 new tests for wrap-up functionality)
+- **Learnings for future iterations:**
+  - Use useEffect to track introduced items when currentQuestion changes
+  - useMemo for computed values like wrapUpRemainingCount and isComplete
+  - Avoid variable shadowing (renamed isComplete to isItemDone in local scope)
+  - Wrap-up completion requires checking all introduced items, not just counting
+  - Progress calculation differs between normal mode (completedItemCount/totalItemCount) and wrap-up mode (introducedCompleted/introducedTotal)
+  - Browser verification not available (no dev-browser skill configured)
+
+---

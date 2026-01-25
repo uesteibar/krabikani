@@ -90,6 +90,8 @@ export interface ReviewSessionProps {
   onSessionComplete?: (itemProgress: Map<number, ItemProgress>) => void;
   /** Delay in ms before auto-advancing after correct answer (default: 50ms for near-instant feedback) */
   autoAdvanceDelay?: number;
+  /** Callback when wrap-up mode is toggled */
+  onWrapUpToggle?: (isWrappingUp: boolean) => void;
 }
 
 // ============================================
@@ -224,6 +226,7 @@ export function ReviewSession({
   onAnswer,
   onSessionComplete,
   autoAdvanceDelay = 50,
+  onWrapUpToggle,
 }: ReviewSessionProps) {
   // Generate initial questions once when items change
   const initialQuestions = useMemo(() => generateReviewQuestions(items), [items]);
@@ -251,6 +254,11 @@ export function ReviewSession({
   const [_itemProgress, setItemProgress] = useState<Map<number, ItemProgress>>(initialItemProgress);
   const [showCorrectFeedback, setShowCorrectFeedback] = useState(false);
   const [incorrectFeedback, setIncorrectFeedback] = useState<IncorrectFeedback | null>(null);
+
+  // Wrap-up mode state
+  const [isWrappingUp, setIsWrappingUp] = useState(false);
+  // Track which items have been introduced (at least one question shown)
+  const [introducedItemIds, setIntroducedItemIds] = useState<Set<number>>(new Set());
 
   // Track completed questions for session progress
   const [completedItemCount, setCompletedItemCount] = useState(0);
@@ -280,11 +288,59 @@ export function ReviewSession({
     setCompletedItemCount(0);
     setShowCorrectFeedback(false);
     setIncorrectFeedback(null);
+    setIsWrappingUp(false);
+    setIntroducedItemIds(new Set());
     answeredQuestionsCount.current = 0;
   }, [items]);
 
   const currentQuestion = questionQueue[currentQuestionIndex];
-  const isComplete = completedItemCount >= totalItemCount;
+
+  // Session is complete when:
+  // - Normal mode: all items are completed
+  // - Wrap-up mode: all introduced items are completed
+  const isComplete = useMemo(() => {
+    if (isWrappingUp) {
+      // In wrap-up mode, complete when all introduced items have both answers correct
+      if (introducedItemIds.size === 0) return false;
+      for (const itemId of introducedItemIds) {
+        const progress = _itemProgress.get(itemId);
+        if (!progress || !(progress.meaningCorrect && progress.readingCorrect)) {
+          return false;
+        }
+      }
+      return true;
+    }
+    return completedItemCount >= totalItemCount;
+  }, [isWrappingUp, introducedItemIds, _itemProgress, completedItemCount, totalItemCount]);
+
+  // Track introduced items when showing a new question
+  useEffect(() => {
+    if (currentQuestion && !introducedItemIds.has(currentQuestion.item.id)) {
+      setIntroducedItemIds(prev => new Set(prev).add(currentQuestion.item.id));
+    }
+  }, [currentQuestion, introducedItemIds]);
+
+  // Calculate wrap-up state: count of introduced items that are not yet complete
+  const wrapUpRemainingCount = useMemo(() => {
+    if (!isWrappingUp) return 0;
+    let count = 0;
+    for (const itemId of introducedItemIds) {
+      const progress = _itemProgress.get(itemId);
+      if (progress && !(progress.meaningCorrect && progress.readingCorrect)) {
+        count++;
+      }
+    }
+    return count;
+  }, [isWrappingUp, introducedItemIds, _itemProgress]);
+
+  // Handle wrap-up button press
+  const handleWrapUpToggle = useCallback(() => {
+    setIsWrappingUp(prev => {
+      const newValue = !prev;
+      onWrapUpToggle?.(newValue);
+      return newValue;
+    });
+  }, [onWrapUpToggle]);
 
   // Handle input change for reading questions (romaji to hiragana)
   const handleReadingInputChange = useCallback((text: string) => {
@@ -306,15 +362,48 @@ export function ReviewSession({
     ? handleReadingInputChange
     : handleMeaningInputChange;
 
+  // Find the next valid question index, considering wrap-up mode
+  const findNextQuestionIndex = useCallback((
+    startIndex: number,
+    queue: ReviewQuestion[],
+    wrappingUp: boolean,
+    introduced: Set<number>,
+    progress: Map<number, ItemProgress>,
+  ): number => {
+    let nextIndex = startIndex;
+
+    // In wrap-up mode, skip questions for items that haven't been introduced yet
+    // or items that are already complete
+    while (nextIndex < queue.length && wrappingUp) {
+      const question = queue[nextIndex];
+      const itemId = question.item.id;
+      const itemProgress = progress.get(itemId);
+      const isIntroduced = introduced.has(itemId);
+      const isItemDone = itemProgress && itemProgress.meaningCorrect && itemProgress.readingCorrect;
+
+      // Skip if not introduced or already complete
+      if (!isIntroduced || isItemDone) {
+        nextIndex++;
+      } else {
+        break;
+      }
+    }
+
+    return nextIndex;
+  }, []);
+
   // Advance to next question (clearing input and feedback)
   const advanceToNextQuestion = useCallback(() => {
-    setCurrentQuestionIndex(prev => prev + 1);
+    setCurrentQuestionIndex(prev => {
+      const nextIndex = prev + 1;
+      return findNextQuestionIndex(nextIndex, questionQueue, isWrappingUp, introducedItemIds, _itemProgress);
+    });
     setInputValue('');
     setDisplayValue('');
     setPendingRomaji('');
     setIncorrectFeedback(null);
     setShowCorrectFeedback(false);
-  }, []);
+  }, [findNextQuestionIndex, questionQueue, isWrappingUp, introducedItemIds, _itemProgress]);
 
   // Handle tap to continue after incorrect answer
   const handleContinue = useCallback(() => {
@@ -379,22 +468,61 @@ export function ReviewSession({
     const itemWasComplete = isItemComplete(currentProgress);
     const itemJustCompleted = itemWillBeComplete && !itemWasComplete;
     const newCompletedCount = itemJustCompleted ? completedItemCount + 1 : completedItemCount;
-    const sessionWillComplete = newCompletedCount >= totalItemCount;
+
+    // Check session completion differently for wrap-up mode vs normal mode
+    let sessionWillComplete: boolean;
+    if (isWrappingUp) {
+      // In wrap-up mode: complete when all introduced items are done
+      sessionWillComplete = itemJustCompleted && (() => {
+        // Check if all introduced items will be complete after this answer
+        for (const itemId of introducedItemIds) {
+          if (itemId === item.id) {
+            // This item will be complete
+            continue;
+          }
+          const progress = _itemProgress.get(itemId);
+          if (!progress || !(progress.meaningCorrect && progress.readingCorrect)) {
+            return false;
+          }
+        }
+        return true;
+      })();
+    } else {
+      sessionWillComplete = newCompletedCount >= totalItemCount;
+    }
 
     // Build the new progress for callback (needs to be done before state update for proper value)
     let newProgressForCallback: Map<number, ItemProgress> | null = null;
-    if (sessionWillComplete && itemJustCompleted) {
+    if (sessionWillComplete && isCorrect) {
       // Pre-compute the new progress map for the callback
-      newProgressForCallback = new Map(_itemProgress);
-      const updatedItemProgress = { ...newProgressForCallback.get(item.id)! };
-      if (isCorrect) {
+      // In wrap-up mode, only include introduced items
+      if (isWrappingUp) {
+        newProgressForCallback = new Map<number, ItemProgress>();
+        for (const itemId of introducedItemIds) {
+          const progress = _itemProgress.get(itemId)!;
+          if (itemId === item.id) {
+            // Update the current item's progress
+            const updatedProgress = { ...progress };
+            if (type === 'meaning') {
+              updatedProgress.meaningCorrect = true;
+            } else {
+              updatedProgress.readingCorrect = true;
+            }
+            newProgressForCallback.set(itemId, updatedProgress);
+          } else {
+            newProgressForCallback.set(itemId, progress);
+          }
+        }
+      } else {
+        newProgressForCallback = new Map(_itemProgress);
+        const updatedItemProgress = { ...newProgressForCallback.get(item.id)! };
         if (type === 'meaning') {
           updatedItemProgress.meaningCorrect = true;
         } else {
           updatedItemProgress.readingCorrect = true;
         }
+        newProgressForCallback.set(item.id, updatedItemProgress);
       }
-      newProgressForCallback.set(item.id, updatedItemProgress);
     }
 
     // Update item progress
@@ -476,6 +604,8 @@ export function ReviewSession({
     advanceToNextQuestion,
     isItemComplete,
     autoAdvanceDelay,
+    isWrappingUp,
+    introducedItemIds,
   ]);
 
   // Handle edge case of empty items array
@@ -512,9 +642,15 @@ export function ReviewSession({
 
   // If showing incorrect feedback, render the feedback view
   if (incorrectFeedback) {
-    // Calculate progress: completed items out of total items
-    const progressPercentage = (completedItemCount / totalItemCount) * 100;
-    const remainingCount = totalItemCount - completedItemCount;
+    // Calculate progress: In wrap-up mode, use introduced items count
+    const displayTotalCount = isWrappingUp ? introducedItemIds.size : totalItemCount;
+    const displayCompletedCount = isWrappingUp
+      ? introducedItemIds.size - wrapUpRemainingCount
+      : completedItemCount;
+    const progressPercentage = displayTotalCount > 0
+      ? (displayCompletedCount / displayTotalCount) * 100
+      : 0;
+    const remainingCount = isWrappingUp ? wrapUpRemainingCount : totalItemCount - completedItemCount;
 
     return (
       <View style={styles.container} testID="review-session-incorrect-feedback">
@@ -522,16 +658,23 @@ export function ReviewSession({
         <View style={styles.progressContainer} testID="review-session-progress">
           <View style={styles.progressTextRow}>
             <Text style={styles.progressText} testID="review-session-progress-text">
-              {completedItemCount} / {totalItemCount}
+              {displayCompletedCount} / {displayTotalCount}
             </Text>
-            <Text style={styles.remainingText} testID="review-session-remaining-text">
-              {remainingCount} remaining
-            </Text>
+            {isWrappingUp ? (
+              <Text style={styles.wrapUpText} testID="review-session-wrapping-up-text">
+                Wrapping up: {wrapUpRemainingCount} remaining
+              </Text>
+            ) : (
+              <Text style={styles.remainingText} testID="review-session-remaining-text">
+                {remainingCount} remaining
+              </Text>
+            )}
           </View>
           <View style={styles.progressBar}>
             <View
               style={[
                 styles.progressFill,
+                isWrappingUp && styles.wrapUpProgressFill,
                 { width: `${progressPercentage}%` },
               ]}
               testID="review-session-progress-fill"
@@ -599,9 +742,15 @@ export function ReviewSession({
     ? displayValue + pendingRomaji
     : displayValue;
 
-  // Calculate progress: completed items out of total items
-  const progressPercentage = (completedItemCount / totalItemCount) * 100;
-  const remainingCount = totalItemCount - completedItemCount;
+  // Calculate progress: In wrap-up mode, use introduced items count
+  const displayTotalCount = isWrappingUp ? introducedItemIds.size : totalItemCount;
+  const displayCompletedCount = isWrappingUp
+    ? introducedItemIds.size - wrapUpRemainingCount
+    : completedItemCount;
+  const progressPercentage = displayTotalCount > 0
+    ? (displayCompletedCount / displayTotalCount) * 100
+    : 0;
+  const remainingCount = isWrappingUp ? wrapUpRemainingCount : totalItemCount - completedItemCount;
 
   return (
     <KeyboardAvoidingView
@@ -613,16 +762,23 @@ export function ReviewSession({
       <View style={styles.progressContainer} testID="review-session-progress">
         <View style={styles.progressTextRow}>
           <Text style={styles.progressText} testID="review-session-progress-text">
-            {completedItemCount} / {totalItemCount}
+            {displayCompletedCount} / {displayTotalCount}
           </Text>
-          <Text style={styles.remainingText} testID="review-session-remaining-text">
-            {remainingCount} remaining
-          </Text>
+          {isWrappingUp ? (
+            <Text style={styles.wrapUpText} testID="review-session-wrapping-up-text">
+              Wrapping up: {wrapUpRemainingCount} remaining
+            </Text>
+          ) : (
+            <Text style={styles.remainingText} testID="review-session-remaining-text">
+              {remainingCount} remaining
+            </Text>
+          )}
         </View>
         <View style={styles.progressBar}>
           <View
             style={[
               styles.progressFill,
+              isWrappingUp && styles.wrapUpProgressFill,
               { width: `${progressPercentage}%` },
             ]}
             testID="review-session-progress-fill"
@@ -688,16 +844,38 @@ export function ReviewSession({
         />
       </View>
 
-      {/* Submit button */}
-      <TouchableOpacity
-        style={[styles.submitButton, { backgroundColor }]}
-        onPress={handleSubmit}
-        disabled={showCorrectFeedback}
-        activeOpacity={0.8}
-        testID="review-session-submit"
-      >
-        <Text style={styles.submitButtonText}>Submit</Text>
-      </TouchableOpacity>
+      {/* Button row: Submit + Wrap Up */}
+      <View style={styles.buttonRow}>
+        {/* Submit button */}
+        <TouchableOpacity
+          style={[styles.submitButton, styles.submitButtonFlex, { backgroundColor }]}
+          onPress={handleSubmit}
+          disabled={showCorrectFeedback}
+          activeOpacity={0.8}
+          testID="review-session-submit"
+        >
+          <Text style={styles.submitButtonText}>Submit</Text>
+        </TouchableOpacity>
+
+        {/* Wrap Up button */}
+        <TouchableOpacity
+          style={[
+            styles.wrapUpButton,
+            isWrappingUp && styles.wrapUpButtonActive,
+          ]}
+          onPress={handleWrapUpToggle}
+          disabled={showCorrectFeedback}
+          activeOpacity={0.8}
+          testID="review-session-wrap-up"
+        >
+          <Text style={[
+            styles.wrapUpButtonText,
+            isWrappingUp && styles.wrapUpButtonTextActive,
+          ]}>
+            {isWrappingUp ? 'Cancel' : 'Wrap Up'}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -892,5 +1070,45 @@ const styles = StyleSheet.create({
   },
   continueButton: {
     backgroundColor: '#666',
+  },
+  // Wrap-up mode styles
+  wrapUpText: {
+    fontSize: 14,
+    color: '#e67e22',
+    fontWeight: '600',
+  },
+  wrapUpProgressFill: {
+    backgroundColor: '#e67e22',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    gap: 12,
+  },
+  submitButtonFlex: {
+    flex: 1,
+    margin: 0,
+  },
+  wrapUpButton: {
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f5f5f5',
+    borderWidth: 2,
+    borderColor: '#e67e22',
+  },
+  wrapUpButtonActive: {
+    backgroundColor: '#e67e22',
+  },
+  wrapUpButtonText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#e67e22',
+  },
+  wrapUpButtonTextActive: {
+    color: '#fff',
   },
 });

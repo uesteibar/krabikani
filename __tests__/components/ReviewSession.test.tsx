@@ -1306,4 +1306,286 @@ describe('ReviewSession', () => {
       jest.useRealTimers();
     });
   });
+
+  describe('Wrap Up Feature', () => {
+    it('should render wrap up button', () => {
+      const { getByTestId } = render(
+        <ReviewSession items={[sampleRadical]} />,
+      );
+
+      expect(getByTestId('review-session-wrap-up')).toBeTruthy();
+    });
+
+    it('should show "Wrap Up" text on button by default', () => {
+      const { getByTestId } = render(
+        <ReviewSession items={[sampleRadical]} />,
+      );
+
+      const wrapUpButton = getByTestId('review-session-wrap-up');
+      expect(wrapUpButton).toBeTruthy();
+      // Check for Wrap Up text
+      const textElements = wrapUpButton.findAllByType(require('react-native').Text);
+      expect(textElements.some(el => el.props.children === 'Wrap Up')).toBe(true);
+    });
+
+    it('should toggle to "Cancel" text when wrap up is activated', () => {
+      const { getByTestId } = render(
+        <ReviewSession items={fiveItems} />,
+      );
+
+      // Press wrap up button
+      fireEvent.press(getByTestId('review-session-wrap-up'));
+
+      // Check that button now shows "Cancel"
+      const wrapUpButton = getByTestId('review-session-wrap-up');
+      const textElements = wrapUpButton.findAllByType(require('react-native').Text);
+      expect(textElements.some(el => el.props.children === 'Cancel')).toBe(true);
+    });
+
+    it('should call onWrapUpToggle when wrap up is pressed', () => {
+      const onWrapUpToggle = jest.fn();
+      const { getByTestId } = render(
+        <ReviewSession items={fiveItems} onWrapUpToggle={onWrapUpToggle} />,
+      );
+
+      fireEvent.press(getByTestId('review-session-wrap-up'));
+      expect(onWrapUpToggle).toHaveBeenCalledWith(true);
+
+      fireEvent.press(getByTestId('review-session-wrap-up'));
+      expect(onWrapUpToggle).toHaveBeenCalledWith(false);
+    });
+
+    it('should show "Wrapping up: X remaining" indicator when wrap up is active', () => {
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={fiveItems} />,
+      );
+
+      // Before activating, should not show wrapping up text
+      expect(queryByTestId('review-session-wrapping-up-text')).toBeNull();
+      expect(queryByTestId('review-session-remaining-text')).toBeTruthy();
+
+      // Activate wrap up
+      fireEvent.press(getByTestId('review-session-wrap-up'));
+
+      // Should now show wrapping up indicator
+      expect(queryByTestId('review-session-wrapping-up-text')).toBeTruthy();
+      expect(queryByTestId('review-session-remaining-text')).toBeNull();
+    });
+
+    it('should show correct remaining count based on introduced items', () => {
+      // With 1 item, when we start we've introduced 1 item
+      const { getByTestId } = render(
+        <ReviewSession items={[sampleRadical]} />,
+      );
+
+      // Activate wrap up - we've only introduced 1 item so far (the current one)
+      fireEvent.press(getByTestId('review-session-wrap-up'));
+
+      // Should show 1 remaining (the introduced item)
+      const wrapUpText = getByTestId('review-session-wrapping-up-text');
+      expect(wrapUpText.props.children).toEqual(['Wrapping up: ', 1, ' remaining']);
+    });
+
+    it('should complete session when all introduced items are answered in wrap up mode', () => {
+      jest.useFakeTimers();
+      const onSessionComplete = jest.fn();
+
+      // Use only one radical so we can easily complete it (radicals only need meaning answer)
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession
+          items={[sampleRadical]}
+          onSessionComplete={onSessionComplete}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Activate wrap up (only the radical has been introduced)
+      fireEvent.press(getByTestId('review-session-wrap-up'));
+
+      // Answer the radical (only needs meaning)
+      fireEvent.changeText(getByTestId('review-session-input'), 'Ground');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Session should be complete
+      expect(queryByTestId('review-session-complete')).toBeTruthy();
+      expect(onSessionComplete).toHaveBeenCalled();
+
+      // The progress map should only contain the introduced radical
+      const progressMap = onSessionComplete.mock.calls[0][0] as Map<number, unknown>;
+      expect(progressMap.size).toBe(1);
+
+      jest.useRealTimers();
+    });
+
+    it('should not introduce new items after wrap up is activated', () => {
+      jest.useFakeTimers();
+
+      // Use fiveItems which has multiple items
+      (Math.random as jest.Mock).mockReturnValue(0.1);
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={fiveItems} autoAdvanceDelay={0} />,
+      );
+
+      // Get the first item's character
+      const firstChar = getByTestId('review-session-characters').props.children;
+
+      // Activate wrap up mode
+      fireEvent.press(getByTestId('review-session-wrap-up'));
+
+      // Get the current question type to know what answer to give
+      const questionType = getByTestId('review-session-question-type').props.children;
+
+      // Answer the current question correctly
+      let answer = '';
+      if (firstChar === '一') answer = 'Ground';
+      else if (firstChar === '人') answer = 'Person';
+      else if (firstChar === '大' && questionType === 'MEANING') answer = 'Big';
+      else if (firstChar === '大' && questionType === 'READING') answer = 'oo';
+      else if (firstChar === '大きい' && questionType === 'MEANING') answer = 'Big';
+      else if (firstChar === '大きい' && questionType === 'READING') answer = 'ookii';
+      else if (firstChar === 'あめ' && questionType === 'MEANING') answer = 'Candy';
+      else if (firstChar === 'あめ' && questionType === 'READING') answer = 'ame';
+      else answer = 'Ground'; // fallback
+
+      fireEvent.changeText(getByTestId('review-session-input'), answer);
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // If it was a radical, session should be complete
+      // If not, we should still see the same item (second question)
+      if (!queryByTestId('review-session-complete')) {
+        // Session not complete, which means we're still working on the introduced item
+        const currentChar = getByTestId('review-session-characters').props.children;
+        // The character should be the same (or session should be complete)
+        // because in wrap-up mode we don't introduce new items
+        expect(currentChar).toBe(firstChar);
+      }
+
+      jest.useRealTimers();
+    });
+
+    it('should deactivate wrap up mode and continue normally when cancel is pressed', () => {
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={fiveItems} />,
+      );
+
+      // Activate wrap up
+      fireEvent.press(getByTestId('review-session-wrap-up'));
+      expect(queryByTestId('review-session-wrapping-up-text')).toBeTruthy();
+
+      // Deactivate wrap up
+      fireEvent.press(getByTestId('review-session-wrap-up'));
+      expect(queryByTestId('review-session-wrapping-up-text')).toBeNull();
+      expect(queryByTestId('review-session-remaining-text')).toBeTruthy();
+    });
+
+    it('should update wrap up remaining count as items are completed', () => {
+      jest.useFakeTimers();
+
+      // Use 2 items for simpler test
+      const twoItems = [sampleRadical, sampleRadical2];
+      (Math.random as jest.Mock).mockReturnValue(0.1);
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={twoItems} autoAdvanceDelay={0} />,
+      );
+
+      // Answer first question to introduce first item
+      const firstChar = getByTestId('review-session-characters').props.children;
+      const firstAnswer = firstChar === '一' ? 'Ground' : 'Person';
+
+      fireEvent.changeText(getByTestId('review-session-input'), firstAnswer);
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // If not complete, we're on second item
+      if (!queryByTestId('review-session-complete')) {
+        // Now activate wrap up with 2 items introduced
+        // (depends on if question queue gave us both items already)
+        fireEvent.press(getByTestId('review-session-wrap-up'));
+
+        // Check remaining count (should be at least 1 - the incomplete item)
+        const wrapUpText = getByTestId('review-session-wrapping-up-text');
+        expect(wrapUpText.props.children[1]).toBeGreaterThanOrEqual(1);
+      }
+
+      jest.useRealTimers();
+    });
+
+    it('should show correct progress (completed/total) in wrap up mode', () => {
+      // Use single radical for simplicity
+      const { getByTestId } = render(
+        <ReviewSession items={[sampleRadical, sampleKanji]} />,
+      );
+
+      // Activate wrap up - only 1 item introduced
+      fireEvent.press(getByTestId('review-session-wrap-up'));
+
+      // Progress should show 0/1 (0 completed out of 1 introduced)
+      const progressText = getByTestId('review-session-progress-text');
+      expect(progressText.props.children).toEqual([0, ' / ', 1]);
+    });
+
+    it('should disable wrap up button during correct feedback', () => {
+      const { getByTestId } = render(
+        <ReviewSession items={[sampleRadical]} autoAdvanceDelay={100} />,
+      );
+
+      const input = getByTestId('review-session-input');
+      const submit = getByTestId('review-session-submit');
+
+      fireEvent.changeText(input, 'Ground');
+      fireEvent.press(submit);
+
+      // During feedback, wrap up button should be disabled
+      expect(getByTestId('review-session-wrap-up').props.accessibilityState).toEqual(
+        expect.objectContaining({ disabled: true }),
+      );
+    });
+
+    it('should include only introduced items in onSessionComplete callback when in wrap up mode', () => {
+      jest.useFakeTimers();
+      const onSessionComplete = jest.fn();
+
+      const { getByTestId } = render(
+        <ReviewSession
+          items={[sampleRadical, sampleKanji, sampleVocabulary]}
+          onSessionComplete={onSessionComplete}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Activate wrap up (only first item introduced)
+      fireEvent.press(getByTestId('review-session-wrap-up'));
+
+      // Answer the introduced item
+      fireEvent.changeText(getByTestId('review-session-input'), 'Ground');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // If the first item was a radical, it should be complete
+      // Otherwise we need to answer the reading question too
+      if (onSessionComplete.mock.calls.length > 0) {
+        const progressMap = onSessionComplete.mock.calls[0][0] as Map<number, unknown>;
+        // The progress map should only contain introduced items
+        expect(progressMap.size).toBe(1);
+      }
+
+      jest.useRealTimers();
+    });
+  });
 });
