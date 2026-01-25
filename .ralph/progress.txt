@@ -175,3 +175,53 @@ Started: Sun Jan 25 10:42:13 CET 2026
   - Adding testID to containers enables style-based testing with `expect.objectContaining`
   - Pre-existing test failures in progress text format and SettingsScreen are unrelated to new features
 ---
+
+## 2026-01-25 - UI Refinements (Post US-008/US-009)
+- **What was implemented**: Multiple UI refinements based on user testing feedback
+  - **Keyboard stays open on correct answer**: Added `blurOnSubmit={false}` to TextInput to prevent keyboard dismissal
+  - **Removed question prompt text**: Removed "What is the meaning/reading?" text, keeping only "MEANING"/"READING" label
+  - **Fixed height change on correct answer**: Changed `correctLabel` fontSize from `FONT_SIZES.lg` to `FONT_SIZES.sm` to match `subjectType`
+  - **Hidden cursor**: Added `caretHidden={true}` to TextInput for cleaner centered text display
+  - **Hiragana in input**: For reading questions, hiragana now appears directly in input value instead of separate display above
+  - **Question type label backgrounds**: READING label now has black background, MEANING label has white background
+  - **Removed indicator bar above kanji**: Removed the full-width question type bar since label now has colored background
+  - **Layout refinement**: Changed from `justifyContent: 'flex-start'` to simpler layout with separate spacer View
+  - **Added bottom padding**: Added `paddingBottom: SPACING.sm` to inputContainer for spacing above keyboard
+- **Files changed**:
+  - src/components/LessonQuiz.tsx (multiple style and behavior changes)
+  - src/components/ReviewSession.tsx (multiple style and behavior changes)
+  - __tests__/components/LessonQuiz.test.tsx (updated tests for new UI behavior)
+  - __tests__/components/ReviewSession.test.tsx (updated tests for new UI behavior)
+- **Test fixes applied**:
+  - Removed tests for `question-type-bar` in main session view (only kept in incorrect feedback view)
+  - Removed tests for `lesson-quiz-prompt`/`review-session-prompt` (prompt text removed)
+  - Removed tests for `converted-display` (hiragana now in input value)
+  - Changed `editable=false` tests to verify input stays editable during correct feedback
+  - Updated input positioning tests to check `paddingTop` instead of `justifyContent: 'flex-start'`
+  - Renamed "Question Type Indicator Bar" test describe to "Question Type Label Styling"
+- **Learnings for future iterations**:
+  - `blurOnSubmit={false}` prevents keyboard dismissal when pressing return/submit
+  - `caretHidden={true}` hides the blinking cursor while still allowing text input
+  - For centered input text with hidden cursor, setting the input value directly with converted text provides better UX
+  - When removing UI elements, tests referencing those elements by testID will fail and need removal
+  - Spacer pattern (empty View with `flex: 1`) is cleaner than `justifyContent` for pushing content to bottom
+---
+
+## 2026-01-25 - Additional UI Fixes
+- **What was implemented**: Two additional UI fixes based on user feedback
+  - **Romaji validation with shake**: For reading questions, submission is blocked if input contains unconverted romaji characters. Input container shakes to indicate invalid input.
+  - **Removed indicator bar from incorrect feedback**: Removed the black/white question type bar that appeared above the red "Incorrect" header block.
+- **Files changed**:
+  - src/components/LessonQuiz.tsx (added Animated import, shakeAnimation ref, triggerShake/hasRomajiCharacters functions, romaji validation in handleSubmit, Animated.View wrapper for input)
+  - src/components/ReviewSession.tsx (same changes as LessonQuiz)
+  - __tests__/components/ReviewSession.test.tsx (updated test to verify no indicator bar in incorrect feedback)
+- **Implementation details**:
+  - Shake animation uses `Animated.sequence` with 5 timing animations (±10px translateX) for a quick back-and-forth effect
+  - Romaji detection uses regex `/[a-zA-Z]/` on the converted hiragana text
+  - `useNativeDriver: true` for smooth animation performance
+- **Learnings for future iterations**:
+  - `Animated.Value` should be created with `useRef().current` pattern for persistence across renders
+  - Shake animations work well with translateX transform and quick 50ms duration per step
+  - Wrapping View with Animated.View and adding transform style enables animation
+  - When blocking submission, return early before setting any state to avoid side effects
+---

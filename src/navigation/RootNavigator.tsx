@@ -48,7 +48,7 @@ export function RootNavigator() {
       <Stack.Screen
         name="Home"
         component={HomeScreen}
-        options={{ title: 'UnaiNikani' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="Lessons"

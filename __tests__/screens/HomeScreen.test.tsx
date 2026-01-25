@@ -101,12 +101,11 @@ describe('HomeScreen', () => {
   });
 
   describe('normal state (online with or without data)', () => {
-    it('renders the title and subtitle', async () => {
-      const { getByText } = renderWithNavigation(<HomeScreen />);
+    it('renders the logo', async () => {
+      const { getByTestId } = renderWithNavigation(<HomeScreen />);
 
       await waitFor(() => {
-        expect(getByText('UnaiNikani')).toBeTruthy();
-        expect(getByText('WaniKani Android Client')).toBeTruthy();
+        expect(getByTestId('home-logo')).toBeTruthy();
       });
     });
 
@@ -293,10 +292,10 @@ describe('HomeScreen', () => {
     });
 
     it('shows normal content (not error state)', async () => {
-      const { getByText, queryByText } = renderWithNavigation(<HomeScreen />);
+      const { getByTestId, queryByText } = renderWithNavigation(<HomeScreen />);
 
       await waitFor(() => {
-        expect(getByText('UnaiNikani')).toBeTruthy();
+        expect(getByTestId('home-logo')).toBeTruthy();
         expect(queryByText('No Connection')).toBeNull();
       });
     });
@@ -599,12 +598,17 @@ describe('HomeScreen', () => {
 
       // Make sync take time so we can see the syncing state
       let resolveSyncSubjects: () => void;
-      const syncSubjectsPromise = new Promise<{ success: boolean; syncedCount: number }>(resolve => {
+      const syncSubjectsPromise = new Promise<{
+        success: boolean;
+        syncedCount: number;
+      }>(resolve => {
         resolveSyncSubjects = () => resolve({ success: true, syncedCount: 10 });
       });
       syncSubjects.mockReturnValueOnce(syncSubjectsPromise);
 
-      const { getByTestId, queryByTestId } = renderWithNavigation(<HomeScreen />);
+      const { getByTestId, queryByTestId } = renderWithNavigation(
+        <HomeScreen />,
+      );
 
       await waitFor(() => {
         expect(getByTestId('home-scroll-view')).toBeTruthy();
@@ -643,12 +647,17 @@ describe('HomeScreen', () => {
 
       // Make sync fail
       let rejectSync: (err: Error) => void;
-      const syncSubjectsPromise = new Promise<{ success: boolean; syncedCount: number }>((_, reject) => {
+      const syncSubjectsPromise = new Promise<{
+        success: boolean;
+        syncedCount: number;
+      }>((_, reject) => {
         rejectSync = reject;
       });
       syncSubjects.mockReturnValueOnce(syncSubjectsPromise);
 
-      const { getByTestId, queryByTestId } = renderWithNavigation(<HomeScreen />);
+      const { getByTestId, queryByTestId } = renderWithNavigation(
+        <HomeScreen />,
+      );
 
       await waitFor(() => {
         expect(getByTestId('home-scroll-view')).toBeTruthy();

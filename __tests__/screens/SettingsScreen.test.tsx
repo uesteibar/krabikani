@@ -1,9 +1,4 @@
-import {
-  act,
-  fireEvent,
-  render,
-  waitFor,
-} from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
@@ -32,7 +27,9 @@ function MockHomeScreen() {
 }
 
 // Wrapper for tests that need navigation
-function renderWithNavigation(initialRouteName: keyof RootStackParamList = 'Settings') {
+function renderWithNavigation(
+  initialRouteName: keyof RootStackParamList = 'Settings',
+) {
   return render(
     <NavigationContainer>
       <Stack.Navigator initialRouteName={initialRouteName}>
@@ -113,7 +110,9 @@ describe('SettingsScreen', () => {
       user: { id: 123, username: 'happyuser', level: 15 },
     });
     // Make sync never complete so we can see syncing UI
-    mockSyncService.getUserLevel.mockImplementation(() => new Promise(() => {}));
+    mockSyncService.getUserLevel.mockImplementation(
+      () => new Promise(() => {}),
+    );
 
     const { getByTestId } = renderWithNavigation();
 
@@ -125,7 +124,9 @@ describe('SettingsScreen', () => {
     fireEvent.press(getByTestId('save-button'));
 
     await waitFor(() => {
-      expect(mockWanikaniApi.validateApiKey).toHaveBeenCalledWith('new-api-key');
+      expect(mockWanikaniApi.validateApiKey).toHaveBeenCalledWith(
+        'new-api-key',
+      );
     });
 
     await waitFor(() => {
@@ -143,10 +144,7 @@ describe('SettingsScreen', () => {
     );
 
     // Should NOT show success Alert anymore
-    expect(Alert.alert).not.toHaveBeenCalledWith(
-      'Success',
-      expect.any(String),
-    );
+    expect(Alert.alert).not.toHaveBeenCalledWith('Success', expect.any(String));
   });
 
   it('should show error when API key validation fails', async () => {
@@ -166,7 +164,9 @@ describe('SettingsScreen', () => {
     fireEvent.press(getByTestId('save-button'));
 
     await waitFor(() => {
-      expect(mockWanikaniApi.validateApiKey).toHaveBeenCalledWith('bad-api-key');
+      expect(mockWanikaniApi.validateApiKey).toHaveBeenCalledWith(
+        'bad-api-key',
+      );
     });
 
     await waitFor(() => {
@@ -266,7 +266,7 @@ describe('SettingsScreen', () => {
 
     expect(Alert.alert).toHaveBeenCalledWith(
       'Clear API Key',
-      'Are you sure you want to remove your API key?',
+      'Are you sure you want to remove your API key? This will also delete all synced data.',
       expect.arrayContaining([
         expect.objectContaining({ text: 'Cancel' }),
         expect.objectContaining({ text: 'Clear' }),
@@ -287,9 +287,7 @@ describe('SettingsScreen', () => {
 
     // Get the Clear button callback from Alert.alert
     const alertCalls = (Alert.alert as jest.Mock).mock.calls;
-    const clearAlertCall = alertCalls.find(
-      call => call[0] === 'Clear API Key',
-    );
+    const clearAlertCall = alertCalls.find(call => call[0] === 'Clear API Key');
     const clearButton = clearAlertCall?.[2]?.find(
       (btn: { text: string }) => btn.text === 'Clear',
     );
@@ -318,7 +316,9 @@ describe('SettingsScreen', () => {
     fireEvent.press(getByTestId('save-button'));
 
     await waitFor(() => {
-      expect(mockWanikaniApi.validateApiKey).toHaveBeenCalledWith('trimmed-key');
+      expect(mockWanikaniApi.validateApiKey).toHaveBeenCalledWith(
+        'trimmed-key',
+      );
     });
 
     await waitFor(() => {
@@ -334,7 +334,9 @@ describe('SettingsScreen', () => {
         user: { id: 1, username: 'testuser', level: 10 },
       });
       // Make sync never complete so we can see syncing UI
-      mockSyncService.getUserLevel.mockImplementation(() => new Promise(() => {}));
+      mockSyncService.getUserLevel.mockImplementation(
+        () => new Promise(() => {}),
+      );
 
       const { getByTestId, queryByTestId } = renderWithNavigation();
 
@@ -362,7 +364,9 @@ describe('SettingsScreen', () => {
         user: { id: 1, username: 'testuser', level: 10 },
       });
       // Make sync never complete so we can see syncing UI
-      mockSyncService.getUserLevel.mockImplementation(() => new Promise(() => {}));
+      mockSyncService.getUserLevel.mockImplementation(
+        () => new Promise(() => {}),
+      );
 
       const { getByTestId } = renderWithNavigation();
 
@@ -431,7 +435,10 @@ describe('SettingsScreen', () => {
       fireEvent.press(getByTestId('save-button'));
 
       await waitFor(() => {
-        expect(Alert.alert).toHaveBeenCalledWith('Error', 'Storage unavailable');
+        expect(Alert.alert).toHaveBeenCalledWith(
+          'Error',
+          'Storage unavailable',
+        );
       });
 
       // Should still show the input form, not syncing view
@@ -627,7 +634,10 @@ describe('SettingsScreen', () => {
       fireEvent.press(getByTestId('save-button'));
 
       await waitFor(() => {
-        expect(Alert.alert).toHaveBeenCalledWith('Error', 'Storage unavailable');
+        expect(Alert.alert).toHaveBeenCalledWith(
+          'Error',
+          'Storage unavailable',
+        );
       });
 
       expect(mockSyncService.getUserLevel).not.toHaveBeenCalled();
@@ -696,7 +706,9 @@ describe('SettingsScreen', () => {
         expect(getByTestId('sync-error-view')).toBeTruthy();
       });
 
-      expect(getByTestId('sync-error-title').props.children).toBe('Sync Failed');
+      expect(getByTestId('sync-error-title').props.children).toBe(
+        'Sync Failed',
+      );
       expect(getByTestId('sync-error-message').props.children).toBe(
         'Network request failed',
       );
@@ -865,7 +877,9 @@ describe('SettingsScreen', () => {
       });
 
       // Make retry never complete so we can see syncing UI
-      mockSyncService.getUserLevel.mockImplementation(() => new Promise(() => {}));
+      mockSyncService.getUserLevel.mockImplementation(
+        () => new Promise(() => {}),
+      );
 
       // Press retry
       fireEvent.press(getByTestId('retry-button'));
@@ -885,9 +899,7 @@ describe('SettingsScreen', () => {
         success: true,
         user: { id: 1, username: 'testuser', level: 10 },
       });
-      mockSyncService.getUserLevel.mockRejectedValue(
-        new Error('Sync failed'),
-      );
+      mockSyncService.getUserLevel.mockRejectedValue(new Error('Sync failed'));
 
       const { getByTestId } = renderWithNavigation();
 
@@ -903,7 +915,9 @@ describe('SettingsScreen', () => {
       });
 
       // API key should have been saved before sync attempt
-      expect(mockSecureStorage.saveApiKey).toHaveBeenCalledWith('valid-api-key');
+      expect(mockSecureStorage.saveApiKey).toHaveBeenCalledWith(
+        'valid-api-key',
+      );
 
       // clearApiKey should NOT have been called - key remains saved
       expect(mockSecureStorage.clearApiKey).not.toHaveBeenCalled();
@@ -956,9 +970,7 @@ describe('SettingsScreen', () => {
         success: true,
         user: { id: 1, username: 'testuser', level: 10 },
       });
-      mockSyncService.getUserLevel.mockRejectedValue(
-        new Error('Sync failed'),
-      );
+      mockSyncService.getUserLevel.mockRejectedValue(new Error('Sync failed'));
 
       const { getByTestId, queryByTestId } = renderWithNavigation();
 

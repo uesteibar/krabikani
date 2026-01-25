@@ -14,6 +14,7 @@ import {
   Platform,
   TouchableOpacity,
   ScrollView,
+  Animated,
   type TextInput as TextInputType,
 } from 'react-native';
 
@@ -288,6 +289,9 @@ export function ReviewSession({
   // Ref for TextInput to enable auto-focus
   const inputRef = useRef<TextInputType>(null);
 
+  // Shake animation for invalid reading submission
+  const shakeAnimation = useRef(new Animated.Value(0)).current;
+
   // Reset state when items change
   useEffect(() => {
     const newQuestions = generateReviewQuestions(items);
@@ -363,17 +367,22 @@ export function ReviewSession({
     return count;
   }, [isWrappingUp, introducedItemIds, _itemProgress]);
 
-  // Auto-focus input when question changes (including after advancing from correct/incorrect feedback)
+  // Auto-focus input when question changes or during correct feedback
   useEffect(() => {
-    // Don't focus if showing feedback or session is complete
-    if (!incorrectFeedback && !showCorrectFeedback && !isComplete) {
+    // Don't focus if showing incorrect feedback (user needs to tap Continue) or session is complete
+    if (!incorrectFeedback && !isComplete) {
       // Small delay to ensure the input is rendered and ready
       const timer = setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [currentQuestionIndex, incorrectFeedback, showCorrectFeedback, isComplete]);
+  }, [
+    currentQuestionIndex,
+    incorrectFeedback,
+    showCorrectFeedback,
+    isComplete,
+  ]);
 
   // Handle wrap-up button press
   const handleWrapUpToggle = useCallback(() => {
@@ -471,6 +480,44 @@ export function ReviewSession({
     advanceToNextQuestion();
   }, [advanceToNextQuestion]);
 
+  // Trigger shake animation for invalid input
+  const triggerShake = useCallback(() => {
+    shakeAnimation.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnimation, {
+        toValue: 10,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnimation, {
+        toValue: -10,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnimation, {
+        toValue: 10,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnimation, {
+        toValue: -10,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnimation, {
+        toValue: 0,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [shakeAnimation]);
+
+  // Check if input contains any romaji (non-hiragana letters)
+  const hasRomajiCharacters = useCallback((text: string): boolean => {
+    // Check if there are any a-z characters remaining
+    return /[a-zA-Z]/.test(text);
+  }, []);
+
   // Check if an item is fully completed (both meaning and reading correct)
   const isItemComplete = useCallback((progress: ItemProgress): boolean => {
     return progress.meaningCorrect && progress.readingCorrect;
@@ -481,6 +528,16 @@ export function ReviewSession({
     if (!currentQuestion || showCorrectFeedback || incorrectFeedback) return;
 
     const { item, type } = currentQuestion;
+
+    // For reading questions, check if input has unconverted romaji
+    if (type === 'reading') {
+      const converted = romajiToHiragana(inputValue);
+      if (hasRomajiCharacters(converted)) {
+        // Input has romaji that couldn't be converted - shake and reject
+        triggerShake();
+        return;
+      }
+    }
 
     // Get the final answer
     const answer =
@@ -767,17 +824,6 @@ export function ReviewSession({
           </View>
         </View>
 
-        {/* Question type indicator bar */}
-        <View
-          style={[
-            styles.questionTypeBar,
-            incorrectFeedback.question.type === 'reading'
-              ? styles.questionTypeBarReading
-              : styles.questionTypeBarMeaning,
-          ]}
-          testID="review-session-question-type-bar"
-        />
-
         {/* Character display with red tint for incorrect */}
         <View
           style={[styles.characterContainer, styles.incorrectHeader]}
@@ -925,17 +971,6 @@ export function ReviewSession({
         </View>
       </View>
 
-      {/* Question type indicator bar */}
-      <View
-        style={[
-          styles.questionTypeBar,
-          type === 'reading'
-            ? styles.questionTypeBarReading
-            : styles.questionTypeBarMeaning,
-        ]}
-        testID="review-session-question-type-bar"
-      />
-
       {/* Character display - with green tint if showing correct feedback */}
       <View
         style={[
@@ -961,31 +996,38 @@ export function ReviewSession({
         )}
       </View>
 
-      {/* Question prompt */}
-      <View style={styles.questionContainer}>
-        <Text style={styles.questionPrompt} testID="review-session-prompt">
-          {questionPrompt}
-        </Text>
-        <Text style={styles.questionType} testID="review-session-question-type">
+      {/* Question type label */}
+      <View
+        style={[
+          styles.questionContainer,
+          type === 'reading'
+            ? styles.questionContainerReading
+            : styles.questionContainerMeaning,
+        ]}
+      >
+        <Text
+          style={[
+            styles.questionType,
+            type === 'reading' && styles.questionTypeReading,
+          ]}
+          testID="review-session-question-type"
+        >
           {type === 'meaning' ? 'MEANING' : 'READING'}
         </Text>
       </View>
 
-      {/* Input area */}
-      <View style={styles.inputContainer} testID="review-session-input-container">
-        {/* For reading questions, show the converted display */}
-        {type === 'reading' && displayText && (
-          <Text
-            style={styles.convertedDisplay}
-            testID="review-session-converted-display"
-          >
-            {displayText}
-          </Text>
-        )}
+      {/* Input area - no flex to keep it near the question prompt */}
+      <Animated.View
+        style={[
+          styles.inputContainer,
+          { transform: [{ translateX: shakeAnimation }] },
+        ]}
+        testID="review-session-input-container"
+      >
         <TextInput
           ref={inputRef}
           style={[styles.input, { borderColor: backgroundColor }]}
-          value={inputValue}
+          value={type === 'reading' ? displayText : inputValue}
           onChangeText={handleInputChange}
           onSubmitEditing={handleSubmit}
           placeholder={placeholder}
@@ -995,10 +1037,14 @@ export function ReviewSession({
           autoComplete="off"
           keyboardType={type === 'reading' ? 'ascii-capable' : 'default'}
           returnKeyType="done"
-          editable={!showCorrectFeedback}
+          blurOnSubmit={false}
+          caretHidden={true}
           testID="review-session-input"
         />
-      </View>
+      </Animated.View>
+
+      {/* Spacer to push buttons to bottom */}
+      <View style={styles.spacer} />
 
       {/* Button row: Submit + Wrap Up */}
       <View style={styles.buttonRow}>
@@ -1120,33 +1166,38 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.feedback.correct,
   },
   correctLabel: {
-    fontSize: FONT_SIZES.lg,
+    fontSize: FONT_SIZES.sm,
     fontWeight: 'bold',
     color: COLORS.text.inverse,
     marginTop: SPACING.sm,
   },
   questionContainer: {
-    paddingVertical: SPACING.lg,
+    paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.lg,
     alignItems: 'center',
   },
-  questionPrompt: {
-    fontSize: FONT_SIZES.xl,
-    fontWeight: '600',
-    color: COLORS.text.primary,
-    marginBottom: SPACING.xs,
+  questionContainerReading: {
+    backgroundColor: COLORS.neutral.black,
+  },
+  questionContainerMeaning: {
+    backgroundColor: COLORS.neutral.white,
   },
   questionType: {
-    fontSize: FONT_SIZES.xs,
+    fontSize: FONT_SIZES.sm,
     fontWeight: '700',
     color: COLORS.text.tertiary,
     letterSpacing: 2,
   },
+  questionTypeReading: {
+    color: COLORS.text.inverse,
+  },
   inputContainer: {
-    flex: 1,
     paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.lg,
-    justifyContent: 'flex-start',
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.sm,
+  },
+  spacer: {
+    flex: 1,
   },
   convertedDisplay: {
     fontSize: FONT_SIZES.xxxl,

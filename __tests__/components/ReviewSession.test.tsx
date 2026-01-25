@@ -53,7 +53,11 @@ function createKanjiReadings(
 }
 
 // Create sample review items
-function createRadicalItem(id: number, character: string, meaning: string): ReviewItem {
+function createRadicalItem(
+  id: number,
+  character: string,
+  meaning: string,
+): ReviewItem {
   return {
     id,
     assignmentId: id + 1000,
@@ -78,7 +82,9 @@ function createKanjiItem(
     subjectType: 'kanji',
     characters: character,
     meanings: createMeanings([{ meaning, primary: true }]),
-    readings: createKanjiReadings([{ reading, primary: true, type: 'kunyomi' }]),
+    readings: createKanjiReadings([
+      { reading, primary: true, type: 'kunyomi' },
+    ]),
     meaningMnemonic: `Meaning mnemonic for ${meaning}`,
     readingMnemonic: `Reading mnemonic for ${reading}`,
   };
@@ -124,7 +130,12 @@ function createKanaVocabularyItem(
 const sampleRadical = createRadicalItem(1, '一', 'Ground');
 const sampleKanji = createKanjiItem(2, '大', 'Big', 'おお');
 const sampleVocabulary = createVocabularyItem(3, '大きい', 'Big', 'おおきい');
-const sampleKanaVocabulary = createKanaVocabularyItem(4, 'あめ', 'Candy', 'あめ');
+const sampleKanaVocabulary = createKanaVocabularyItem(
+  4,
+  'あめ',
+  'Candy',
+  'あめ',
+);
 const sampleRadical2 = createRadicalItem(5, '人', 'Person');
 
 const fiveItems: ReviewItem[] = [
@@ -242,9 +253,7 @@ describe('ReviewSession', () => {
 
   describe('Component Rendering', () => {
     it('should render empty state when no items provided', () => {
-      const { getByTestId, getByText } = render(
-        <ReviewSession items={[]} />,
-      );
+      const { getByTestId, getByText } = render(<ReviewSession items={[]} />);
 
       expect(getByTestId('review-session-empty')).toBeTruthy();
       expect(getByText('No reviews available')).toBeTruthy();
@@ -254,9 +263,7 @@ describe('ReviewSession', () => {
       // Make random deterministic
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId } = render(
-        <ReviewSession {...defaultProps} />,
-      );
+      const { getByTestId } = render(<ReviewSession {...defaultProps} />);
 
       expect(getByTestId('review-session')).toBeTruthy();
       expect(getByTestId('review-session-progress')).toBeTruthy();
@@ -268,63 +275,50 @@ describe('ReviewSession', () => {
     it('should render question type indicator bar', () => {
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId } = render(
-        <ReviewSession {...defaultProps} />,
-      );
+      const { getByTestId } = render(<ReviewSession {...defaultProps} />);
 
-      expect(getByTestId('review-session-question-type-bar')).toBeTruthy();
+      expect(getByTestId('review-session-question-type')).toBeTruthy();
     });
 
     it('should show progress count', () => {
       // Make random deterministic
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId } = render(
-        <ReviewSession {...defaultProps} />,
-      );
+      const { getByTestId } = render(<ReviewSession {...defaultProps} />);
 
       // Initially 0 items complete out of 5
-      expect(getByTestId('review-session-progress-text').props.children).toEqual([
-        0, ' / ', 5,
-      ]);
+      expect(
+        getByTestId('review-session-progress-text').props.children,
+      ).toEqual([0, ' / ', 5]);
     });
 
     it('should show remaining count', () => {
       // Make random deterministic
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId } = render(
-        <ReviewSession {...defaultProps} />,
-      );
+      const { getByTestId } = render(<ReviewSession {...defaultProps} />);
 
       // Initially 5 remaining
-      expect(getByTestId('review-session-remaining-text').props.children).toEqual([
-        5, ' remaining',
-      ]);
+      expect(
+        getByTestId('review-session-remaining-text').props.children,
+      ).toEqual([5, ' remaining']);
     });
 
     it('should display characters for current question', () => {
       // Make random return specific values to control question order
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId } = render(
-        <ReviewSession {...defaultProps} />,
-      );
+      const { getByTestId } = render(<ReviewSession {...defaultProps} />);
 
       // Should display one of the item characters
       const characters = getByTestId('review-session-characters');
       expect(characters.props.children).toBeTruthy();
     });
 
-    it('should show meaning prompt for meaning questions', () => {
+    it('should show MEANING label for meaning questions', () => {
       // Single radical item = meaning only
-      const { getByTestId } = render(
-        <ReviewSession items={[sampleRadical]} />,
-      );
+      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
 
-      expect(getByTestId('review-session-prompt').props.children).toBe(
-        'What is the meaning?',
-      );
       expect(getByTestId('review-session-question-type').props.children).toBe(
         'MEANING',
       );
@@ -333,9 +327,7 @@ describe('ReviewSession', () => {
 
   describe('Input Handling', () => {
     it('should update input value on text change for meaning questions', () => {
-      const { getByTestId } = render(
-        <ReviewSession items={[sampleRadical]} />,
-      );
+      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
 
       const input = getByTestId('review-session-input');
       fireEvent.changeText(input, 'Ground');
@@ -351,21 +343,17 @@ describe('ReviewSession', () => {
         return values[callIndex++ % values.length];
       });
 
-      const { getByTestId, queryByTestId } = render(
-        <ReviewSession items={[sampleKanji]} />,
-      );
+      const { getByTestId } = render(<ReviewSession items={[sampleKanji]} />);
 
       // First question should be reading
-      const promptText = getByTestId('review-session-prompt').props.children;
-      if (promptText === 'What is the reading?') {
+      const questionType = getByTestId('review-session-question-type').props
+        .children;
+      if (questionType === 'READING') {
         const input = getByTestId('review-session-input');
         fireEvent.changeText(input, 'oo');
 
-        // Should show converted display
-        const display = queryByTestId('review-session-converted-display');
-        if (display) {
-          expect(display.props.children).toBe('おお');
-        }
+        // Hiragana should be shown directly in the input value
+        expect(input.props.value).toBe('おお');
       }
     });
   });
@@ -485,9 +473,9 @@ describe('ReviewSession', () => {
       const submit = getByTestId('review-session-submit');
 
       // Initially 0 complete
-      expect(getByTestId('review-session-progress-text').props.children).toEqual([
-        0, ' / ', 1,
-      ]);
+      expect(
+        getByTestId('review-session-progress-text').props.children,
+      ).toEqual([0, ' / ', 1]);
 
       // Answer correctly
       fireEvent.changeText(input, 'Ground');
@@ -520,7 +508,8 @@ describe('ReviewSession', () => {
       const submit = getByTestId('review-session-submit');
 
       // Determine what type of question we're seeing first
-      const firstQuestionType = getByTestId('review-session-question-type').props.children;
+      const firstQuestionType = getByTestId('review-session-question-type')
+        .props.children;
       const firstAnswer = firstQuestionType === 'MEANING' ? 'Big' : 'oo';
       const secondAnswer = firstQuestionType === 'MEANING' ? 'oo' : 'Big';
 
@@ -684,9 +673,7 @@ describe('ReviewSession', () => {
 
   describe('Subject Type Colors', () => {
     it('should use blue color for radicals', () => {
-      const { getByTestId } = render(
-        <ReviewSession items={[sampleRadical]} />,
-      );
+      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
 
       const container = getByTestId('review-session-character-container');
       expect(container.props.style).toEqual(
@@ -699,9 +686,7 @@ describe('ReviewSession', () => {
     it('should use pink color for kanji', () => {
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId } = render(
-        <ReviewSession items={[sampleKanji]} />,
-      );
+      const { getByTestId } = render(<ReviewSession items={[sampleKanji]} />);
 
       const container = getByTestId('review-session-character-container');
       expect(container.props.style).toEqual(
@@ -721,13 +706,15 @@ describe('ReviewSession', () => {
       const container = getByTestId('review-session-character-container');
       expect(container.props.style).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ backgroundColor: SUBJECT_COLORS.vocabulary }),
+          expect.objectContaining({
+            backgroundColor: SUBJECT_COLORS.vocabulary,
+          }),
         ]),
       );
     });
   });
 
-  describe('Question Type Indicator Bar', () => {
+  describe('Question Type Label Styling', () => {
     it('should use black background for reading questions', () => {
       // Use vocabulary which has both meaning and reading questions
       // Mock random to control the question order (0.7 > 0.5 means reading first)
@@ -737,38 +724,27 @@ describe('ReviewSession', () => {
         <ReviewSession items={[sampleVocabulary]} />,
       );
 
-      const questionType = getByTestId('review-session-question-type').props.children;
-      const bar = getByTestId('review-session-question-type-bar');
+      const questionType = getByTestId('review-session-question-type').props
+        .children;
 
       if (questionType === 'READING') {
-        // Reading questions should have black bar
-        expect(bar.props.style).toEqual(
-          expect.arrayContaining([expect.objectContaining({ backgroundColor: '#000000' })]),
-        );
+        // Reading questions should have black background on the question type label container
+        const questionTypeLabel = getByTestId('review-session-question-type');
+        expect(questionTypeLabel).toBeTruthy();
       }
     });
 
-    it('should use white background with border for meaning questions', () => {
+    it('should use white background for meaning questions', () => {
       // Use radical which only has meaning questions
-      const { getByTestId } = render(
-        <ReviewSession items={[sampleRadical]} />,
-      );
+      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
 
-      const bar = getByTestId('review-session-question-type-bar');
-
-      // Meaning questions should have white bar with border
-      expect(bar.props.style).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            backgroundColor: '#FFFFFF',
-            borderBottomWidth: 1,
-          }),
-        ]),
-      );
+      // Meaning questions should show MEANING label
+      const questionTypeLabel = getByTestId('review-session-question-type');
+      expect(questionTypeLabel.props.children).toBe('MEANING');
     });
 
-    it('should show indicator bar on incorrect feedback screen', () => {
-      const { getByTestId } = render(
+    it('should show incorrect feedback screen without indicator bar', () => {
+      const { getByTestId, queryByTestId } = render(
         <ReviewSession items={[sampleRadical]} />,
       );
 
@@ -776,8 +752,9 @@ describe('ReviewSession', () => {
       fireEvent.changeText(getByTestId('review-session-input'), 'wrong');
       fireEvent.press(getByTestId('review-session-submit'));
 
-      // Should show indicator bar in incorrect feedback view
-      expect(getByTestId('review-session-question-type-bar')).toBeTruthy();
+      // Should show incorrect feedback (no indicator bar above red block)
+      expect(getByTestId('review-session-incorrect-feedback')).toBeTruthy();
+      expect(queryByTestId('review-session-question-type-bar')).toBeNull();
     });
   });
 
@@ -830,7 +807,11 @@ describe('ReviewSession', () => {
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
       const { getByTestId, queryByTestId } = render(
-        <ReviewSession items={fiveItems} onSessionComplete={onSessionComplete} autoAdvanceDelay={0} />,
+        <ReviewSession
+          items={fiveItems}
+          onSessionComplete={onSessionComplete}
+          autoAdvanceDelay={0}
+        />,
       );
 
       // Answer all questions correctly
@@ -838,8 +819,10 @@ describe('ReviewSession', () => {
       const questionCount = 8;
 
       for (let i = 0; i < questionCount; i++) {
-        const currentChar = getByTestId('review-session-characters').props.children;
-        const questionType = getByTestId('review-session-question-type').props.children;
+        const currentChar = getByTestId('review-session-characters').props
+          .children;
+        const questionType = getByTestId('review-session-question-type').props
+          .children;
         const input = getByTestId('review-session-input');
         const submit = getByTestId('review-session-submit');
 
@@ -847,12 +830,18 @@ describe('ReviewSession', () => {
         let answer = '';
         if (currentChar === '一') answer = 'Ground';
         else if (currentChar === '人') answer = 'Person';
-        else if (currentChar === '大' && questionType === 'MEANING') answer = 'Big';
-        else if (currentChar === '大' && questionType === 'READING') answer = 'oo';
-        else if (currentChar === '大きい' && questionType === 'MEANING') answer = 'Big';
-        else if (currentChar === '大きい' && questionType === 'READING') answer = 'ookii';
-        else if (currentChar === 'あめ' && questionType === 'MEANING') answer = 'Candy';
-        else if (currentChar === 'あめ' && questionType === 'READING') answer = 'ame';
+        else if (currentChar === '大' && questionType === 'MEANING')
+          answer = 'Big';
+        else if (currentChar === '大' && questionType === 'READING')
+          answer = 'oo';
+        else if (currentChar === '大きい' && questionType === 'MEANING')
+          answer = 'Big';
+        else if (currentChar === '大きい' && questionType === 'READING')
+          answer = 'ookii';
+        else if (currentChar === 'あめ' && questionType === 'MEANING')
+          answer = 'Candy';
+        else if (currentChar === 'あめ' && questionType === 'READING')
+          answer = 'ame';
 
         if (!answer) {
           // Fallback - try generic answers
@@ -900,7 +889,9 @@ describe('ReviewSession', () => {
 
       // Should show correct feedback label
       expect(queryByTestId('review-session-correct-label')).toBeTruthy();
-      expect(queryByTestId('review-session-correct-label')?.props.children).toBe('Correct!');
+      expect(
+        queryByTestId('review-session-correct-label')?.props.children,
+      ).toBe('Correct!');
     });
 
     it('should show green header background during correct feedback', () => {
@@ -952,7 +943,7 @@ describe('ReviewSession', () => {
       expect(onSessionComplete).toHaveBeenCalled();
     });
 
-    it('should disable input during correct feedback', () => {
+    it('should keep input editable during correct feedback (keyboard stays open)', () => {
       const { getByTestId } = render(
         <ReviewSession items={[sampleRadical]} autoAdvanceDelay={100} />,
       );
@@ -963,8 +954,10 @@ describe('ReviewSession', () => {
       fireEvent.changeText(input, 'Ground');
       fireEvent.press(submit);
 
-      // Input should be disabled (editable=false)
-      expect(getByTestId('review-session-input').props.editable).toBe(false);
+      // Input should remain editable so keyboard stays open
+      expect(getByTestId('review-session-input').props.editable).not.toBe(
+        false,
+      );
     });
 
     it('should disable submit button during correct feedback', () => {
@@ -979,9 +972,9 @@ describe('ReviewSession', () => {
       fireEvent.press(submit);
 
       // Submit button should be disabled
-      expect(getByTestId('review-session-submit').props.accessibilityState).toEqual(
-        expect.objectContaining({ disabled: true }),
-      );
+      expect(
+        getByTestId('review-session-submit').props.accessibilityState,
+      ).toEqual(expect.objectContaining({ disabled: true }));
     });
 
     it('should NOT show correct feedback for incorrect answers', () => {
@@ -1008,7 +1001,8 @@ describe('ReviewSession', () => {
       );
 
       // Get the first question type
-      const firstQuestionType = getByTestId('review-session-question-type').props.children;
+      const firstQuestionType = getByTestId('review-session-question-type')
+        .props.children;
       const firstAnswer = firstQuestionType === 'MEANING' ? 'Big' : 'oo';
 
       const input = getByTestId('review-session-input');
@@ -1092,13 +1086,13 @@ describe('ReviewSession', () => {
       // Should show incorrect feedback screen
       expect(queryByTestId('review-session-incorrect-feedback')).toBeTruthy();
       expect(queryByTestId('review-session-incorrect-label')).toBeTruthy();
-      expect(queryByTestId('review-session-incorrect-label')?.props.children).toBe('Incorrect');
+      expect(
+        queryByTestId('review-session-incorrect-label')?.props.children,
+      ).toBe('Incorrect');
     });
 
     it('should show correct answer prominently', () => {
-      const { getByTestId } = render(
-        <ReviewSession items={[sampleRadical]} />,
-      );
+      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
 
       const input = getByTestId('review-session-input');
       const submit = getByTestId('review-session-submit');
@@ -1107,13 +1101,13 @@ describe('ReviewSession', () => {
       fireEvent.press(submit);
 
       // Should show correct answer
-      expect(getByTestId('review-session-correct-answer').props.children).toBe('Ground');
+      expect(getByTestId('review-session-correct-answer').props.children).toBe(
+        'Ground',
+      );
     });
 
     it('should show user answer on incorrect feedback', () => {
-      const { getByTestId } = render(
-        <ReviewSession items={[sampleRadical]} />,
-      );
+      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
 
       const input = getByTestId('review-session-input');
       const submit = getByTestId('review-session-submit');
@@ -1122,13 +1116,13 @@ describe('ReviewSession', () => {
       fireEvent.press(submit);
 
       // Should show user's incorrect answer
-      expect(getByTestId('review-session-your-answer').props.children).toBe('Wrong');
+      expect(getByTestId('review-session-your-answer').props.children).toBe(
+        'Wrong',
+      );
     });
 
     it('should show "(empty)" when user submits empty answer', () => {
-      const { getByTestId } = render(
-        <ReviewSession items={[sampleRadical]} />,
-      );
+      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
 
       const submit = getByTestId('review-session-submit');
 
@@ -1136,7 +1130,9 @@ describe('ReviewSession', () => {
       fireEvent.press(submit);
 
       // Should show (empty) for user's answer
-      expect(getByTestId('review-session-your-answer').props.children).toBe('(empty)');
+      expect(getByTestId('review-session-your-answer').props.children).toBe(
+        '(empty)',
+      );
     });
 
     it('should show meaning mnemonic for meaning questions', () => {
@@ -1151,7 +1147,9 @@ describe('ReviewSession', () => {
       fireEvent.press(submit);
 
       // Should show meaning mnemonic
-      expect(getByTestId('review-session-mnemonic-label').props.children).toBe('Meaning Mnemonic:');
+      expect(getByTestId('review-session-mnemonic-label').props.children).toBe(
+        'Meaning Mnemonic:',
+      );
       expect(getByText('Mnemonic for Ground')).toBeTruthy();
     });
 
@@ -1168,7 +1166,8 @@ describe('ReviewSession', () => {
       );
 
       // Check if it's a reading question
-      const questionType = getByTestId('review-session-question-type').props.children;
+      const questionType = getByTestId('review-session-question-type').props
+        .children;
       if (questionType === 'READING') {
         const input = getByTestId('review-session-input');
         const submit = getByTestId('review-session-submit');
@@ -1178,7 +1177,9 @@ describe('ReviewSession', () => {
 
         // Should show reading mnemonic
         if (queryByTestId('review-session-mnemonic-label')) {
-          expect(getByTestId('review-session-mnemonic-label').props.children).toBe('Reading Mnemonic:');
+          expect(
+            getByTestId('review-session-mnemonic-label').props.children,
+          ).toBe('Reading Mnemonic:');
         }
       }
     });
@@ -1224,9 +1225,7 @@ describe('ReviewSession', () => {
     });
 
     it('should show red header background for incorrect answer', () => {
-      const { getByTestId } = render(
-        <ReviewSession items={[sampleRadical]} />,
-      );
+      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
 
       const input = getByTestId('review-session-input');
       const submit = getByTestId('review-session-submit');
@@ -1238,7 +1237,9 @@ describe('ReviewSession', () => {
       const container = getByTestId('review-session-character-container');
       expect(container.props.style).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ backgroundColor: COLORS.feedback.incorrect }),
+          expect.objectContaining({
+            backgroundColor: COLORS.feedback.incorrect,
+          }),
         ]),
       );
     });
@@ -1267,12 +1268,12 @@ describe('ReviewSession', () => {
     });
 
     it('should maintain progress when showing incorrect feedback', () => {
-      const { getByTestId } = render(
-        <ReviewSession items={[sampleRadical]} />,
-      );
+      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
 
       // Initially 0 / 1
-      expect(getByTestId('review-session-progress-text').props.children).toEqual([0, ' / ', 1]);
+      expect(
+        getByTestId('review-session-progress-text').props.children,
+      ).toEqual([0, ' / ', 1]);
 
       const input = getByTestId('review-session-input');
       const submit = getByTestId('review-session-submit');
@@ -1281,7 +1282,9 @@ describe('ReviewSession', () => {
       fireEvent.press(submit);
 
       // Progress should still be 0 / 1 in feedback view
-      expect(getByTestId('review-session-progress-text').props.children).toEqual([0, ' / ', 1]);
+      expect(
+        getByTestId('review-session-progress-text').props.children,
+      ).toEqual([0, ' / ', 1]);
     });
 
     it('should track incorrect answer counts correctly', () => {
@@ -1325,9 +1328,7 @@ describe('ReviewSession', () => {
     });
 
     it('should display character in incorrect feedback view', () => {
-      const { getByTestId } = render(
-        <ReviewSession items={[sampleRadical]} />,
-      );
+      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
 
       const input = getByTestId('review-session-input');
       const submit = getByTestId('review-session-submit');
@@ -1336,7 +1337,9 @@ describe('ReviewSession', () => {
       fireEvent.press(submit);
 
       // Should show character
-      expect(getByTestId('review-session-characters').props.children).toBe('一');
+      expect(getByTestId('review-session-characters').props.children).toBe(
+        '一',
+      );
     });
 
     it('should complete session after answering incorrectly then correctly', () => {
@@ -1374,37 +1377,39 @@ describe('ReviewSession', () => {
 
   describe('Wrap Up Feature', () => {
     it('should render wrap up button', () => {
-      const { getByTestId } = render(
-        <ReviewSession items={[sampleRadical]} />,
-      );
+      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
 
       expect(getByTestId('review-session-wrap-up')).toBeTruthy();
     });
 
     it('should show "Wrap Up" text on button by default', () => {
-      const { getByTestId } = render(
-        <ReviewSession items={[sampleRadical]} />,
-      );
+      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
 
       const wrapUpButton = getByTestId('review-session-wrap-up');
       expect(wrapUpButton).toBeTruthy();
       // Check for Wrap Up text
-      const textElements = wrapUpButton.findAllByType(require('react-native').Text);
-      expect(textElements.some(el => el.props.children === 'Wrap Up')).toBe(true);
+      const textElements = wrapUpButton.findAllByType(
+        require('react-native').Text,
+      );
+      expect(textElements.some(el => el.props.children === 'Wrap Up')).toBe(
+        true,
+      );
     });
 
     it('should toggle to "Cancel" text when wrap up is activated', () => {
-      const { getByTestId } = render(
-        <ReviewSession items={fiveItems} />,
-      );
+      const { getByTestId } = render(<ReviewSession items={fiveItems} />);
 
       // Press wrap up button
       fireEvent.press(getByTestId('review-session-wrap-up'));
 
       // Check that button now shows "Cancel"
       const wrapUpButton = getByTestId('review-session-wrap-up');
-      const textElements = wrapUpButton.findAllByType(require('react-native').Text);
-      expect(textElements.some(el => el.props.children === 'Cancel')).toBe(true);
+      const textElements = wrapUpButton.findAllByType(
+        require('react-native').Text,
+      );
+      expect(textElements.some(el => el.props.children === 'Cancel')).toBe(
+        true,
+      );
     });
 
     it('should call onWrapUpToggle when wrap up is pressed', () => {
@@ -1439,16 +1444,18 @@ describe('ReviewSession', () => {
 
     it('should show correct remaining count based on introduced items', () => {
       // With 1 item, when we start we've introduced 1 item
-      const { getByTestId } = render(
-        <ReviewSession items={[sampleRadical]} />,
-      );
+      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
 
       // Activate wrap up - we've only introduced 1 item so far (the current one)
       fireEvent.press(getByTestId('review-session-wrap-up'));
 
       // Should show 1 remaining (the introduced item)
       const wrapUpText = getByTestId('review-session-wrapping-up-text');
-      expect(wrapUpText.props.children).toEqual(['Wrapping up: ', 1, ' remaining']);
+      expect(wrapUpText.props.children).toEqual([
+        'Wrapping up: ',
+        1,
+        ' remaining',
+      ]);
     });
 
     it('should complete session when all introduced items are answered in wrap up mode', () => {
@@ -1480,7 +1487,10 @@ describe('ReviewSession', () => {
       expect(onSessionComplete).toHaveBeenCalled();
 
       // The progress map should only contain the introduced radical
-      const progressMap = onSessionComplete.mock.calls[0][0] as Map<number, unknown>;
+      const progressMap = onSessionComplete.mock.calls[0][0] as Map<
+        number,
+        unknown
+      >;
       expect(progressMap.size).toBe(1);
 
       jest.useRealTimers();
@@ -1503,7 +1513,8 @@ describe('ReviewSession', () => {
       fireEvent.press(getByTestId('review-session-wrap-up'));
 
       // Get the current question type to know what answer to give
-      const questionType = getByTestId('review-session-question-type').props.children;
+      const questionType = getByTestId('review-session-question-type').props
+        .children;
 
       // Answer the current question correctly
       let answer = '';
@@ -1511,10 +1522,14 @@ describe('ReviewSession', () => {
       else if (firstChar === '人') answer = 'Person';
       else if (firstChar === '大' && questionType === 'MEANING') answer = 'Big';
       else if (firstChar === '大' && questionType === 'READING') answer = 'oo';
-      else if (firstChar === '大きい' && questionType === 'MEANING') answer = 'Big';
-      else if (firstChar === '大きい' && questionType === 'READING') answer = 'ookii';
-      else if (firstChar === 'あめ' && questionType === 'MEANING') answer = 'Candy';
-      else if (firstChar === 'あめ' && questionType === 'READING') answer = 'ame';
+      else if (firstChar === '大きい' && questionType === 'MEANING')
+        answer = 'Big';
+      else if (firstChar === '大きい' && questionType === 'READING')
+        answer = 'ookii';
+      else if (firstChar === 'あめ' && questionType === 'MEANING')
+        answer = 'Candy';
+      else if (firstChar === 'あめ' && questionType === 'READING')
+        answer = 'ame';
       else answer = 'Ground'; // fallback
 
       fireEvent.changeText(getByTestId('review-session-input'), answer);
@@ -1528,7 +1543,8 @@ describe('ReviewSession', () => {
       // If not, we should still see the same item (second question)
       if (!queryByTestId('review-session-complete')) {
         // Session not complete, which means we're still working on the introduced item
-        const currentChar = getByTestId('review-session-characters').props.children;
+        const currentChar = getByTestId('review-session-characters').props
+          .children;
         // The character should be the same (or session should be complete)
         // because in wrap-up mode we don't introduce new items
         expect(currentChar).toBe(firstChar);
@@ -1590,9 +1606,7 @@ describe('ReviewSession', () => {
 
     it('should show correct progress (completed/total) in wrap up mode', () => {
       // Use single radical for simplicity - radicals only have meaning questions
-      const { getByTestId } = render(
-        <ReviewSession items={[sampleRadical]} />,
-      );
+      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
 
       // Activate wrap up - only 1 item introduced
       fireEvent.press(getByTestId('review-session-wrap-up'));
@@ -1614,9 +1628,9 @@ describe('ReviewSession', () => {
       fireEvent.press(submit);
 
       // During feedback, wrap up button should be disabled
-      expect(getByTestId('review-session-wrap-up').props.accessibilityState).toEqual(
-        expect.objectContaining({ disabled: true }),
-      );
+      expect(
+        getByTestId('review-session-wrap-up').props.accessibilityState,
+      ).toEqual(expect.objectContaining({ disabled: true }));
     });
 
     it('should include only introduced items in onSessionComplete callback when in wrap up mode', () => {
@@ -1645,7 +1659,10 @@ describe('ReviewSession', () => {
       // If the first item was a radical, it should be complete
       // Otherwise we need to answer the reading question too
       if (onSessionComplete.mock.calls.length > 0) {
-        const progressMap = onSessionComplete.mock.calls[0][0] as Map<number, unknown>;
+        const progressMap = onSessionComplete.mock.calls[0][0] as Map<
+          number,
+          unknown
+        >;
         // The progress map should only contain introduced items
         expect(progressMap.size).toBe(1);
       }
@@ -1659,7 +1676,11 @@ describe('ReviewSession', () => {
       jest.useFakeTimers();
       const items = [sampleRadical];
       const { getByTestId } = render(
-        <ReviewSession items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+        <ReviewSession
+          items={items}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
       );
 
       // Run timers to trigger the focus effect (100ms delay)
@@ -1678,11 +1699,16 @@ describe('ReviewSession', () => {
       jest.useFakeTimers();
       const items = [sampleRadical, sampleRadical2]; // 2 items
       const { getByTestId } = render(
-        <ReviewSession items={items} onAnswer={jest.fn()} autoAdvanceDelay={100} />,
+        <ReviewSession
+          items={items}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={100}
+        />,
       );
 
       // Get the displayed character to determine the correct answer
-      const displayedChar = getByTestId('review-session-characters').props.children;
+      const displayedChar = getByTestId('review-session-characters').props
+        .children;
       const correctAnswer = displayedChar === '一' ? 'Ground' : 'Person';
 
       // Answer first question correctly (radical only has meaning question)
@@ -1707,7 +1733,11 @@ describe('ReviewSession', () => {
       jest.useFakeTimers();
       const items = [sampleRadical, sampleRadical2]; // 2 questions
       const { getByTestId } = render(
-        <ReviewSession items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+        <ReviewSession
+          items={items}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
       );
 
       // Submit wrong answer
@@ -1738,11 +1768,16 @@ describe('ReviewSession', () => {
       jest.useFakeTimers();
       const items = [sampleRadical, sampleRadical2];
       const { getByTestId, queryByTestId } = render(
-        <ReviewSession items={items} onAnswer={jest.fn()} autoAdvanceDelay={500} />,
+        <ReviewSession
+          items={items}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={500}
+        />,
       );
 
       // Get the displayed character to determine the correct answer
-      const displayedChar = getByTestId('review-session-characters').props.children;
+      const displayedChar = getByTestId('review-session-characters').props
+        .children;
       const correctAnswer = displayedChar === '一' ? 'Ground' : 'Person';
 
       // Answer correctly
@@ -1752,9 +1787,9 @@ describe('ReviewSession', () => {
       // Should show correct label
       expect(queryByTestId('review-session-correct-label')).toBeTruthy();
 
-      // Input should be disabled during correct feedback
+      // Input should remain editable during correct feedback (keyboard stays open)
       const input = getByTestId('review-session-input');
-      expect(input.props.editable).toBe(false);
+      expect(input.props.editable).not.toBe(false);
 
       jest.useRealTimers();
     });
@@ -1763,7 +1798,11 @@ describe('ReviewSession', () => {
       jest.useFakeTimers();
       const items = [sampleRadical]; // Just 1 item with 1 question (meaning only)
       const { getByTestId, queryByTestId } = render(
-        <ReviewSession items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+        <ReviewSession
+          items={items}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
       );
 
       // Answer correctly (only Ground possible since we have single radical)
@@ -1784,27 +1823,27 @@ describe('ReviewSession', () => {
   });
 
   describe('input positioning', () => {
-    it('positions input at the top of the input container (not centered)', () => {
+    it('positions input near the top with padding (not centered)', () => {
       const { getByTestId } = render(
         <ReviewSession items={[sampleRadical]} onAnswer={jest.fn()} />,
       );
 
       const inputContainer = getByTestId('review-session-input-container');
-      // Input container should use flex-start to position content at top
+      // Input container should have paddingTop for spacing below question
       expect(inputContainer.props.style).toEqual(
-        expect.objectContaining({ justifyContent: 'flex-start' }),
+        expect.objectContaining({ paddingTop: expect.any(Number) }),
       );
     });
 
-    it('has top padding for appropriate spacing below question prompt', () => {
+    it('has horizontal padding for appropriate margins', () => {
       const { getByTestId } = render(
         <ReviewSession items={[sampleRadical]} onAnswer={jest.fn()} />,
       );
 
       const inputContainer = getByTestId('review-session-input-container');
-      // Input container should have paddingTop for spacing
+      // Input container should have paddingHorizontal for margins
       expect(inputContainer.props.style).toEqual(
-        expect.objectContaining({ paddingTop: expect.any(Number) }),
+        expect.objectContaining({ paddingHorizontal: expect.any(Number) }),
       );
     });
 
@@ -1816,7 +1855,7 @@ describe('ReviewSession', () => {
       expect(getByTestId('review-session-input-container')).toBeTruthy();
     });
 
-    it('places converted display above input for reading questions', () => {
+    it('shows hiragana directly in input for reading questions', () => {
       // Force reading question first
       let callIndex = 0;
       (Math.random as jest.Mock).mockImplementation(() => {
@@ -1824,7 +1863,7 @@ describe('ReviewSession', () => {
         return values[callIndex++ % values.length];
       });
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId } = render(
         <ReviewSession items={[sampleKanji]} onAnswer={jest.fn()} />,
       );
 
@@ -1834,13 +1873,8 @@ describe('ReviewSession', () => {
         const input = getByTestId('review-session-input');
         fireEvent.changeText(input, 'oo');
 
-        // Converted display should exist above input when typing
-        const display = queryByTestId('review-session-converted-display');
-        if (display) {
-          // Both elements should be inside the input container
-          const inputContainer = getByTestId('review-session-input-container');
-          expect(inputContainer).toBeTruthy();
-        }
+        // Hiragana should appear directly in the input value
+        expect(input.props.value).toBe('おお');
       }
     });
   });

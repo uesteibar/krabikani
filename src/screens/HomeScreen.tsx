@@ -1,6 +1,12 @@
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import React, {
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  useMemo,
+} from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,6 +14,7 @@ import {
   View,
   ScrollView,
   RefreshControl,
+  Image,
 } from 'react-native';
 
 import { WaniKaniClient } from '../api/wanikaniApi';
@@ -39,7 +46,12 @@ import {
   getPendingReviewCount,
   getPendingLessonCount,
 } from '../storage';
-import { syncSubjects, syncAssignments, getUserLevel, syncPendingData } from '../sync';
+import {
+  syncSubjects,
+  syncAssignments,
+  getUserLevel,
+  syncPendingData,
+} from '../sync';
 import { isOnline, addNetworkStatusListener } from '../utils';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<
@@ -195,7 +207,11 @@ export function HomeScreen() {
     } finally {
       isSyncingPending.current = false;
     }
-  }, [pendingData.pendingLessonsCount, pendingData.pendingReviewsCount, loadDashboardData]);
+  }, [
+    pendingData.pendingLessonsCount,
+    pendingData.pendingReviewsCount,
+    loadDashboardData,
+  ]);
 
   // Listen for network status changes to sync pending data when coming online
   useEffect(() => {
@@ -239,30 +255,29 @@ export function HomeScreen() {
   }, [navigation, dashboardData.reviewsCount]);
 
   // Dynamic styles based on theme
-  const dynamicStyles = useMemo(() => ({
-    container: {
-      backgroundColor: theme.colors.background.primary,
-    },
-    title: {
-      color: theme.colors.text.primary,
-    },
-    subtitle: {
-      color: theme.colors.text.secondary,
-    },
-    errorTitle: {
-      color: theme.colors.text.primary,
-    },
-    errorMessage: {
-      color: theme.colors.text.secondary,
-    },
-  }), [theme]);
+  const dynamicStyles = useMemo(
+    () => ({
+      container: {
+        backgroundColor: theme.colors.background.primary,
+      },
+      errorTitle: {
+        color: theme.colors.text.primary,
+      },
+      errorMessage: {
+        color: theme.colors.text.secondary,
+      },
+    }),
+    [theme],
+  );
 
   if (showOfflineError) {
     return (
       <View style={[styles.container, dynamicStyles.container]}>
         <OfflineIndicator />
         <View style={styles.errorContainer}>
-          <Text style={[styles.errorTitle, dynamicStyles.errorTitle]}>No Connection</Text>
+          <Text style={[styles.errorTitle, dynamicStyles.errorTitle]}>
+            No Connection
+          </Text>
           <Text style={[styles.errorMessage, dynamicStyles.errorMessage]}>
             Please connect to the internet to download your data. This app
             requires an initial sync before it can work offline.
@@ -284,10 +299,14 @@ export function HomeScreen() {
             testID="refresh-control"
           />
         }
-        testID="home-scroll-view">
+        testID="home-scroll-view"
+      >
         <View style={styles.content}>
-          <Text style={[styles.title, dynamicStyles.title]}>UnaiNikani</Text>
-          <Text style={[styles.subtitle, dynamicStyles.subtitle]}>WaniKani Android Client</Text>
+          <Image
+            source={require('../../assets/cabrigator-icon.png')}
+            style={styles.logo}
+            testID="home-logo"
+          />
           <View style={styles.dashboardContainer}>
             <DashboardStats
               lessonsCount={dashboardData.lessonsCount}
@@ -309,7 +328,8 @@ export function HomeScreen() {
           <TouchableOpacity
             style={styles.settingsButton}
             onPress={() => navigation.navigate('Settings')}
-            testID="settings-button">
+            testID="settings-button"
+          >
             <Text style={styles.settingsButtonText}>Settings</Text>
           </TouchableOpacity>
         </View>
@@ -331,15 +351,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  title: {
-    fontSize: FONT_SIZES.xxxl,
-    fontWeight: 'bold',
-    color: COLORS.text.primary,
-  },
-  subtitle: {
-    fontSize: FONT_SIZES.base,
-    color: COLORS.text.secondary,
-    marginTop: SPACING.sm,
+  logo: {
+    width: 240,
+    height: 240,
+    marginBottom: SPACING.md,
   },
   dashboardContainer: {
     marginTop: SPACING.xxl,
