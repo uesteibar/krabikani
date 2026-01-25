@@ -3,7 +3,9 @@
 - Jest requires transformIgnorePatterns for @react-navigation and other ES module packages
 - Folder structure: src/screens, src/components, src/api, src/storage, src/utils, src/navigation, src/theme
 - Theme system in src/theme/: import colors, spacing, typography from '../theme' - use SUBJECT_COLORS, COLORS, SPACING, etc.
+- Dark mode: use ThemeProvider, useTheme(), useDarkMode() from src/theme - wrap components in ThemeProvider for tests
 - Navigation uses @react-navigation/native with native-stack navigator
+- Screen transitions: use screenOptions with animation: 'slide_from_right', animationDuration: 250
 - Quality checks: npm run typecheck, npm run lint, npm test
 - Use react-native-keychain for secure storage (API keys, tokens)
 - Use @testing-library/react-native for component tests
@@ -32,6 +34,8 @@
 - Session state tracking: use sessionState module (startSession, endSession, isSessionActive) to track lesson/review sessions
 - App state sync: use appStateSync module for automatic background sync on app foreground
 - Background sync skips during active sessions via shouldSkip callback pattern
+- Animations: use React Native Animated API with useNativeDriver: true for performance
+- Tests with ThemeProvider: wrap in <ThemeProvider forcedColorScheme="light"> for deterministic behavior
 
 ---
 
@@ -838,6 +842,67 @@
   - Use getSubjectColor(type) helper function for subject-dependent colors
   - MIN_TOUCH_TARGET=44 ensures accessibility compliance
   - Tests should import theme constants to stay in sync with implementation
+  - Browser verification not available (no dev-browser skill configured)
+
+---
+
+## 2026-01-25 - US-028: UI Polish - Animations and Transitions
+- What was implemented:
+  - Smooth screen transitions via React Navigation screenOptions:
+    - animation: 'slide_from_right' for polished screen transitions
+    - animationDuration: 250ms for optimal feel
+    - gestureEnabled: true for swipe-back support
+  - Theme-aware navigation header and content styles
+  - AnimatedFeedback component for correct/incorrect answer animations:
+    - Correct: Brief green flash with subtle pulse (scale 1.02)
+    - Incorrect: Brief red flash with subtle shake (translateX -4/+4/etc)
+    - Uses React Native Animated API with useNativeDriver for performance
+    - Configurable animation duration (default 200ms)
+  - FocusableInput component for high contrast input fields:
+    - Thicker border when focused (3px vs 2px)
+    - Customizable focus/unfocus colors
+    - Glow effect (shadow) when focused
+    - Placeholder text color styling
+  - Full dark mode support via ThemeContext:
+    - ThemeProvider wraps app and provides theme to all components
+    - useTheme() hook for accessing current theme
+    - useDarkMode() hook for checking dark mode state
+    - Respects system color scheme via useColorScheme() hook
+    - forcedColorScheme prop for testing
+    - Dark mode color palette:
+      - Background: #121212 (primary), #1E1E1E (secondary)
+      - Text: #E0E0E0 (primary), #AAAAAA (secondary)
+      - Border: #333333 (light), #444444 (medium)
+      - Shadows: More subtle with 0.3 opacity
+    - Subject colors remain consistent for brand identity
+  - React Navigation theme integration:
+    - Custom LightNavigationTheme and DarkNavigationTheme objects
+    - Theme colors for header, background, card, text, border
+    - headerShadowVisible: false in dark mode
+  - Updated HomeScreen to use dynamic theme-based styles via useMemo
+  - Updated RootNavigator to use useTheme() for header/content styling
+  - Updated HomeScreen tests to wrap with ThemeProvider
+- Files changed:
+  - src/theme/ThemeContext.tsx (new - theme context and provider)
+  - src/theme/index.ts (updated - export ThemeProvider, useTheme, useDarkMode, types)
+  - src/components/AnimatedFeedback.tsx (new - animated feedback component)
+  - src/components/FocusableInput.tsx (new - high contrast input component)
+  - src/components/index.ts (updated - export new components)
+  - src/navigation/RootNavigator.tsx (updated - screen transitions, theme-aware styling)
+  - App.tsx (updated - ThemeProvider wrapper, custom navigation themes)
+  - src/screens/HomeScreen.tsx (updated - dynamic theme-based styles)
+  - __tests__/components/AnimatedFeedback.test.tsx (new - 15 tests)
+  - __tests__/components/FocusableInput.test.tsx (new - 15 tests)
+  - __tests__/theme/ThemeContext.test.tsx (new - 16 tests)
+  - __tests__/screens/HomeScreen.test.tsx (updated - ThemeProvider wrapper)
+  - __tests__/components/LessonQuiz.test.tsx (updated - removed unused import)
+- **Learnings for future iterations:**
+  - React Navigation v7 uses `animation` in screenOptions instead of cardStyleInterpolator
+  - useTheme() hook requires component to be within ThemeProvider
+  - Tests need ThemeProvider wrapper - use forcedColorScheme="light" for deterministic tests
+  - Animated.parallel() and Animated.sequence() can be combined for complex animations
+  - useNativeDriver: true is required for transform animations (scale, translateX)
+  - React Native style arrays can be nested - use flat() or recursive helper to find nested styles
   - Browser verification not available (no dev-browser skill configured)
 
 ---

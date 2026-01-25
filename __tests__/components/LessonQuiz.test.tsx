@@ -9,7 +9,7 @@ import {
   shuffleArray,
 } from '../../src/components/LessonQuiz';
 import type { Meaning, Reading, KanjiReading } from '../../src/api/types';
-import { SUBJECT_COLORS, COLORS } from '../../src/theme';
+import { SUBJECT_COLORS } from '../../src/theme';
 
 // Helper to create test meanings
 function createMeanings(

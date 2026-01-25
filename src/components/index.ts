@@ -69,3 +69,14 @@ export {
   LoadingSpinner,
   type LoadingSpinnerProps,
 } from './LoadingSpinner';
+
+export {
+  AnimatedFeedback,
+  type AnimatedFeedbackProps,
+  type FeedbackType,
+} from './AnimatedFeedback';
+
+export {
+  FocusableInput,
+  type FocusableInputProps,
+} from './FocusableInput';

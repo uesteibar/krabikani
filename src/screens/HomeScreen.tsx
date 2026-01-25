@@ -1,6 +1,6 @@
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -25,6 +25,7 @@ import {
   FONT_SIZES,
   BORDER_RADIUS,
   MIN_TOUCH_TARGET,
+  useTheme,
 } from '../theme';
 import type { RootStackParamList } from '../navigation/types';
 import { getApiKey } from '../storage/secureStorage';
@@ -63,6 +64,7 @@ export interface PendingData {
 
 export function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
+  const theme = useTheme();
   const [syncStatus, setSyncStatus] = useState<SyncStatusData>({
     lastSyncedAt: null,
     hasCachedData: false,
@@ -235,13 +237,32 @@ export function HomeScreen() {
     }
   }, [navigation, dashboardData.reviewsCount]);
 
+  // Dynamic styles based on theme
+  const dynamicStyles = useMemo(() => ({
+    container: {
+      backgroundColor: theme.colors.background.primary,
+    },
+    title: {
+      color: theme.colors.text.primary,
+    },
+    subtitle: {
+      color: theme.colors.text.secondary,
+    },
+    errorTitle: {
+      color: theme.colors.text.primary,
+    },
+    errorMessage: {
+      color: theme.colors.text.secondary,
+    },
+  }), [theme]);
+
   if (showOfflineError) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, dynamicStyles.container]}>
         <OfflineIndicator />
         <View style={styles.errorContainer}>
-          <Text style={styles.errorTitle}>No Connection</Text>
-          <Text style={styles.errorMessage}>
+          <Text style={[styles.errorTitle, dynamicStyles.errorTitle]}>No Connection</Text>
+          <Text style={[styles.errorMessage, dynamicStyles.errorMessage]}>
             Please connect to the internet to download your data. This app
             requires an initial sync before it can work offline.
           </Text>
@@ -251,7 +272,7 @@ export function HomeScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, dynamicStyles.container]}>
       <OfflineIndicator />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -264,8 +285,8 @@ export function HomeScreen() {
         }
         testID="home-scroll-view">
         <View style={styles.content}>
-          <Text style={styles.title}>UnaiNikani</Text>
-          <Text style={styles.subtitle}>WaniKani Android Client</Text>
+          <Text style={[styles.title, dynamicStyles.title]}>UnaiNikani</Text>
+          <Text style={[styles.subtitle, dynamicStyles.subtitle]}>WaniKani Android Client</Text>
           <View style={styles.dashboardContainer}>
             <DashboardStats
               lessonsCount={dashboardData.lessonsCount}

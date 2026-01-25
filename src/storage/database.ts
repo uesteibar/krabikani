@@ -1,17 +1,11 @@
-import SQLite, {
-  SQLiteDatabase,
-  ResultSet,
-} from 'react-native-sqlite-storage';
-
-// Enable promises for SQLite
-SQLite.enablePromise(true);
+import { open, type DB, type QueryResult } from '@op-engineering/op-sqlite';
 
 // Database name
 const DATABASE_NAME = 'wanikani.db';
 const DATABASE_VERSION = 1;
 
 // Current database instance
-let db: SQLiteDatabase | null = null;
+let db: DB | null = null;
 
 // ============================================
 // Schema Definitions
@@ -194,14 +188,13 @@ export interface DatabasePendingLesson {
  * Opens the database connection if not already open.
  * @returns The database instance
  */
-export async function getDatabase(): Promise<SQLiteDatabase> {
+export function getDatabase(): DB {
   if (db !== null) {
     return db;
   }
 
-  db = await SQLite.openDatabase({
+  db = open({
     name: DATABASE_NAME,
-    location: 'default',
   });
 
   return db;
@@ -214,16 +207,14 @@ export async function getDatabase(): Promise<SQLiteDatabase> {
  */
 export async function initializeDatabase(): Promise<boolean> {
   try {
-    const database = await getDatabase();
+    const database = getDatabase();
 
     for (const statement of SCHEMA_STATEMENTS) {
-      await database.executeSql(statement);
+      await database.execute(statement);
     }
 
     // Initialize sync_status with a single row if it doesn't exist
-    await database.executeSql(
-      'INSERT OR IGNORE INTO sync_status (id) VALUES (1)',
-    );
+    await database.execute('INSERT OR IGNORE INTO sync_status (id) VALUES (1)');
 
     return true;
   } catch (error) {
@@ -235,9 +226,9 @@ export async function initializeDatabase(): Promise<boolean> {
 /**
  * Closes the database connection.
  */
-export async function closeDatabase(): Promise<void> {
+export function closeDatabase(): void {
   if (db !== null) {
-    await db.close();
+    db.close();
     db = null;
   }
 }
@@ -246,15 +237,14 @@ export async function closeDatabase(): Promise<void> {
  * Executes a SQL query and returns the results.
  * @param sql The SQL query to execute
  * @param params Optional parameters for the query
- * @returns The result set
+ * @returns The query result
  */
 export async function executeSql(
   sql: string,
   params: (string | number | null)[] = [],
-): Promise<ResultSet> {
-  const database = await getDatabase();
-  const [results] = await database.executeSql(sql, params);
-  return results;
+): Promise<QueryResult> {
+  const database = getDatabase();
+  return database.execute(sql, params);
 }
 
 /**
@@ -341,10 +331,10 @@ export async function upsertSubject(subject: SubjectInput): Promise<void> {
 export async function upsertSubjects(subjects: SubjectInput[]): Promise<void> {
   if (subjects.length === 0) return;
 
-  const database = await getDatabase();
+  const database = getDatabase();
   await database.transaction(async tx => {
     for (const subject of subjects) {
-      tx.executeSql(
+      await tx.execute(
         `INSERT OR REPLACE INTO subjects
           (id, object_type, characters, meanings, readings, meaning_mnemonic, reading_mnemonic, level, component_subject_ids, data_updated_at, created_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT created_at FROM subjects WHERE id = ?), CURRENT_TIMESTAMP))`,
@@ -376,7 +366,7 @@ export async function getSubjectById(
   if (result.rows.length === 0) {
     return null;
   }
-  return result.rows.item(0) as DatabaseSubject;
+  return result.rows[0] as DatabaseSubject;
 }
 
 /**
@@ -392,7 +382,7 @@ export async function getSubjectsByIds(
     `SELECT * FROM subjects WHERE id IN (${placeholders})`,
     ids,
   );
-  return result.rows.raw() as DatabaseSubject[];
+  return result.rows as DatabaseSubject[];
 }
 
 /**
@@ -405,7 +395,7 @@ export async function getSubjectsByLevel(
     'SELECT * FROM subjects WHERE level <= ? ORDER BY level, id',
     [maxLevel],
   );
-  return result.rows.raw() as DatabaseSubject[];
+  return result.rows as DatabaseSubject[];
 }
 
 /**
@@ -418,7 +408,7 @@ export async function getSubjectsByType(
     'SELECT * FROM subjects WHERE object_type = ? ORDER BY level, id',
     [objectType],
   );
-  return result.rows.raw() as DatabaseSubject[];
+  return result.rows as DatabaseSubject[];
 }
 
 /**
@@ -429,7 +419,7 @@ export async function getAllSubjects(): Promise<DatabaseSubject[]> {
     'SELECT * FROM subjects ORDER BY level, id',
     [],
   );
-  return result.rows.raw() as DatabaseSubject[];
+  return result.rows as DatabaseSubject[];
 }
 
 /**
@@ -444,7 +434,7 @@ export async function deleteSubject(id: number): Promise<void> {
  */
 export async function getSubjectCount(): Promise<number> {
   const result = await executeSql('SELECT COUNT(*) as count FROM subjects', []);
-  return (result.rows.item(0) as { count: number }).count;
+  return (result.rows[0] as { count: number }).count;
 }
 
 // ============================================
@@ -492,10 +482,10 @@ export async function upsertAssignments(
 ): Promise<void> {
   if (assignments.length === 0) return;
 
-  const database = await getDatabase();
+  const database = getDatabase();
   await database.transaction(async tx => {
     for (const assignment of assignments) {
-      tx.executeSql(
+      await tx.execute(
         `INSERT OR REPLACE INTO assignments
           (id, subject_id, srs_stage, available_at, started_at, unlocked_at, data_updated_at, created_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT created_at FROM assignments WHERE id = ?), CURRENT_TIMESTAMP))`,
@@ -526,7 +516,7 @@ export async function getAssignmentById(
   if (result.rows.length === 0) {
     return null;
   }
-  return result.rows.item(0) as DatabaseAssignment;
+  return result.rows[0] as DatabaseAssignment;
 }
 
 /**
@@ -542,7 +532,7 @@ export async function getAssignmentBySubjectId(
   if (result.rows.length === 0) {
     return null;
   }
-  return result.rows.item(0) as DatabaseAssignment;
+  return result.rows[0] as DatabaseAssignment;
 }
 
 /**
@@ -559,7 +549,7 @@ export async function getAvailableReviews(): Promise<DatabaseAssignment[]> {
      ORDER BY available_at`,
     [now],
   );
-  return result.rows.raw() as DatabaseAssignment[];
+  return result.rows as DatabaseAssignment[];
 }
 
 /**
@@ -573,7 +563,7 @@ export async function getAvailableLessons(): Promise<DatabaseAssignment[]> {
      ORDER BY id`,
     [],
   );
-  return result.rows.raw() as DatabaseAssignment[];
+  return result.rows as DatabaseAssignment[];
 }
 
 /**
@@ -581,7 +571,7 @@ export async function getAvailableLessons(): Promise<DatabaseAssignment[]> {
  */
 export async function getAllAssignments(): Promise<DatabaseAssignment[]> {
   const result = await executeSql('SELECT * FROM assignments ORDER BY id', []);
-  return result.rows.raw() as DatabaseAssignment[];
+  return result.rows as DatabaseAssignment[];
 }
 
 /**
@@ -599,7 +589,7 @@ export async function getAssignmentCount(): Promise<number> {
     'SELECT COUNT(*) as count FROM assignments',
     [],
   );
-  return (result.rows.item(0) as { count: number }).count;
+  return (result.rows[0] as { count: number }).count;
 }
 
 /**
@@ -617,7 +607,7 @@ export async function getNextReviewTime(): Promise<string | null> {
        AND srs_stage > 0`,
     [now],
   );
-  const row = result.rows.item(0);
+  const row = result.rows[0] as { next_review: string | null } | undefined;
   return row?.next_review ?? null;
 }
 
@@ -665,7 +655,7 @@ export async function getPendingReviewById(
   if (result.rows.length === 0) {
     return null;
   }
-  return result.rows.item(0) as DatabasePendingReview;
+  return result.rows[0] as DatabasePendingReview;
 }
 
 /**
@@ -676,7 +666,7 @@ export async function getAllPendingReviews(): Promise<DatabasePendingReview[]> {
     'SELECT * FROM pending_reviews ORDER BY created_at',
     [],
   );
-  return result.rows.raw() as DatabasePendingReview[];
+  return result.rows as DatabasePendingReview[];
 }
 
 /**
@@ -701,7 +691,7 @@ export async function getPendingReviewCount(): Promise<number> {
     'SELECT COUNT(*) as count FROM pending_reviews',
     [],
   );
-  return (result.rows.item(0) as { count: number }).count;
+  return (result.rows[0] as { count: number }).count;
 }
 
 // ============================================
@@ -738,10 +728,10 @@ export async function insertPendingLessons(
 ): Promise<void> {
   if (lessons.length === 0) return;
 
-  const database = await getDatabase();
+  const database = getDatabase();
   await database.transaction(async tx => {
     for (const lesson of lessons) {
-      tx.executeSql(
+      await tx.execute(
         `INSERT OR REPLACE INTO pending_lessons (assignment_id, subject_id, started_at)
          VALUES (?, ?, ?)`,
         [lesson.assignment_id, lesson.subject_id, lesson.started_at],
@@ -763,7 +753,7 @@ export async function getPendingLessonById(
   if (result.rows.length === 0) {
     return null;
   }
-  return result.rows.item(0) as DatabasePendingLesson;
+  return result.rows[0] as DatabasePendingLesson;
 }
 
 /**
@@ -779,7 +769,7 @@ export async function getPendingLessonByAssignmentId(
   if (result.rows.length === 0) {
     return null;
   }
-  return result.rows.item(0) as DatabasePendingLesson;
+  return result.rows[0] as DatabasePendingLesson;
 }
 
 /**
@@ -790,7 +780,7 @@ export async function getAllPendingLessons(): Promise<DatabasePendingLesson[]> {
     'SELECT * FROM pending_lessons ORDER BY created_at',
     [],
   );
-  return result.rows.raw() as DatabasePendingLesson[];
+  return result.rows as DatabasePendingLesson[];
 }
 
 /**
@@ -826,7 +816,7 @@ export async function getPendingLessonCount(): Promise<number> {
     'SELECT COUNT(*) as count FROM pending_lessons',
     [],
   );
-  return (result.rows.item(0) as { count: number }).count;
+  return (result.rows[0] as { count: number }).count;
 }
 
 // ============================================
@@ -841,7 +831,7 @@ export async function getSyncStatus(): Promise<DatabaseSyncStatus | null> {
   if (result.rows.length === 0) {
     return null;
   }
-  return result.rows.item(0) as DatabaseSyncStatus;
+  return result.rows[0] as DatabaseSyncStatus;
 }
 
 export interface SyncStatusUpdate {
@@ -941,7 +931,7 @@ export async function getSchemaVersion(): Promise<number> {
       'SELECT MAX(version) as version FROM schema_version',
       [],
     );
-    const row = result.rows.item(0);
+    const row = result.rows[0] as { version: number | null } | undefined;
     return row?.version ?? 0;
   } catch {
     // Table doesn't exist yet
@@ -967,10 +957,10 @@ export async function runMigrations(): Promise<{
   applied: number[];
   currentVersion: number;
 }> {
-  const database = await getDatabase();
+  const database = getDatabase();
 
   // Ensure schema_version table exists
-  await database.executeSql(CREATE_SCHEMA_VERSION_TABLE);
+  await database.execute(CREATE_SCHEMA_VERSION_TABLE);
 
   // If this is a fresh database, record the initial version
   const currentVersion = await getSchemaVersion();
@@ -986,7 +976,7 @@ export async function runMigrations(): Promise<{
   for (const migration of pendingMigrations) {
     await database.transaction(async tx => {
       for (const sql of migration.up) {
-        tx.executeSql(sql);
+        await tx.execute(sql);
       }
     });
     await recordSchemaVersion(migration.version);

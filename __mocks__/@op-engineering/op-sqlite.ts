@@ -1,8 +1,8 @@
-// Mock SQLite storage for testing
+// Mock op-sqlite for testing
 // Simulates SQLite database operations in memory
 
 interface MockRow {
-  [key: string]: string | number | null;
+  [key: string]: string | number | boolean | null;
 }
 
 interface MockTable {
@@ -52,10 +52,10 @@ function parseCreateTable(sql: string): { tableName: string; columns: string[] }
 }
 
 // Helper to parse INSERT statement
-function parseInsert(sql: string, params: (string | number | null)[]): {
+function parseInsert(sql: string, params: (string | number | boolean | null)[]): {
   tableName: string;
   columns: string[];
-  values: (string | number | null)[];
+  values: (string | number | boolean | null)[];
   isReplace: boolean;
   isIgnore: boolean;
 } | null {
@@ -91,9 +91,9 @@ function parseInsert(sql: string, params: (string | number | null)[]): {
 }
 
 // Helper to parse WHERE clause and extract conditions
-function parseWhereClause(sql: string, params: (string | number | null)[]): {
+function parseWhereClause(sql: string, params: (string | number | boolean | null)[]): {
   column: string;
-  value: string | number | null;
+  value: string | number | boolean | null;
   operator: string;
 } | null {
   // Try matching with placeholder first
@@ -133,31 +133,23 @@ function parseWhereClause(sql: string, params: (string | number | null)[]): {
   return null;
 }
 
-// Mock result set
-interface MockResultSet {
-  rows: {
-    raw: () => MockRow[];
-    length: number;
-    item: (index: number) => MockRow;
-  };
+// Mock QueryResult matching op-sqlite's interface
+interface MockQueryResult {
+  rows: MockRow[];
   rowsAffected: number;
-  insertId: number | null;
+  insertId?: number;
 }
 
-function createResultSet(rows: MockRow[] = [], rowsAffected = 0, insertId: number | null = null): MockResultSet {
+function createQueryResult(rows: MockRow[] = [], rowsAffected = 0, insertId?: number): MockQueryResult {
   return {
-    rows: {
-      raw: () => rows,
-      length: rows.length,
-      item: (index: number) => rows[index],
-    },
+    rows,
     rowsAffected,
     insertId,
   };
 }
 
-// Execute SQL implementation shared between direct and transaction calls
-function executeSqlImpl(sql: string, params: (string | number | null)[] = []): [MockResultSet] {
+// Execute SQL implementation
+function executeSqlImpl(sql: string, params: (string | number | boolean | null)[] = []): MockQueryResult {
   mockDatabase.executedStatements.push(sql);
 
   // Handle CREATE TABLE
@@ -170,12 +162,12 @@ function executeSqlImpl(sql: string, params: (string | number | null)[] = []): [
         autoIncrement: {},
       };
     }
-    return [createResultSet()];
+    return createQueryResult();
   }
 
   // Handle CREATE INDEX
   if (sql.match(/CREATE INDEX/i)) {
-    return [createResultSet()];
+    return createQueryResult();
   }
 
   // Handle INSERT
@@ -185,7 +177,7 @@ function executeSqlImpl(sql: string, params: (string | number | null)[] = []): [
       const table = mockDatabase.tables[parsed.tableName];
       if (table) {
         const row: MockRow = {};
-        let insertId: number | null = null;
+        let insertId: number | undefined = undefined;
 
         // Initialize all table columns with null first
         for (const col of table.columns) {
@@ -228,10 +220,10 @@ function executeSqlImpl(sql: string, params: (string | number | null)[] = []): [
           table.rows.push(row);
         }
 
-        return [createResultSet([], 1, insertId)];
+        return createQueryResult([], 1, insertId);
       }
     }
-    return [createResultSet()];
+    return createQueryResult();
   }
 
   // Handle SELECT
@@ -277,12 +269,24 @@ function executeSqlImpl(sql: string, params: (string | number | null)[] = []): [
         const inMatch = sql.match(/WHERE\s+(\w+)\s+IN\s*\(/i);
         if (inMatch) {
           const column = inMatch[1];
-          rows = rows.filter(r => params.includes(r[column]));
+          rows = rows.filter(r => params.includes(r[column] as string | number | boolean | null));
         }
 
         // Handle COUNT(*)
         if (sql.match(/COUNT\s*\(\s*\*\s*\)/i)) {
-          return [createResultSet([{ count: rows.length }])];
+          return createQueryResult([{ count: rows.length }]);
+        }
+
+        // Handle MIN(column)
+        if (sql.match(/MIN\s*\(\s*(\w+)\s*\)/i)) {
+          const minMatch = sql.match(/MIN\s*\(\s*(\w+)\s*\)\s+as\s+(\w+)/i);
+          if (minMatch) {
+            const column = minMatch[1];
+            const alias = minMatch[2];
+            const values = rows.map(r => r[column]).filter(v => v !== null) as (string | number)[];
+            const minValue = values.length > 0 ? values.reduce((a, b) => a < b ? a : b) : null;
+            return createQueryResult([{ [alias]: minValue }]);
+          }
         }
 
         // Handle MAX(version)
@@ -292,14 +296,14 @@ function executeSqlImpl(sql: string, params: (string | number | null)[] = []): [
             const column = maxMatch[1];
             const values = rows.map(r => r[column]).filter(v => v !== null) as number[];
             const maxValue = values.length > 0 ? Math.max(...values) : null;
-            return [createResultSet([{ [column]: maxValue }])];
+            return createQueryResult([{ [column]: maxValue }]);
           }
         }
 
-        return [createResultSet(rows)];
+        return createQueryResult(rows);
       }
     }
-    return [createResultSet()];
+    return createQueryResult();
   }
 
   // Handle UPDATE
@@ -350,10 +354,10 @@ function executeSqlImpl(sql: string, params: (string | number | null)[] = []): [
           });
         }
 
-        return [createResultSet([], rowsAffected)];
+        return createQueryResult([], rowsAffected);
       }
     }
-    return [createResultSet([], 1)];
+    return createQueryResult([], 1);
   }
 
   // Handle DELETE
@@ -374,54 +378,85 @@ function executeSqlImpl(sql: string, params: (string | number | null)[] = []): [
             }
             return true;
           });
-          return [createResultSet([], initialCount - table.rows.length)];
+          return createQueryResult([], initialCount - table.rows.length);
         } else {
           // DELETE all
           const count = table.rows.length;
           table.rows = [];
-          return [createResultSet([], count)];
+          return createQueryResult([], count);
         }
       }
     }
-    return [createResultSet([], 1)];
+    return createQueryResult([], 1);
   }
 
-  return [createResultSet()];
+  return createQueryResult();
 }
 
-// Mock transaction
+// Mock Transaction interface
 interface MockTransaction {
-  executeSql: (sql: string, params?: (string | number | null)[], success?: () => void, error?: () => void) => void;
+  execute: (sql: string, params?: (string | number | boolean | null)[]) => Promise<MockQueryResult>;
+  commit: () => Promise<MockQueryResult>;
+  rollback: () => MockQueryResult;
 }
 
-// Mock database instance
-const mockDbInstance = {
-  executeSql: jest.fn(async (sql: string, params: (string | number | null)[] = []): Promise<[MockResultSet]> => {
-    return executeSqlImpl(sql, params);
-  }),
+// Mock DB interface matching op-sqlite
+interface MockDB {
+  execute: jest.Mock<Promise<MockQueryResult>, [string, (string | number | boolean | null)?[]]>;
+  executeSync: jest.Mock<MockQueryResult, [string, (string | number | boolean | null)?[]]>;
+  transaction: jest.Mock<Promise<void>, [(tx: MockTransaction) => Promise<void>]>;
+  close: jest.Mock<void, []>;
+  delete: jest.Mock<void, [string?]>;
+  getDbPath: jest.Mock<string, [string?]>;
+}
 
-  transaction: jest.fn(async (callback: (tx: MockTransaction) => void): Promise<void> => {
-    const tx: MockTransaction = {
-      executeSql: (sql: string, params: (string | number | null)[] = [], success?: () => void) => {
-        executeSqlImpl(sql, params);
-        if (success) success();
-      },
-    };
-    callback(tx);
-  }),
+// Create mock database instance
+function createMockDbInstance(): MockDB {
+  return {
+    execute: jest.fn(async (sql: string, params: (string | number | boolean | null)[] = []): Promise<MockQueryResult> => {
+      return executeSqlImpl(sql, params);
+    }),
 
-  close: jest.fn(async (): Promise<void> => {
-    isOpen = false;
-  }),
-};
+    executeSync: jest.fn((sql: string, params: (string | number | boolean | null)[] = []): MockQueryResult => {
+      return executeSqlImpl(sql, params);
+    }),
 
-// Enable promise mode
-export const enablePromise = jest.fn((_enable: boolean): void => {
-  // No-op in mock, promises are always enabled
-});
+    transaction: jest.fn(async (callback: (tx: MockTransaction) => Promise<void>): Promise<void> => {
+      const tx: MockTransaction = {
+        execute: async (sql: string, params: (string | number | boolean | null)[] = []): Promise<MockQueryResult> => {
+          return executeSqlImpl(sql, params);
+        },
+        commit: async (): Promise<MockQueryResult> => {
+          return createQueryResult();
+        },
+        rollback: (): MockQueryResult => {
+          return createQueryResult();
+        },
+      };
+      await callback(tx);
+    }),
 
-// Open database
-export const openDatabase = jest.fn(async (_config: { name: string; location: string }) => {
+    close: jest.fn((): void => {
+      isOpen = false;
+    }),
+
+    delete: jest.fn((_location?: string): void => {
+      mockDatabase = {
+        tables: {},
+        executedStatements: [],
+      };
+    }),
+
+    getDbPath: jest.fn((_location?: string): string => {
+      return '/mock/path/to/database.db';
+    }),
+  };
+}
+
+let mockDbInstance: MockDB = createMockDbInstance();
+
+// Open database - matching op-sqlite's open function
+export const open = jest.fn((_config: { name: string; location?: string; encryptionKey?: string }): MockDB => {
   isOpen = true;
   return mockDbInstance;
 });
@@ -433,11 +468,12 @@ export const __resetMockDatabase = (): void => {
     executedStatements: [],
   };
   isOpen = false;
-  mockDbInstance.executeSql.mockClear();
-  mockDbInstance.transaction.mockClear();
-  mockDbInstance.close.mockClear();
-  openDatabase.mockClear();
-  enablePromise.mockClear();
+  mockDbInstance = createMockDbInstance();
+  open.mockClear();
+  open.mockImplementation((_config: { name: string; location?: string; encryptionKey?: string }): MockDB => {
+    isOpen = true;
+    return mockDbInstance;
+  });
 };
 
 export const __getMockDatabase = (): MockDatabase => mockDatabase;
@@ -463,7 +499,8 @@ export const __getTableRows = (tableName: string): MockRow[] => {
   return mockDatabase.tables[tableName]?.rows || [];
 };
 
-export default {
-  enablePromise,
-  openDatabase,
-};
+// Export type for QueryResult
+export type { MockQueryResult as QueryResult };
+
+// Export type for DB
+export type { MockDB as DB };

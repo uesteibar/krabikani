@@ -14,3 +14,16 @@ export {
   BORDER_RADIUS,
   FONT_SIZES,
 } from './colors';
+
+export {
+  ThemeProvider,
+  useTheme,
+  useDarkMode,
+} from './ThemeContext';
+
+export type {
+  ColorScheme,
+  ThemeColors,
+  Theme,
+  ThemeProviderProps,
+} from './ThemeContext';

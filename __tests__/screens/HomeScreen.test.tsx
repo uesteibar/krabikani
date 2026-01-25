@@ -23,6 +23,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { HomeScreen } from '../../src/screens/HomeScreen';
 import { LessonsScreen } from '../../src/screens/LessonsScreen';
 import { ReviewsScreen } from '../../src/screens/ReviewsScreen';
+import { ThemeProvider } from '../../src/theme';
 import {
   initializeNetworkMonitoring,
   stopNetworkMonitoring,
@@ -59,22 +60,26 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 // Wrapper component for navigation context with full navigator
 function renderWithNavigation(component: React.ReactElement) {
   return render(
-    <NavigationContainer>
-      {component}
-    </NavigationContainer>,
+    <ThemeProvider forcedColorScheme="light">
+      <NavigationContainer>
+        {component}
+      </NavigationContainer>
+    </ThemeProvider>,
   );
 }
 
 // Full navigator for testing navigation
 function renderWithFullNavigator() {
   return render(
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName="Home">
-        <Stack.Screen name="Home" component={HomeScreen} />
-        <Stack.Screen name="Lessons" component={LessonsScreen} />
-        <Stack.Screen name="Reviews" component={ReviewsScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>,
+    <ThemeProvider forcedColorScheme="light">
+      <NavigationContainer>
+        <Stack.Navigator initialRouteName="Home">
+          <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen name="Lessons" component={LessonsScreen} />
+          <Stack.Screen name="Reviews" component={ReviewsScreen} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </ThemeProvider>,
   );
 }
 
