@@ -59,3 +59,8 @@ export {
   type ItemProgress,
   type IncorrectFeedback as ReviewIncorrectFeedback,
 } from './ReviewSession';
+
+export {
+  PendingSyncIndicator,
+  type PendingSyncIndicatorProps,
+} from './PendingSyncIndicator';

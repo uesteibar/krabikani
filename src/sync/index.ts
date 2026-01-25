@@ -10,6 +10,7 @@ export {
   submitReviews,
   syncPendingReviews,
   clearPendingReviews,
+  syncPendingData,
   type SyncProgressCallback,
   type SyncSubjectsOptions,
   type SyncSubjectsResult,
@@ -23,4 +24,5 @@ export {
   type SubmitReviewsOptions,
   type SubmitReviewsResult,
   type SyncPendingReviewsResult,
+  type SyncPendingDataResult,
 } from './syncService';

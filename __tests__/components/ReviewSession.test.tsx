@@ -1524,9 +1524,9 @@ describe('ReviewSession', () => {
     });
 
     it('should show correct progress (completed/total) in wrap up mode', () => {
-      // Use single radical for simplicity
+      // Use single radical for simplicity - radicals only have meaning questions
       const { getByTestId } = render(
-        <ReviewSession items={[sampleRadical, sampleKanji]} />,
+        <ReviewSession items={[sampleRadical]} />,
       );
 
       // Activate wrap up - only 1 item introduced

@@ -10,6 +10,7 @@ import {
   submitReviews,
   syncPendingReviews,
   clearPendingReviews,
+  syncPendingData,
 } from '../../src/sync/syncService';
 import { WaniKaniClient, WaniKaniApiError } from '../../src/api/wanikaniApi';
 import type {
@@ -1758,6 +1759,204 @@ describe('syncService', () => {
 
       pendingCount = await getPendingReviewCount();
       expect(pendingCount).toBe(0);
+    });
+  });
+
+  describe('syncPendingData', () => {
+    // Helper function to create a mock review API response
+    function createMockReviewResponse(
+      reviewId: number,
+      assignmentId: number,
+      subjectId: number,
+      newSrsStage: number = 2,
+    ) {
+      return {
+        id: reviewId,
+        object: 'review',
+        url: `https://api.wanikani.com/v2/reviews/${reviewId}`,
+        data_updated_at: '2024-01-15T10:00:00.000000Z',
+        data: {
+          assignment_id: assignmentId,
+          subject_id: subjectId,
+          created_at: '2024-01-15T10:00:00.000000Z',
+          incorrect_meaning_answers: 0,
+          incorrect_reading_answers: 0,
+          spaced_repetition_system_id: 1,
+          starting_srs_stage: 1,
+          ending_srs_stage: newSrsStage,
+        },
+        resources_updated: {
+          assignment: {
+            id: assignmentId,
+            object: 'assignment',
+            url: `https://api.wanikani.com/v2/assignments/${assignmentId}`,
+            data_updated_at: '2024-01-15T10:00:00.000000Z',
+            data: {
+              subject_id: subjectId,
+              srs_stage: newSrsStage,
+              available_at: '2024-01-15T18:00:00.000000Z',
+              started_at: '2024-01-01T10:00:00.000000Z',
+              unlocked_at: '2024-01-01T00:00:00.000000Z',
+            },
+          },
+          review_statistic: {
+            id: 1000,
+            object: 'review_statistic',
+            data: {},
+          },
+        },
+      };
+    }
+
+    it('should sync both pending lessons and reviews', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      // Queue a lesson and a review offline
+      await completeLessons(null, [{ assignmentId: 100, subjectId: 1 }]);
+      await submitReviews(null, [
+        {
+          assignmentId: 101,
+          subjectId: 2,
+          incorrectMeaningAnswers: 0,
+          incorrectReadingAnswers: 0,
+        },
+      ]);
+
+      // Verify they were queued
+      expect(await getPendingLessonCount()).toBe(1);
+      expect(await getPendingReviewCount()).toBe(1);
+
+      // Mock API responses for lesson start and review creation
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            id: 100,
+            object: 'assignment',
+            data_updated_at: '2024-01-15T10:00:00.000000Z',
+            data: {
+              subject_id: 1,
+              srs_stage: 1,
+              available_at: '2024-01-15T14:00:00.000000Z',
+              started_at: '2024-01-15T10:00:00.000000Z',
+              unlocked_at: '2024-01-01T00:00:00.000000Z',
+            },
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => createMockReviewResponse(1000, 101, 2, 2),
+        });
+
+      const result = await syncPendingData(client);
+
+      expect(result.success).toBe(true);
+      expect(result.lessons.syncedCount).toBe(1);
+      expect(result.lessons.failedCount).toBe(0);
+      expect(result.reviews.syncedCount).toBe(1);
+      expect(result.reviews.failedCount).toBe(0);
+
+      // Verify both queues are empty
+      expect(await getPendingLessonCount()).toBe(0);
+      expect(await getPendingReviewCount()).toBe(0);
+    });
+
+    it('should continue syncing reviews even if lessons fail', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      // Queue a lesson and a review
+      await completeLessons(null, [{ assignmentId: 100, subjectId: 1 }]);
+      await submitReviews(null, [
+        {
+          assignmentId: 101,
+          subjectId: 2,
+          incorrectMeaningAnswers: 0,
+          incorrectReadingAnswers: 0,
+        },
+      ]);
+
+      // Mock: lesson sync fails, review sync succeeds
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => createMockReviewResponse(1000, 101, 2, 2),
+        });
+
+      const result = await syncPendingData(client);
+
+      expect(result.success).toBe(false); // Overall success is false
+      expect(result.lessons.success).toBe(false);
+      expect(result.lessons.failedCount).toBe(1);
+      expect(result.reviews.success).toBe(true);
+      expect(result.reviews.syncedCount).toBe(1);
+
+      // Lesson should still be in queue, review should be cleared
+      expect(await getPendingLessonCount()).toBe(1);
+      expect(await getPendingReviewCount()).toBe(0);
+    });
+
+    it('should return success when both queues are empty', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      const result = await syncPendingData(client);
+
+      expect(result.success).toBe(true);
+      expect(result.lessons.syncedCount).toBe(0);
+      expect(result.reviews.syncedCount).toBe(0);
+    });
+
+    it('should handle zero data loss - failed items remain in queue', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      // Queue multiple reviews
+      await submitReviews(null, [
+        {
+          assignmentId: 100,
+          subjectId: 1,
+          incorrectMeaningAnswers: 1,
+          incorrectReadingAnswers: 0,
+        },
+        {
+          assignmentId: 101,
+          subjectId: 2,
+          incorrectMeaningAnswers: 0,
+          incorrectReadingAnswers: 1,
+        },
+      ]);
+
+      expect(await getPendingReviewCount()).toBe(2);
+
+      // First fails, second succeeds
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => createMockReviewResponse(1000, 101, 2, 2),
+        });
+
+      const result = await syncPendingData(client);
+
+      // Only one review should remain
+      expect(await getPendingReviewCount()).toBe(1);
+      expect(result.reviews.syncedCount).toBe(1);
+      expect(result.reviews.failedCount).toBe(1);
+
+      // The failed review is preserved with its original data
+      const pendingReviews = await getAllPendingReviews();
+      expect(pendingReviews[0].assignment_id).toBe(100);
+      expect(pendingReviews[0].incorrect_meaning_answers).toBe(1);
+      expect(pendingReviews[0].incorrect_reading_answers).toBe(0);
     });
   });
 });

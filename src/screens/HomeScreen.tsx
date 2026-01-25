@@ -1,6 +1,6 @@
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -16,6 +16,7 @@ import {
   LastSyncedIndicator,
   DashboardStats,
   NextReviewIndicator,
+  PendingSyncIndicator,
 } from '../components';
 import type { RootStackParamList } from '../navigation/types';
 import { getApiKey } from '../storage/secureStorage';
@@ -25,9 +26,11 @@ import {
   getAvailableLessons,
   getAvailableReviews,
   getNextReviewTime,
+  getPendingReviewCount,
+  getPendingLessonCount,
 } from '../storage';
-import { syncSubjects, syncAssignments, getUserLevel } from '../sync';
-import { isOnline } from '../utils';
+import { syncSubjects, syncAssignments, getUserLevel, syncPendingData } from '../sync';
+import { isOnline, addNetworkStatusListener } from '../utils';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -45,6 +48,11 @@ export interface DashboardData {
   nextReviewAt: Date | null;
 }
 
+export interface PendingData {
+  pendingLessonsCount: number;
+  pendingReviewsCount: number;
+}
+
 export function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const [syncStatus, setSyncStatus] = useState<SyncStatusData>({
@@ -58,17 +66,31 @@ export function HomeScreen() {
   });
   const [showOfflineError, setShowOfflineError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [pendingData, setPendingData] = useState<PendingData>({
+    pendingLessonsCount: 0,
+    pendingReviewsCount: 0,
+  });
+  const isSyncingPending = useRef(false);
 
   const loadDashboardData = useCallback(async () => {
     try {
-      const [status, subjectCount, lessons, reviews, nextReviewTimeStr] =
-        await Promise.all([
-          getSyncStatus(),
-          getSubjectCount(),
-          getAvailableLessons(),
-          getAvailableReviews(),
-          getNextReviewTime(),
-        ]);
+      const [
+        status,
+        subjectCount,
+        lessons,
+        reviews,
+        nextReviewTimeStr,
+        pendingLessonsCount,
+        pendingReviewsCount,
+      ] = await Promise.all([
+        getSyncStatus(),
+        getSubjectCount(),
+        getAvailableLessons(),
+        getAvailableReviews(),
+        getNextReviewTime(),
+        getPendingLessonCount(),
+        getPendingReviewCount(),
+      ]);
 
       const lastSync =
         status?.last_subjects_sync ?? status?.last_assignments_sync;
@@ -80,6 +102,10 @@ export function HomeScreen() {
         lessonsCount: lessons.length,
         reviewsCount: reviews.length,
         nextReviewAt: nextReviewTimeStr ? new Date(nextReviewTimeStr) : null,
+      });
+      setPendingData({
+        pendingLessonsCount,
+        pendingReviewsCount,
       });
 
       // Check if we're offline with no cached data
@@ -125,10 +151,68 @@ export function HomeScreen() {
     }
   }, [loadDashboardData]);
 
+  // Sync pending data (lessons and reviews) when coming back online
+  const syncPendingDataOnReconnect = useCallback(async () => {
+    // Prevent concurrent sync attempts
+    if (isSyncingPending.current) {
+      return;
+    }
+
+    // Check if there's anything to sync
+    const hasPending =
+      pendingData.pendingLessonsCount > 0 ||
+      pendingData.pendingReviewsCount > 0;
+    if (!hasPending) {
+      return;
+    }
+
+    try {
+      isSyncingPending.current = true;
+
+      const apiKey = await getApiKey();
+      if (!apiKey) {
+        return;
+      }
+
+      const client = new WaniKaniClient(apiKey);
+      await syncPendingData(client);
+
+      // Reload dashboard data after successful sync
+      await loadDashboardData();
+    } catch {
+      // Sync failed - items remain in queue for next attempt
+    } finally {
+      isSyncingPending.current = false;
+    }
+  }, [pendingData.pendingLessonsCount, pendingData.pendingReviewsCount, loadDashboardData]);
+
+  // Listen for network status changes to sync pending data when coming online
+  useEffect(() => {
+    const unsubscribe = addNetworkStatusListener((isConnected: boolean) => {
+      if (isConnected) {
+        // Coming back online - sync pending data
+        syncPendingDataOnReconnect();
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [syncPendingDataOnReconnect]);
+
   useFocusEffect(
     useCallback(() => {
       loadDashboardData();
     }, [loadDashboardData]),
+  );
+
+  // Also try to sync pending data when screen focuses (if online)
+  useFocusEffect(
+    useCallback(() => {
+      if (isOnline()) {
+        syncPendingDataOnReconnect();
+      }
+    }, [syncPendingDataOnReconnect]),
   );
 
   const handleLessonsPress = useCallback(() => {
@@ -187,6 +271,10 @@ export function HomeScreen() {
             />
           </View>
           <LastSyncedIndicator lastSyncedAt={syncStatus.lastSyncedAt} />
+          <PendingSyncIndicator
+            pendingLessonsCount={pendingData.pendingLessonsCount}
+            pendingReviewsCount={pendingData.pendingReviewsCount}
+          />
           <TouchableOpacity
             style={styles.settingsButton}
             onPress={() => navigation.navigate('Settings')}

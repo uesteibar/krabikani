@@ -765,3 +765,42 @@ export async function syncPendingReviews(
 export async function clearPendingReviews(): Promise<void> {
   await deleteAllPendingReviews();
 }
+
+// ============================================
+// Sync All Pending Data
+// ============================================
+
+export interface SyncPendingDataResult {
+  success: boolean;
+  lessons: SyncPendingLessonsResult;
+  reviews: SyncPendingReviewsResult;
+}
+
+/**
+ * Syncs all pending data (lessons and reviews) when coming back online.
+ * This should be called when network connectivity is restored.
+ *
+ * Features:
+ * - Syncs pending lessons first, then pending reviews
+ * - Continues syncing reviews even if some lessons fail
+ * - Returns combined results for both operations
+ * - Zero data loss: failed items remain in queue for retry
+ *
+ * @param client WaniKani API client
+ * @returns Combined result with lesson and review sync results
+ */
+export async function syncPendingData(
+  client: WaniKaniClient,
+): Promise<SyncPendingDataResult> {
+  // Sync pending lessons first
+  const lessonsResult = await syncPendingLessons(client);
+
+  // Then sync pending reviews (even if lessons had failures)
+  const reviewsResult = await syncPendingReviews(client);
+
+  return {
+    success: lessonsResult.success && reviewsResult.success,
+    lessons: lessonsResult,
+    reviews: reviewsResult,
+  };
+}
