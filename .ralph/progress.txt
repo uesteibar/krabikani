@@ -19,6 +19,10 @@
 - Mock react-native-sqlite-storage in __mocks__/react-native-sqlite-storage.ts
 - Database types (DatabaseSubject, DatabaseAssignment, etc.) are in src/storage/database.ts
 - Import mock helpers directly from mock file (e.g., `import { __resetMockDatabase } from '../../__mocks__/react-native-sqlite-storage'`)
+- CRUD input types (SubjectInput, AssignmentInput, PendingReviewInput, SyncStatusUpdate) in src/storage/database.ts
+- Use upsertSubject/upsertAssignment for insert-or-replace operations
+- Transaction-based batch operations (upsertSubjects, upsertAssignments) for bulk inserts
+- Migrations use schema_version table; runMigrations() is idempotent
 
 ---
 
@@ -172,5 +176,29 @@
   - Store complex data (meanings, readings, component_subject_ids) as JSON strings in SQLite
   - Use CHECK constraint on sync_status id to enforce single row
   - Export SCHEMA object for testing table definitions without initializing database
+
+---
+
+## 2026-01-25 - US-007: Local Database - CRUD Operations
+- What was implemented:
+  - Subject CRUD: upsertSubject, upsertSubjects, getSubjectById, getSubjectsByIds, getSubjectsByLevel, getSubjectsByType, getAllSubjects, deleteSubject, getSubjectCount
+  - Assignment CRUD: upsertAssignment, upsertAssignments, getAssignmentById, getAssignmentBySubjectId, getAvailableReviews, getAvailableLessons, getAllAssignments, deleteAssignment, getAssignmentCount
+  - Pending Review CRUD: insertPendingReview, getPendingReviewById, getAllPendingReviews, deletePendingReview, deleteAllPendingReviews, getPendingReviewCount
+  - Sync Status CRUD: getSyncStatus, updateSyncStatus, resetSyncStatus
+  - Migrations system: schema_version table, getSchemaVersion, runMigrations, initializeDatabaseWithMigrations
+  - Input types: SubjectInput, AssignmentInput, PendingReviewInput, SyncStatusUpdate
+  - Enhanced SQLite mock with better WHERE clause parsing, UPDATE/DELETE support, and transaction support
+- Files changed:
+  - src/storage/database.ts (added all CRUD functions, migrations system)
+  - src/storage/index.ts (updated exports for all new functions and types)
+  - __mocks__/react-native-sqlite-storage.ts (enhanced mock for CRUD operations)
+  - __tests__/storage/databaseCrud.test.ts (new - 51 tests for CRUD operations)
+- **Learnings for future iterations:**
+  - Use INSERT OR REPLACE for upsert behavior (preserves created_at via COALESCE subquery)
+  - Use database.transaction() for batch operations to improve performance
+  - Mock WHERE clause parsing needs to handle both placeholder (?) and literal values (id = 1)
+  - Initialize all table columns with null in mock INSERT before setting provided values
+  - getAvailableReviews filters: available_at <= now AND started_at IS NOT NULL AND srs_stage > 0
+  - getAvailableLessons filters: unlocked_at IS NOT NULL AND started_at IS NULL
 
 ---
