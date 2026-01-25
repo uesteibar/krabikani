@@ -295,6 +295,304 @@ describe('answerValidation', () => {
         });
       });
     });
+
+    describe('typo forgiveness', () => {
+      describe('short words (1-3 characters) - exact match only', () => {
+        it('requires exact match for 1-char word', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'to', primary: true, accepted_answer: true },
+          ];
+          const result = validateMeaningAnswer('ti', meanings);
+          expect(result.isCorrect).toBe(false);
+        });
+
+        it('requires exact match for 2-char word', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'go', primary: true, accepted_answer: true },
+          ];
+          const result = validateMeaningAnswer('gi', meanings);
+          expect(result.isCorrect).toBe(false);
+        });
+
+        it('requires exact match for 3-char word', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'dog', primary: true, accepted_answer: true },
+          ];
+          const result = validateMeaningAnswer('dgo', meanings);
+          expect(result.isCorrect).toBe(false);
+        });
+
+        it('accepts exact match for short word', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'cat', primary: true, accepted_answer: true },
+          ];
+          const result = validateMeaningAnswer('cat', meanings);
+          expect(result.isCorrect).toBe(true);
+          expect(result.isFuzzyMatch).toBeUndefined();
+        });
+      });
+
+      describe('medium words (4-6 characters) - 1 edit allowed', () => {
+        it('accepts 1 substitution typo for 4-char word', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'fire', primary: true, accepted_answer: true },
+          ];
+          const result = validateMeaningAnswer('fure', meanings);
+          expect(result.isCorrect).toBe(true);
+          expect(result.isFuzzyMatch).toBe(true);
+          expect(result.matchedMeaning).toBe('fire');
+        });
+
+        it('accepts 1 insertion typo for 5-char word', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'water', primary: true, accepted_answer: true },
+          ];
+          const result = validateMeaningAnswer('watter', meanings);
+          expect(result.isCorrect).toBe(true);
+          expect(result.isFuzzyMatch).toBe(true);
+        });
+
+        it('accepts 1 deletion typo for 6-char word', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'person', primary: true, accepted_answer: true },
+          ];
+          const result = validateMeaningAnswer('peson', meanings);
+          expect(result.isCorrect).toBe(true);
+          expect(result.isFuzzyMatch).toBe(true);
+        });
+
+        it('accepts 1 transposition typo for 4-char word', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'blue', primary: true, accepted_answer: true },
+          ];
+          const result = validateMeaningAnswer('bleu', meanings);
+          expect(result.isCorrect).toBe(true);
+          expect(result.isFuzzyMatch).toBe(true);
+        });
+
+        it('rejects 2 typos for 4-char word', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'fire', primary: true, accepted_answer: true },
+          ];
+          const result = validateMeaningAnswer('fure$', meanings);
+          expect(result.isCorrect).toBe(false);
+        });
+
+        it('rejects 2 typos for 6-char word', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'person', primary: true, accepted_answer: true },
+          ];
+          // 'perxyz' has 3 substitutions from 'person' (s->x, o->y, n->z)
+          const result = validateMeaningAnswer('perxyz', meanings);
+          expect(result.isCorrect).toBe(false);
+        });
+
+        it('exact match does not set isFuzzyMatch', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'fire', primary: true, accepted_answer: true },
+          ];
+          const result = validateMeaningAnswer('fire', meanings);
+          expect(result.isCorrect).toBe(true);
+          expect(result.isFuzzyMatch).toBeUndefined();
+        });
+      });
+
+      describe('long words (7+ characters) - 2 edits allowed', () => {
+        it('accepts 1 typo for 7-char word', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'teacher', primary: true, accepted_answer: true },
+          ];
+          const result = validateMeaningAnswer('teachre', meanings);
+          expect(result.isCorrect).toBe(true);
+          expect(result.isFuzzyMatch).toBe(true);
+        });
+
+        it('accepts 2 typos for 7-char word', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'teacher', primary: true, accepted_answer: true },
+          ];
+          const result = validateMeaningAnswer('techaer', meanings);
+          expect(result.isCorrect).toBe(true);
+          expect(result.isFuzzyMatch).toBe(true);
+        });
+
+        it('accepts 2 typos for 10-char word', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'university', primary: true, accepted_answer: true },
+          ];
+          const result = validateMeaningAnswer('univeristy', meanings);
+          expect(result.isCorrect).toBe(true);
+          expect(result.isFuzzyMatch).toBe(true);
+        });
+
+        it('rejects 3 typos for 7-char word', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'teacher', primary: true, accepted_answer: true },
+          ];
+          // 'txyzher' has 3 substitutions from 'teacher' (e->x, a->y, c->z)
+          const result = validateMeaningAnswer('txyzher', meanings);
+          expect(result.isCorrect).toBe(false);
+        });
+
+        it('accepts 2 typos for very long word', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'understanding', primary: true, accepted_answer: true },
+          ];
+          const result = validateMeaningAnswer('understadning', meanings);
+          expect(result.isCorrect).toBe(true);
+          expect(result.isFuzzyMatch).toBe(true);
+        });
+      });
+
+      describe('blacklist still rejects fuzzy matches', () => {
+        it('rejects blacklisted meaning even if exact match', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'person', primary: true, accepted_answer: true },
+          ];
+          const auxiliaryMeanings: AuxiliaryMeaning[] = [
+            { meaning: 'people', type: 'blacklist' },
+          ];
+          const result = validateMeaningAnswer('people', meanings, auxiliaryMeanings);
+          expect(result.isCorrect).toBe(false);
+          expect(result.isBlacklisted).toBe(true);
+        });
+
+        it('does not fuzzy match to blacklisted meaning', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'person', primary: true, accepted_answer: true },
+          ];
+          const auxiliaryMeanings: AuxiliaryMeaning[] = [
+            { meaning: 'people', type: 'blacklist' },
+          ];
+          // "peopel" is 1 edit from "people" (blacklist) but we should not block it
+          // it's also far from "person" so should just be rejected
+          const result = validateMeaningAnswer('peopel', meanings, auxiliaryMeanings);
+          expect(result.isCorrect).toBe(false);
+          expect(result.isBlacklisted).toBeUndefined();
+        });
+      });
+
+      describe('auxiliary whitelist with fuzzy matching', () => {
+        it('accepts fuzzy match on whitelisted auxiliary meaning', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'dog', primary: true, accepted_answer: true },
+          ];
+          const auxiliaryMeanings: AuxiliaryMeaning[] = [
+            { meaning: 'canine', type: 'whitelist' },
+          ];
+          const result = validateMeaningAnswer('cannie', meanings, auxiliaryMeanings);
+          expect(result.isCorrect).toBe(true);
+          expect(result.isAuxiliary).toBe(true);
+          expect(result.isFuzzyMatch).toBe(true);
+        });
+
+        it('primary meaning fuzzy match takes priority over auxiliary fuzzy match', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'study', primary: true, accepted_answer: true },
+          ];
+          const auxiliaryMeanings: AuxiliaryMeaning[] = [
+            { meaning: 'learn', type: 'whitelist' },
+          ];
+          const result = validateMeaningAnswer('stuyd', meanings, auxiliaryMeanings);
+          expect(result.isCorrect).toBe(true);
+          expect(result.isAuxiliary).toBeUndefined();
+          expect(result.isFuzzyMatch).toBe(true);
+          expect(result.matchedMeaning).toBe('study');
+        });
+      });
+
+      describe('multiple meanings with fuzzy matching', () => {
+        it('finds fuzzy match in alternative meaning', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'dog', primary: true, accepted_answer: true },
+            { meaning: 'hound', primary: false, accepted_answer: true },
+          ];
+          const result = validateMeaningAnswer('houdn', meanings);
+          expect(result.isCorrect).toBe(true);
+          expect(result.isFuzzyMatch).toBe(true);
+          expect(result.matchedMeaning).toBe('hound');
+        });
+
+        it('prefers exact match over fuzzy match', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'test', primary: true, accepted_answer: true },
+            { meaning: 'testing', primary: false, accepted_answer: true },
+          ];
+          const result = validateMeaningAnswer('test', meanings);
+          expect(result.isCorrect).toBe(true);
+          expect(result.isFuzzyMatch).toBeUndefined();
+          expect(result.matchedMeaning).toBe('test');
+        });
+      });
+
+      describe('common WaniKani typo scenarios', () => {
+        it('accepts "recieve" for "receive"', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'receive', primary: true, accepted_answer: true },
+          ];
+          const result = validateMeaningAnswer('recieve', meanings);
+          expect(result.isCorrect).toBe(true);
+          expect(result.isFuzzyMatch).toBe(true);
+        });
+
+        it('accepts "occurance" for "occurrence"', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'occurrence', primary: true, accepted_answer: true },
+          ];
+          const result = validateMeaningAnswer('occurance', meanings);
+          expect(result.isCorrect).toBe(true);
+          expect(result.isFuzzyMatch).toBe(true);
+        });
+
+        it('accepts "seperete" for "separate"', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'separate', primary: true, accepted_answer: true },
+          ];
+          const result = validateMeaningAnswer('seperete', meanings);
+          expect(result.isCorrect).toBe(true);
+          expect(result.isFuzzyMatch).toBe(true);
+        });
+
+        it('accepts "accomodate" for "accommodate"', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'accommodate', primary: true, accepted_answer: true },
+          ];
+          const result = validateMeaningAnswer('accomodate', meanings);
+          expect(result.isCorrect).toBe(true);
+          expect(result.isFuzzyMatch).toBe(true);
+        });
+      });
+
+      describe('return value structure for fuzzy match', () => {
+        it('returns correct structure for fuzzy match', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'water', primary: true, accepted_answer: true },
+          ];
+          const result = validateMeaningAnswer('weter', meanings);
+          expect(result).toEqual<MeaningValidationResult>({
+            isCorrect: true,
+            matchedMeaning: 'water',
+            isFuzzyMatch: true,
+          });
+        });
+
+        it('returns correct structure for fuzzy auxiliary match', () => {
+          const meanings: Meaning[] = [
+            { meaning: 'dog', primary: true, accepted_answer: true },
+          ];
+          const auxiliaryMeanings: AuxiliaryMeaning[] = [
+            { meaning: 'canine', type: 'whitelist' },
+          ];
+          const result = validateMeaningAnswer('cannie', meanings, auxiliaryMeanings);
+          expect(result).toEqual<MeaningValidationResult>({
+            isCorrect: true,
+            isAuxiliary: true,
+            matchedMeaning: 'canine',
+            isFuzzyMatch: true,
+          });
+        });
+      });
+    });
   });
 
   // ============================================

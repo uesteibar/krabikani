@@ -13,6 +13,19 @@ Started: Sun Jan 25 20:13:24 CET 2026
 
 ---
 
+## 2026-01-25 - US-006
+- **What was implemented**: Integrated typo forgiveness into answer validation using the Damerau-Levenshtein distance algorithm
+- **Files changed**:
+  - `src/utils/answerValidation.ts` - Added getAllowedEditDistance() helper, integrated fuzzy matching into validateMeaningAnswer(), added isFuzzyMatch to MeaningValidationResult interface
+  - `__tests__/utils/answerValidation.test.ts` - Added 40+ new tests for typo forgiveness scenarios
+- **Learnings for future iterations:**
+  - Typo tolerance is based on answer length: 1-3 chars require exact match, 4-6 chars allow 1 edit, 7+ chars allow 2 edits
+  - Exact matches are checked first, then fuzzy matches - this ensures exact matches don't get isFuzzyMatch flag
+  - Blacklist checking uses exact match only (not fuzzy) to avoid false rejections
+  - The isFuzzyMatch flag allows UI to show different feedback (yellow vs green) in future stories
+
+---
+
 ## 2026-01-25 - US-005
 - **What was implemented**: Damerau-Levenshtein distance algorithm for typo forgiveness in answer validation
 - **Files changed**:
