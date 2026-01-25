@@ -13,6 +13,21 @@ Started: Sun Jan 25 20:13:24 CET 2026
 
 ---
 
+## 2026-01-25 - US-008
+- **What was implemented**: Added 'Mark as Correct' button on incorrect answer screens in both LessonQuiz and ReviewSession
+- **Files changed**:
+  - `src/components/LessonQuiz.tsx` - Added handleMarkAsCorrect callback, button row layout with 'Mark as Correct' button alongside Continue, secondary button styling
+  - `src/components/ReviewSession.tsx` - Same implementation as LessonQuiz for consistency
+  - `__tests__/components/LessonQuiz.test.tsx` - Added 6 tests for Mark as Correct functionality
+  - `__tests__/components/ReviewSession.test.tsx` - Added 7 tests for Mark as Correct functionality
+- **Learnings for future iterations:**
+  - When overriding an incorrect answer, need to: mark question as completed, remove re-queued question from queue, update item progress, and check for session completion
+  - Secondary button styling uses gray background with border to be less prominent than primary action button
+  - Inlining helper functions (like isItemComplete check) avoids useCallback dependency issues
+  - Removed unused getQuestionPrompt function that was causing lint errors
+
+---
+
 ## 2026-01-25 - US-007
 - **What was implemented**: Show yellow/amber feedback for answers accepted via typo forgiveness ("Close enough!") instead of green "Correct!"
 - **Files changed**:

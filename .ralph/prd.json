@@ -141,8 +141,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added 'Mark as Correct' button to incorrect feedback screens in both LessonQuiz and ReviewSession. Button uses secondary styling (gray outline) alongside the Continue button. When pressed: treats answer as correct (updates SRS/progress), removes re-queued question from queue, and proceeds immediately."
     },
     {
       "id": "US-009",
