@@ -23,6 +23,8 @@
 - Use upsertSubject/upsertAssignment for insert-or-replace operations
 - Transaction-based batch operations (upsertSubjects, upsertAssignments) for bulk inserts
 - Migrations use schema_version table; runMigrations() is idempotent
+- Sync service exports: syncSubjects(), getUserLevel(), convertSubjectToInput(), and related types
+- Sync service is in src/sync/syncService.ts with barrel exports in src/sync/index.ts
 
 ---
 
@@ -200,5 +202,31 @@
   - Initialize all table columns with null in mock INSERT before setting provided values
   - getAvailableReviews filters: available_at <= now AND started_at IS NOT NULL AND srs_stage > 0
   - getAvailableLessons filters: unlocked_at IS NOT NULL AND started_at IS NULL
+
+---
+
+## 2026-01-25 - US-008: Initial Data Sync - Subjects
+- What was implemented:
+  - SyncService module in src/sync/ with syncSubjects() function
+  - Fetches all subjects up to user's current level using WaniKaniClient
+  - Handles pagination automatically (follows next_url until exhausted)
+  - Progress callback (SyncProgressCallback) for UI updates showing synced/total items
+  - Converts API Subject data to SubjectInput format for database storage
+  - Stores fetched subjects in local SQLite database using upsertSubjects()
+  - Updates sync_status.last_subjects_sync timestamp after successful sync
+  - getUserLevel() helper function to get user's current level
+  - convertSubjectToInput() helper for API-to-database type conversion
+  - Support for incremental sync via updatedAfter parameter
+  - Error handling with typed result (SyncSubjectsResult)
+- Files changed:
+  - src/sync/syncService.ts (new - sync logic and types)
+  - src/sync/index.ts (new - barrel exports)
+  - __tests__/sync/syncService.test.ts (new - 16 comprehensive tests)
+- **Learnings for future iterations:**
+  - API subjects have different structures (radicals vs kanji vs vocabulary) - use type guards or 'in' operator
+  - Readings and reading_mnemonic are only present for kanji/vocabulary, null for radicals
+  - component_subject_ids only exist for kanji and vocabulary
+  - Progress callbacks should be called after each page is processed and stored
+  - Use { maxRetries: 0 } in tests to avoid retry delays
 
 ---
