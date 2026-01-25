@@ -357,3 +357,32 @@
   - Browser verification not available (no dev-browser skill configured)
 
 ---
+
+## 2026-01-25 - US-013: Romaji to Hiragana Input Conversion
+- What was implemented:
+  - romajiToHiragana() function for complete string conversion
+  - processRomajiInput() function for real-time input processing with pending state
+  - Wapuro-style conversion rules (ka→か, shi/si→し, tsu/tu→つ, chi/ti→ち, fu/hu→ふ)
+  - Double consonant producing っ (kka→っか, ssa→っさ, tta→った, cchi→っち, tch→っち)
+  - nn→ん with proper handling of nna→んな (n followed by n + vowel = ん + な)
+  - n followed by consonant (except y) → ん + consonant (nka→んか)
+  - n at end of word → ん (when forceComplete=true)
+  - Combination kana/youon (sha→しゃ, kyo→きょ, nya→にゃ, etc.)
+  - Long vowels work correctly (ou→おう, uu→うう, aa→ああ)
+  - Backspace handling via complete string recalculation
+  - Hiragana passthrough (already converted characters preserved)
+  - Non-alphabetic character passthrough (numbers, punctuation)
+  - Case insensitive input
+  - RomajiInputState type for tracking hiragana + pending state
+- Files changed:
+  - src/utils/romajiToHiragana.ts (new - romaji to hiragana conversion utility)
+  - src/utils/index.ts (updated - added exports for new module)
+  - __tests__/utils/romajiToHiragana.test.ts (new - 151 comprehensive tests)
+- **Learnings for future iterations:**
+  - Order of checks matters: handle 'n' specially before double consonant check
+  - 'nn' followed by vowel should be ん + な (not んあ) - first n becomes ん, second n starts new syllable
+  - For real-time input, return pending state for partial sequences that could form valid syllables
+  - Trailing 'n' handling depends on forceComplete flag (ん when complete, pending when typing)
+  - processRomajiInput recalculates entire string on each call - handles backspace naturally
+
+---
