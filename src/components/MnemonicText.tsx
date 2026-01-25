@@ -4,7 +4,7 @@ import { StyleSheet, Text, TextStyle } from 'react-native';
 import { SUBJECT_COLORS } from '../theme';
 
 export interface MnemonicTextProps {
-  /** The mnemonic text that may contain <radical>, <kanji>, and <vocabulary> tags */
+  /** The mnemonic text that may contain <radical>, <kanji>, <vocabulary>, and <reading> tags */
   text: string;
   /** Optional testID for testing */
   testID?: string;
@@ -20,7 +20,7 @@ const TAG_COLORS: Record<string, string> = {
 };
 
 /** Regex pattern to match valid tags: <tagname>content</tagname> */
-const TAG_PATTERN = /<(radical|kanji|vocabulary)>(.*?)<\/\1>/g;
+const TAG_PATTERN = /<(radical|kanji|vocabulary|reading)>(.*?)<\/\1>/g;
 
 interface ParsedSegment {
   text: string;
@@ -83,9 +83,10 @@ function parseMnemonicText(text: string): ParsedSegment[] {
  * MnemonicText parses and renders mnemonic text with highlighted tags.
  *
  * Supports the following tags:
- * - <radical>text</radical> - renders in blue (#00AAFF)
- * - <kanji>text</kanji> - renders in pink (#FF00AA)
- * - <vocabulary>text</vocabulary> - renders in purple (#AA00FF)
+ * - <radical>text</radical> - renders in blue (#00AAFF) with bold
+ * - <kanji>text</kanji> - renders in pink (#FF00AA) with bold
+ * - <vocabulary>text</vocabulary> - renders in purple (#AA00FF) with bold
+ * - <reading>text</reading> - renders in italic (no color, no bold)
  *
  * Malformed, nested, or unknown tags are rendered as plain text.
  */
@@ -95,6 +96,13 @@ export function MnemonicText({ text, testID, style }: MnemonicTextProps) {
   return (
     <Text style={style} testID={testID}>
       {segments.map((segment, index) => {
+        if (segment.tagType === 'reading') {
+          return (
+            <Text key={index} style={styles.reading}>
+              {segment.text}
+            </Text>
+          );
+        }
         if (segment.tagType && TAG_COLORS[segment.tagType]) {
           return (
             <Text
@@ -116,5 +124,8 @@ export function MnemonicText({ text, testID, style }: MnemonicTextProps) {
 const styles = StyleSheet.create({
   highlighted: {
     fontWeight: 'bold',
+  },
+  reading: {
+    fontStyle: 'italic',
   },
 });
