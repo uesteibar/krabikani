@@ -1,0 +1,7 @@
+# Ralph autonomous agent
+.ralph/.worktrees
+
+# Environment variables (API keys, secrets)
+.env
+.env.local
+.env.*.local
