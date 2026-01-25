@@ -10,6 +10,9 @@
 - Export modules via index.ts barrel files in each directory
 - WaniKani API: use `Wanikani-Revision: 20170710` and `Authorization: Bearer <token>` headers
 - Mock global fetch in tests: `(globalThis as { fetch: typeof fetch }).fetch = mockFetch`
+- API types are in src/api/types.ts, API client logic in src/api/wanikaniApi.ts
+- WaniKaniClient class handles authentication and typed requests
+- WaniKaniApiError has code (ApiErrorCode), statusCode, message, and retryable properties
 
 ---
 
@@ -86,5 +89,31 @@
   - Use `(globalThis as { fetch: typeof fetch }).fetch = mockFetch` for TypeScript-safe global fetch mocking
   - API responses wrap data in `{ object, url, data_updated_at, data }` structure
   - Always validate API key before saving to provide immediate feedback to user
+
+---
+
+## 2026-01-25 - US-004: WaniKani API Client - Core Setup
+- What was implemented:
+  - Comprehensive TypeScript types for WaniKani API v2 in src/api/types.ts
+  - Types for Subject (Radical, Kanji, Vocabulary, KanaVocabulary) with all fields
+  - Types for Assignment with full SRS data
+  - Types for User with subscription and preferences
+  - WaniKaniCollection generic type for paginated responses
+  - WaniKaniClient class with typed get() method and getUser() endpoint
+  - WaniKaniApiError class with typed ApiErrorCode and retryable flag
+  - Updated barrel exports in src/api/index.ts
+  - Comprehensive test suite (21 new tests for API client and types)
+- Files changed:
+  - src/api/types.ts (new - comprehensive API type definitions)
+  - src/api/wanikaniApi.ts (refactored - WaniKaniClient class, improved error handling)
+  - src/api/index.ts (updated - export new types and client)
+  - __tests__/api/wanikaniApi.test.ts (updated - tests for WaniKaniClient)
+  - __tests__/api/types.test.ts (new - type verification tests)
+- **Learnings for future iterations:**
+  - User API response doesn't have `id` at top level like other resources (different structure)
+  - WaniKaniApiError should have `code` (ApiErrorCode), `statusCode`, and `retryable` properties
+  - 4xx errors are not retryable, 5xx and 429 errors are retryable
+  - Full URLs (e.g., pagination next_url) should be passed directly to fetch, not prepended with base URL
+  - Types should be in a separate types.ts file for cleaner organization
 
 ---
