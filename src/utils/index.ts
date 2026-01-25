@@ -10,3 +10,9 @@ export {
   type NetworkStatus,
   type NetworkStatusListener,
 } from './networkStatus';
+
+export {
+  romajiToHiragana,
+  processRomajiInput,
+  type RomajiInputState,
+} from './romajiToHiragana';
