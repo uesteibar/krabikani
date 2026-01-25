@@ -439,3 +439,29 @@
   - Browser verification not available (no dev-browser skill configured)
 
 ---
+
+## 2026-01-25 - US-016: Lesson Learning Phase - Batch Flow
+- What was implemented:
+  - LessonBatch component for presenting lessons in batches of 5 items
+  - Progress indicator with colored dots (one per item) and X/Y text counter
+  - Component radicals display for kanji items ("Made up of:" section with radical characters and meanings)
+  - Auto-proceed to quiz via onBatchComplete callback when all items viewed
+  - LessonItem interface with id, subjectType, characters, meanings, readings, mnemonics, componentSubjectIds
+  - ComponentRadical interface with id, characters, meaning
+  - LESSON_BATCH_SIZE constant exported as 5
+  - getDotColor() helper for color-coded progress dots based on subject type
+  - Empty state handling for when no lessons are available
+  - Support for partial batches (less than 5 items)
+- Files changed:
+  - src/components/LessonBatch.tsx (new - batch lesson component with progress indicator and component radicals)
+  - src/components/index.ts (updated - added LessonBatch, LESSON_BATCH_SIZE, LessonItem, ComponentRadical exports)
+  - __tests__/components/LessonBatch.test.tsx (new - 36 comprehensive tests)
+- **Learnings for future iterations:**
+  - Use useMemo for computing component radicals to avoid recalculating on every render
+  - componentSubjectIds is only present on kanji items - check subjectType before accessing
+  - ComponentRadical map lookup returns undefined for missing IDs - filter these out
+  - Progress dots should use subject-type colors for visited items, gray for unvisited
+  - LessonBatch wraps LessonCard and adds batch-level UI (progress, components)
+  - Browser verification not available (no dev-browser skill configured)
+
+---
