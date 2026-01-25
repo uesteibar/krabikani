@@ -1,5 +1,11 @@
 // API Client
-export { WaniKaniClient, WaniKaniApiError } from './wanikaniApi';
+export {
+  WaniKaniClient,
+  WaniKaniApiError,
+  type SubjectCollection,
+  type AssignmentCollection,
+  type RetryOptions,
+} from './wanikaniApi';
 
 // Legacy support
 export {
@@ -37,6 +43,16 @@ export type {
   // Assignment types
   AssignmentData,
   Assignment,
+  // Summary types
+  SummaryLesson,
+  SummaryReview,
+  SummaryData,
+  Summary,
+  // Review types
+  ReviewData,
+  Review,
+  CreateReviewParams,
+  CreateReviewResponse,
   // Error types
   WaniKaniErrorResponse,
   ApiErrorCode,

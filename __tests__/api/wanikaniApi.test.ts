@@ -212,7 +212,8 @@ describe('wanikaniApi', () => {
     let client: WaniKaniClient;
 
     beforeEach(() => {
-      client = new WaniKaniClient('test-api-key');
+      // Use no retries for basic tests to keep them fast and deterministic
+      client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
     });
 
     describe('get', () => {
@@ -342,6 +343,584 @@ describe('wanikaniApi', () => {
             }),
           }),
         );
+      });
+    });
+
+    describe('getSummary', () => {
+      it('should fetch summary data', async () => {
+        const mockSummary = {
+          object: 'report',
+          url: 'https://api.wanikani.com/v2/summary',
+          data_updated_at: '2024-01-01T00:00:00.000000Z',
+          data: {
+            lessons: [
+              {
+                available_at: '2024-01-01T00:00:00.000000Z',
+                subject_ids: [1, 2, 3],
+              },
+            ],
+            next_reviews_at: '2024-01-01T01:00:00.000000Z',
+            reviews: [
+              {
+                available_at: '2024-01-01T00:00:00.000000Z',
+                subject_ids: [4, 5, 6],
+              },
+            ],
+          },
+        };
+
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockSummary,
+        });
+
+        const result = await client.getSummary();
+
+        expect(result).toEqual(mockSummary);
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.wanikani.com/v2/summary',
+          expect.any(Object),
+        );
+      });
+    });
+
+    describe('getSubjects', () => {
+      it('should fetch subjects without filters', async () => {
+        const mockSubjects = {
+          object: 'collection',
+          url: 'https://api.wanikani.com/v2/subjects',
+          pages: {
+            per_page: 500,
+            next_url: null,
+            previous_url: null,
+          },
+          total_count: 2,
+          data_updated_at: '2024-01-01T00:00:00.000000Z',
+          data: [
+            { id: 1, object: 'radical', data: {} },
+            { id: 2, object: 'kanji', data: {} },
+          ],
+        };
+
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockSubjects,
+        });
+
+        const result = await client.getSubjects();
+
+        expect(result).toEqual(mockSubjects);
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.wanikani.com/v2/subjects',
+          expect.any(Object),
+        );
+      });
+
+      it('should fetch subjects with filters', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ data: [] }),
+        });
+
+        await client.getSubjects({
+          ids: [1, 2, 3],
+          types: ['radical', 'kanji'],
+          levels: [1, 2],
+          hidden: false,
+          updated_after: '2024-01-01T00:00:00.000000Z',
+        });
+
+        expect(mockFetch).toHaveBeenCalledWith(
+          expect.stringContaining('/subjects?'),
+          expect.any(Object),
+        );
+        const calledUrl = mockFetch.mock.calls[0][0] as string;
+        expect(calledUrl).toContain('ids=1%2C2%2C3');
+        expect(calledUrl).toContain('types=radical%2Ckanji');
+        expect(calledUrl).toContain('levels=1%2C2');
+        expect(calledUrl).toContain('hidden=false');
+        expect(calledUrl).toContain('updated_after=2024-01-01T00%3A00%3A00.000000Z');
+      });
+
+      it('should fetch a single subject by ID', async () => {
+        const mockSubject = {
+          id: 1,
+          object: 'radical',
+          data: { characters: '一' },
+        };
+
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockSubject,
+        });
+
+        const result = await client.getSubject(1);
+
+        expect(result).toEqual(mockSubject);
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.wanikani.com/v2/subjects/1',
+          expect.any(Object),
+        );
+      });
+    });
+
+    describe('getAssignments', () => {
+      it('should fetch assignments without filters', async () => {
+        const mockAssignments = {
+          object: 'collection',
+          url: 'https://api.wanikani.com/v2/assignments',
+          pages: {
+            per_page: 500,
+            next_url: null,
+            previous_url: null,
+          },
+          total_count: 1,
+          data_updated_at: '2024-01-01T00:00:00.000000Z',
+          data: [{ id: 1, object: 'assignment', data: { subject_id: 1 } }],
+        };
+
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockAssignments,
+        });
+
+        const result = await client.getAssignments();
+
+        expect(result).toEqual(mockAssignments);
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.wanikani.com/v2/assignments',
+          expect.any(Object),
+        );
+      });
+
+      it('should fetch assignments with filters', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ data: [] }),
+        });
+
+        await client.getAssignments({
+          subject_ids: [1, 2],
+          srs_stages: [1, 2, 3],
+          immediately_available_for_review: true,
+          burned: false,
+        });
+
+        expect(mockFetch).toHaveBeenCalledWith(
+          expect.stringContaining('/assignments?'),
+          expect.any(Object),
+        );
+        const calledUrl = mockFetch.mock.calls[0][0] as string;
+        expect(calledUrl).toContain('subject_ids=1%2C2');
+        expect(calledUrl).toContain('srs_stages=1%2C2%2C3');
+        expect(calledUrl).toContain('immediately_available_for_review=true');
+        expect(calledUrl).toContain('burned=false');
+      });
+
+      it('should fetch a single assignment by ID', async () => {
+        const mockAssignment = {
+          id: 1,
+          object: 'assignment',
+          data: { subject_id: 1, srs_stage: 1 },
+        };
+
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockAssignment,
+        });
+
+        const result = await client.getAssignment(1);
+
+        expect(result).toEqual(mockAssignment);
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.wanikani.com/v2/assignments/1',
+          expect.any(Object),
+        );
+      });
+    });
+
+    describe('startAssignment', () => {
+      it('should start an assignment', async () => {
+        const mockAssignment = {
+          id: 1,
+          object: 'assignment',
+          data: {
+            subject_id: 1,
+            srs_stage: 1,
+            started_at: '2024-01-01T00:00:00.000000Z',
+          },
+        };
+
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockAssignment,
+        });
+
+        const result = await client.startAssignment(1);
+
+        expect(result).toEqual(mockAssignment);
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.wanikani.com/v2/assignments/1/start',
+          expect.objectContaining({
+            method: 'PUT',
+          }),
+        );
+      });
+
+      it('should start an assignment with custom started_at', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ id: 1 }),
+        });
+
+        await client.startAssignment(1, {
+          started_at: '2024-01-01T00:00:00.000000Z',
+        });
+
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.wanikani.com/v2/assignments/1/start',
+          expect.objectContaining({
+            method: 'PUT',
+            body: JSON.stringify({
+              started_at: '2024-01-01T00:00:00.000000Z',
+            }),
+          }),
+        );
+      });
+    });
+
+    describe('createReview', () => {
+      it('should create a review with assignment_id', async () => {
+        const mockResponse = {
+          id: 1,
+          object: 'review',
+          url: 'https://api.wanikani.com/v2/reviews/1',
+          data_updated_at: '2024-01-01T00:00:00.000000Z',
+          data: {
+            assignment_id: 123,
+            created_at: '2024-01-01T00:00:00.000000Z',
+            ending_srs_stage: 2,
+            incorrect_meaning_answers: 0,
+            incorrect_reading_answers: 1,
+            spaced_repetition_system_id: 1,
+            starting_srs_stage: 1,
+            subject_id: 456,
+          },
+          resources_updated: {
+            assignment: { id: 123, object: 'assignment', data: {} },
+            review_statistic: { id: 789, object: 'review_statistic', data: {} },
+          },
+        };
+
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockResponse,
+        });
+
+        const result = await client.createReview({
+          assignment_id: 123,
+          incorrect_meaning_answers: 0,
+          incorrect_reading_answers: 1,
+        });
+
+        expect(result).toEqual(mockResponse);
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.wanikani.com/v2/reviews',
+          expect.objectContaining({
+            method: 'POST',
+            body: JSON.stringify({
+              review: {
+                assignment_id: 123,
+                incorrect_meaning_answers: 0,
+                incorrect_reading_answers: 1,
+              },
+            }),
+          }),
+        );
+      });
+
+      it('should create a review with subject_id', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ id: 1 }),
+        });
+
+        await client.createReview({
+          subject_id: 456,
+          incorrect_meaning_answers: 2,
+          incorrect_reading_answers: 0,
+        });
+
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.wanikani.com/v2/reviews',
+          expect.objectContaining({
+            body: JSON.stringify({
+              review: {
+                subject_id: 456,
+                incorrect_meaning_answers: 2,
+                incorrect_reading_answers: 0,
+              },
+            }),
+          }),
+        );
+      });
+    });
+
+    describe('getNextPage', () => {
+      it('should fetch the next page of a collection', async () => {
+        const nextPageData = {
+          object: 'collection',
+          url: 'https://api.wanikani.com/v2/subjects?page_after_id=100',
+          pages: { per_page: 500, next_url: null, previous_url: null },
+          total_count: 100,
+          data_updated_at: '2024-01-01T00:00:00.000000Z',
+          data: [],
+        };
+
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => nextPageData,
+        });
+
+        const collection = {
+          object: 'collection' as const,
+          url: 'https://api.wanikani.com/v2/subjects',
+          pages: {
+            per_page: 500,
+            next_url: 'https://api.wanikani.com/v2/subjects?page_after_id=100',
+            previous_url: null,
+          },
+          total_count: 100,
+          data_updated_at: '2024-01-01T00:00:00.000000Z',
+          data: [],
+        };
+
+        const result = await client.getNextPage(collection);
+
+        expect(result).toEqual(nextPageData);
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.wanikani.com/v2/subjects?page_after_id=100',
+          expect.any(Object),
+        );
+      });
+
+      it('should return null when there is no next page', async () => {
+        const collection = {
+          object: 'collection' as const,
+          url: 'https://api.wanikani.com/v2/subjects',
+          pages: {
+            per_page: 500,
+            next_url: null,
+            previous_url: null,
+          },
+          total_count: 100,
+          data_updated_at: '2024-01-01T00:00:00.000000Z',
+          data: [],
+        };
+
+        const result = await client.getNextPage(collection);
+
+        expect(result).toBeNull();
+        expect(mockFetch).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('retry logic', () => {
+      it('should retry on 500 error with exponential backoff', async () => {
+        // Using very small delays for testing
+        const clientWithRetry = new WaniKaniClient('test-api-key', {
+          maxRetries: 2,
+          initialDelayMs: 10,
+        });
+
+        mockFetch
+          .mockResolvedValueOnce({ ok: false, status: 500 })
+          .mockResolvedValueOnce({ ok: false, status: 500 })
+          .mockResolvedValueOnce({
+            ok: true,
+            status: 200,
+            json: async () => ({ data: 'success' }),
+          });
+
+        const result = await clientWithRetry.get('/test');
+
+        expect(result).toEqual({ data: 'success' });
+        expect(mockFetch).toHaveBeenCalledTimes(3);
+      });
+
+      it('should retry on 429 (rate limit) error', async () => {
+        const clientWithRetry = new WaniKaniClient('test-api-key', {
+          maxRetries: 1,
+          initialDelayMs: 10,
+        });
+
+        mockFetch
+          .mockResolvedValueOnce({ ok: false, status: 429 })
+          .mockResolvedValueOnce({
+            ok: true,
+            status: 200,
+            json: async () => ({ data: 'success' }),
+          });
+
+        const result = await clientWithRetry.get('/test');
+
+        expect(result).toEqual({ data: 'success' });
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+      });
+
+      it('should retry on network errors', async () => {
+        const clientWithRetry = new WaniKaniClient('test-api-key', {
+          maxRetries: 1,
+          initialDelayMs: 10,
+        });
+
+        mockFetch
+          .mockRejectedValueOnce(new Error('Network failed'))
+          .mockResolvedValueOnce({
+            ok: true,
+            status: 200,
+            json: async () => ({ data: 'success' }),
+          });
+
+        const result = await clientWithRetry.get('/test');
+
+        expect(result).toEqual({ data: 'success' });
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+      });
+
+      it('should not retry on 401 (unauthorized)', async () => {
+        const clientWithRetry = new WaniKaniClient('test-api-key', {
+          maxRetries: 3,
+          initialDelayMs: 10,
+        });
+
+        mockFetch.mockResolvedValueOnce({ ok: false, status: 401 });
+
+        await expect(clientWithRetry.get('/test')).rejects.toMatchObject({
+          code: 'UNAUTHORIZED',
+          retryable: false,
+        });
+
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+      });
+
+      it('should not retry on 404 (not found)', async () => {
+        const clientWithRetry = new WaniKaniClient('test-api-key', {
+          maxRetries: 3,
+          initialDelayMs: 10,
+        });
+
+        mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
+
+        await expect(clientWithRetry.get('/test')).rejects.toMatchObject({
+          code: 'NOT_FOUND',
+          retryable: false,
+        });
+
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+      });
+
+      it('should throw after max retries exceeded', async () => {
+        const clientWithRetry = new WaniKaniClient('test-api-key', {
+          maxRetries: 2,
+          initialDelayMs: 10,
+        });
+
+        mockFetch
+          .mockResolvedValueOnce({ ok: false, status: 500 })
+          .mockResolvedValueOnce({ ok: false, status: 500 })
+          .mockResolvedValueOnce({ ok: false, status: 500 });
+
+        await expect(clientWithRetry.get('/test')).rejects.toMatchObject({
+          code: 'INTERNAL_SERVER_ERROR',
+        });
+
+        expect(mockFetch).toHaveBeenCalledTimes(3);
+      });
+
+      it('should apply exponential backoff pattern', async () => {
+        // We verify the pattern by tracking time between retries
+        const startTimes: number[] = [];
+        const clientWithRetry = new WaniKaniClient('test-api-key', {
+          maxRetries: 2,
+          initialDelayMs: 50,
+        });
+
+        mockFetch.mockImplementation(() => {
+          startTimes.push(Date.now());
+          return Promise.resolve({ ok: false, status: 500 });
+        });
+
+        await expect(clientWithRetry.get('/test')).rejects.toThrow();
+
+        // Verify we had 3 attempts (initial + 2 retries)
+        expect(startTimes.length).toBe(3);
+
+        // Second delay should be roughly 2x the first
+        const delay1 = startTimes[1] - startTimes[0];
+        const delay2 = startTimes[2] - startTimes[1];
+
+        // Allow some tolerance for timing
+        expect(delay1).toBeGreaterThanOrEqual(40);
+        expect(delay1).toBeLessThan(150);
+        expect(delay2).toBeGreaterThanOrEqual(90);
+        expect(delay2).toBeLessThan(250);
+      });
+
+      it('should retry POST requests on transient failures', async () => {
+        const clientWithRetry = new WaniKaniClient('test-api-key', {
+          maxRetries: 1,
+          initialDelayMs: 10,
+        });
+
+        mockFetch
+          .mockResolvedValueOnce({ ok: false, status: 503 })
+          .mockResolvedValueOnce({
+            ok: true,
+            status: 200,
+            json: async () => ({ id: 1 }),
+          });
+
+        const result = await clientWithRetry.createReview({
+          assignment_id: 123,
+          incorrect_meaning_answers: 0,
+          incorrect_reading_answers: 0,
+        });
+
+        expect(result).toEqual({ id: 1 });
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+      });
+
+      it('should retry PUT requests on transient failures', async () => {
+        const clientWithRetry = new WaniKaniClient('test-api-key', {
+          maxRetries: 1,
+          initialDelayMs: 10,
+        });
+
+        mockFetch
+          .mockRejectedValueOnce(new Error('Connection reset'))
+          .mockResolvedValueOnce({
+            ok: true,
+            status: 200,
+            json: async () => ({ id: 1 }),
+          });
+
+        const result = await clientWithRetry.startAssignment(123);
+
+        expect(result).toEqual({ id: 1 });
+        expect(mockFetch).toHaveBeenCalledTimes(2);
       });
     });
   });

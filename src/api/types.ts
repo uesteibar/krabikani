@@ -220,6 +220,72 @@ export type Assignment = WaniKaniResource<AssignmentData> & {
 };
 
 // ============================================
+// Summary Types
+// ============================================
+
+export interface SummaryLesson {
+  available_at: string;
+  subject_ids: number[];
+}
+
+export interface SummaryReview {
+  available_at: string;
+  subject_ids: number[];
+}
+
+export interface SummaryData {
+  lessons: SummaryLesson[];
+  next_reviews_at: string | null;
+  reviews: SummaryReview[];
+}
+
+export interface Summary {
+  object: 'report';
+  url: string;
+  data_updated_at: string;
+  data: SummaryData;
+}
+
+// ============================================
+// Review Types
+// ============================================
+
+export interface ReviewData {
+  assignment_id: number;
+  created_at: string;
+  ending_srs_stage: number;
+  incorrect_meaning_answers: number;
+  incorrect_reading_answers: number;
+  spaced_repetition_system_id: number;
+  starting_srs_stage: number;
+  subject_id: number;
+}
+
+export type Review = WaniKaniResource<ReviewData> & {
+  object: 'review';
+};
+
+export interface CreateReviewParams {
+  assignment_id?: number;
+  subject_id?: number;
+  incorrect_meaning_answers: number;
+  incorrect_reading_answers: number;
+  created_at?: string;
+}
+
+export interface CreateReviewResponse {
+  id: number;
+  object: 'review';
+  url: string;
+  data_updated_at: string;
+  data: ReviewData;
+  resources_updated: {
+    assignment: Assignment;
+    review_statistic: WaniKaniResource<unknown>;
+  };
+}
+
+// ============================================
 // Error Types
 // ============================================
 
