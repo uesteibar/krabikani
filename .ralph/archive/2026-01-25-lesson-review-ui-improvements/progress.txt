@@ -1,0 +1,7 @@
+# Ralph Progress Log
+Started: Sat Jan 25 2026
+---
+
+## Codebase Patterns
+(To be filled in by Ralph during execution)
+
