@@ -4,18 +4,44 @@ import {
   render,
   waitFor,
 } from '@testing-library/react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
-import { Alert } from 'react-native';
+import { Alert, View, Text } from 'react-native';
 
 import { SettingsScreen } from '../../src/screens/SettingsScreen';
 import * as wanikaniApi from '../../src/api/wanikaniApi';
 import * as secureStorage from '../../src/storage/secureStorage';
 import * as syncService from '../../src/sync/syncService';
+import type { RootStackParamList } from '../../src/navigation/types';
 
 jest.mock('../../src/storage/secureStorage');
 jest.mock('../../src/api/wanikaniApi');
 jest.mock('../../src/sync/syncService');
 jest.spyOn(Alert, 'alert');
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
+
+// Mock Home screen for navigation tests
+function MockHomeScreen() {
+  return (
+    <View testID="home-screen">
+      <Text>Home Screen</Text>
+    </View>
+  );
+}
+
+// Wrapper for tests that need navigation
+function renderWithNavigation(initialRouteName: keyof RootStackParamList = 'Settings') {
+  return render(
+    <NavigationContainer>
+      <Stack.Navigator initialRouteName={initialRouteName}>
+        <Stack.Screen name="Home" component={MockHomeScreen} />
+        <Stack.Screen name="Settings" component={SettingsScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>,
+  );
+}
 
 const mockSecureStorage = secureStorage as jest.Mocked<typeof secureStorage>;
 const mockWanikaniApi = wanikaniApi as jest.Mocked<typeof wanikaniApi>;
@@ -48,7 +74,7 @@ describe('SettingsScreen', () => {
       () => new Promise(() => {}), // Never resolves
     );
 
-    const { getByTestId } = render(<SettingsScreen />);
+    const { getByTestId } = renderWithNavigation();
 
     // While loading, the input should not be visible
     expect(() => getByTestId('api-key-input')).toThrow();
@@ -57,7 +83,7 @@ describe('SettingsScreen', () => {
   it('should render empty input when no API key is stored', async () => {
     mockSecureStorage.getApiKey.mockResolvedValue(null);
 
-    const { getByTestId, queryByTestId } = render(<SettingsScreen />);
+    const { getByTestId, queryByTestId } = renderWithNavigation();
 
     await waitFor(() => {
       expect(getByTestId('api-key-input')).toBeTruthy();
@@ -70,7 +96,7 @@ describe('SettingsScreen', () => {
   it('should render stored API key and show clear button', async () => {
     mockSecureStorage.getApiKey.mockResolvedValue('existing-api-key');
 
-    const { getByTestId } = render(<SettingsScreen />);
+    const { getByTestId } = renderWithNavigation();
 
     await waitFor(() => {
       expect(getByTestId('api-key-input')).toBeTruthy();
@@ -86,8 +112,10 @@ describe('SettingsScreen', () => {
       success: true,
       user: { id: 123, username: 'happyuser', level: 15 },
     });
+    // Make sync never complete so we can see syncing UI
+    mockSyncService.getUserLevel.mockImplementation(() => new Promise(() => {}));
 
-    const { getByTestId } = render(<SettingsScreen />);
+    const { getByTestId } = renderWithNavigation();
 
     await waitFor(() => {
       expect(getByTestId('api-key-input')).toBeTruthy();
@@ -128,7 +156,7 @@ describe('SettingsScreen', () => {
       error: 'Invalid API key',
     });
 
-    const { getByTestId } = render(<SettingsScreen />);
+    const { getByTestId } = renderWithNavigation();
 
     await waitFor(() => {
       expect(getByTestId('api-key-input')).toBeTruthy();
@@ -159,7 +187,7 @@ describe('SettingsScreen', () => {
       error: 'Network error. Please check your internet connection.',
     });
 
-    const { getByTestId } = render(<SettingsScreen />);
+    const { getByTestId } = renderWithNavigation();
 
     await waitFor(() => {
       expect(getByTestId('api-key-input')).toBeTruthy();
@@ -181,7 +209,7 @@ describe('SettingsScreen', () => {
   it('should show error when saving empty API key', async () => {
     mockSecureStorage.getApiKey.mockResolvedValue(null);
 
-    const { getByTestId } = render(<SettingsScreen />);
+    const { getByTestId } = renderWithNavigation();
 
     await waitFor(() => {
       expect(getByTestId('api-key-input')).toBeTruthy();
@@ -211,7 +239,7 @@ describe('SettingsScreen', () => {
       error: 'Storage unavailable',
     });
 
-    const { getByTestId } = render(<SettingsScreen />);
+    const { getByTestId } = renderWithNavigation();
 
     await waitFor(() => {
       expect(getByTestId('api-key-input')).toBeTruthy();
@@ -228,7 +256,7 @@ describe('SettingsScreen', () => {
   it('should confirm before clearing API key', async () => {
     mockSecureStorage.getApiKey.mockResolvedValue('existing-key');
 
-    const { getByTestId } = render(<SettingsScreen />);
+    const { getByTestId } = renderWithNavigation();
 
     await waitFor(() => {
       expect(getByTestId('clear-button')).toBeTruthy();
@@ -249,7 +277,7 @@ describe('SettingsScreen', () => {
   it('should clear API key when confirmed', async () => {
     mockSecureStorage.getApiKey.mockResolvedValue('existing-key');
 
-    const { getByTestId, queryByTestId } = render(<SettingsScreen />);
+    const { getByTestId, queryByTestId } = renderWithNavigation();
 
     await waitFor(() => {
       expect(getByTestId('clear-button')).toBeTruthy();
@@ -280,7 +308,7 @@ describe('SettingsScreen', () => {
   it('should trim whitespace from API key when validating and saving', async () => {
     mockSecureStorage.getApiKey.mockResolvedValue(null);
 
-    const { getByTestId } = render(<SettingsScreen />);
+    const { getByTestId } = renderWithNavigation();
 
     await waitFor(() => {
       expect(getByTestId('api-key-input')).toBeTruthy();
@@ -305,8 +333,10 @@ describe('SettingsScreen', () => {
         success: true,
         user: { id: 1, username: 'testuser', level: 10 },
       });
+      // Make sync never complete so we can see syncing UI
+      mockSyncService.getUserLevel.mockImplementation(() => new Promise(() => {}));
 
-      const { getByTestId, queryByTestId } = render(<SettingsScreen />);
+      const { getByTestId, queryByTestId } = renderWithNavigation();
 
       await waitFor(() => {
         expect(getByTestId('api-key-input')).toBeTruthy();
@@ -331,8 +361,10 @@ describe('SettingsScreen', () => {
         success: true,
         user: { id: 1, username: 'testuser', level: 10 },
       });
+      // Make sync never complete so we can see syncing UI
+      mockSyncService.getUserLevel.mockImplementation(() => new Promise(() => {}));
 
-      const { getByTestId } = render(<SettingsScreen />);
+      const { getByTestId } = renderWithNavigation();
 
       await waitFor(() => {
         expect(getByTestId('api-key-input')).toBeTruthy();
@@ -357,7 +389,7 @@ describe('SettingsScreen', () => {
         error: 'Invalid API key',
       });
 
-      const { getByTestId, queryByTestId } = render(<SettingsScreen />);
+      const { getByTestId, queryByTestId } = renderWithNavigation();
 
       await waitFor(() => {
         expect(getByTestId('api-key-input')).toBeTruthy();
@@ -389,7 +421,7 @@ describe('SettingsScreen', () => {
         error: 'Storage unavailable',
       });
 
-      const { getByTestId, queryByTestId } = render(<SettingsScreen />);
+      const { getByTestId, queryByTestId } = renderWithNavigation();
 
       await waitFor(() => {
         expect(getByTestId('api-key-input')).toBeTruthy();
@@ -417,7 +449,7 @@ describe('SettingsScreen', () => {
       });
       mockSyncService.getUserLevel.mockResolvedValue(15);
 
-      const { getByTestId } = render(<SettingsScreen />);
+      const { getByTestId } = renderWithNavigation();
 
       await waitFor(() => {
         expect(getByTestId('api-key-input')).toBeTruthy();
@@ -443,7 +475,7 @@ describe('SettingsScreen', () => {
       });
       mockSyncService.getUserLevel.mockResolvedValue(12);
 
-      const { getByTestId } = render(<SettingsScreen />);
+      const { getByTestId } = renderWithNavigation();
 
       await waitFor(() => {
         expect(getByTestId('api-key-input')).toBeTruthy();
@@ -469,7 +501,7 @@ describe('SettingsScreen', () => {
         user: { id: 1, username: 'testuser', level: 10 },
       });
 
-      const { getByTestId } = render(<SettingsScreen />);
+      const { getByTestId } = renderWithNavigation();
 
       await waitFor(() => {
         expect(getByTestId('api-key-input')).toBeTruthy();
@@ -514,7 +546,7 @@ describe('SettingsScreen', () => {
         return { success: true, syncedCount: 50 };
       });
 
-      const { getByTestId } = render(<SettingsScreen />);
+      const { getByTestId } = renderWithNavigation();
 
       await waitFor(() => {
         expect(getByTestId('api-key-input')).toBeTruthy();
@@ -553,7 +585,7 @@ describe('SettingsScreen', () => {
         error: 'Invalid API key',
       });
 
-      const { getByTestId } = render(<SettingsScreen />);
+      const { getByTestId } = renderWithNavigation();
 
       await waitFor(() => {
         expect(getByTestId('api-key-input')).toBeTruthy();
@@ -585,7 +617,7 @@ describe('SettingsScreen', () => {
         error: 'Storage unavailable',
       });
 
-      const { getByTestId } = render(<SettingsScreen />);
+      const { getByTestId } = renderWithNavigation();
 
       await waitFor(() => {
         expect(getByTestId('api-key-input')).toBeTruthy();
@@ -601,6 +633,41 @@ describe('SettingsScreen', () => {
       expect(mockSyncService.getUserLevel).not.toHaveBeenCalled();
       expect(mockSyncService.syncSubjects).not.toHaveBeenCalled();
       expect(mockSyncService.syncAssignments).not.toHaveBeenCalled();
+    });
+
+    it('should navigate to Home screen after successful sync', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockWanikaniApi.validateApiKey.mockResolvedValue({
+        success: true,
+        user: { id: 1, username: 'testuser', level: 10 },
+      });
+      mockSyncService.getUserLevel.mockResolvedValue(10);
+      mockSyncService.syncSubjects.mockResolvedValue({
+        success: true,
+        syncedCount: 100,
+      });
+      mockSyncService.syncAssignments.mockResolvedValue({
+        success: true,
+        syncedCount: 50,
+      });
+
+      const { getByTestId, queryByTestId } = renderWithNavigation('Settings');
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('api-key-input'), 'valid-api-key');
+      fireEvent.press(getByTestId('save-button'));
+
+      // After sync completes, should navigate to Home screen
+      await waitFor(() => {
+        expect(getByTestId('home-screen')).toBeTruthy();
+      });
+
+      // Settings screen should no longer be visible
+      expect(queryByTestId('syncing-view')).toBeNull();
+      expect(queryByTestId('api-key-input')).toBeNull();
     });
   });
 });

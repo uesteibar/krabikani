@@ -39,6 +39,46 @@
 
 ---
 
+## 2026-01-25 - US-003: Navigate to Home after successful sync
+- What was implemented:
+  - Added useNavigation hook with typed NativeStackNavigationProp to SettingsScreen
+  - After successful sync (both syncSubjects and syncAssignments complete), navigates to Home screen
+  - Uses navigation.reset() to replace the navigation stack, preventing back navigation to Settings
+  - Home screen already has useFocusEffect that loads updated dashboard data including lesson/review counts and lastSyncedAt
+- Files changed:
+  - src/screens/SettingsScreen.tsx (added navigation imports and useNavigation hook, added navigation.reset() after sync)
+  - __tests__/screens/SettingsScreen.test.tsx (wrapped tests in NavigationContainer, added navigation test)
+  - .ralph/prd.json (marked US-003 as passes: true)
+  - .ralph/progress.txt (added this entry)
+- **Learnings for future iterations:**
+  - SettingsScreen tests now require NavigationContainer wrapper since it uses useNavigation
+  - Created renderWithNavigation() helper for all SettingsScreen tests
+  - For tests that need to see syncing UI, mock getUserLevel to return never-resolving promise
+  - Use navigation.reset() instead of navigate() to replace navigation stack entirely
+  - Home screen uses useFocusEffect to reload data when it becomes focused
+
+---
+
+## 2026-01-25 - US-002: Sync subjects and assignments after API key save
+- What was implemented:
+  - After successful API key save, creates WaniKaniClient with the validated key
+  - Calls getUserLevel(client) to fetch user's current level from WaniKani API
+  - Calls syncSubjects() and syncAssignments() in parallel using Promise.all()
+  - syncSubjects receives { maxLevel: userLevel } to sync subjects up to user's level
+  - Sync errors are caught but not yet handled (deferred to US-004)
+- Files changed:
+  - src/screens/SettingsScreen.tsx (added WaniKaniClient, sync imports, sync calls after save)
+  - __tests__/screens/SettingsScreen.test.tsx (added syncService mock, 6 new sync tests)
+  - .ralph/prd.json (marked US-002 as passes: true)
+- **Learnings for future iterations:**
+  - WaniKaniClient is instantiated with just the API key: `new WaniKaniClient(trimmedKey)`
+  - Sync functions take WaniKaniClient as first argument, options as second
+  - Test sync service by mocking `../../src/sync/syncService` module
+  - Verify parallel execution by tracking call order with timestamps in mock implementations
+  - Use `jest.Mocked<typeof module>` for type-safe mocking
+
+---
+
 ## 2026-01-25 - US-001: Show sync progress UI after API key validation
 - What was implemented:
   - Added isSyncing state to SettingsScreen to track sync progress

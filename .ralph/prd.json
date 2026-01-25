@@ -30,8 +30,8 @@
         "All quality checks pass"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "After successful API key save, creates WaniKaniClient with the saved key, fetches user level via getUserLevel(), then calls syncSubjects() and syncAssignments() in parallel using Promise.all(). Added 6 tests verifying: getUserLevel is called, syncSubjects receives correct maxLevel, syncAssignments is called, parallel execution, and no sync calls on validation/save failures. All 892 tests pass."
     },
     {
       "id": "US-003",
@@ -45,8 +45,8 @@
         "All quality checks pass"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added useNavigation hook to SettingsScreen. After successful sync, uses navigation.reset() to navigate to Home screen and replace the navigation stack (preventing back navigation to Settings). Home screen uses useFocusEffect to load dashboard data from the database, which includes updated lesson/review counts and lastSyncedAt time. Added test to verify navigation occurs after sync. All 893 tests pass."
     },
     {
       "id": "US-004",

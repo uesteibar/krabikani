@@ -1,3 +1,5 @@
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -10,9 +12,15 @@ import {
 } from 'react-native';
 
 import { validateApiKey, WaniKaniClient } from '../api';
+import type { RootStackParamList } from '../navigation/types';
 import { clearApiKey, getApiKey, saveApiKey } from '../storage';
 import { getUserLevel, syncSubjects, syncAssignments } from '../sync';
 import { COLORS, SPACING, FONT_SIZES } from '../theme';
+
+type SettingsScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'Settings'
+>;
 
 export type SettingsScreenState =
   | 'loading'
@@ -21,6 +29,7 @@ export type SettingsScreenState =
   | 'syncing';
 
 export function SettingsScreen() {
+  const navigation = useNavigation<SettingsScreenNavigationProp>();
   const [apiKey, setApiKey] = useState('');
   const [hasStoredKey, setHasStoredKey] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -82,6 +91,12 @@ export function SettingsScreen() {
             syncSubjects(client, { maxLevel: userLevel }),
             syncAssignments(client),
           ]);
+
+          // Navigate to Home screen after successful sync
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Home' }],
+          });
         } catch {
           // Sync errors will be handled in US-004
         }
