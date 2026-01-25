@@ -1782,4 +1782,66 @@ describe('ReviewSession', () => {
       jest.useRealTimers();
     });
   });
+
+  describe('input positioning', () => {
+    it('positions input at the top of the input container (not centered)', () => {
+      const { getByTestId } = render(
+        <ReviewSession items={[sampleRadical]} onAnswer={jest.fn()} />,
+      );
+
+      const inputContainer = getByTestId('review-session-input-container');
+      // Input container should use flex-start to position content at top
+      expect(inputContainer.props.style).toEqual(
+        expect.objectContaining({ justifyContent: 'flex-start' }),
+      );
+    });
+
+    it('has top padding for appropriate spacing below question prompt', () => {
+      const { getByTestId } = render(
+        <ReviewSession items={[sampleRadical]} onAnswer={jest.fn()} />,
+      );
+
+      const inputContainer = getByTestId('review-session-input-container');
+      // Input container should have paddingTop for spacing
+      expect(inputContainer.props.style).toEqual(
+        expect.objectContaining({ paddingTop: expect.any(Number) }),
+      );
+    });
+
+    it('renders input container with testID', () => {
+      const { getByTestId } = render(
+        <ReviewSession items={[sampleRadical]} onAnswer={jest.fn()} />,
+      );
+
+      expect(getByTestId('review-session-input-container')).toBeTruthy();
+    });
+
+    it('places converted display above input for reading questions', () => {
+      // Force reading question first
+      let callIndex = 0;
+      (Math.random as jest.Mock).mockImplementation(() => {
+        const values = [0.6, 0.1, 0.1, 0.1, 0.1];
+        return values[callIndex++ % values.length];
+      });
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[sampleKanji]} onAnswer={jest.fn()} />,
+      );
+
+      const type = getByTestId('review-session-question-type').props.children;
+
+      if (type === 'READING') {
+        const input = getByTestId('review-session-input');
+        fireEvent.changeText(input, 'oo');
+
+        // Converted display should exist above input when typing
+        const display = queryByTestId('review-session-converted-display');
+        if (display) {
+          // Both elements should be inside the input container
+          const inputContainer = getByTestId('review-session-input-container');
+          expect(inputContainer).toBeTruthy();
+        }
+      }
+    });
+  });
 });

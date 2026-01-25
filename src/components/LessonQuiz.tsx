@@ -622,7 +622,7 @@ export function LessonQuiz({
       </View>
 
       {/* Input area */}
-      <View style={styles.inputContainer}>
+      <View style={styles.inputContainer} testID="lesson-quiz-input-container">
         {/* For reading questions, show the converted display */}
         {type === 'reading' && displayText && (
           <Text
@@ -749,7 +749,8 @@ const styles = StyleSheet.create({
   inputContainer: {
     flex: 1,
     paddingHorizontal: SPACING.lg,
-    justifyContent: 'center',
+    paddingTop: SPACING.lg,
+    justifyContent: 'flex-start',
   },
   convertedDisplay: {
     fontSize: FONT_SIZES.xxxl,

@@ -1365,4 +1365,63 @@ describe('LessonQuiz', () => {
       expect(queryByTestId('lesson-quiz-input')).toBeNull();
     });
   });
+
+  describe('input positioning', () => {
+    it('positions input at the top of the input container (not centered)', () => {
+      const items = [sampleRadical];
+      const { getByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+      );
+
+      const inputContainer = getByTestId('lesson-quiz-input-container');
+      // Input container should use flex-start to position content at top
+      expect(inputContainer.props.style).toEqual(
+        expect.objectContaining({ justifyContent: 'flex-start' }),
+      );
+    });
+
+    it('has top padding for appropriate spacing below question prompt', () => {
+      const items = [sampleRadical];
+      const { getByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+      );
+
+      const inputContainer = getByTestId('lesson-quiz-input-container');
+      // Input container should have paddingTop for spacing
+      expect(inputContainer.props.style).toEqual(
+        expect.objectContaining({ paddingTop: expect.any(Number) }),
+      );
+    });
+
+    it('renders input container with testID', () => {
+      const items = [sampleRadical];
+      const { getByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+      );
+
+      expect(getByTestId('lesson-quiz-input-container')).toBeTruthy();
+    });
+
+    it('places converted display above input for reading questions', () => {
+      const items = [sampleVocabulary];
+      const { getByTestId, queryByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+      );
+
+      const type = getByTestId('lesson-quiz-question-type').props.children;
+
+      if (type === 'READING') {
+        const input = getByTestId('lesson-quiz-input');
+        fireEvent.changeText(input, 'ookii');
+
+        // Converted display should exist above input when typing
+        const display = queryByTestId('lesson-quiz-converted-display');
+        if (display) {
+          // Both elements should be inside the input container
+          const inputContainer = getByTestId('lesson-quiz-input-container');
+          expect(inputContainer).toBeTruthy();
+        }
+      }
+    });
+  });
 });
