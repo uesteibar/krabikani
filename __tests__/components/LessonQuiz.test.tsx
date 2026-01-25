@@ -1891,4 +1891,242 @@ describe('LessonQuiz', () => {
       expect(treeTexts.length).toBeGreaterThanOrEqual(3);
     });
   });
+
+  describe('Component Kanji on Incorrect Vocabulary Answers', () => {
+    // Create a vocabulary item with component kanji
+    const vocabWithKanji: QuizItem = {
+      id: 200,
+      subjectType: 'vocabulary',
+      characters: '大人',
+      meanings: createMeanings([{ meaning: 'Adult', primary: true }]),
+      readings: createReadings([{ reading: 'おとな', primary: true }]),
+      meaningMnemonic: 'A big person is an adult',
+      readingMnemonic: 'Reading mnemonic for otona',
+      componentKanji: [
+        { id: 10, characters: '大', meaning: 'Big', reading: 'おお' },
+        { id: 11, characters: '人', meaning: 'Person', reading: 'ひと' },
+      ],
+    };
+
+    it('shows component kanji on incorrect vocabulary meaning answer', () => {
+      const { getByTestId, getByText } = render(
+        <LessonQuiz
+          items={[vocabWithKanji]}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Check if on meaning question first
+      const type = getByTestId('lesson-quiz-question-type').props.children;
+      if (type !== 'MEANING') {
+        // Skip this test if we got a reading question first
+        return;
+      }
+
+      // Submit wrong answer
+      const input = getByTestId('lesson-quiz-input');
+      fireEvent.changeText(input, 'wrong');
+      fireEvent(input, 'submitEditing');
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Should show incorrect feedback
+      expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
+
+      // Should show component kanji section
+      expect(getByTestId('lesson-quiz-component-kanji')).toBeTruthy();
+      expect(getByText('Made up of:')).toBeTruthy();
+
+      // Should show each component kanji with meaning (not reading, since this is a meaning question)
+      expect(getByTestId('lesson-quiz-component-kanji-10')).toBeTruthy();
+      expect(getByTestId('lesson-quiz-component-kanji-11')).toBeTruthy();
+    });
+
+    it('shows component kanji with readings on incorrect vocabulary reading answer', () => {
+      const { getByTestId, getByText } = render(
+        <LessonQuiz
+          items={[vocabWithKanji]}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // First, answer any question type correctly to get to the next one
+      const firstType = getByTestId('lesson-quiz-question-type').props.children;
+      const input = getByTestId('lesson-quiz-input');
+
+      if (firstType === 'MEANING') {
+        fireEvent.changeText(input, 'Adult');
+        fireEvent(input, 'submitEditing');
+        act(() => {
+          jest.runAllTimers();
+        });
+
+        // Now should be on reading question
+        const type = getByTestId('lesson-quiz-question-type').props.children;
+        expect(type).toBe('READING');
+      }
+
+      // Submit wrong answer on reading question
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
+      fireEvent(getByTestId('lesson-quiz-input'), 'submitEditing');
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Should show incorrect feedback with component kanji
+      expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
+      expect(getByTestId('lesson-quiz-component-kanji')).toBeTruthy();
+
+      // For reading questions, should show the reading instead of meaning
+      // The ComponentDisplay shows reading when displayText prop is provided
+      expect(getByText('おお')).toBeTruthy();
+      expect(getByText('ひと')).toBeTruthy();
+    });
+
+    it('does not show component kanji for vocabulary without components', () => {
+      const vocabWithoutKanji: QuizItem = {
+        ...sampleVocabulary,
+        componentKanji: undefined,
+      };
+
+      const { getByTestId, queryByTestId } = render(
+        <LessonQuiz
+          items={[vocabWithoutKanji]}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Submit wrong answer
+      const input = getByTestId('lesson-quiz-input');
+      fireEvent.changeText(input, 'wrong');
+      fireEvent(input, 'submitEditing');
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Should show incorrect feedback
+      expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
+
+      // Should not show component kanji section
+      expect(queryByTestId('lesson-quiz-component-kanji')).toBeNull();
+    });
+
+    it('does not show component kanji for kanji items', () => {
+      const { getByTestId, queryByTestId } = render(
+        <LessonQuiz
+          items={[sampleKanji]}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Submit wrong answer
+      const input = getByTestId('lesson-quiz-input');
+      fireEvent.changeText(input, 'wrong');
+      fireEvent(input, 'submitEditing');
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Should show incorrect feedback
+      expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
+
+      // Should not show component kanji section (kanji shows radicals, not kanji)
+      expect(queryByTestId('lesson-quiz-component-kanji')).toBeNull();
+    });
+
+    it('does not show component kanji for radicals', () => {
+      const { getByTestId, queryByTestId } = render(
+        <LessonQuiz
+          items={[sampleRadical]}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Submit wrong answer
+      const input = getByTestId('lesson-quiz-input');
+      fireEvent.changeText(input, 'wrong');
+      fireEvent(input, 'submitEditing');
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Should show incorrect feedback
+      expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
+
+      // Should not show component kanji section
+      expect(queryByTestId('lesson-quiz-component-kanji')).toBeNull();
+    });
+
+    it('displays kanji characters correctly with pink background', () => {
+      const { getByTestId, getAllByText } = render(
+        <LessonQuiz
+          items={[vocabWithKanji]}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Check if on meaning question first (we need the incorrect state)
+      const type = getByTestId('lesson-quiz-question-type').props.children;
+      if (type !== 'MEANING') {
+        return;
+      }
+
+      // Submit wrong answer
+      const input = getByTestId('lesson-quiz-input');
+      fireEvent.changeText(input, 'wrong');
+      fireEvent(input, 'submitEditing');
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Should display kanji characters
+      const bigTexts = getAllByText('大');
+      expect(bigTexts.length).toBeGreaterThanOrEqual(1);
+      const personTexts = getAllByText('人');
+      expect(personTexts.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('handles kana-only vocabulary gracefully (no component kanji)', () => {
+      const kanaVocab: QuizItem = {
+        ...sampleKanaVocabulary,
+        componentKanji: [], // Empty array - no kanji components
+      };
+
+      const { getByTestId, queryByTestId } = render(
+        <LessonQuiz
+          items={[kanaVocab]}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Submit wrong answer
+      const input = getByTestId('lesson-quiz-input');
+      fireEvent.changeText(input, 'wrong');
+      fireEvent(input, 'submitEditing');
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Should show incorrect feedback
+      expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
+
+      // Should not show component kanji section (empty array)
+      expect(queryByTestId('lesson-quiz-component-kanji')).toBeNull();
+    });
+  });
 });

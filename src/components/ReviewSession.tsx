@@ -62,6 +62,18 @@ export interface ReviewComponentRadical {
   characterImages?: string | null;
 }
 
+/** Component kanji data for vocabulary review items */
+export interface ReviewComponentKanji {
+  /** Subject ID */
+  id: number;
+  /** Kanji character */
+  characters: string;
+  /** Primary meaning of the kanji */
+  meaning: string;
+  /** Primary reading of the kanji */
+  reading: string;
+}
+
 /** Data for a review item */
 export interface ReviewItem {
   /** Unique identifier for the item */
@@ -84,6 +96,8 @@ export interface ReviewItem {
   auxiliaryMeanings?: AuxiliaryMeaning[];
   /** Component radicals for kanji items (optional) */
   componentRadicals?: ReviewComponentRadical[];
+  /** Component kanji for vocabulary items (optional) */
+  componentKanji?: ReviewComponentKanji[];
 }
 
 /** Type of question being asked */
@@ -1060,6 +1074,35 @@ export function ReviewSession({
                       />
                     ),
                   )}
+                </View>
+              </View>
+            )}
+
+          {/* Component kanji for vocabulary items */}
+          {(incorrectFeedback.question.item.subjectType === 'vocabulary' ||
+            incorrectFeedback.question.item.subjectType === 'kana_vocabulary') &&
+            incorrectFeedback.question.item.componentKanji &&
+            incorrectFeedback.question.item.componentKanji.length > 0 && (
+              <View
+                style={styles.feedbackSection}
+                testID="review-session-component-kanji"
+              >
+                <Text style={styles.feedbackLabel}>Made up of:</Text>
+                <View style={styles.componentsRow}>
+                  {incorrectFeedback.question.item.componentKanji.map(kanji => (
+                    <ComponentDisplay
+                      key={kanji.id}
+                      subjectType="kanji"
+                      characters={kanji.characters}
+                      meaning={kanji.meaning}
+                      displayText={
+                        incorrectFeedback.question.type === 'reading'
+                          ? kanji.reading
+                          : undefined
+                      }
+                      testID={`review-session-component-kanji-${kanji.id}`}
+                    />
+                  ))}
                 </View>
               </View>
             )}

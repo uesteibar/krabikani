@@ -62,6 +62,18 @@ export interface QuizComponentRadical {
   characterImages?: string | null;
 }
 
+/** Component kanji data for vocabulary items */
+export interface QuizComponentKanji {
+  /** Subject ID */
+  id: number;
+  /** Kanji character */
+  characters: string;
+  /** Primary meaning of the kanji */
+  meaning: string;
+  /** Primary reading of the kanji */
+  reading: string;
+}
+
 /** Data for a quiz item (same as LessonItem but reused for clarity) */
 export interface QuizItem {
   /** Unique identifier for the item */
@@ -82,6 +94,8 @@ export interface QuizItem {
   auxiliaryMeanings?: AuxiliaryMeaning[];
   /** Component radicals for kanji items (optional) */
   componentRadicals?: QuizComponentRadical[];
+  /** Component kanji for vocabulary items (optional) */
+  componentKanji?: QuizComponentKanji[];
 }
 
 /** Type of question being asked */
@@ -671,6 +685,35 @@ export function LessonQuiz({
                       />
                     ),
                   )}
+                </View>
+              </View>
+            )}
+
+          {/* Component kanji for vocabulary items */}
+          {(incorrectFeedback.question.item.subjectType === 'vocabulary' ||
+            incorrectFeedback.question.item.subjectType === 'kana_vocabulary') &&
+            incorrectFeedback.question.item.componentKanji &&
+            incorrectFeedback.question.item.componentKanji.length > 0 && (
+              <View
+                style={styles.feedbackSection}
+                testID="lesson-quiz-component-kanji"
+              >
+                <Text style={styles.feedbackLabel}>Made up of:</Text>
+                <View style={styles.componentsRow}>
+                  {incorrectFeedback.question.item.componentKanji.map(kanji => (
+                    <ComponentDisplay
+                      key={kanji.id}
+                      subjectType="kanji"
+                      characters={kanji.characters}
+                      meaning={kanji.meaning}
+                      displayText={
+                        incorrectFeedback.question.type === 'reading'
+                          ? kanji.reading
+                          : undefined
+                      }
+                      testID={`lesson-quiz-component-kanji-${kanji.id}`}
+                    />
+                  ))}
                 </View>
               </View>
             )}

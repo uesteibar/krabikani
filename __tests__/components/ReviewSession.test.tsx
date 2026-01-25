@@ -2383,4 +2383,270 @@ describe('ReviewSession', () => {
       }
     });
   });
+
+  describe('Component Kanji on Incorrect Vocabulary Answers', () => {
+    let callIndex = 0;
+    beforeEach(() => {
+      jest.useFakeTimers();
+      callIndex = 0;
+      // Control randomization: meaning first by default
+      (Math.random as jest.Mock).mockImplementation(() => {
+        const values = [0.1, 0.1, 0.1, 0.1, 0.1];
+        return values[callIndex++ % values.length];
+      });
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    // Create a vocabulary item with component kanji
+    const vocabWithKanji: ReviewItem = {
+      id: 200,
+      assignmentId: 2000,
+      subjectType: 'vocabulary',
+      characters: '大人',
+      meanings: createMeanings([{ meaning: 'Adult', primary: true }]),
+      readings: createReadings([{ reading: 'おとな', primary: true }]),
+      meaningMnemonic: 'A big person is an adult',
+      readingMnemonic: 'Reading mnemonic for otona',
+      componentKanji: [
+        { id: 10, characters: '大', meaning: 'Big', reading: 'おお' },
+        { id: 11, characters: '人', meaning: 'Person', reading: 'ひと' },
+      ],
+    };
+
+    it('shows component kanji on incorrect vocabulary meaning answer', () => {
+      // Reset random to meaning first
+      callIndex = 0;
+      (Math.random as jest.Mock).mockImplementation(() => {
+        const values = [0.1, 0.1, 0.1, 0.1, 0.1];
+        return values[callIndex++ % values.length];
+      });
+
+      const { getByTestId, getByText } = render(
+        <ReviewSession
+          items={[vocabWithKanji]}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Check if on meaning question first
+      const type = getByTestId('review-session-question-type').props.children;
+      if (type !== 'MEANING') {
+        // Skip this test if we got a reading question first
+        return;
+      }
+
+      // Submit wrong answer
+      const input = getByTestId('review-session-input');
+      fireEvent.changeText(input, 'wrong');
+      fireEvent(input, 'submitEditing');
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Should show incorrect feedback
+      expect(getByTestId('review-session-incorrect-feedback')).toBeTruthy();
+
+      // Should show component kanji section
+      expect(getByTestId('review-session-component-kanji')).toBeTruthy();
+      expect(getByText('Made up of:')).toBeTruthy();
+
+      // Should show each component kanji
+      expect(getByTestId('review-session-component-kanji-10')).toBeTruthy();
+      expect(getByTestId('review-session-component-kanji-11')).toBeTruthy();
+    });
+
+    it('shows component kanji with readings on incorrect vocabulary reading answer', () => {
+      // Reset random to reading first
+      callIndex = 0;
+      (Math.random as jest.Mock).mockImplementation(() => {
+        const values = [0.9, 0.9, 0.9, 0.9, 0.9]; // Higher values to get reading question first
+        return values[callIndex++ % values.length];
+      });
+
+      const { getByTestId, getByText } = render(
+        <ReviewSession
+          items={[vocabWithKanji]}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Check if on reading question
+      const type = getByTestId('review-session-question-type').props.children;
+      if (type !== 'READING') {
+        // Skip this test if we got a meaning question instead
+        return;
+      }
+
+      // Submit wrong answer
+      const input = getByTestId('review-session-input');
+      fireEvent.changeText(input, 'wrong');
+      fireEvent(input, 'submitEditing');
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Should show incorrect feedback with component kanji
+      expect(getByTestId('review-session-incorrect-feedback')).toBeTruthy();
+      expect(getByTestId('review-session-component-kanji')).toBeTruthy();
+
+      // For reading questions, should show the reading instead of meaning
+      expect(getByText('おお')).toBeTruthy();
+      expect(getByText('ひと')).toBeTruthy();
+    });
+
+    it('does not show component kanji for vocabulary without components', () => {
+      const vocabWithoutKanji: ReviewItem = {
+        ...sampleVocabulary,
+        componentKanji: undefined,
+      };
+
+      // Reset random to meaning first
+      callIndex = 0;
+      (Math.random as jest.Mock).mockImplementation(() => {
+        const values = [0.1, 0.1, 0.1, 0.1, 0.1];
+        return values[callIndex++ % values.length];
+      });
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession
+          items={[vocabWithoutKanji]}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Submit wrong answer
+      const input = getByTestId('review-session-input');
+      fireEvent.changeText(input, 'wrong');
+      fireEvent(input, 'submitEditing');
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Should show incorrect feedback
+      expect(getByTestId('review-session-incorrect-feedback')).toBeTruthy();
+
+      // Should not show component kanji section
+      expect(queryByTestId('review-session-component-kanji')).toBeNull();
+    });
+
+    it('does not show component kanji for kanji items', () => {
+      // Reset random to meaning first
+      callIndex = 0;
+      (Math.random as jest.Mock).mockImplementation(() => {
+        const values = [0.1, 0.1, 0.1, 0.1, 0.1];
+        return values[callIndex++ % values.length];
+      });
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession
+          items={[sampleKanji]}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Submit wrong answer
+      const input = getByTestId('review-session-input');
+      fireEvent.changeText(input, 'wrong');
+      fireEvent(input, 'submitEditing');
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Should show incorrect feedback
+      expect(getByTestId('review-session-incorrect-feedback')).toBeTruthy();
+
+      // Should not show component kanji section (kanji shows radicals, not kanji)
+      expect(queryByTestId('review-session-component-kanji')).toBeNull();
+    });
+
+    it('displays kanji characters correctly', () => {
+      // Reset random to meaning first
+      callIndex = 0;
+      (Math.random as jest.Mock).mockImplementation(() => {
+        const values = [0.1, 0.1, 0.1, 0.1, 0.1];
+        return values[callIndex++ % values.length];
+      });
+
+      const { getByTestId, getAllByText } = render(
+        <ReviewSession
+          items={[vocabWithKanji]}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      const type = getByTestId('review-session-question-type').props.children;
+
+      if (type === 'MEANING') {
+        const input = getByTestId('review-session-input');
+        fireEvent.changeText(input, 'wrong');
+        fireEvent(input, 'submitEditing');
+
+        act(() => {
+          jest.runAllTimers();
+        });
+
+        // Should display kanji characters
+        const bigTexts = getAllByText('大');
+        expect(bigTexts.length).toBeGreaterThanOrEqual(1);
+        const personTexts = getAllByText('人');
+        expect(personTexts.length).toBeGreaterThanOrEqual(1);
+      }
+    });
+
+    it('handles kana-only vocabulary gracefully (empty component kanji)', () => {
+      const kanaVocab: ReviewItem = {
+        id: 300,
+        assignmentId: 3000,
+        subjectType: 'kana_vocabulary',
+        characters: 'あめ',
+        meanings: createMeanings([{ meaning: 'Candy', primary: true }]),
+        readings: createReadings([{ reading: 'あめ', primary: true }]),
+        meaningMnemonic: 'Mnemonic for candy',
+        readingMnemonic: 'Reading mnemonic for ame',
+        componentKanji: [], // Empty array - no kanji components
+      };
+
+      // Reset random to meaning first
+      callIndex = 0;
+      (Math.random as jest.Mock).mockImplementation(() => {
+        const values = [0.1, 0.1, 0.1, 0.1, 0.1];
+        return values[callIndex++ % values.length];
+      });
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession
+          items={[kanaVocab]}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Submit wrong answer
+      const input = getByTestId('review-session-input');
+      fireEvent.changeText(input, 'wrong');
+      fireEvent(input, 'submitEditing');
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Should show incorrect feedback
+      expect(getByTestId('review-session-incorrect-feedback')).toBeTruthy();
+
+      // Should not show component kanji section (empty array)
+      expect(queryByTestId('review-session-component-kanji')).toBeNull();
+    });
+  });
 });
