@@ -156,3 +156,22 @@ Started: Sun Jan 25 10:42:13 CET 2026
   - Focus suppression based on state flags (incorrectFeedback, showCorrectFeedback, isComplete) prevents unwanted keyboard flashes
   - ReviewSession tests must handle random question order - read displayed character to determine correct answer
 ---
+
+## 2026-01-25 - US-009
+- **What was implemented**: Fixed input positioning to prevent keyboard overlap
+  - Changed inputContainer style's `justifyContent` from `'center'` to `'flex-start'`
+  - Added `paddingTop: SPACING.lg` for appropriate spacing below the question prompt
+  - Added `testID` to inputContainer for testing (`lesson-quiz-input-container`, `review-session-input-container`)
+  - Reading conversion display (hiragana) remains above input due to unchanged JSX ordering
+  - Works in both LessonQuiz and ReviewSession components
+- **Files changed**:
+  - src/components/LessonQuiz.tsx (changed inputContainer style, added testID)
+  - src/components/ReviewSession.tsx (changed inputContainer style, added testID)
+  - __tests__/components/LessonQuiz.test.tsx (added 4 input positioning tests)
+  - __tests__/components/ReviewSession.test.tsx (added 4 input positioning tests)
+- **Learnings for future iterations**:
+  - Using `justifyContent: 'flex-start'` positions input at top of container instead of center
+  - `paddingTop` provides spacing between question prompt section and input area
+  - Adding testID to containers enables style-based testing with `expect.objectContaining`
+  - Pre-existing test failures in progress text format and SettingsScreen are unrelated to new features
+---
