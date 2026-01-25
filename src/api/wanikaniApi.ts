@@ -10,6 +10,10 @@ import type {
   WaniKaniCollection,
   SubjectData,
   AssignmentData,
+  StudyMaterial,
+  StudyMaterialData,
+  CreateStudyMaterialParams,
+  UpdateStudyMaterialParams,
 } from './types';
 
 const WANIKANI_API_BASE = 'https://api.wanikani.com/v2';
@@ -22,6 +26,7 @@ const INITIAL_RETRY_DELAY_MS = 1000;
 // Type alias for collections
 export type SubjectCollection = WaniKaniCollection<SubjectData>;
 export type AssignmentCollection = WaniKaniCollection<AssignmentData>;
+export type StudyMaterialCollection = WaniKaniCollection<StudyMaterialData>;
 
 // ============================================
 // Error Handling
@@ -408,6 +413,59 @@ export class WaniKaniClient {
    */
   async createReview(params: CreateReviewParams): Promise<CreateReviewResponse> {
     return this.post<CreateReviewResponse>('/reviews', { review: params });
+  }
+
+  /**
+   * Gets study materials with optional filters
+   */
+  async getStudyMaterials(params?: {
+    ids?: number[];
+    subject_ids?: number[];
+    subject_types?: ('radical' | 'kanji' | 'vocabulary' | 'kana_vocabulary')[];
+    hidden?: boolean;
+    updated_after?: string;
+  }): Promise<StudyMaterialCollection> {
+    const queryParams: Record<string, string | undefined> = {
+      ids: params?.ids?.length ? params.ids.join(',') : undefined,
+      subject_ids: params?.subject_ids?.length
+        ? params.subject_ids.join(',')
+        : undefined,
+      subject_types: params?.subject_types?.length
+        ? params.subject_types.join(',')
+        : undefined,
+      hidden: params?.hidden !== undefined ? String(params.hidden) : undefined,
+      updated_after: params?.updated_after,
+    };
+
+    const queryString = buildQueryString(queryParams);
+    const endpoint = queryString
+      ? `/study_materials?${queryString}`
+      : '/study_materials';
+    return this.get<StudyMaterialCollection>(endpoint);
+  }
+
+  /**
+   * Gets a single study material by ID
+   */
+  async getStudyMaterial(id: number): Promise<StudyMaterial> {
+    return this.get<StudyMaterial>(`/study_materials/${id}`);
+  }
+
+  /**
+   * Creates a study material for a subject
+   */
+  async createStudyMaterial(params: CreateStudyMaterialParams): Promise<StudyMaterial> {
+    return this.post<StudyMaterial>('/study_materials', { study_material: params });
+  }
+
+  /**
+   * Updates an existing study material
+   */
+  async updateStudyMaterial(
+    id: number,
+    params: UpdateStudyMaterialParams,
+  ): Promise<StudyMaterial> {
+    return this.put<StudyMaterial>(`/study_materials/${id}`, { study_material: params });
   }
 
   /**

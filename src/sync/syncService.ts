@@ -22,6 +22,10 @@ import {
   deletePendingReview,
   deleteAllPendingReviews,
   saveCachedUserLevel,
+  getPendingSynonyms,
+  deletePendingSynonymBySubjectAndSynonym,
+  deleteAllPendingSynonyms,
+  markSynonymSynced,
   type SubjectInput,
   type AssignmentInput,
   type PendingLessonInput,
@@ -850,6 +854,134 @@ export async function clearPendingReviews(): Promise<void> {
 }
 
 // ============================================
+// Synonym Sync Types
+// ============================================
+
+export interface SyncPendingSynonymsResult {
+  success: boolean;
+  syncedCount: number;
+  failedCount: number;
+  error?: string;
+}
+
+// ============================================
+// Synonym Sync Functions
+// ============================================
+
+/**
+ * Syncs all pending synonyms to WaniKani.
+ *
+ * For each pending synonym:
+ * 1. Check if a study material exists for the subject
+ * 2. If exists: GET to fetch current meaning_synonyms, add new synonym, PUT to update
+ * 3. If not exists: POST to create new study material with meaning_synonyms
+ * 4. On success: remove from pending_synonyms, update synced_at in user_synonyms
+ *
+ * @param client WaniKani API client
+ * @returns Result with counts of synced and failed synonyms
+ */
+export async function syncPendingSynonyms(
+  client: WaniKaniClient,
+): Promise<SyncPendingSynonymsResult> {
+  try {
+    const pendingSynonyms = await getPendingSynonyms();
+
+    if (pendingSynonyms.length === 0) {
+      return {
+        success: true,
+        syncedCount: 0,
+        failedCount: 0,
+      };
+    }
+
+    let syncedCount = 0;
+    let failedCount = 0;
+
+    // Group pending synonyms by subject_id to batch API calls
+    const synonymsBySubject = new Map<number, string[]>();
+    for (const pending of pendingSynonyms) {
+      const existing = synonymsBySubject.get(pending.subject_id) || [];
+      existing.push(pending.synonym);
+      synonymsBySubject.set(pending.subject_id, existing);
+    }
+
+    for (const [subjectId, newSynonyms] of synonymsBySubject) {
+      try {
+        // Get existing study material for this subject
+        const studyMaterials = await client.getStudyMaterials({
+          subject_ids: [subjectId],
+        });
+
+        let existingSynonyms: string[] = [];
+        let studyMaterialId: number | null = null;
+
+        if (studyMaterials.data.length > 0) {
+          // Study material exists
+          const material = studyMaterials.data[0];
+          studyMaterialId = material.id;
+          existingSynonyms = material.data.meaning_synonyms || [];
+        }
+
+        // Merge existing synonyms with new ones (avoid duplicates)
+        const mergedSynonyms = [...new Set([...existingSynonyms, ...newSynonyms])];
+
+        if (studyMaterialId !== null) {
+          // Update existing study material
+          await client.updateStudyMaterial(studyMaterialId, {
+            meaning_synonyms: mergedSynonyms,
+          });
+        } else {
+          // Create new study material
+          await client.createStudyMaterial({
+            subject_id: subjectId,
+            meaning_synonyms: mergedSynonyms,
+          });
+        }
+
+        // Mark synonyms as synced in user_synonyms
+        for (const synonym of newSynonyms) {
+          await markSynonymSynced(subjectId, synonym);
+        }
+
+        // Remove synced synonyms from pending queue
+        for (const synonym of newSynonyms) {
+          await deletePendingSynonymBySubjectAndSynonym(subjectId, synonym);
+          syncedCount++;
+        }
+      } catch {
+        // Continue with next subject on failure
+        failedCount += newSynonyms.length;
+      }
+    }
+
+    return {
+      success: failedCount === 0,
+      syncedCount,
+      failedCount,
+    };
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : 'Unknown error syncing pending synonyms';
+    return {
+      success: false,
+      syncedCount: 0,
+      failedCount: 0,
+      error: errorMessage,
+    };
+  }
+}
+
+/**
+ * Clears all pending synonyms from the queue.
+ * Useful after successful sync or for cleanup.
+ */
+export async function clearPendingSynonyms(): Promise<void> {
+  await deleteAllPendingSynonyms();
+}
+
+// ============================================
 // Sync All Pending Data
 // ============================================
 
@@ -857,20 +989,21 @@ export interface SyncPendingDataResult {
   success: boolean;
   lessons: SyncPendingLessonsResult;
   reviews: SyncPendingReviewsResult;
+  synonyms: SyncPendingSynonymsResult;
 }
 
 /**
- * Syncs all pending data (lessons and reviews) when coming back online.
+ * Syncs all pending data (lessons, reviews, and synonyms) when coming back online.
  * This should be called when network connectivity is restored.
  *
  * Features:
- * - Syncs pending lessons first, then pending reviews
- * - Continues syncing reviews even if some lessons fail
- * - Returns combined results for both operations
+ * - Syncs pending lessons first, then pending reviews, then pending synonyms
+ * - Continues syncing subsequent types even if some earlier ones fail
+ * - Returns combined results for all operations
  * - Zero data loss: failed items remain in queue for retry
  *
  * @param client WaniKani API client
- * @returns Combined result with lesson and review sync results
+ * @returns Combined result with lesson, review, and synonym sync results
  */
 export async function syncPendingData(
   client: WaniKaniClient,
@@ -881,10 +1014,14 @@ export async function syncPendingData(
   // Then sync pending reviews (even if lessons had failures)
   const reviewsResult = await syncPendingReviews(client);
 
+  // Then sync pending synonyms (even if reviews had failures)
+  const synonymsResult = await syncPendingSynonyms(client);
+
   return {
-    success: lessonsResult.success && reviewsResult.success,
+    success: lessonsResult.success && reviewsResult.success && synonymsResult.success,
     lessons: lessonsResult,
     reviews: reviewsResult,
+    synonyms: synonymsResult,
   };
 }
 

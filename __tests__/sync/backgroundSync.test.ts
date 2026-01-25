@@ -22,6 +22,10 @@ jest.mock('../../src/storage/database', () => ({
   deleteAllPendingLessons: jest.fn().mockResolvedValue(undefined),
   deleteAllPendingReviews: jest.fn().mockResolvedValue(undefined),
   saveCachedUserLevel: jest.fn().mockResolvedValue(undefined),
+  getPendingSynonyms: jest.fn().mockResolvedValue([]),
+  deletePendingSynonymBySubjectAndSynonym: jest.fn().mockResolvedValue(undefined),
+  deleteAllPendingSynonyms: jest.fn().mockResolvedValue(undefined),
+  markSynonymSynced: jest.fn().mockResolvedValue(undefined),
 }));
 
 // Create a mock fetch for API tests

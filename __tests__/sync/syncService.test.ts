@@ -11,6 +11,8 @@ import {
   syncPendingReviews,
   clearPendingReviews,
   syncPendingData,
+  syncPendingSynonyms,
+  clearPendingSynonyms,
 } from '../../src/sync/syncService';
 import { WaniKaniClient, WaniKaniApiError } from '../../src/api/wanikaniApi';
 import type {
@@ -33,6 +35,11 @@ import {
   getPendingLessonCount,
   getAllPendingReviews,
   getPendingReviewCount,
+  insertPendingSynonym,
+  getPendingSynonymCount,
+  getPendingSynonyms,
+  addUserSynonym,
+  getUserSynonymsBySubjectId,
 } from '../../src/storage/database';
 import { __resetMockDatabase } from '../../__mocks__/@op-engineering/op-sqlite';
 
@@ -1987,6 +1994,367 @@ describe('syncService', () => {
       expect(pendingReviews[0].assignment_id).toBe(100);
       expect(pendingReviews[0].incorrect_meaning_answers).toBe(1);
       expect(pendingReviews[0].incorrect_reading_answers).toBe(0);
+    });
+
+    it('should include synonyms result in syncPendingData', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      // Add a pending synonym and corresponding user synonym
+      await addUserSynonym({ subject_id: 42, synonym: 'test-synonym' });
+      await insertPendingSynonym({ subject_id: 42, synonym: 'test-synonym' });
+
+      // Mock: no existing study material
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          object: 'collection',
+          data: [],
+          total_count: 0,
+          pages: { per_page: 500, next_url: null, previous_url: null },
+        }),
+      });
+
+      // Mock: create study material
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: 1,
+          object: 'study_material',
+          data: {
+            subject_id: 42,
+            meaning_synonyms: ['test-synonym'],
+          },
+        }),
+      });
+
+      const result = await syncPendingData(client);
+
+      expect(result.synonyms).toBeDefined();
+      expect(result.synonyms.syncedCount).toBe(1);
+      expect(result.synonyms.failedCount).toBe(0);
+    });
+  });
+
+  describe('syncPendingSynonyms', () => {
+    it('should return success when no pending synonyms exist', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      const result = await syncPendingSynonyms(client);
+
+      expect(result.success).toBe(true);
+      expect(result.syncedCount).toBe(0);
+      expect(result.failedCount).toBe(0);
+    });
+
+    it('should create new study material when none exists for subject', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      // Add a user synonym and pending synonym
+      await addUserSynonym({ subject_id: 42, synonym: 'my synonym' });
+      await insertPendingSynonym({ subject_id: 42, synonym: 'my synonym' });
+
+      // Mock: no existing study material
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          object: 'collection',
+          url: 'https://api.wanikani.com/v2/study_materials',
+          pages: { per_page: 500, next_url: null, previous_url: null },
+          total_count: 0,
+          data_updated_at: null,
+          data: [],
+        }),
+      });
+
+      // Mock: create study material
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: 1,
+          object: 'study_material',
+          url: 'https://api.wanikani.com/v2/study_materials/1',
+          data_updated_at: '2024-01-01T00:00:00.000000Z',
+          data: {
+            created_at: '2024-01-01T00:00:00.000000Z',
+            hidden: false,
+            meaning_note: null,
+            meaning_synonyms: ['my synonym'],
+            reading_note: null,
+            subject_id: 42,
+            subject_type: 'vocabulary',
+          },
+        }),
+      });
+
+      const result = await syncPendingSynonyms(client);
+
+      expect(result.success).toBe(true);
+      expect(result.syncedCount).toBe(1);
+      expect(result.failedCount).toBe(0);
+
+      // Verify pending synonym was removed
+      const pendingCount = await getPendingSynonymCount();
+      expect(pendingCount).toBe(0);
+
+      // Verify API calls
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      // First call: GET study_materials with subject_ids filter
+      expect(mockFetch.mock.calls[0][0]).toContain('/study_materials');
+      expect(mockFetch.mock.calls[0][0]).toContain('subject_ids=42');
+      // Second call: POST to create study_material
+      expect(mockFetch.mock.calls[1][0]).toBe(
+        'https://api.wanikani.com/v2/study_materials',
+      );
+    });
+
+    it('should update existing study material and merge synonyms', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      // Add a user synonym and pending synonym
+      await addUserSynonym({ subject_id: 42, synonym: 'new synonym' });
+      await insertPendingSynonym({ subject_id: 42, synonym: 'new synonym' });
+
+      // Mock: existing study material with one synonym
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          object: 'collection',
+          url: 'https://api.wanikani.com/v2/study_materials',
+          pages: { per_page: 500, next_url: null, previous_url: null },
+          total_count: 1,
+          data_updated_at: '2024-01-01T00:00:00.000000Z',
+          data: [
+            {
+              id: 100,
+              object: 'study_material',
+              url: 'https://api.wanikani.com/v2/study_materials/100',
+              data_updated_at: '2024-01-01T00:00:00.000000Z',
+              data: {
+                created_at: '2024-01-01T00:00:00.000000Z',
+                hidden: false,
+                meaning_note: null,
+                meaning_synonyms: ['existing synonym'],
+                reading_note: null,
+                subject_id: 42,
+                subject_type: 'vocabulary',
+              },
+            },
+          ],
+        }),
+      });
+
+      // Mock: update study material
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: 100,
+          object: 'study_material',
+          data: {
+            subject_id: 42,
+            meaning_synonyms: ['existing synonym', 'new synonym'],
+          },
+        }),
+      });
+
+      const result = await syncPendingSynonyms(client);
+
+      expect(result.success).toBe(true);
+      expect(result.syncedCount).toBe(1);
+
+      // Verify API call was PUT to update
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      const [url, options] = mockFetch.mock.calls[1];
+      expect(url).toBe('https://api.wanikani.com/v2/study_materials/100');
+      expect(options.method).toBe('PUT');
+      const body = JSON.parse(options.body);
+      expect(body.study_material.meaning_synonyms).toContain('existing synonym');
+      expect(body.study_material.meaning_synonyms).toContain('new synonym');
+    });
+
+    it('should sync multiple synonyms for same subject in one batch', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      // Add multiple synonyms for the same subject
+      await addUserSynonym({ subject_id: 42, synonym: 'synonym1' });
+      await addUserSynonym({ subject_id: 42, synonym: 'synonym2' });
+      await insertPendingSynonym({ subject_id: 42, synonym: 'synonym1' });
+      await insertPendingSynonym({ subject_id: 42, synonym: 'synonym2' });
+
+      // Mock: no existing study material
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          object: 'collection',
+          data: [],
+          total_count: 0,
+          pages: { per_page: 500, next_url: null, previous_url: null },
+        }),
+      });
+
+      // Mock: create study material
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: 1,
+          object: 'study_material',
+          data: {
+            subject_id: 42,
+            meaning_synonyms: ['synonym1', 'synonym2'],
+          },
+        }),
+      });
+
+      const result = await syncPendingSynonyms(client);
+
+      expect(result.success).toBe(true);
+      expect(result.syncedCount).toBe(2);
+      expect(result.failedCount).toBe(0);
+
+      // Verify only 2 API calls were made (GET + POST), not one per synonym
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+
+      // Verify both synonyms were included in the create call
+      const [, options] = mockFetch.mock.calls[1];
+      const body = JSON.parse(options.body);
+      expect(body.study_material.meaning_synonyms).toContain('synonym1');
+      expect(body.study_material.meaning_synonyms).toContain('synonym2');
+    });
+
+    it('should mark user synonyms as synced after successful sync', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      // Add user synonym and pending synonym
+      await addUserSynonym({ subject_id: 42, synonym: 'my synonym' });
+      await insertPendingSynonym({ subject_id: 42, synonym: 'my synonym' });
+
+      // Verify synced_at is null initially
+      const beforeSync = await getUserSynonymsBySubjectId(42);
+      expect(beforeSync[0].synced_at).toBeNull();
+
+      // Mock API calls
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          object: 'collection',
+          data: [],
+          total_count: 0,
+          pages: { per_page: 500, next_url: null, previous_url: null },
+        }),
+      });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: 1,
+          object: 'study_material',
+          data: { subject_id: 42, meaning_synonyms: ['my synonym'] },
+        }),
+      });
+
+      await syncPendingSynonyms(client);
+
+      // Verify synced_at is now set
+      const afterSync = await getUserSynonymsBySubjectId(42);
+      expect(afterSync[0].synced_at).not.toBeNull();
+    });
+
+    it('should continue on individual subject failure', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      // Add synonyms for two different subjects
+      await addUserSynonym({ subject_id: 42, synonym: 'synonym42' });
+      await addUserSynonym({ subject_id: 43, synonym: 'synonym43' });
+      await insertPendingSynonym({ subject_id: 42, synonym: 'synonym42' });
+      await insertPendingSynonym({ subject_id: 43, synonym: 'synonym43' });
+
+      // First subject: GET fails
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+      });
+
+      // Second subject: GET succeeds (no existing material)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          object: 'collection',
+          data: [],
+          total_count: 0,
+          pages: { per_page: 500, next_url: null, previous_url: null },
+        }),
+      });
+
+      // Second subject: POST succeeds
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: 1,
+          object: 'study_material',
+          data: { subject_id: 43, meaning_synonyms: ['synonym43'] },
+        }),
+      });
+
+      const result = await syncPendingSynonyms(client);
+
+      expect(result.success).toBe(false); // Not all succeeded
+      expect(result.syncedCount).toBe(1);
+      expect(result.failedCount).toBe(1);
+
+      // Failed synonym should still be in pending queue
+      const pending = await getPendingSynonyms();
+      expect(pending).toHaveLength(1);
+      expect(pending[0].subject_id).toBe(42);
+    });
+
+    it('should handle API error and return error result', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      // Add a pending synonym
+      await addUserSynonym({ subject_id: 42, synonym: 'my synonym' });
+      await insertPendingSynonym({ subject_id: 42, synonym: 'my synonym' });
+
+      // Mock: API error
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+      });
+
+      const result = await syncPendingSynonyms(client);
+
+      expect(result.success).toBe(false);
+      expect(result.syncedCount).toBe(0);
+      expect(result.failedCount).toBe(1);
+
+      // Synonym should still be in pending queue
+      const pendingCount = await getPendingSynonymCount();
+      expect(pendingCount).toBe(1);
+    });
+  });
+
+  describe('clearPendingSynonyms', () => {
+    it('should clear all pending synonyms', async () => {
+      // Add some pending synonyms
+      await insertPendingSynonym({ subject_id: 1, synonym: 'synonym1' });
+      await insertPendingSynonym({ subject_id: 2, synonym: 'synonym2' });
+
+      let pendingCount = await getPendingSynonymCount();
+      expect(pendingCount).toBe(2);
+
+      await clearPendingSynonyms();
+
+      pendingCount = await getPendingSynonymCount();
+      expect(pendingCount).toBe(0);
     });
   });
 });

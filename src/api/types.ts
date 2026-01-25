@@ -286,6 +286,37 @@ export interface CreateReviewResponse {
 }
 
 // ============================================
+// Study Material Types
+// ============================================
+
+export interface StudyMaterialData {
+  created_at: string;
+  hidden: boolean;
+  meaning_note: string | null;
+  meaning_synonyms: string[];
+  reading_note: string | null;
+  subject_id: number;
+  subject_type: SubjectType;
+}
+
+export type StudyMaterial = WaniKaniResource<StudyMaterialData> & {
+  object: 'study_material';
+};
+
+export interface CreateStudyMaterialParams {
+  subject_id: number;
+  meaning_note?: string;
+  reading_note?: string;
+  meaning_synonyms?: string[];
+}
+
+export interface UpdateStudyMaterialParams {
+  meaning_note?: string;
+  reading_note?: string;
+  meaning_synonyms?: string[];
+}
+
+// ============================================
 // Error Types
 // ============================================
 

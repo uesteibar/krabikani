@@ -677,6 +677,178 @@ describe('wanikaniApi', () => {
       });
     });
 
+    describe('getStudyMaterials', () => {
+      it('should fetch study materials without filters', async () => {
+        const mockStudyMaterials = {
+          object: 'collection',
+          url: 'https://api.wanikani.com/v2/study_materials',
+          pages: {
+            per_page: 500,
+            next_url: null,
+            previous_url: null,
+          },
+          total_count: 1,
+          data_updated_at: '2024-01-01T00:00:00.000000Z',
+          data: [
+            {
+              id: 1,
+              object: 'study_material',
+              data: {
+                subject_id: 1,
+                meaning_synonyms: ['test'],
+              },
+            },
+          ],
+        };
+
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockStudyMaterials,
+        });
+
+        const result = await client.getStudyMaterials();
+
+        expect(result).toEqual(mockStudyMaterials);
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.wanikani.com/v2/study_materials',
+          expect.any(Object),
+        );
+      });
+
+      it('should fetch study materials with subject_ids filter', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ data: [] }),
+        });
+
+        await client.getStudyMaterials({
+          subject_ids: [1, 2, 3],
+        });
+
+        expect(mockFetch).toHaveBeenCalledWith(
+          expect.stringContaining('/study_materials?'),
+          expect.any(Object),
+        );
+        const calledUrl = mockFetch.mock.calls[0][0] as string;
+        expect(calledUrl).toContain('subject_ids=1%2C2%2C3');
+      });
+
+      it('should fetch a single study material by ID', async () => {
+        const mockStudyMaterial = {
+          id: 1,
+          object: 'study_material',
+          data: {
+            subject_id: 1,
+            meaning_synonyms: ['test'],
+          },
+        };
+
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockStudyMaterial,
+        });
+
+        const result = await client.getStudyMaterial(1);
+
+        expect(result).toEqual(mockStudyMaterial);
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.wanikani.com/v2/study_materials/1',
+          expect.any(Object),
+        );
+      });
+    });
+
+    describe('createStudyMaterial', () => {
+      it('should create a study material', async () => {
+        const mockResponse = {
+          id: 1,
+          object: 'study_material',
+          url: 'https://api.wanikani.com/v2/study_materials/1',
+          data_updated_at: '2024-01-01T00:00:00.000000Z',
+          data: {
+            created_at: '2024-01-01T00:00:00.000000Z',
+            hidden: false,
+            meaning_note: null,
+            meaning_synonyms: ['synonym1', 'synonym2'],
+            reading_note: null,
+            subject_id: 42,
+            subject_type: 'vocabulary',
+          },
+        };
+
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockResponse,
+        });
+
+        const result = await client.createStudyMaterial({
+          subject_id: 42,
+          meaning_synonyms: ['synonym1', 'synonym2'],
+        });
+
+        expect(result).toEqual(mockResponse);
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.wanikani.com/v2/study_materials',
+          expect.objectContaining({
+            method: 'POST',
+            body: JSON.stringify({
+              study_material: {
+                subject_id: 42,
+                meaning_synonyms: ['synonym1', 'synonym2'],
+              },
+            }),
+          }),
+        );
+      });
+    });
+
+    describe('updateStudyMaterial', () => {
+      it('should update a study material', async () => {
+        const mockResponse = {
+          id: 1,
+          object: 'study_material',
+          url: 'https://api.wanikani.com/v2/study_materials/1',
+          data_updated_at: '2024-01-01T00:00:00.000000Z',
+          data: {
+            created_at: '2024-01-01T00:00:00.000000Z',
+            hidden: false,
+            meaning_note: null,
+            meaning_synonyms: ['synonym1', 'synonym2', 'synonym3'],
+            reading_note: null,
+            subject_id: 42,
+            subject_type: 'vocabulary',
+          },
+        };
+
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockResponse,
+        });
+
+        const result = await client.updateStudyMaterial(1, {
+          meaning_synonyms: ['synonym1', 'synonym2', 'synonym3'],
+        });
+
+        expect(result).toEqual(mockResponse);
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.wanikani.com/v2/study_materials/1',
+          expect.objectContaining({
+            method: 'PUT',
+            body: JSON.stringify({
+              study_material: {
+                meaning_synonyms: ['synonym1', 'synonym2', 'synonym3'],
+              },
+            }),
+          }),
+        );
+      });
+    });
+
     describe('getNextPage', () => {
       it('should fetch the next page of a collection', async () => {
         const nextPageData = {
