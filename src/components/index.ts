@@ -92,3 +92,8 @@ export {
 export { RadicalImage, type RadicalImageProps } from './RadicalImage';
 
 export { LevelIndicator, type LevelIndicatorProps } from './LevelIndicator';
+
+export {
+  ComponentDisplay,
+  type ComponentDisplayProps,
+} from './ComponentDisplay';
