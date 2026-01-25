@@ -13,6 +13,25 @@ Started: Sun Jan 25 20:13:24 CET 2026
 
 ---
 
+## 2026-01-25 - US-012
+- **What was implemented**: Block submission of invalid reading answers with shake feedback in both LessonQuiz and ReviewSession
+- **Files changed**:
+  - `src/utils/romajiToHiragana.ts` - Added isAllHiragana() function that validates a string contains only hiragana characters, added isValidReadingInput() function that validates input is non-empty and converts fully to hiragana
+  - `src/utils/index.ts` - Exported isAllHiragana and isValidReadingInput functions
+  - `src/components/LessonQuiz.tsx` - Imported isValidReadingInput, replaced hasRomajiCharacters check with isValidReadingInput validation, removed unused hasRomajiCharacters callback
+  - `src/components/ReviewSession.tsx` - Same changes as LessonQuiz for consistency
+  - `__tests__/utils/romajiToHiragana.test.ts` - Added 35 tests for isAllHiragana() and isValidReadingInput() functions covering various valid and invalid input scenarios
+  - `__tests__/components/LessonQuiz.test.tsx` - Added 8 tests for invalid reading input blocking including empty, whitespace, unconvertible romaji, partial romaji, and valid inputs
+  - `__tests__/components/ReviewSession.test.tsx` - Added 8 tests for invalid reading input blocking matching LessonQuiz tests
+- **Learnings for future iterations:**
+  - isAllHiragana() checks Unicode range 0x3040-0x309F for hiragana characters (includes all hiragana including small kana and ん)
+  - isValidReadingInput() combines empty check, trim, romaji conversion, and hiragana validation in one function
+  - The shake animation was already implemented in both components - just needed proper validation before triggering
+  - Existing tests that use 'wrong' for reading questions need to be updated to use valid hiragana like 'あああ' since invalid inputs are now blocked
+  - When updating test assertions, use dynamic question type checks to handle either meaning or reading questions appropriately
+
+---
+
 ## 2026-01-25 - US-011
 - **What was implemented**: Show component kanji on incorrect vocabulary answer screens in both LessonQuiz and ReviewSession
 - **Files changed**:

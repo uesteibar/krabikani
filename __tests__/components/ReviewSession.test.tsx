@@ -1829,8 +1829,10 @@ describe('ReviewSession', () => {
         <ReviewSession items={[sampleKanji]} autoAdvanceDelay={0} />,
       );
 
-      // Submit wrong answer
-      fireEvent.changeText(getByTestId('review-session-input'), 'wrong');
+      // Submit wrong answer - use appropriate format based on question type
+      const type = getByTestId('review-session-question-type').props.children;
+      const wrongAnswer = type === 'READING' ? 'あああ' : 'wrong';
+      fireEvent.changeText(getByTestId('review-session-input'), wrongAnswer);
       fireEvent.press(getByTestId('review-session-submit'));
 
       // Press Mark as Correct
@@ -2483,9 +2485,9 @@ describe('ReviewSession', () => {
         return;
       }
 
-      // Submit wrong answer
+      // Submit wrong answer (use valid hiragana, not romaji that can't convert)
       const input = getByTestId('review-session-input');
-      fireEvent.changeText(input, 'wrong');
+      fireEvent.changeText(input, 'あああ');
       fireEvent(input, 'submitEditing');
 
       act(() => {
@@ -2522,9 +2524,11 @@ describe('ReviewSession', () => {
         />,
       );
 
-      // Submit wrong answer
+      // Submit wrong answer - use appropriate format based on question type
       const input = getByTestId('review-session-input');
-      fireEvent.changeText(input, 'wrong');
+      const type = getByTestId('review-session-question-type').props.children;
+      const wrongAnswer = type === 'READING' ? 'あああ' : 'wrong';
+      fireEvent.changeText(input, wrongAnswer);
       fireEvent(input, 'submitEditing');
 
       act(() => {
@@ -2554,9 +2558,11 @@ describe('ReviewSession', () => {
         />,
       );
 
-      // Submit wrong answer
+      // Submit wrong answer - use appropriate format based on question type
       const input = getByTestId('review-session-input');
-      fireEvent.changeText(input, 'wrong');
+      const type = getByTestId('review-session-question-type').props.children;
+      const wrongAnswer = type === 'READING' ? 'あああ' : 'wrong';
+      fireEvent.changeText(input, wrongAnswer);
       fireEvent(input, 'submitEditing');
 
       act(() => {
@@ -2633,9 +2639,11 @@ describe('ReviewSession', () => {
         />,
       );
 
-      // Submit wrong answer
+      // Submit wrong answer - use appropriate format based on question type
       const input = getByTestId('review-session-input');
-      fireEvent.changeText(input, 'wrong');
+      const type = getByTestId('review-session-question-type').props.children;
+      const wrongAnswer = type === 'READING' ? 'あああ' : 'wrong';
+      fireEvent.changeText(input, wrongAnswer);
       fireEvent(input, 'submitEditing');
 
       act(() => {
@@ -2647,6 +2655,204 @@ describe('ReviewSession', () => {
 
       // Should not show component kanji section (empty array)
       expect(queryByTestId('review-session-component-kanji')).toBeNull();
+    });
+  });
+
+  describe('Invalid Reading Input Blocking', () => {
+    const vocabForReading = createVocabularyItem(50, 'たべる', 'Eat', 'たべる');
+    let callIndex = 0;
+
+    beforeEach(() => {
+      // Reset random to get reading question first
+      callIndex = 0;
+      (Math.random as jest.Mock).mockImplementation(() => {
+        const values = [0.9, 0.9, 0.9, 0.9, 0.9]; // reading first
+        return values[callIndex++ % values.length];
+      });
+    });
+
+    it('does not submit empty reading answer', () => {
+      const onAnswer = jest.fn();
+      const { getByTestId } = render(
+        <ReviewSession
+          items={[vocabForReading]}
+          onAnswer={onAnswer}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      const type = getByTestId('review-session-question-type').props.children;
+
+      if (type === 'READING') {
+        // Try to submit empty input
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        // onAnswer should NOT be called
+        expect(onAnswer).not.toHaveBeenCalled();
+
+        // Should still be on the same question (not show incorrect feedback)
+        expect(getByTestId('review-session')).toBeTruthy();
+      }
+    });
+
+    it('does not submit whitespace-only reading answer', () => {
+      const onAnswer = jest.fn();
+      const { getByTestId } = render(
+        <ReviewSession
+          items={[vocabForReading]}
+          onAnswer={onAnswer}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      const type = getByTestId('review-session-question-type').props.children;
+
+      if (type === 'READING') {
+        // Type whitespace only
+        fireEvent.changeText(getByTestId('review-session-input'), '   ');
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        // onAnswer should NOT be called
+        expect(onAnswer).not.toHaveBeenCalled();
+      }
+    });
+
+    it('does not submit reading answer with unconvertible romaji', () => {
+      const onAnswer = jest.fn();
+      const { getByTestId } = render(
+        <ReviewSession
+          items={[vocabForReading]}
+          onAnswer={onAnswer}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      const type = getByTestId('review-session-question-type').props.children;
+
+      if (type === 'READING') {
+        // Type romaji that can't be converted to hiragana
+        fireEvent.changeText(getByTestId('review-session-input'), 'xyz');
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        // onAnswer should NOT be called
+        expect(onAnswer).not.toHaveBeenCalled();
+      }
+    });
+
+    it('does not submit reading answer with partial romaji like "ky"', () => {
+      const onAnswer = jest.fn();
+      const { getByTestId } = render(
+        <ReviewSession
+          items={[vocabForReading]}
+          onAnswer={onAnswer}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      const type = getByTestId('review-session-question-type').props.children;
+
+      if (type === 'READING') {
+        // Type partial romaji sequence
+        fireEvent.changeText(getByTestId('review-session-input'), 'ky');
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        // onAnswer should NOT be called
+        expect(onAnswer).not.toHaveBeenCalled();
+      }
+    });
+
+    it('allows submission of valid romaji that converts to hiragana', () => {
+      const onAnswer = jest.fn();
+      const { getByTestId } = render(
+        <ReviewSession
+          items={[vocabForReading]}
+          onAnswer={onAnswer}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      const type = getByTestId('review-session-question-type').props.children;
+
+      if (type === 'READING') {
+        // Type valid romaji
+        fireEvent.changeText(getByTestId('review-session-input'), 'taberu');
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        // onAnswer should be called
+        expect(onAnswer).toHaveBeenCalled();
+      }
+    });
+
+    it('allows submission of direct hiragana input', () => {
+      const onAnswer = jest.fn();
+      const { getByTestId } = render(
+        <ReviewSession
+          items={[vocabForReading]}
+          onAnswer={onAnswer}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      const type = getByTestId('review-session-question-type').props.children;
+
+      if (type === 'READING') {
+        // Type direct hiragana
+        fireEvent.changeText(getByTestId('review-session-input'), 'たべる');
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        // onAnswer should be called
+        expect(onAnswer).toHaveBeenCalled();
+      }
+    });
+
+    it('does not block empty meaning answers (they are processed normally)', () => {
+      // Use meaning-first order
+      callIndex = 0;
+      (Math.random as jest.Mock).mockImplementation(() => {
+        const values = [0.1, 0.1, 0.1, 0.1, 0.1]; // meaning first
+        return values[callIndex++ % values.length];
+      });
+
+      const onAnswer = jest.fn();
+      const radical = createRadicalItem(60, '一', 'Ground');
+      const { getByTestId } = render(
+        <ReviewSession
+          items={[radical]}
+          onAnswer={onAnswer}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Radical always has meaning question
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // onAnswer should be called (empty meaning answers are submitted and marked incorrect)
+      expect(onAnswer).toHaveBeenCalled();
+    });
+
+    it('renders input container that shakes on invalid reading submission', () => {
+      const { getByTestId } = render(
+        <ReviewSession
+          items={[vocabForReading]}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      const type = getByTestId('review-session-question-type').props.children;
+
+      if (type === 'READING') {
+        // The input container has the shake animation applied
+        const inputContainer = getByTestId('review-session-input-container');
+        expect(inputContainer).toBeTruthy();
+
+        // Try to submit invalid input
+        fireEvent.changeText(getByTestId('review-session-input'), 'invalid');
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        // Input container should still be there (no navigation away)
+        expect(getByTestId('review-session-input-container')).toBeTruthy();
+      }
     });
   });
 });

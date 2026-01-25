@@ -28,6 +28,7 @@ import type {
 import {
   processRomajiInput,
   romajiToHiragana,
+  isValidReadingInput,
 } from '../utils/romajiToHiragana';
 import {
   validateMeaningAnswer,
@@ -411,23 +412,16 @@ export function LessonQuiz({
     ]).start();
   }, [shakeAnimation]);
 
-  // Check if input contains any romaji (non-hiragana letters)
-  const hasRomajiCharacters = useCallback((text: string): boolean => {
-    // Check if there are any a-z characters remaining
-    return /[a-zA-Z]/.test(text);
-  }, []);
-
   // Handle answer submission
   const handleSubmit = useCallback(() => {
     if (!currentQuestion || isSubmitting) return;
 
     const { item, type } = currentQuestion;
 
-    // For reading questions, check if input has unconverted romaji
+    // For reading questions, validate that input is non-empty and valid hiragana
     if (type === 'reading') {
-      const converted = romajiToHiragana(inputValue);
-      if (hasRomajiCharacters(converted)) {
-        // Input has romaji that couldn't be converted - shake and reject
+      if (!isValidReadingInput(inputValue)) {
+        // Input is empty or contains invalid characters - shake and reject
         triggerShake();
         return;
       }
@@ -526,7 +520,6 @@ export function LessonQuiz({
     totalOriginalQuestions,
     autoAdvanceDelay,
     advanceToNextQuestion,
-    hasRomajiCharacters,
     triggerShake,
   ]);
 

@@ -14,6 +14,8 @@ export {
 export {
   romajiToHiragana,
   processRomajiInput,
+  isAllHiragana,
+  isValidReadingInput,
   type RomajiInputState,
 } from './romajiToHiragana';
 
