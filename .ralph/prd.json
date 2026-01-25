@@ -1,222 +1,266 @@
 {
   "project": "UnaiNikani",
-  "branchName": "ralph/ui-improvements-typo-forgiveness",
-  "description": "UI Improvements and Typo Forgiveness - Display radical images, support reading tags, show user level, implement typo tolerance, mark as correct functionality, and component display on incorrect answers",
+  "branchName": "ralph/review-enhancements-stats",
+  "description": "Review Enhancements and Home Screen Stats - SRS level display with animations, polished review completion screen, expandable item details, synonym support, upcoming reviews chart, and learned item counts",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Fix radicals displaying '?' instead of image",
-      "description": "As a user, I want to see radical images for radicals without Unicode characters so that I can learn all radicals visually.",
+      "title": "Display SRS Level Badge on Review Screens",
+      "description": "As a user, I want to see the current SRS level of the item I'm reviewing so that I understand where each item stands in my learning journey.",
       "acceptanceCriteria": [
-        "Radicals with `characters: null` display their image from `character_images` array",
-        "Image fetched from WaniKani CDN URL (prefer SVG with `inline_styles: true`)",
-        "Image displays at appropriate size (24x24 matching current character font size)",
-        "Radical images are cached locally for offline use",
-        "Fallback to meaning text if no image available",
-        "Regression test added that verifies radicals without characters render correctly",
+        "SRS level badge displayed on question screen AND answer feedback screen",
+        "Badge shows level name: 'Apprentice', 'Guru', 'Master', 'Enlightened', 'Burned'",
+        "Badge uses WaniKani colors: Apprentice (#DD0093), Guru (#882D9E), Master (#294DDB), Enlightened (#0093DD), Burned (#434343)",
+        "Badge includes appropriate icon (bar/flame style) for each level",
+        "Badge positioned consistently in header area",
         "All tests pass",
         "All quality checks pass"
       ],
       "priority": 1,
-      "passes": true,
-      "notes": "Implemented RadicalImage component with image caching via React Native's Image.prefetch. Uses PNG when available, falls back to SVG with inline_styles."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-002",
-      "title": "Support <reading> tags in MnemonicText with italic rendering",
-      "description": "As a user, I want reading hints in mnemonics to be displayed in italics so they stand out from regular text without being too visually heavy.",
+      "title": "Animate SRS Level Up Transitions",
+      "description": "As a user, I want to see an animation when an item levels up after my answer so that I get satisfying feedback on my progress.",
       "acceptanceCriteria": [
-        "`<reading>text</reading>` tags render as italic text (no color, no bold)",
-        "Works in lesson screens (LessonCard mnemonics)",
-        "Works in incorrect answer feedback screens (LessonQuiz, ReviewSession)",
-        "Existing tag types (`<radical>`, `<kanji>`, `<vocabulary>`) continue to work",
-        "Unit tests added for `<reading>` tag parsing",
+        "Level-up animation: OLD level shown 200ms, badge scales 1.0→1.15 with glow, cross-fade to new level 300ms, particle burst, scale back 1.15→1.0",
+        "Total duration ~500ms",
+        "Animation only plays when level actually increases",
+        "Level change calculated based on WaniKani SRS rules (correct = +1 stage)",
+        "Use react-native-reanimated for 60fps animations",
         "All tests pass",
         "All quality checks pass"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "Added <reading> tag support to MnemonicText regex pattern, renders with fontStyle: italic (no color, no bold). MnemonicText is used in LessonCard, LessonQuiz, and ReviewSession."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-003",
-      "title": "Move 'made up of' section below kanji display in lessons",
-      "description": "As a user, I want to see the kanji character first before seeing its component radicals, so the visual flow matches how I learn (whole then parts).",
+      "title": "Animate SRS Level Down Transitions",
+      "description": "As a user, I want to see a different animation when an item levels down after an incorrect answer.",
       "acceptanceCriteria": [
-        "'Made up of' section appears below the pink kanji character block",
-        "Section still only appears for kanji items with component radicals",
-        "Visual styling remains unchanged (light blue background, radical pills)",
-        "Swipe gestures continue to work correctly",
-        "All tests pass",
-        "All quality checks pass",
-        "Verify in browser using dev-browser skill"
-      ],
-      "priority": 3,
-      "passes": true,
-      "notes": "Moved component radicals display from LessonBatch to LessonCard. The 'Made up of' section now renders directly below the header (character block) inside LessonCard, using the componentRadicals prop."
-    },
-    {
-      "id": "US-004",
-      "title": "Display current level on home screen",
-      "description": "As a user, I want to see my current WaniKani level on the home screen so I can track my progress at a glance.",
-      "acceptanceCriteria": [
-        "User level displayed in the stats area near lessons/reviews counts",
-        "Level fetched during initial sync and cached",
-        "Display format: 'Level X' with subtle styling (not dominant)",
-        "Level updates after successful sync",
-        "Handles loading state gracefully (shows placeholder or nothing)",
-        "All tests pass",
-        "All quality checks pass",
-        "Verify in browser using dev-browser skill"
-      ],
-      "priority": 4,
-      "passes": true,
-      "notes": "Added user_level column to sync_status table with migration. Level is cached when getUserLevel() is called during sync. LevelIndicator component displays 'Level X' above the dashboard stats. Returns null during loading (renders nothing)."
-    },
-    {
-      "id": "US-005",
-      "title": "Implement Damerau-Levenshtein distance algorithm",
-      "description": "As a developer, I need a Damerau-Levenshtein distance algorithm to enable typo forgiveness for meaning answers.",
-      "acceptanceCriteria": [
-        "Create damerauLevenshtein function in src/utils/stringDistance.ts",
-        "Algorithm handles insertions, deletions, substitutions, and transpositions",
-        "Returns integer edit distance between two strings",
-        "Performance optimized with early termination when distance exceeds threshold",
-        "Comprehensive unit tests covering various typo scenarios",
+        "Level-down animation: OLD level shown 200ms, badge shakes 2-3 times, red tint pulse, cross-fade to new level 250ms",
+        "Total duration ~400ms",
+        "Animation only plays when level actually decreases",
+        "Level change calculated based on WaniKani SRS rules (incorrect drops based on stage)",
+        "Use react-native-reanimated for 60fps animations",
         "All tests pass",
         "All quality checks pass"
       ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Create Animated Review Completion Screen Base",
+      "description": "As a user, I want the review completion screen to feel polished so that finishing reviews feels rewarding.",
+      "acceptanceCriteria": [
+        "Success checkmark icon in colored circle (reviews purple) with scale bounce animation (0→1.1→1.0)",
+        "Checkmark draws itself with stroke animation as it appears",
+        "Total items reviewed in large bold text (64px)",
+        "Incorrect count in secondary text with red tint if any incorrect",
+        "Sync status badge with colored background (green 'Synced' / amber 'Queued')",
+        "Styled 'Return to Dashboard' button",
+        "Layout matches LessonCompletion component patterns",
+        "All tests pass",
+        "All quality checks pass"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Add Staggered Entrance Animation to Review Completion",
+      "description": "As a user, I want elements on the completion screen to appear with staggered timing for a polished feel.",
+      "acceptanceCriteria": [
+        "Elements appear with 100ms staggered delays: checkmark → items count → incorrect count → sync status → button",
+        "Each element fades in and slides up from below",
+        "If 0 incorrect: confetti particles burst from checkmark",
+        "Respects device reduced motion settings",
+        "All tests pass",
+        "All quality checks pass",
+        "Verify in browser/simulator using dev-browser skill"
+      ],
       "priority": 5,
-      "passes": true,
-      "notes": "Implemented damerauLevenshtein and isWithinDistance functions in src/utils/stringDistance.ts. Uses optimal string alignment variant with early termination via maxDistance option. 64 comprehensive tests covering insertions, deletions, substitutions, transpositions, WaniKani-specific scenarios, and edge cases."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-006",
-      "title": "Integrate typo forgiveness into answer validation",
-      "description": "As a user, I want minor typos in my meaning answers to be accepted so that I'm not penalized for typing mistakes when I know the correct answer.",
+      "title": "Add Toggle for Full Item Details on Incorrect Screen",
+      "description": "As a user, when I get an answer wrong, I want the option to see all information about that item.",
       "acceptanceCriteria": [
-        "Answers within acceptable edit distance are marked correct",
-        "Tolerance: 1 edit for words 4-6 characters, 2 edits for words 7+ characters, exact match only for 1-3 chars",
-        "Only applies to meaning answers (not reading/hiragana answers)",
-        "Exact matches still prioritized over fuzzy matches",
-        "Blacklisted meanings still rejected even if within edit distance",
-        "Validation result includes `isFuzzyMatch` flag when typo forgiveness applied",
-        "Unit tests cover various typo scenarios",
+        "Toggle button with chevron: 'Show full details' (down) / 'Hide details' (up)",
+        "Chevron rotates 180° smoothly on toggle (200ms ease-out)",
+        "Content reveals with height animation (250ms ease-out-quart)",
+        "Default state is collapsed",
+        "Toggle state resets for each new incorrect answer",
         "All tests pass",
         "All quality checks pass"
       ],
       "priority": 6,
-      "passes": true,
-      "notes": "Integrated Damerau-Levenshtein distance into validateMeaningAnswer(). Added getAllowedEditDistance() helper for word-length-based tolerance. Exact matches checked first, then fuzzy matches. Blacklist uses exact match only. Added isFuzzyMatch flag to MeaningValidationResult. 40+ new tests for typo scenarios."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-007",
-      "title": "Show yellow feedback for typo-forgiven answers",
-      "description": "As a user, I want to see yellow/amber feedback when my answer was accepted via typo forgiveness so I know to be more careful.",
+      "title": "Display Full Item Details Content When Expanded",
+      "description": "As a user, I want to see organized sections with all item information when I expand the details.",
       "acceptanceCriteria": [
-        "When answer accepted via typo forgiveness, show yellow/amber background instead of green",
-        "Yellow feedback indicates 'accepted but be careful' to the user",
-        "Works in both LessonQuiz and ReviewSession components",
-        "Green feedback still shown for exact matches",
+        "Meanings section: all meanings (primary bolded, alternatives regular)",
+        "Readings section: all readings with types (on'yomi, kun'yomi, etc.)",
+        "Meaning Mnemonic section with formatted text",
+        "Reading Mnemonic section (if applicable)",
+        "Components section: radicals (for kanji) or kanji (for vocabulary)",
+        "Sections have subtle dividers and consistent spacing",
         "All tests pass",
         "All quality checks pass",
-        "Verify in browser using dev-browser skill"
+        "Verify in browser/simulator using dev-browser skill"
       ],
       "priority": 7,
-      "passes": true,
-      "notes": "Added COLORS.feedback.fuzzyMatch (#F59E0B amber) color. LessonQuiz and ReviewSession track isFuzzyMatch state from validateMeaningAnswer(). When isFuzzyMatch is true, shows yellow/amber header with 'Close enough!' label instead of green 'Correct!'. Tests verify fuzzy match vs exact match display."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-008",
-      "title": "Add 'Mark as Correct' button on incorrect answer screen",
-      "description": "As a user, I want to mark my answer as correct when I made a typo that wasn't caught by typo forgiveness, so I don't lose SRS progress for answers I actually knew.",
+      "title": "Create Pending Synonyms Storage",
+      "description": "As a developer, I need to store synonyms locally and track pending syncs so that synonyms work offline.",
       "acceptanceCriteria": [
-        "'Mark as Correct' button appears alongside 'Continue' button on incorrect feedback",
-        "Tapping 'Mark as Correct' treats the answer as correct (updates SRS accordingly)",
-        "Button has distinct but secondary styling (not as prominent as Continue)",
-        "Works in both LessonQuiz and ReviewSession screens",
-        "No confirmation dialog needed (proceeds immediately)",
+        "Create user_synonyms table (subject_id, synonym, synced_at, created_at)",
+        "Create pending_synonyms table (subject_id, synonym, created_at)",
+        "Add database functions: addUserSynonym(), getPendingSynonyms(), markSynonymSynced()",
+        "Answer validation checks user_synonyms table in addition to API meanings",
         "All tests pass",
-        "All quality checks pass",
-        "Verify in browser using dev-browser skill"
+        "All quality checks pass"
       ],
       "priority": 8,
-      "passes": true,
-      "notes": "Added 'Mark as Correct' button to incorrect feedback screens in both LessonQuiz and ReviewSession. Button uses secondary styling (gray outline) alongside the Continue button. When pressed: treats answer as correct (updates SRS/progress), removes re-queued question from queue, and proceeds immediately."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-009",
-      "title": "Extract reusable component display for radicals/kanji",
-      "description": "As a developer, I need a reusable component to display radical or kanji items with their characters/images and meanings for use on incorrect answer screens.",
+      "title": "Add Synonym from Incorrect Answer Screen",
+      "description": "As a user, when my answer is marked incorrect but I believe it should be accepted, I want to add it as a synonym.",
       "acceptanceCriteria": [
-        "Create ComponentDisplay component that renders radical or kanji with character and meaning",
-        "Handles radicals without Unicode characters (uses images per US-001)",
-        "Supports both blue (radical) and pink (kanji) color schemes",
-        "Unit tests verify rendering for both radical and kanji items",
+        "'Add as Synonym' text link appears on MEANING questions only",
+        "Link is visually de-emphasized: smaller font, below primary actions",
+        "Tap shows 'Adding...' with pulse, then 'Synonym added ✓'",
+        "After 400ms, auto-marks question correct and advances",
+        "Synonym saved to local database",
+        "If offline, synonym queued in pending_synonyms table",
         "All tests pass",
         "All quality checks pass"
       ],
       "priority": 9,
-      "passes": true,
-      "notes": "Created ComponentDisplay component that renders radical/kanji items with character (or RadicalImage) and meaning/reading. Uses SUBJECT_COLORS for blue (radical) or pink (kanji) background. Includes displayText prop for showing reading instead of meaning. 9 unit tests cover all acceptance criteria."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-010",
-      "title": "Show component radicals on incorrect kanji answer screen",
-      "description": "As a user, when I get a kanji answer wrong, I want to see the radicals that make up the kanji so I can better understand and remember it.",
+      "title": "Sync Synonyms to WaniKani",
+      "description": "As a user, I want my custom synonyms to sync to WaniKani so they're available across all my devices.",
       "acceptanceCriteria": [
-        "'Made up of' section displays below mnemonic on incorrect kanji answers",
-        "Shows each component radical with character/image and meaning",
-        "Uses same visual style as lesson screen (blue pills)",
-        "Only appears for kanji items (not radicals or vocabulary)",
-        "Works in both LessonQuiz and ReviewSession screens",
+        "Implement WaniKani Study Materials API: GET study materials, POST/PUT meaning_synonyms",
+        "On app startup or manual sync, push pending synonyms",
+        "Handle API errors with retry logic",
+        "Remove from pending_synonyms and update synced_at on success",
         "All tests pass",
-        "All quality checks pass",
-        "Verify in browser using dev-browser skill"
+        "All quality checks pass"
       ],
       "priority": 10,
-      "passes": true,
-      "notes": "Added componentRadicals to QuizItem and ReviewItem interfaces. LessonQuiz and ReviewSession now display 'Made up of' section below mnemonic for incorrect kanji answers. Uses ComponentDisplay component with blue radical styling. Added 12 tests covering display of component radicals."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-011",
-      "title": "Show component kanji on incorrect vocabulary answer screen",
-      "description": "As a user, when I get a vocabulary answer wrong, I want to see the kanji that make up the word with their relevant meaning or reading.",
+      "title": "Query Learned Item Counts",
+      "description": "As a developer, I need database queries to count learned kanji and vocabulary.",
       "acceptanceCriteria": [
-        "'Made up of' section displays below mnemonic on incorrect vocabulary answers",
-        "For meaning questions: shows each kanji character + its primary meaning",
-        "For reading questions: shows each kanji character + its primary reading",
-        "Uses pink kanji color scheme for consistency",
-        "Only appears for vocabulary items with component kanji",
-        "Gracefully handles vocabulary without kanji (kana-only words)",
-        "Works in both LessonQuiz and ReviewSession screens",
+        "Create getLearnedCount(subjectType: 'kanji' | 'vocabulary'): number",
+        "Query counts assignments where srs_stage >= 5 (Guru or above)",
+        "Vocabulary count includes both 'vocabulary' and 'kana_vocabulary' types",
+        "Query uses appropriate indexes for efficiency",
         "All tests pass",
-        "All quality checks pass",
-        "Verify in browser using dev-browser skill"
+        "All quality checks pass"
       ],
       "priority": 11,
-      "passes": true,
-      "notes": "Added componentKanji interface and prop to QuizItem and ReviewItem. LessonQuiz and ReviewSession display 'Made up of' section below mnemonic for incorrect vocabulary answers. Uses ComponentDisplay with pink kanji styling. For meaning questions, shows kanji meaning; for reading questions, shows kanji reading via displayText prop. LessonsScreen and ReviewsScreen fetch component kanji data from database. Kana-only words handled by checking for empty componentKanji array. 12 new tests added."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-012",
-      "title": "Block submission of invalid reading answers with shake feedback",
-      "description": "As a user, I want the app to prevent me from submitting invalid reading answers (empty or containing non-hiragana characters) so I can fix my input without losing progress.",
+      "title": "Add Learned Counts to Home Screen",
+      "description": "As a user, I want to see how many kanji and vocabulary items I've learned so I can track my overall progress.",
       "acceptanceCriteria": [
-        "Empty reading answers are not submitted",
-        "Reading answers containing non-hiragana characters (romaji, katakana, etc.) are not submitted",
-        "When submission is blocked, input field shakes briefly (animation feedback)",
-        "User can continue typing to fix their answer after shake",
-        "Shake animation is subtle but noticeable (150-300ms duration)",
-        "Works in both LessonQuiz and ReviewSession screens",
-        "Unit tests verify invalid inputs are blocked",
+        "Display 'Kanji Learned: X' and 'Vocabulary Learned: X' on home screen",
+        "Counts animate from 0 to actual number (500ms, ease-out)",
+        "Stats displayed in visually consistent row/grid with existing elements",
+        "Counts update when returning to home screen after reviews/lessons",
         "All tests pass",
         "All quality checks pass",
-        "Verify in browser using dev-browser skill"
+        "Verify in browser/simulator using dev-browser skill"
       ],
       "priority": 12,
-      "passes": true,
-      "notes": "Added isAllHiragana() and isValidReadingInput() functions to romajiToHiragana.ts. Both LessonQuiz and ReviewSession now validate reading input before submission: empty inputs, whitespace-only inputs, and inputs with unconvertible characters (romaji that doesn't map to hiragana, katakana, kanji, etc.) are blocked. When blocked, the existing shake animation (200ms duration) is triggered to provide feedback. User can continue typing to fix their answer. 35+ new tests for validation functions and 16 new tests for invalid input blocking in LessonQuiz and ReviewSession."
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Query Upcoming Reviews by Hour",
+      "description": "As a developer, I need a database query that groups upcoming reviews by hour for the chart.",
+      "acceptanceCriteria": [
+        "Create getUpcomingReviewsByHour(hours: number): { hour: Date, count: number }[]",
+        "Groups assignments by available_at into hourly buckets",
+        "Only includes assignments where started_at is not null and srs_stage > 0 and < 9",
+        "Returns array of 12 objects with hour timestamp and review count",
+        "Hours with 0 reviews included for chart continuity",
+        "All tests pass",
+        "All quality checks pass"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "Display Upcoming Reviews Bar Chart",
+      "description": "As a user, I want to see a chart showing how many reviews are coming up in the next 12 hours.",
+      "acceptanceCriteria": [
+        "Bar chart displayed on home screen below main stats",
+        "12 bars, one per hour, showing NEW reviews per hour (not cumulative)",
+        "Bars colored reviews purple (#AA00FF) with subtle gradient",
+        "Hour labels below bars (e.g., '2pm', '3pm')",
+        "Current hour highlighted with accent border",
+        "Chart height constrained to ~100-120px",
+        "All tests pass",
+        "All quality checks pass"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-015",
+      "title": "Add Chart Animations and Interactions",
+      "description": "As a user, I want the chart to animate and respond to taps for a polished experience.",
+      "acceptanceCriteria": [
+        "Bars grow from bottom with staggered timing (50ms delay each, left to right)",
+        "On bar tap: show tooltip with exact count ('15 reviews at 3pm')",
+        "If 0 reviews in next 12 hours: show empty state with friendly message",
+        "Empty state shows when next review IS (e.g., 'Next review in 2 days')",
+        "Respects reduced motion settings",
+        "All tests pass",
+        "All quality checks pass",
+        "Verify in browser/simulator using dev-browser skill"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
     }
   ]
 }
