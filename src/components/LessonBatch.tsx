@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
+import { StyleSheet, Text, View, PanResponder, GestureResponderEvent, PanResponderGestureState } from 'react-native';
 
 import type { SubjectType, Meaning, Reading, KanjiReading } from '../api/types';
 import { LessonCard } from './LessonCard';
@@ -53,6 +53,12 @@ export interface LessonBatchProps {
 
 /** Default batch size for lessons */
 export const LESSON_BATCH_SIZE = 5;
+
+/** Minimum horizontal distance in pixels required to trigger a swipe */
+export const SWIPE_THRESHOLD = 50;
+
+/** Maximum vertical distance allowed during a swipe (to distinguish from vertical scrolls) */
+const SWIPE_VERTICAL_THRESHOLD = 100;
 
 /** Unvisited dot color */
 const UNVISITED_DOT_COLOR = COLORS.neutral.gray300;
@@ -112,6 +118,47 @@ export function LessonBatch({
     }
   }, [isFirstItem]);
 
+  // Store refs for swipe handlers to avoid stale closures in PanResponder
+  const handleNextRef = useRef(handleNext);
+  const handleBackRef = useRef(handleBack);
+  handleNextRef.current = handleNext;
+  handleBackRef.current = handleBack;
+
+  // Pan responder for swipe gestures
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (
+        _evt: GestureResponderEvent,
+        gestureState: PanResponderGestureState,
+      ) => {
+        // Only capture horizontal swipes (not vertical scrolls)
+        const { dx, dy } = gestureState;
+        return Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10;
+      },
+      onPanResponderRelease: (
+        _evt: GestureResponderEvent,
+        gestureState: PanResponderGestureState,
+      ) => {
+        const { dx, dy } = gestureState;
+
+        // Ignore if vertical movement is too large (user is scrolling)
+        if (Math.abs(dy) > SWIPE_VERTICAL_THRESHOLD) {
+          return;
+        }
+
+        // Swipe left (negative dx) -> advance to next
+        if (dx < -SWIPE_THRESHOLD) {
+          handleNextRef.current();
+        }
+        // Swipe right (positive dx) -> go back to previous
+        else if (dx > SWIPE_THRESHOLD) {
+          handleBackRef.current();
+        }
+      },
+    }),
+  ).current;
+
   // Handle edge case of empty items array
   if (!currentItem) {
     return (
@@ -169,8 +216,8 @@ export function LessonBatch({
         </View>
       )}
 
-      {/* Lesson card */}
-      <View style={styles.cardContainer}>
+      {/* Lesson card with swipe gesture support */}
+      <View style={styles.cardContainer} {...panResponder.panHandlers} testID="lesson-batch-swipe-area">
         <LessonCard
           subjectType={currentItem.subjectType}
           characters={currentItem.characters}

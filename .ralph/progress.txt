@@ -9,6 +9,7 @@ Started: Sun Jan 25 10:42:13 CET 2026
 - Styles use StyleSheet.create with COLORS, SPACING, BORDER_RADIUS from theme
 - Test files use testID attributes for querying elements
 - Pre-existing test failures exist in progress text format assertions and SettingsScreen tests (unrelated to new features)
+- PanResponder gesture state cannot be unit tested by directly calling handlers; use structural tests to verify handlers exist, functional tests require E2E or manual verification
 
 ## 2026-01-25 - US-001
 - **What was implemented**: Added visual indicator bar for question type
@@ -100,4 +101,24 @@ Started: Sun Jan 25 10:42:13 CET 2026
   - Use conditional rendering with spacer view to maintain button positioning when back button is hidden
   - Test for flattened style objects (TouchableOpacity) use expect.objectContaining, not expect.arrayContaining
   - Back button uses outline style (borderWidth + borderColor) instead of filled background for visual distinction
+---
+
+## 2026-01-25 - US-006
+- **What was implemented**: Added swipe gestures to lesson cards for navigation
+  - Swipe left advances to next item (same as tapping Next)
+  - Swipe right goes back to previous item (same as tapping Back)
+  - Swipe right on first item does nothing (isFirstItem check)
+  - Swipe left on last item completes the batch (calls onBatchComplete)
+  - SWIPE_THRESHOLD of 50 pixels to avoid accidental triggers
+  - SWIPE_VERTICAL_THRESHOLD of 100 pixels to distinguish from scrolling
+  - Button navigation continues to work alongside swipe gestures
+- **Files changed**:
+  - src/components/LessonBatch.tsx (added PanResponder, SWIPE_THRESHOLD constant, swipe area View)
+  - __tests__/components/LessonBatch.test.tsx (updated tests - structural tests verify swipe area exists and has handlers)
+- **Learnings for future iterations**:
+  - PanResponder handlers receive gestureState as second argument with dx/dy values
+  - Use useRef to store handler references to avoid stale closures in PanResponder callbacks
+  - PanResponder's internal gesture state cannot be easily unit tested by calling handlers directly
+  - Structural tests verify swipe area exists and has handlers attached; functional swipe testing requires manual browser verification or E2E tests
+  - The swipe area wraps the LessonCard with {...panResponder.panHandlers} spread
 ---

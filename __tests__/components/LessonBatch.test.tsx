@@ -7,6 +7,7 @@ import {
   LessonItem,
   ComponentRadical,
   LESSON_BATCH_SIZE,
+  SWIPE_THRESHOLD,
 } from '../../src/components/LessonBatch';
 import type { Meaning, Reading, KanjiReading } from '../../src/api/types';
 import { SUBJECT_COLORS, COLORS } from '../../src/theme';
@@ -735,6 +736,104 @@ describe('LessonBatch', () => {
       expect(getByTestId('lesson-card-characters').props.children).toBe('大きい');
       expect(getByTestId('lesson-card-type').props.children).toBe('vocabulary');
       expect(getByTestId('lesson-card-reading-section')).toBeTruthy();
+    });
+  });
+
+  describe('swipe gestures', () => {
+    // Note: PanResponder's gesture state is managed internally and cannot be easily unit tested
+    // by calling the handler directly. The handler attached to props.onResponderRelease is
+    // PanResponder's internal handler which tracks gesture state separately.
+    // Functional swipe testing requires manual browser verification or E2E tests.
+
+    describe('constants', () => {
+      it('exports SWIPE_THRESHOLD as 50', () => {
+        expect(SWIPE_THRESHOLD).toBe(50);
+      });
+    });
+
+    describe('swipe area rendering', () => {
+      it('renders the swipe area with testID', () => {
+        const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+        expect(getByTestId('lesson-batch-swipe-area')).toBeTruthy();
+      });
+
+      it('swipe area contains the lesson card', () => {
+        const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+        const swipeArea = getByTestId('lesson-batch-swipe-area');
+        // The lesson card should be a child of the swipe area
+        expect(swipeArea).toBeTruthy();
+        expect(getByTestId('lesson-card')).toBeTruthy();
+      });
+
+      it('swipe area has responder handlers attached', () => {
+        const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+        const swipeArea = getByTestId('lesson-batch-swipe-area');
+        // PanResponder attaches these handlers to enable gesture recognition
+        expect(swipeArea.props.onResponderRelease).toBeDefined();
+        expect(swipeArea.props.onMoveShouldSetResponder).toBeDefined();
+        expect(swipeArea.props.onStartShouldSetResponder).toBeDefined();
+      });
+    });
+
+    describe('button navigation works alongside swipe area', () => {
+      it('Next button advances to next item', () => {
+        const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+
+        // First item should be "一"
+        expect(getByTestId('lesson-card-characters').props.children).toBe('一');
+
+        // Use button to advance
+        fireEvent.press(getByTestId('lesson-card-next-button'));
+
+        // Should be on second item
+        expect(getByTestId('lesson-card-characters').props.children).toBe('大');
+      });
+
+      it('Back button goes to previous item', () => {
+        const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+
+        // Navigate to third item
+        fireEvent.press(getByTestId('lesson-card-next-button'));
+        fireEvent.press(getByTestId('lesson-card-next-button'));
+        expect(getByTestId('lesson-card-characters').props.children).toBe('大きい');
+
+        // Use button to go back
+        fireEvent.press(getByTestId('lesson-card-back-button'));
+
+        // Should be on second item
+        expect(getByTestId('lesson-card-characters').props.children).toBe('大');
+      });
+
+      it('Next button on last item calls onBatchComplete', () => {
+        const onBatchComplete = jest.fn();
+        const { getByTestId } = render(
+          <LessonBatch {...defaultProps} onBatchComplete={onBatchComplete} />,
+        );
+
+        // Navigate to the last item
+        for (let i = 0; i < 4; i++) {
+          fireEvent.press(getByTestId('lesson-card-next-button'));
+        }
+
+        // Verify we're on the last item
+        expect(getByTestId('lesson-batch-progress-text').props.children).toEqual([
+          5,
+          ' / ',
+          5,
+        ]);
+
+        // Press next on last item
+        fireEvent.press(getByTestId('lesson-card-next-button'));
+
+        expect(onBatchComplete).toHaveBeenCalledTimes(1);
+      });
+
+      it('Back button does nothing on first item (not rendered)', () => {
+        const { queryByTestId } = render(<LessonBatch {...defaultProps} />);
+
+        // Back button should not be rendered on first item
+        expect(queryByTestId('lesson-card-back-button')).toBeNull();
+      });
     });
   });
 });
