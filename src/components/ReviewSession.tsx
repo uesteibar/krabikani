@@ -49,6 +49,7 @@ import { ComponentDisplay } from './ComponentDisplay';
 import { SrsLevelBadge } from './SrsLevelBadge';
 import { AnimatedSrsLevelBadge } from './AnimatedSrsLevelBadge';
 import { ReviewCompletion } from './ReviewCompletion';
+import { ExpandableDetails } from './ExpandableDetails';
 import { getSrsLevelInfo, calculateSrsStageAfterIncorrect } from '../theme';
 
 // ============================================
@@ -1198,6 +1199,18 @@ export function ReviewSession({
                 </View>
               </View>
             )}
+
+          {/* Expandable full details section */}
+          <ExpandableDetails
+            resetKey={incorrectFeedback.question.key}
+            testID="review-session-expandable-details"
+          >
+            <View style={styles.expandableContent}>
+              <Text style={styles.expandablePlaceholder}>
+                Full item details will be shown here
+              </Text>
+            </View>
+          </ExpandableDetails>
         </ScrollView>
 
         {/* Button row: Mark as Correct + Continue */}
@@ -1716,5 +1729,15 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm,
     fontWeight: 'bold',
     color: COLORS.text.secondary,
+  },
+  // Expandable details styles
+  expandableContent: {
+    paddingVertical: SPACING.md,
+  },
+  expandablePlaceholder: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.tertiary,
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
 });

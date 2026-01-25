@@ -113,3 +113,8 @@ export {
   ReviewCompletion,
   type ReviewCompletionProps,
 } from './ReviewCompletion';
+
+export {
+  ExpandableDetails,
+  type ExpandableDetailsProps,
+} from './ExpandableDetails';
