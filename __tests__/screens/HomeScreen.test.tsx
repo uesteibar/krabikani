@@ -168,6 +168,26 @@ describe('HomeScreen', () => {
       });
     });
 
+    it('renders the level indicator when level is cached', async () => {
+      await updateSyncStatus({ user_level: 5 });
+
+      const { getByTestId, getByText } = renderWithNavigation(<HomeScreen />);
+
+      await waitFor(() => {
+        expect(getByTestId('level-indicator')).toBeTruthy();
+        expect(getByText('Level 5')).toBeTruthy();
+      });
+    });
+
+    it('does not render level indicator when no level is cached', async () => {
+      const { queryByTestId } = renderWithNavigation(<HomeScreen />);
+
+      await waitFor(() => {
+        // Level indicator should not render when level is null
+        expect(queryByTestId('level-indicator')).toBeNull();
+      });
+    });
+
     it('shows zero counts when no lessons or reviews available', async () => {
       const { getByTestId } = renderWithNavigation(<HomeScreen />);
 

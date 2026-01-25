@@ -64,6 +64,7 @@ const CREATE_PENDING_REVIEWS_TABLE = `
 
 /**
  * Sync status table tracks when data was last synchronized with the API.
+ * Also stores user profile data that should persist between syncs.
  */
 const CREATE_SYNC_STATUS_TABLE = `
   CREATE TABLE IF NOT EXISTS sync_status (
@@ -71,6 +72,7 @@ const CREATE_SYNC_STATUS_TABLE = `
     last_subjects_sync TEXT,
     last_assignments_sync TEXT,
     last_summary_sync TEXT,
+    user_level INTEGER,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
   )
@@ -169,6 +171,7 @@ export interface DatabaseSyncStatus {
   last_subjects_sync: string | null;
   last_assignments_sync: string | null;
   last_summary_sync: string | null;
+  user_level: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -844,6 +847,7 @@ export interface SyncStatusUpdate {
   last_subjects_sync?: string | null;
   last_assignments_sync?: string | null;
   last_summary_sync?: string | null;
+  user_level?: number | null;
 }
 
 /**
@@ -854,7 +858,7 @@ export async function updateSyncStatus(
   update: SyncStatusUpdate,
 ): Promise<void> {
   const updates: string[] = [];
-  const values: (string | null)[] = [];
+  const values: (string | number | null)[] = [];
 
   if (update.last_subjects_sync !== undefined) {
     updates.push('last_subjects_sync = ?');
@@ -868,6 +872,10 @@ export async function updateSyncStatus(
     updates.push('last_summary_sync = ?');
     values.push(update.last_summary_sync);
   }
+  if (update.user_level !== undefined) {
+    updates.push('user_level = ?');
+    values.push(update.user_level);
+  }
 
   if (updates.length === 0) return;
 
@@ -880,7 +888,23 @@ export async function updateSyncStatus(
 }
 
 /**
- * Resets all sync timestamps to null.
+ * Gets the cached user level.
+ * Returns null if no level has been cached yet.
+ */
+export async function getCachedUserLevel(): Promise<number | null> {
+  const status = await getSyncStatus();
+  return status?.user_level ?? null;
+}
+
+/**
+ * Saves the user level to the cache.
+ */
+export async function saveCachedUserLevel(level: number): Promise<void> {
+  await updateSyncStatus({ user_level: level });
+}
+
+/**
+ * Resets all sync timestamps and user level to null.
  */
 export async function resetSyncStatus(): Promise<void> {
   await executeSql(
@@ -888,6 +912,7 @@ export async function resetSyncStatus(): Promise<void> {
        last_subjects_sync = NULL,
        last_assignments_sync = NULL,
        last_summary_sync = NULL,
+       user_level = NULL,
        updated_at = CURRENT_TIMESTAMP
      WHERE id = 1`,
     [],
@@ -911,6 +936,7 @@ export async function clearAllData(): Promise<void> {
          last_subjects_sync = NULL,
          last_assignments_sync = NULL,
          last_summary_sync = NULL,
+         user_level = NULL,
          updated_at = CURRENT_TIMESTAMP
        WHERE id = 1`,
     );
@@ -934,6 +960,11 @@ const MIGRATIONS: Migration[] = [
     version: 2,
     description: 'Add character_images column to subjects table for radicals',
     up: ['ALTER TABLE subjects ADD COLUMN character_images TEXT'],
+  },
+  {
+    version: 3,
+    description: 'Add user_level column to sync_status table',
+    up: ['ALTER TABLE sync_status ADD COLUMN user_level INTEGER'],
   },
 ];
 

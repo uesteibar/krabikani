@@ -59,6 +59,8 @@ export {
   getSyncStatus,
   updateSyncStatus,
   resetSyncStatus,
+  getCachedUserLevel,
+  saveCachedUserLevel,
   // Data management
   clearAllData,
   // Migrations

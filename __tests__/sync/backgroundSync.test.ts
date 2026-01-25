@@ -21,6 +21,7 @@ jest.mock('../../src/storage/database', () => ({
   insertPendingReview: jest.fn().mockResolvedValue(undefined),
   deleteAllPendingLessons: jest.fn().mockResolvedValue(undefined),
   deleteAllPendingReviews: jest.fn().mockResolvedValue(undefined),
+  saveCachedUserLevel: jest.fn().mockResolvedValue(undefined),
 }));
 
 // Create a mock fetch for API tests
