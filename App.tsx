@@ -1,9 +1,19 @@
-import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
-import React, { useEffect, useMemo } from 'react';
-import { StatusBar, useColorScheme } from 'react-native';
+import {
+  NavigationContainer,
+  DefaultTheme,
+  DarkTheme,
+} from '@react-navigation/native';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  StatusBar,
+  useColorScheme,
+  ActivityIndicator,
+  View,
+} from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { RootNavigator } from './src/navigation';
+import { initializeDatabaseWithMigrations } from './src/storage';
 import { ThemeProvider, COLORS } from './src/theme';
 import {
   initializeNetworkMonitoring,
@@ -45,6 +55,18 @@ const DarkNavigationTheme = {
 function App() {
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === 'dark';
+  const [isDbReady, setIsDbReady] = useState(false);
+
+  // Initialize database on mount
+  useEffect(() => {
+    const initDb = async () => {
+      console.log('[App] Initializing database...');
+      const success = await initializeDatabaseWithMigrations();
+      console.log('[App] Database initialization result:', success);
+      setIsDbReady(true);
+    };
+    initDb();
+  }, []);
 
   // Initialize network monitoring and app state sync on mount
   useEffect(() => {
@@ -62,6 +84,24 @@ function App() {
     () => (isDarkMode ? DarkNavigationTheme : LightNavigationTheme),
     [isDarkMode],
   );
+
+  // Show loading screen while database initializes
+  if (!isDbReady) {
+    return (
+      <SafeAreaProvider>
+        <View
+          style={{
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: isDarkMode ? '#121212' : COLORS.background.primary,
+          }}
+        >
+          <ActivityIndicator size="large" color={COLORS.subject.kanji} />
+        </View>
+      </SafeAreaProvider>
+    );
+  }
 
   return (
     <SafeAreaProvider>

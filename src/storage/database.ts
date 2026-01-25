@@ -554,13 +554,15 @@ export async function getAvailableReviews(): Promise<DatabaseAssignment[]> {
 
 /**
  * Retrieves all assignments available for lessons (unlocked but not started).
+ * Orders by subject level then subject id to match WaniKani's lesson order.
  */
 export async function getAvailableLessons(): Promise<DatabaseAssignment[]> {
   const result = await executeSql(
-    `SELECT * FROM assignments
-     WHERE unlocked_at IS NOT NULL
-       AND started_at IS NULL
-     ORDER BY id`,
+    `SELECT a.* FROM assignments a
+     JOIN subjects s ON a.subject_id = s.id
+     WHERE a.unlocked_at IS NOT NULL
+       AND a.started_at IS NULL
+     ORDER BY s.level, s.id`,
     [],
   );
   return result.rows as unknown as DatabaseAssignment[];
@@ -886,6 +888,29 @@ export async function resetSyncStatus(): Promise<void> {
      WHERE id = 1`,
     [],
   );
+}
+
+/**
+ * Clears all user data from the database.
+ * This removes all subjects, assignments, pending reviews, pending lessons,
+ * and resets sync status. Used when logging out or changing API keys.
+ */
+export async function clearAllData(): Promise<void> {
+  const database = getDatabase();
+  await database.transaction(async tx => {
+    await tx.execute('DELETE FROM pending_reviews');
+    await tx.execute('DELETE FROM pending_lessons');
+    await tx.execute('DELETE FROM assignments');
+    await tx.execute('DELETE FROM subjects');
+    await tx.execute(
+      `UPDATE sync_status SET
+         last_subjects_sync = NULL,
+         last_assignments_sync = NULL,
+         last_summary_sync = NULL,
+         updated_at = CURRENT_TIMESTAMP
+       WHERE id = 1`,
+    );
+  });
 }
 
 // ============================================

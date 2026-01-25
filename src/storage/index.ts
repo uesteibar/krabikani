@@ -59,6 +59,8 @@ export {
   getSyncStatus,
   updateSyncStatus,
   resetSyncStatus,
+  // Data management
+  clearAllData,
   // Migrations
   getSchemaVersion,
   runMigrations,

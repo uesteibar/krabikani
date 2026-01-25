@@ -13,7 +13,7 @@ import {
 
 import { validateApiKey, WaniKaniClient } from '../api';
 import type { RootStackParamList } from '../navigation/types';
-import { clearApiKey, getApiKey, saveApiKey } from '../storage';
+import { clearApiKey, getApiKey, saveApiKey, clearAllData } from '../storage';
 import { getUserLevel, syncSubjects, syncAssignments } from '../sync';
 import { COLORS, SPACING, FONT_SIZES } from '../theme';
 
@@ -58,32 +58,35 @@ export function SettingsScreen() {
     loadStoredKey();
   }, [loadStoredKey]);
 
-  const performSync = useCallback(async (keyToUse: string) => {
-    setIsSyncing(true);
-    setSyncError(null);
+  const performSync = useCallback(
+    async (keyToUse: string) => {
+      setIsSyncing(true);
+      setSyncError(null);
 
-    try {
-      const client = new WaniKaniClient(keyToUse);
-      const userLevel = await getUserLevel(client);
+      try {
+        const client = new WaniKaniClient(keyToUse);
+        const userLevel = await getUserLevel(client);
 
-      // Sync subjects and assignments in parallel
-      await Promise.all([
-        syncSubjects(client, { maxLevel: userLevel }),
-        syncAssignments(client),
-      ]);
+        // Sync subjects and assignments in parallel
+        await Promise.all([
+          syncSubjects(client, { maxLevel: userLevel }),
+          syncAssignments(client),
+        ]);
 
-      // Navigate to Home screen after successful sync
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Home' }],
-      });
-    } catch (error) {
-      setIsSyncing(false);
-      const errorMessage =
-        error instanceof Error ? error.message : 'An unknown error occurred';
-      setSyncError(errorMessage);
-    }
-  }, [navigation]);
+        // Navigate to Home screen after successful sync
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Home' }],
+        });
+      } catch (error) {
+        setIsSyncing(false);
+        const errorMessage =
+          error instanceof Error ? error.message : 'An unknown error occurred';
+        setSyncError(errorMessage);
+      }
+    },
+    [navigation],
+  );
 
   const handleRetry = useCallback(() => {
     const trimmedKey = apiKey.trim();
@@ -102,7 +105,10 @@ export function SettingsScreen() {
       // Validate the API key first
       const validationResult = await validateApiKey(trimmedKey);
       if (!validationResult.success) {
-        Alert.alert('Validation Failed', validationResult.error || 'Invalid API key');
+        Alert.alert(
+          'Validation Failed',
+          validationResult.error || 'Invalid API key',
+        );
         setIsSaving(false);
         return;
       }
@@ -126,7 +132,7 @@ export function SettingsScreen() {
   const handleClear = () => {
     Alert.alert(
       'Clear API Key',
-      'Are you sure you want to remove your API key?',
+      'Are you sure you want to remove your API key? This will also delete all synced data.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -135,13 +141,12 @@ export function SettingsScreen() {
           onPress: async () => {
             const result = await clearApiKey();
             if (result.success) {
+              // Clear all synced data from the database
+              await clearAllData();
               setApiKey('');
               setHasStoredKey(false);
             } else {
-              Alert.alert(
-                'Error',
-                result.error || 'Failed to clear API key',
-              );
+              Alert.alert('Error', result.error || 'Failed to clear API key');
             }
           },
         },
@@ -186,7 +191,8 @@ export function SettingsScreen() {
         <TouchableOpacity
           style={[styles.button, styles.retryButton]}
           onPress={handleRetry}
-          testID="retry-button">
+          testID="retry-button"
+        >
           <Text style={styles.buttonText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -213,10 +219,15 @@ export function SettingsScreen() {
         />
 
         <TouchableOpacity
-          style={[styles.button, styles.saveButton, isSaving && styles.buttonDisabled]}
+          style={[
+            styles.button,
+            styles.saveButton,
+            isSaving && styles.buttonDisabled,
+          ]}
           onPress={handleSave}
           disabled={isSaving}
-          testID="save-button">
+          testID="save-button"
+        >
           {isSaving ? (
             <ActivityIndicator color="#fff" />
           ) : (
@@ -228,7 +239,8 @@ export function SettingsScreen() {
           <TouchableOpacity
             style={[styles.button, styles.clearButton]}
             onPress={handleClear}
-            testID="clear-button">
+            testID="clear-button"
+          >
             <Text style={[styles.buttonText, styles.clearButtonText]}>
               Clear API Key
             </Text>
