@@ -13,6 +13,25 @@ Started: Sun Jan 25 20:13:24 CET 2026
 
 ---
 
+## 2026-01-25 - US-011
+- **What was implemented**: Show component kanji on incorrect vocabulary answer screens in both LessonQuiz and ReviewSession
+- **Files changed**:
+  - `src/components/LessonQuiz.tsx` - Added QuizComponentKanji interface, componentKanji prop to QuizItem, added component kanji section below mnemonic in incorrect feedback with displayText for reading questions
+  - `src/components/ReviewSession.tsx` - Added ReviewComponentKanji interface, componentKanji prop to ReviewItem, added component kanji section below mnemonic in incorrect feedback with displayText for reading questions
+  - `src/components/index.ts` - Exported QuizComponentKanji and ReviewComponentKanji types
+  - `src/screens/LessonsScreen.tsx` - Added componentKanji map and useMemo, updated lessonItemToQuizItem() to accept componentKanji map
+  - `src/screens/ReviewsScreen.tsx` - Added componentKanji to ReviewSessionData, updated subjectToReviewItem() to accept componentKanji map, added kanji loading to loadReviews()
+  - `__tests__/components/LessonQuiz.test.tsx` - Added 8 tests for component kanji display on incorrect vocabulary answers
+  - `__tests__/components/ReviewSession.test.tsx` - Added 6 tests for component kanji display on incorrect vocabulary answers
+- **Learnings for future iterations:**
+  - For vocabulary items, component_subject_ids points to kanji subjects (not radicals like for kanji items)
+  - ComponentDisplay's displayText prop is used to show reading instead of meaning for reading questions
+  - Both LessonQuiz and ReviewSession need to conditionally check for vocabulary/kana_vocabulary subjectType
+  - Kana-only vocabulary handled by checking for empty componentKanji array (length > 0 condition)
+  - Component kanji are fetched from database alongside component radicals in a single query
+
+---
+
 ## 2026-01-25 - US-010
 - **What was implemented**: Show component radicals on incorrect kanji answer screens in both LessonQuiz and ReviewSession
 - **Files changed**:

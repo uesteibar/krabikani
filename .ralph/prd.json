@@ -195,8 +195,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added componentKanji interface and prop to QuizItem and ReviewItem. LessonQuiz and ReviewSession display 'Made up of' section below mnemonic for incorrect vocabulary answers. Uses ComponentDisplay with pink kanji styling. For meaning questions, shows kanji meaning; for reading questions, shows kanji reading via displayText prop. LessonsScreen and ReviewsScreen fetch component kanji data from database. Kana-only words handled by checking for empty componentKanji array. 12 new tests added."
     },
     {
       "id": "US-012",
