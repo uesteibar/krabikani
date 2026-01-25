@@ -710,3 +710,32 @@
   - Browser verification not available (no dev-browser skill configured)
 
 ---
+
+## 2026-01-25 - US-025: Review Submission - Offline Queue
+- What was implemented:
+  - syncPendingData() function in syncService that syncs both pending lessons and reviews when coming back online
+  - Network reconnection listener in HomeScreen that triggers syncPendingDataOnReconnect()
+  - PendingSyncIndicator component showing pending items count (X lessons and Y reviews pending sync)
+  - Zero data loss: failed sync attempts leave items in queue for retry
+  - useFocusEffect to trigger pending sync when HomeScreen comes into focus (if online)
+  - useRef for isSyncingPending to prevent concurrent sync attempts
+  - Fixed pre-existing test bug in ReviewSession wrap-up mode (test was using 2 items but expecting 0/1)
+  - 7 new tests for PendingSyncIndicator component
+  - 4 new tests for syncPendingData function
+- Files changed:
+  - src/sync/syncService.ts (added syncPendingData, SyncPendingDataResult type)
+  - src/sync/index.ts (updated exports)
+  - src/components/PendingSyncIndicator.tsx (new - pending sync indicator component)
+  - src/components/index.ts (updated exports)
+  - src/screens/HomeScreen.tsx (added network reconnection listener, pending data state, sync on focus)
+  - __tests__/components/PendingSyncIndicator.test.tsx (new - 7 tests)
+  - __tests__/sync/syncService.test.ts (added 4 new tests for syncPendingData)
+  - __tests__/components/ReviewSession.test.tsx (fixed test to use single item for wrap-up progress test)
+- **Learnings for future iterations:**
+  - Use addNetworkStatusListener from networkStatus module to listen for connectivity changes
+  - useRef is helpful to prevent concurrent async operations (isSyncingPending pattern)
+  - useFocusEffect can be used multiple times - one for loading data, one for syncing pending
+  - Sync lessons before reviews (order matters for new lessons that unlock reviews)
+  - Browser verification not available (no dev-browser skill configured)
+
+---
