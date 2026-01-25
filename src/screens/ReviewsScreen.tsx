@@ -24,7 +24,7 @@ import {
   type DatabaseSubject,
 } from '../storage';
 import { submitReviews, type ReviewToSubmit } from '../sync';
-import { isOnline } from '../utils/networkStatus';
+import { isOnline, startSession, endSession } from '../utils';
 
 type ReviewsScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -128,9 +128,15 @@ export function ReviewsScreen() {
     }
   }, []);
 
-  // Load available reviews on mount
+  // Load available reviews on mount and track session state
   useEffect(() => {
+    startSession('review');
     loadReviews();
+
+    // End session when component unmounts
+    return () => {
+      endSession();
+    };
   }, [loadReviews]);
 
   // Convert session data to review items

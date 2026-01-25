@@ -11,6 +11,7 @@ export {
   syncPendingReviews,
   clearPendingReviews,
   syncPendingData,
+  backgroundSync,
   type SyncProgressCallback,
   type SyncSubjectsOptions,
   type SyncSubjectsResult,
@@ -25,4 +26,6 @@ export {
   type SubmitReviewsResult,
   type SyncPendingReviewsResult,
   type SyncPendingDataResult,
+  type BackgroundSyncResult,
+  type BackgroundSyncOptions,
 } from './syncService';

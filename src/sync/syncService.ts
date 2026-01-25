@@ -804,3 +804,92 @@ export async function syncPendingData(
     reviews: reviewsResult,
   };
 }
+
+// ============================================
+// Background Sync
+// ============================================
+
+export interface BackgroundSyncResult {
+  success: boolean;
+  /** Whether sync was skipped (e.g., due to active session) */
+  skipped: boolean;
+  /** Reason for skipping if skipped is true */
+  skipReason?: string;
+  /** Results from syncing pending data */
+  pendingData?: SyncPendingDataResult;
+  /** Results from syncing subjects */
+  subjects?: SyncSubjectsResult;
+  /** Results from syncing assignments */
+  assignments?: SyncAssignmentsResult;
+  error?: string;
+}
+
+export interface BackgroundSyncOptions {
+  /** Check if sync should be skipped (e.g., active session) */
+  shouldSkip?: () => boolean;
+  /** Reason to report if shouldSkip returns true */
+  skipReason?: string;
+}
+
+/**
+ * Performs a background sync operation when the app comes to the foreground.
+ *
+ * This function:
+ * 1. Syncs any pending review/lesson submissions
+ * 2. Fetches new assignments and reviews from WaniKani API
+ * 3. Fetches any new subjects unlocked since last sync
+ * 4. Can be configured to skip sync during active sessions
+ *
+ * @param client WaniKani API client
+ * @param options Configuration options
+ * @returns Result of the background sync operation
+ */
+export async function backgroundSync(
+  client: WaniKaniClient,
+  options: BackgroundSyncOptions = {},
+): Promise<BackgroundSyncResult> {
+  const { shouldSkip, skipReason } = options;
+
+  // Check if sync should be skipped
+  if (shouldSkip && shouldSkip()) {
+    return {
+      success: true,
+      skipped: true,
+      skipReason: skipReason ?? 'Sync skipped',
+    };
+  }
+
+  try {
+    // Step 1: Sync any pending data (offline lessons/reviews)
+    const pendingResult = await syncPendingData(client);
+
+    // Step 2: Get user level to know which subjects to fetch
+    const userLevel = await getUserLevel(client);
+
+    // Step 3: Sync subjects (will use last_subjects_sync for incremental sync)
+    const syncStatus = await getSyncStatus();
+    const subjectsResult = await syncSubjects(client, {
+      maxLevel: userLevel,
+      updatedAfter: syncStatus?.last_subjects_sync ?? undefined,
+    });
+
+    // Step 4: Sync assignments (will use last_assignments_sync for incremental sync)
+    const assignmentsResult = await syncAssignments(client);
+
+    return {
+      success: pendingResult.success && subjectsResult.success && assignmentsResult.success,
+      skipped: false,
+      pendingData: pendingResult,
+      subjects: subjectsResult,
+      assignments: assignmentsResult,
+    };
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error during background sync';
+    return {
+      success: false,
+      skipped: false,
+      error: errorMessage,
+    };
+  }
+}

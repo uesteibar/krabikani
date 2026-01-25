@@ -27,7 +27,7 @@ import {
 } from '../storage';
 import { WaniKaniClient } from '../api/wanikaniApi';
 import { getApiKey } from '../storage/secureStorage';
-import { isOnline } from '../utils/networkStatus';
+import { isOnline, startSession, endSession } from '../utils';
 import { completeLessons, type LessonToComplete } from '../sync';
 
 type LessonsScreenNavigationProp = NativeStackNavigationProp<
@@ -148,9 +148,15 @@ export function LessonsScreen() {
     }
   }, []);
 
-  // Load available lessons on mount
+  // Load available lessons on mount and track session state
   useEffect(() => {
+    startSession('lesson');
     loadLessons();
+
+    // End session when component unmounts
+    return () => {
+      endSession();
+    };
   }, [loadLessons]);
 
   // Get the current batch of items
