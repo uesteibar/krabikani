@@ -2,11 +2,9 @@ import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { StyleSheet, Text, View, PanResponder, GestureResponderEvent, PanResponderGestureState } from 'react-native';
 
 import type { SubjectType, Meaning, Reading, KanjiReading } from '../api/types';
-import { LessonCard } from './LessonCard';
-import { RadicalImage } from './RadicalImage';
+import { LessonCard, ComponentRadical } from './LessonCard';
 import {
   getSubjectColor,
-  SUBJECT_COLORS,
   COLORS,
   SPACING,
   FONT_SIZES,
@@ -31,18 +29,6 @@ export interface LessonItem {
   readingMnemonic: string | null;
   /** Component radical subject IDs (only for kanji) */
   componentSubjectIds?: number[];
-  /** JSON string of character images (for radicals without Unicode characters) */
-  characterImages?: string | null;
-}
-
-/** Data for a component radical */
-export interface ComponentRadical {
-  /** Subject ID */
-  id: number;
-  /** Radical characters (null for image-only radicals) */
-  characters: string | null;
-  /** Primary meaning of the radical */
-  meaning: string;
   /** JSON string of character images (for radicals without Unicode characters) */
   characterImages?: string | null;
 }
@@ -199,37 +185,6 @@ export function LessonBatch({
         </Text>
       </View>
 
-      {/* Component radicals display for kanji */}
-      {currentComponentRadicals.length > 0 && (
-        <View
-          style={styles.componentsContainer}
-          testID="lesson-batch-components">
-          <Text style={styles.componentsTitle}>Made up of:</Text>
-          <View style={styles.componentsRow}>
-            {currentComponentRadicals.map(radical => (
-              <View
-                key={radical.id}
-                style={styles.componentItem}
-                testID={`lesson-batch-component-${radical.id}`}>
-                {radical.characters === null && radical.characterImages ? (
-                  <RadicalImage
-                    characterImages={radical.characterImages}
-                    fallbackText={radical.meaning}
-                    size={FONT_SIZES.xxl}
-                    testID={`lesson-batch-component-${radical.id}-image`}
-                  />
-                ) : (
-                  <Text style={styles.componentCharacter}>
-                    {radical.characters ?? '?'}
-                  </Text>
-                )}
-                <Text style={styles.componentMeaning}>{radical.meaning}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      )}
-
       {/* Lesson card with swipe gesture support */}
       <View style={styles.cardContainer} {...panResponder.panHandlers} testID="lesson-batch-swipe-area">
         <LessonCard
@@ -240,6 +195,7 @@ export function LessonBatch({
           meaningMnemonic={currentItem.meaningMnemonic}
           readingMnemonic={currentItem.readingMnemonic}
           characterImages={currentItem.characterImages}
+          componentRadicals={currentComponentRadicals}
           onNext={handleNext}
           onBack={isFirstItem ? undefined : handleBack}
         />
@@ -277,45 +233,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm,
     color: COLORS.text.secondary,
     fontWeight: '500',
-  },
-  componentsContainer: {
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
-    backgroundColor: '#E8F4FF', // Light blue tint for radical components
-    borderBottomWidth: 1,
-    borderBottomColor: '#B8D4F0',
-  },
-  componentsTitle: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.text.secondary,
-    marginBottom: SPACING.sm,
-    fontWeight: '500',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  componentsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.md,
-  },
-  componentItem: {
-    alignItems: 'center',
-    minWidth: 60,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    backgroundColor: SUBJECT_COLORS.radical,
-    borderRadius: BORDER_RADIUS.md,
-  },
-  componentCharacter: {
-    fontSize: FONT_SIZES.xxl,
-    fontWeight: 'bold',
-    color: COLORS.text.inverse,
-  },
-  componentMeaning: {
-    fontSize: 10,
-    color: 'rgba(255, 255, 255, 0.9)',
-    marginTop: SPACING.xs,
-    textAlign: 'center',
   },
   cardContainer: {
     flex: 1,

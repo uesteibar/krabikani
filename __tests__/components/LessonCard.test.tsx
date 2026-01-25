@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 
-import { LessonCard, LessonCardProps } from '../../src/components/LessonCard';
+import { LessonCard, LessonCardProps, ComponentRadical } from '../../src/components/LessonCard';
 import type { Meaning, Reading, KanjiReading } from '../../src/api/types';
 import { SUBJECT_COLORS } from '../../src/theme';
 
@@ -484,6 +484,84 @@ describe('LessonCard', () => {
       expect(backButtonText.props.style).toEqual(
         expect.arrayContaining([expect.objectContaining({ color: SUBJECT_COLORS.kanji })]),
       );
+    });
+  });
+
+  describe('component radicals section', () => {
+    const componentRadicals: ComponentRadical[] = [
+      { id: 1, characters: '一', meaning: 'Ground' },
+      { id: 3, characters: '人', meaning: 'Person' },
+    ];
+
+    it('renders component radicals section when provided for kanji', () => {
+      const props = { ...defaultKanjiProps, componentRadicals };
+      const { getByTestId } = render(<LessonCard {...props} />);
+      expect(getByTestId('lesson-card-components')).toBeTruthy();
+    });
+
+    it('displays "Made up of:" title', () => {
+      const props = { ...defaultKanjiProps, componentRadicals };
+      const { getByText } = render(<LessonCard {...props} />);
+      expect(getByText('Made up of:')).toBeTruthy();
+    });
+
+    it('displays each component radical', () => {
+      const props = { ...defaultKanjiProps, componentRadicals };
+      const { getByTestId } = render(<LessonCard {...props} />);
+      expect(getByTestId('lesson-card-component-1')).toBeTruthy();
+      expect(getByTestId('lesson-card-component-3')).toBeTruthy();
+    });
+
+    it('displays component radical characters', () => {
+      const props = { ...defaultKanjiProps, componentRadicals };
+      const { getByText } = render(<LessonCard {...props} />);
+      expect(getByText('一')).toBeTruthy();
+      expect(getByText('人')).toBeTruthy();
+    });
+
+    it('displays component radical meanings', () => {
+      const props = { ...defaultKanjiProps, componentRadicals };
+      const { getByText } = render(<LessonCard {...props} />);
+      expect(getByText('Ground')).toBeTruthy();
+      expect(getByText('Person')).toBeTruthy();
+    });
+
+    it('does not render component radicals section when not provided', () => {
+      const { queryByTestId } = render(<LessonCard {...defaultKanjiProps} />);
+      expect(queryByTestId('lesson-card-components')).toBeNull();
+    });
+
+    it('does not render component radicals section when array is empty', () => {
+      const props = { ...defaultKanjiProps, componentRadicals: [] };
+      const { queryByTestId } = render(<LessonCard {...props} />);
+      expect(queryByTestId('lesson-card-components')).toBeNull();
+    });
+
+    it('displays ? for radicals with null characters', () => {
+      const radicalsWithNull: ComponentRadical[] = [
+        { id: 50, characters: null, meaning: 'Image Radical' },
+      ];
+      const props = { ...defaultKanjiProps, componentRadicals: radicalsWithNull };
+      const { getByText } = render(<LessonCard {...props} />);
+      expect(getByText('?')).toBeTruthy();
+    });
+
+    it('displays RadicalImage for radicals with null characters but has characterImages', () => {
+      const characterImages = JSON.stringify([
+        {
+          url: 'https://files.wanikani.com/test-radical.png',
+          content_type: 'image/png',
+          metadata: {},
+        },
+      ]);
+      const radicalsWithImages: ComponentRadical[] = [
+        { id: 50, characters: null, meaning: 'Image Radical', characterImages },
+      ];
+      const props = { ...defaultKanjiProps, componentRadicals: radicalsWithImages };
+      const { getByTestId } = render(<LessonCard {...props} />);
+      // Should render a component with the RadicalImage
+      expect(getByTestId('lesson-card-component-50')).toBeTruthy();
+      expect(getByTestId('lesson-card-component-50-image')).toBeTruthy();
     });
   });
 

@@ -5,10 +5,10 @@ import {
   LessonBatch,
   LessonBatchProps,
   LessonItem,
-  ComponentRadical,
   LESSON_BATCH_SIZE,
   SWIPE_THRESHOLD,
 } from '../../src/components/LessonBatch';
+import { ComponentRadical } from '../../src/components/LessonCard';
 import type { Meaning, Reading, KanjiReading } from '../../src/api/types';
 import { SUBJECT_COLORS, COLORS } from '../../src/theme';
 
@@ -442,13 +442,13 @@ describe('LessonBatch', () => {
       const { getByTestId, queryByTestId } = render(<LessonBatch {...defaultProps} />);
 
       // First item is radical - no components
-      expect(queryByTestId('lesson-batch-components')).toBeNull();
+      expect(queryByTestId('lesson-card-components')).toBeNull();
 
       // Navigate to kanji item
       fireEvent.press(getByTestId('lesson-card-next-button'));
 
       // Kanji item should have components
-      expect(getByTestId('lesson-batch-components')).toBeTruthy();
+      expect(getByTestId('lesson-card-components')).toBeTruthy();
     });
 
     it('displays component radicals with correct data', () => {
@@ -458,8 +458,8 @@ describe('LessonBatch', () => {
       fireEvent.press(getByTestId('lesson-card-next-button'));
 
       // Should show both component radicals
-      expect(getByTestId('lesson-batch-component-1')).toBeTruthy();
-      expect(getByTestId('lesson-batch-component-3')).toBeTruthy();
+      expect(getByTestId('lesson-card-component-1')).toBeTruthy();
+      expect(getByTestId('lesson-card-component-3')).toBeTruthy();
     });
 
     it('displays component radical characters', () => {
@@ -469,7 +469,7 @@ describe('LessonBatch', () => {
       fireEvent.press(getByTestId('lesson-card-next-button'));
 
       // The components section should exist
-      expect(getByTestId('lesson-batch-component-1')).toBeTruthy();
+      expect(getByTestId('lesson-card-component-1')).toBeTruthy();
       // The character should be displayed
       expect(getByText('一')).toBeTruthy(); // Ground radical
       expect(getByText('Ground')).toBeTruthy(); // Meaning
@@ -482,14 +482,14 @@ describe('LessonBatch', () => {
       fireEvent.press(getByTestId('lesson-card-next-button')); // kanji
       fireEvent.press(getByTestId('lesson-card-next-button')); // vocabulary
 
-      expect(queryByTestId('lesson-batch-components')).toBeNull();
+      expect(queryByTestId('lesson-card-components')).toBeNull();
     });
 
     it('does not show components for radicals', () => {
       const { queryByTestId } = render(<LessonBatch {...defaultProps} />);
 
       // First item is a radical
-      expect(queryByTestId('lesson-batch-components')).toBeNull();
+      expect(queryByTestId('lesson-card-components')).toBeNull();
     });
 
     it('does not show components when kanji has no componentSubjectIds', () => {
@@ -502,7 +502,7 @@ describe('LessonBatch', () => {
         />,
       );
 
-      expect(queryByTestId('lesson-batch-components')).toBeNull();
+      expect(queryByTestId('lesson-card-components')).toBeNull();
     });
 
     it('does not show components when componentRadicals map is not provided', () => {
@@ -514,7 +514,7 @@ describe('LessonBatch', () => {
         />,
       );
 
-      expect(queryByTestId('lesson-batch-components')).toBeNull();
+      expect(queryByTestId('lesson-card-components')).toBeNull();
     });
 
     it('filters out missing component radicals', () => {
@@ -528,8 +528,8 @@ describe('LessonBatch', () => {
       );
 
       // Should only show component 1, not 999
-      expect(getByTestId('lesson-batch-component-1')).toBeTruthy();
-      expect(queryByTestId('lesson-batch-component-999')).toBeNull();
+      expect(getByTestId('lesson-card-component-1')).toBeTruthy();
+      expect(queryByTestId('lesson-card-component-999')).toBeNull();
     });
   });
 
@@ -700,7 +700,7 @@ describe('LessonBatch', () => {
         />,
       );
 
-      expect(getByTestId('lesson-batch-component-50')).toBeTruthy();
+      expect(getByTestId('lesson-card-component-50')).toBeTruthy();
       expect(getByText('?')).toBeTruthy();
     });
   });

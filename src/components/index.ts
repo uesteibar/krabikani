@@ -20,14 +20,17 @@ export {
   type NextReviewIndicatorProps,
 } from './NextReviewIndicator';
 
-export { LessonCard, type LessonCardProps } from './LessonCard';
+export {
+  LessonCard,
+  type LessonCardProps,
+  type ComponentRadical,
+} from './LessonCard';
 
 export {
   LessonBatch,
   LESSON_BATCH_SIZE,
   type LessonBatchProps,
   type LessonItem,
-  type ComponentRadical,
 } from './LessonBatch';
 
 export {
