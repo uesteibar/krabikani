@@ -21,3 +21,11 @@ export {
 } from './NextReviewIndicator';
 
 export { LessonCard, type LessonCardProps } from './LessonCard';
+
+export {
+  LessonBatch,
+  LESSON_BATCH_SIZE,
+  type LessonBatchProps,
+  type LessonItem,
+  type ComponentRadical,
+} from './LessonBatch';
