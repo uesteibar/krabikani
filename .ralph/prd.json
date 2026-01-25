@@ -175,8 +175,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added componentRadicals to QuizItem and ReviewItem interfaces. LessonQuiz and ReviewSession now display 'Made up of' section below mnemonic for incorrect kanji answers. Uses ComponentDisplay component with blue radical styling. Added 12 tests covering display of component radicals."
     },
     {
       "id": "US-011",

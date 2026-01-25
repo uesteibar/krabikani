@@ -13,6 +13,25 @@ Started: Sun Jan 25 20:13:24 CET 2026
 
 ---
 
+## 2026-01-25 - US-010
+- **What was implemented**: Show component radicals on incorrect kanji answer screens in both LessonQuiz and ReviewSession
+- **Files changed**:
+  - `src/components/LessonQuiz.tsx` - Added QuizComponentRadical interface, componentRadicals prop to QuizItem, imported ComponentDisplay, added component radicals section below mnemonic in incorrect feedback, added componentsRow style
+  - `src/components/ReviewSession.tsx` - Added ReviewComponentRadical interface, componentRadicals prop to ReviewItem, imported ComponentDisplay, added component radicals section below mnemonic in incorrect feedback, added componentsRow style
+  - `src/components/index.ts` - Exported QuizComponentRadical and ReviewComponentRadical types
+  - `src/screens/LessonsScreen.tsx` - Updated lessonItemToQuizItem() to accept componentRadicals map and include them in quiz items, updated componentRadicals population to include characterImages
+  - `src/screens/ReviewsScreen.tsx` - Updated subjectToReviewItem() to accept componentRadicals map, added componentRadicals loading to loadReviews() by fetching component subjects, updated reviewItems useMemo
+  - `__tests__/components/LessonQuiz.test.tsx` - Added 6 tests for component radicals display on incorrect kanji answers
+  - `__tests__/components/ReviewSession.test.tsx` - Added 5 tests for component radicals display on incorrect kanji answers
+- **Learnings for future iterations:**
+  - QuizItem and ReviewItem interfaces can include optional componentRadicals array for kanji items
+  - Component radicals are loaded from database (via getSubjectsByIds) for both lessons and reviews
+  - For lessons, radicals come from session.subjects; for reviews, they need separate database fetch
+  - ComponentDisplay component provides consistent rendering for component radicals (blue pills)
+  - The "Made up of" section only shows for kanji items with componentRadicals.length > 0
+
+---
+
 ## 2026-01-25 - US-009
 - **What was implemented**: Created reusable ComponentDisplay component for rendering radical/kanji items on incorrect answer screens
 - **Files changed**:

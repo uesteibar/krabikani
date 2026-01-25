@@ -44,10 +44,23 @@ import {
   MIN_TOUCH_TARGET,
 } from '../theme';
 import { MnemonicText } from './MnemonicText';
+import { ComponentDisplay } from './ComponentDisplay';
 
 // ============================================
 // Types
 // ============================================
+
+/** Component radical data for kanji review items */
+export interface ReviewComponentRadical {
+  /** Subject ID */
+  id: number;
+  /** Radical characters (null for image-only radicals) */
+  characters: string | null;
+  /** Primary meaning of the radical */
+  meaning: string;
+  /** JSON string of character images (for radicals without Unicode characters) */
+  characterImages?: string | null;
+}
 
 /** Data for a review item */
 export interface ReviewItem {
@@ -69,6 +82,8 @@ export interface ReviewItem {
   readingMnemonic: string | null;
   /** Auxiliary meanings for validation (optional) */
   auxiliaryMeanings?: AuxiliaryMeaning[];
+  /** Component radicals for kanji items (optional) */
+  componentRadicals?: ReviewComponentRadical[];
 }
 
 /** Type of question being asked */
@@ -1022,6 +1037,32 @@ export function ReviewSession({
               testID="review-session-mnemonic"
             />
           </View>
+
+          {/* Component radicals for kanji items */}
+          {incorrectFeedback.question.item.subjectType === 'kanji' &&
+            incorrectFeedback.question.item.componentRadicals &&
+            incorrectFeedback.question.item.componentRadicals.length > 0 && (
+              <View
+                style={styles.feedbackSection}
+                testID="review-session-component-radicals"
+              >
+                <Text style={styles.feedbackLabel}>Made up of:</Text>
+                <View style={styles.componentsRow}>
+                  {incorrectFeedback.question.item.componentRadicals.map(
+                    radical => (
+                      <ComponentDisplay
+                        key={radical.id}
+                        subjectType="radical"
+                        characters={radical.characters}
+                        meaning={radical.meaning}
+                        characterImages={radical.characterImages}
+                        testID={`review-session-component-${radical.id}`}
+                      />
+                    ),
+                  )}
+                </View>
+              </View>
+            )}
         </ScrollView>
 
         {/* Button row: Mark as Correct + Continue */}
@@ -1447,6 +1488,11 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.base,
     color: COLORS.text.primary,
     lineHeight: FONT_SIZES.xxl,
+  },
+  componentsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.md,
   },
   continueButton: {
     backgroundColor: COLORS.neutral.gray600,

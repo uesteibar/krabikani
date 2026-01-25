@@ -1697,4 +1697,198 @@ describe('LessonQuiz', () => {
       }
     });
   });
+
+  describe('Component Radicals on Incorrect Kanji Answers', () => {
+    // Create a kanji item with component radicals
+    const kanjiWithRadicals: QuizItem = {
+      id: 100,
+      subjectType: 'kanji',
+      characters: '森',
+      meanings: createMeanings([{ meaning: 'Forest', primary: true }]),
+      readings: createKanjiReadings([
+        { reading: 'もり', primary: true, type: 'kunyomi' },
+      ]),
+      meaningMnemonic: 'Three trees make a forest',
+      readingMnemonic: 'Reading mnemonic for mori',
+      componentRadicals: [
+        { id: 1, characters: '木', meaning: 'Tree', characterImages: null },
+        { id: 2, characters: '木', meaning: 'Tree', characterImages: null },
+        { id: 3, characters: '木', meaning: 'Tree', characterImages: null },
+      ],
+    };
+
+    it('shows component radicals on incorrect kanji meaning answer', () => {
+      const { getByTestId, getByText } = render(
+        <LessonQuiz
+          items={[kanjiWithRadicals]}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Should be on meaning question
+      const type = getByTestId('lesson-quiz-question-type').props.children;
+      expect(type).toBe('MEANING');
+
+      // Submit wrong answer
+      const input = getByTestId('lesson-quiz-input');
+      fireEvent.changeText(input, 'wrong');
+      fireEvent(input, 'submitEditing');
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Should show incorrect feedback
+      expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
+
+      // Should show component radicals section
+      expect(getByTestId('lesson-quiz-component-radicals')).toBeTruthy();
+      expect(getByText('Made up of:')).toBeTruthy();
+
+      // Should show each component radical
+      expect(getByTestId('lesson-quiz-component-1')).toBeTruthy();
+      expect(getByTestId('lesson-quiz-component-2')).toBeTruthy();
+      expect(getByTestId('lesson-quiz-component-3')).toBeTruthy();
+    });
+
+    it('shows component radicals on incorrect kanji reading answer', () => {
+      const { getByTestId } = render(
+        <LessonQuiz
+          items={[kanjiWithRadicals]}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // First, answer meaning question correctly
+      const input = getByTestId('lesson-quiz-input');
+      fireEvent.changeText(input, 'forest');
+      fireEvent(input, 'submitEditing');
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Should now be on reading question
+      const type = getByTestId('lesson-quiz-question-type').props.children;
+      expect(type).toBe('READING');
+
+      // Submit wrong answer
+      fireEvent.changeText(input, 'wrong');
+      fireEvent(input, 'submitEditing');
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Should show incorrect feedback with component radicals
+      expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
+      expect(getByTestId('lesson-quiz-component-radicals')).toBeTruthy();
+    });
+
+    it('does not show component radicals for kanji without components', () => {
+      const kanjiWithoutRadicals: QuizItem = {
+        ...sampleKanji,
+        componentRadicals: undefined,
+      };
+
+      const { getByTestId, queryByTestId } = render(
+        <LessonQuiz
+          items={[kanjiWithoutRadicals]}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Submit wrong answer
+      const input = getByTestId('lesson-quiz-input');
+      fireEvent.changeText(input, 'wrong');
+      fireEvent(input, 'submitEditing');
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Should show incorrect feedback
+      expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
+
+      // Should not show component radicals section
+      expect(queryByTestId('lesson-quiz-component-radicals')).toBeNull();
+    });
+
+    it('does not show component radicals for radicals', () => {
+      const { getByTestId, queryByTestId } = render(
+        <LessonQuiz
+          items={[sampleRadical]}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Submit wrong answer
+      const input = getByTestId('lesson-quiz-input');
+      fireEvent.changeText(input, 'wrong');
+      fireEvent(input, 'submitEditing');
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Should show incorrect feedback
+      expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
+
+      // Should not show component radicals section
+      expect(queryByTestId('lesson-quiz-component-radicals')).toBeNull();
+    });
+
+    it('does not show component radicals for vocabulary', () => {
+      const { getByTestId, queryByTestId } = render(
+        <LessonQuiz
+          items={[sampleVocabulary]}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Submit wrong answer
+      const input = getByTestId('lesson-quiz-input');
+      fireEvent.changeText(input, 'wrong');
+      fireEvent(input, 'submitEditing');
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Should show incorrect feedback
+      expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
+
+      // Should not show component radicals section
+      expect(queryByTestId('lesson-quiz-component-radicals')).toBeNull();
+    });
+
+    it('displays radical characters correctly', () => {
+      const { getByTestId, getAllByText } = render(
+        <LessonQuiz
+          items={[kanjiWithRadicals]}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Submit wrong answer
+      const input = getByTestId('lesson-quiz-input');
+      fireEvent.changeText(input, 'wrong');
+      fireEvent(input, 'submitEditing');
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Should display radical characters
+      const treeTexts = getAllByText('木');
+      // There should be at least 3 tree radicals displayed
+      expect(treeTexts.length).toBeGreaterThanOrEqual(3);
+    });
+  });
 });
