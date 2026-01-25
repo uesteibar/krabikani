@@ -39,6 +39,29 @@
 
 ---
 
+## 2026-01-25 - US-005: Show sync progress indicator on Home screen during pull-to-refresh
+- What was implemented:
+  - Created SyncingIndicator component that shows "Syncing..." text with a spinner
+  - Component only renders when isSyncing prop is true, otherwise returns null
+  - Added SyncingIndicator to HomeScreen, wired to existing refreshing state
+  - The refreshing state already tracks pull-to-refresh sync, so no new state needed
+  - Indicator disappears automatically when sync completes (success or failure) since refreshing becomes false
+- Files changed:
+  - src/components/SyncingIndicator.tsx (new component)
+  - src/components/index.ts (added export for SyncingIndicator)
+  - src/screens/HomeScreen.tsx (added SyncingIndicator import and usage)
+  - __tests__/components/SyncingIndicator.test.tsx (new test file with 4 tests)
+  - __tests__/screens/HomeScreen.test.tsx (added 3 tests for syncing indicator during pull-to-refresh)
+  - .ralph/prd.json (marked US-005 as passes: true)
+  - .ralph/progress.txt (added this entry)
+- **Learnings for future iterations:**
+  - Test IDs for syncing indicator: syncing-indicator, syncing-indicator-spinner
+  - HomeScreen already has refreshing state that tracks pull-to-refresh, no need to add new state
+  - To test indicator visibility during async operations, use Promise that doesn't resolve immediately
+  - Use act() without await to start async operation, then await waitFor() to check state change
+
+---
+
 ## 2026-01-25 - US-004: Handle sync errors with retry option
 - What was implemented:
   - Added syncError state to SettingsScreen to track sync error messages
