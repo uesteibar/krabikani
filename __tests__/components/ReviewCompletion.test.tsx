@@ -1,7 +1,19 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { AccessibilityInfo } from 'react-native';
 
 import { ReviewCompletion } from '../../src/components/ReviewCompletion';
+
+// Mock AccessibilityInfo
+const mockIsReduceMotionEnabled = jest.fn(() => Promise.resolve(false));
+const mockAddEventListener = jest.fn(() => ({ remove: jest.fn() }));
+
+jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockImplementation(
+  mockIsReduceMotionEnabled,
+);
+jest.spyOn(AccessibilityInfo, 'addEventListener').mockImplementation(
+  mockAddEventListener,
+);
 
 describe('ReviewCompletion', () => {
   const defaultProps = {
@@ -13,6 +25,8 @@ describe('ReviewCompletion', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // Default: animations enabled (reduce motion disabled)
+    mockIsReduceMotionEnabled.mockResolvedValue(false);
   });
 
   describe('rendering', () => {
@@ -201,6 +215,81 @@ describe('ReviewCompletion', () => {
 
       // Now the callback should be called
       expect(onReturnToDashboard).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('staggered animations', () => {
+    it('should render all animated elements', () => {
+      const { getByTestId, getByText } = render(
+        <ReviewCompletion {...defaultProps} />,
+      );
+
+      // All elements should be present for staggered animation
+      expect(getByTestId('review-completion-icon')).toBeTruthy();
+      expect(getByTestId('review-completion-title')).toBeTruthy();
+      expect(getByTestId('review-completion-count')).toBeTruthy();
+      expect(getByTestId('review-completion-sync-status')).toBeTruthy();
+      expect(getByTestId('review-completion-dashboard')).toBeTruthy();
+      expect(getByText('Return to Dashboard')).toBeTruthy();
+    });
+  });
+
+  describe('confetti animation', () => {
+    it('should show confetti particles when incorrectCount is 0', async () => {
+      const { queryByTestId } = render(
+        <ReviewCompletion {...defaultProps} incorrectCount={0} />,
+      );
+
+      // Wait for state to update
+      await waitFor(() => {
+        // Check that confetti particles are rendered (we render 12 particles)
+        expect(queryByTestId('confetti-particle-0')).toBeTruthy();
+        expect(queryByTestId('confetti-particle-5')).toBeTruthy();
+        expect(queryByTestId('confetti-particle-11')).toBeTruthy();
+      });
+    });
+
+    it('should not show confetti particles when incorrectCount is greater than 0', () => {
+      const { queryByTestId } = render(
+        <ReviewCompletion {...defaultProps} incorrectCount={3} />,
+      );
+
+      // No confetti should be rendered
+      expect(queryByTestId('confetti-particle-0')).toBeNull();
+    });
+  });
+
+  describe('reduced motion', () => {
+    it('should check reduced motion setting on mount', async () => {
+      render(<ReviewCompletion {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(mockIsReduceMotionEnabled).toHaveBeenCalled();
+      });
+    });
+
+    it('should add event listener for reduced motion changes', async () => {
+      render(<ReviewCompletion {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(mockAddEventListener).toHaveBeenCalledWith(
+          'reduceMotionChanged',
+          expect.any(Function),
+        );
+      });
+    });
+
+    it('should not show confetti when reduced motion is enabled', async () => {
+      mockIsReduceMotionEnabled.mockResolvedValue(true);
+
+      const { queryByTestId } = render(
+        <ReviewCompletion {...defaultProps} incorrectCount={0} />,
+      );
+
+      await waitFor(() => {
+        // Even with 0 incorrect, confetti should not show with reduced motion
+        expect(queryByTestId('confetti-particle-0')).toBeNull();
+      });
     });
   });
 });

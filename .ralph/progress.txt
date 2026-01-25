@@ -67,3 +67,60 @@ Started:
 
 ---
 
+## 2026-01-26 - US-003
+- What was implemented: Animate SRS Level Down Transitions
+  - Added calculateSrsStageAfterIncorrect() utility function implementing WaniKani SRS penalty rules:
+    - Apprentice 1-4: drop to Apprentice 1 (stage 1)
+    - Guru 1-2: drop to Apprentice 4 (stage 4)
+    - Master/Enlightened: drop to Guru 1 (stage 5)
+    - Burned: no change (not reviewable)
+  - Extended AnimatedSrsLevelBadge with level-down animation:
+    - OLD level shown for 200ms
+    - Badge shakes horizontally 2-3 times (±8px oscillations)
+    - Red tint pulse overlay during shake
+    - Cross-fade to new level (250ms) with ease-out-quart easing
+    - Total duration ~400ms
+  - Animation only plays when level actually decreases (e.g., Guru→Apprentice)
+  - Integrated level-down animation into ReviewSession for incorrect feedback screen
+  - Added levelDownAnimation state to track level-down transitions
+- Files changed:
+  - src/theme/colors.ts (added calculateSrsStageAfterIncorrect function)
+  - src/theme/index.ts (exported calculateSrsStageAfterIncorrect)
+  - src/components/AnimatedSrsLevelBadge.tsx (added animateLevelDown prop, shake animation, red tint overlay)
+  - src/components/ReviewSession.tsx (imports calculateSrsStageAfterIncorrect, added levelDownAnimation state, shows AnimatedSrsLevelBadge on incorrect feedback)
+  - jest.setup.js (added Easing.linear and Easing.poly mocks, added eslint-env directive)
+  - __tests__/theme/srsLevels.test.ts (added tests for calculateSrsStageAfterIncorrect)
+  - __tests__/components/AnimatedSrsLevelBadge.test.tsx (added tests for level-down animation)
+- **Learnings for future iterations:**
+  - Patterns discovered: Easing.poly(4) is equivalent to Easing.quart (which doesn't exist in reanimated)
+  - Gotchas encountered: Jest mocks need to include all Easing functions used by the component
+  - Useful context: Level-down penalties are more dramatic than level-up (multiple levels can be skipped)
+
+---
+
+## 2026-01-26 - US-004
+- What was implemented: Create Animated Review Completion Screen Base
+  - Created ReviewCompletion component with animated checkmark in reviews purple circle
+  - Added scale bounce animation (0 → 1.15 → 1.0) using withSequence and Easing.back
+  - Checkmark stroke animation using opacity fade-in with withDelay
+  - Display total items reviewed count in large 64px bold text (reviews purple color)
+  - Show incorrect count with red tint (only when > 0, with singular/plural forms)
+  - Sync status badge with colored background (green "Synced" / amber "Queued")
+  - Styled "Return to Dashboard" button matching reviews purple theme
+  - Integrated ReviewCompletion into ReviewSession, replacing basic completion screen
+  - Added onReturnToDashboard and syncedOnline props to ReviewSessionProps
+  - Calculates total incorrect count from item progress for completion stats
+- Files changed:
+  - src/components/ReviewCompletion.tsx (new - animated completion screen component)
+  - src/components/index.ts (exported ReviewCompletion)
+  - src/components/ReviewSession.tsx (added props, imported and integrated ReviewCompletion)
+  - jest.setup.js (added Easing.back and Easing.ease mocks)
+  - __tests__/components/ReviewCompletion.test.tsx (new - comprehensive tests)
+  - __tests__/components/ReviewSession.test.tsx (updated testIDs from review-session-complete to review-completion)
+- **Learnings for future iterations:**
+  - Patterns discovered: Completion screens follow LessonCompletion pattern with iconContainer, summaryContainer, syncStatus, and actionsContainer
+  - Gotchas encountered: Easing.back() needs to be mocked in jest.setup.js for reanimated animations
+  - Useful context: ReviewSession already tracks incorrect counts per item via _itemProgress Map (incorrectMeaningAnswers + incorrectReadingAnswers)
+
+---
+
