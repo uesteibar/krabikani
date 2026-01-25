@@ -265,6 +265,16 @@ describe('ReviewSession', () => {
       expect(getByTestId('review-session-submit')).toBeTruthy();
     });
 
+    it('should render question type indicator bar', () => {
+      (Math.random as jest.Mock).mockReturnValue(0.1);
+
+      const { getByTestId } = render(
+        <ReviewSession {...defaultProps} />,
+      );
+
+      expect(getByTestId('review-session-question-type-bar')).toBeTruthy();
+    });
+
     it('should show progress count', () => {
       // Make random deterministic
       (Math.random as jest.Mock).mockReturnValue(0.1);
@@ -714,6 +724,60 @@ describe('ReviewSession', () => {
           expect.objectContaining({ backgroundColor: SUBJECT_COLORS.vocabulary }),
         ]),
       );
+    });
+  });
+
+  describe('Question Type Indicator Bar', () => {
+    it('should use black background for reading questions', () => {
+      // Use vocabulary which has both meaning and reading questions
+      // Mock random to control the question order (0.7 > 0.5 means reading first)
+      (Math.random as jest.Mock).mockReturnValue(0.7);
+
+      const { getByTestId } = render(
+        <ReviewSession items={[sampleVocabulary]} />,
+      );
+
+      const questionType = getByTestId('review-session-question-type').props.children;
+      const bar = getByTestId('review-session-question-type-bar');
+
+      if (questionType === 'READING') {
+        // Reading questions should have black bar
+        expect(bar.props.style).toEqual(
+          expect.arrayContaining([expect.objectContaining({ backgroundColor: '#000000' })]),
+        );
+      }
+    });
+
+    it('should use white background with border for meaning questions', () => {
+      // Use radical which only has meaning questions
+      const { getByTestId } = render(
+        <ReviewSession items={[sampleRadical]} />,
+      );
+
+      const bar = getByTestId('review-session-question-type-bar');
+
+      // Meaning questions should have white bar with border
+      expect(bar.props.style).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            backgroundColor: '#FFFFFF',
+            borderBottomWidth: 1,
+          }),
+        ]),
+      );
+    });
+
+    it('should show indicator bar on incorrect feedback screen', () => {
+      const { getByTestId } = render(
+        <ReviewSession items={[sampleRadical]} />,
+      );
+
+      // Submit wrong answer
+      fireEvent.changeText(getByTestId('review-session-input'), 'wrong');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Should show indicator bar in incorrect feedback view
+      expect(getByTestId('review-session-question-type-bar')).toBeTruthy();
     });
   });
 

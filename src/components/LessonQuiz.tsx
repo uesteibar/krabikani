@@ -438,6 +438,17 @@ export function LessonQuiz({
           </View>
         </View>
 
+        {/* Question type indicator bar */}
+        <View
+          style={[
+            styles.questionTypeBar,
+            incorrectFeedback.question.type === 'reading'
+              ? styles.questionTypeBarReading
+              : styles.questionTypeBarMeaning,
+          ]}
+          testID="lesson-quiz-question-type-bar"
+        />
+
         {/* Character display with red tint for incorrect */}
         <View
           style={[styles.characterContainer, styles.incorrectHeader]}
@@ -548,6 +559,17 @@ export function LessonQuiz({
         </View>
       </View>
 
+      {/* Question type indicator bar */}
+      <View
+        style={[
+          styles.questionTypeBar,
+          type === 'reading'
+            ? styles.questionTypeBarReading
+            : styles.questionTypeBarMeaning,
+        ]}
+        testID="lesson-quiz-question-type-bar"
+      />
+
       {/* Character display - with green tint if showing correct feedback */}
       <View
         style={[
@@ -630,6 +652,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background.primary,
+  },
+  questionTypeBar: {
+    height: 10,
+    width: '100%',
+  },
+  questionTypeBarReading: {
+    backgroundColor: COLORS.neutral.black,
+  },
+  questionTypeBarMeaning: {
+    backgroundColor: COLORS.neutral.white,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border.medium,
   },
   progressContainer: {
     paddingHorizontal: SPACING.lg,

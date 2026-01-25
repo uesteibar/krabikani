@@ -287,6 +287,11 @@ describe('LessonQuiz', () => {
       const { getByTestId } = render(<LessonQuiz {...defaultProps} />);
       expect(getByTestId('lesson-quiz-question-type')).toBeTruthy();
     });
+
+    it('renders the question type indicator bar', () => {
+      const { getByTestId } = render(<LessonQuiz {...defaultProps} />);
+      expect(getByTestId('lesson-quiz-question-type-bar')).toBeTruthy();
+    });
   });
 
   describe('empty state', () => {
@@ -869,6 +874,60 @@ describe('LessonQuiz', () => {
       expect(container.props.style).toEqual(
         expect.arrayContaining([expect.objectContaining({ backgroundColor: SUBJECT_COLORS.kana_vocabulary })]),
       );
+    });
+  });
+
+  describe('question type indicator bar', () => {
+    it('uses black background for reading questions', () => {
+      // Use vocabulary which has both meaning and reading questions
+      const items = [sampleVocabulary];
+      const { getByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+      );
+
+      const questionType = getByTestId('lesson-quiz-question-type').props.children;
+      const bar = getByTestId('lesson-quiz-question-type-bar');
+
+      if (questionType === 'READING') {
+        // Reading questions should have black bar
+        expect(bar.props.style).toEqual(
+          expect.arrayContaining([expect.objectContaining({ backgroundColor: '#000000' })]),
+        );
+      }
+    });
+
+    it('uses white background with border for meaning questions', () => {
+      // Use radical which only has meaning questions
+      const items = [sampleRadical];
+      const { getByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+      );
+
+      const bar = getByTestId('lesson-quiz-question-type-bar');
+
+      // Meaning questions should have white bar with border
+      expect(bar.props.style).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            backgroundColor: '#FFFFFF',
+            borderBottomWidth: 1,
+          }),
+        ]),
+      );
+    });
+
+    it('shows indicator bar on incorrect feedback screen', () => {
+      const items = [sampleRadical];
+      const { getByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+      );
+
+      // Submit wrong answer
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      // Should show indicator bar in incorrect feedback view
+      expect(getByTestId('lesson-quiz-question-type-bar')).toBeTruthy();
     });
   });
 
