@@ -126,13 +126,6 @@ export interface ReviewSessionProps {
 }
 
 /**
- * Get the prompt text based on question type.
- */
-function getQuestionPrompt(type: ReviewQuestionType): string {
-  return type === 'meaning' ? 'What is the meaning?' : 'What is the reading?';
-}
-
-/**
  * Get all accepted meanings as a string for display.
  */
 function getAcceptedMeaningsDisplay(meanings: Meaning[]): string {
@@ -483,6 +476,136 @@ export function ReviewSession({
     advanceToNextQuestion();
   }, [advanceToNextQuestion]);
 
+  // Handle "Mark as Correct" - treat incorrect answer as correct
+  const handleMarkAsCorrect = useCallback(() => {
+    if (!incorrectFeedback) return;
+
+    const question = incorrectFeedback.question;
+    const { item, type } = question;
+
+    // Create result as if it were correct
+    const result: ReviewAnswerResult = {
+      question,
+      userAnswer: incorrectFeedback.userAnswer,
+      isCorrect: true,
+      correctAnswer: incorrectFeedback.correctAnswer,
+    };
+
+    // Notify parent of the corrected result
+    onAnswer?.(result);
+
+    // Remove the re-queued question (it was added when marked incorrect)
+    setQuestionQueue(prev => {
+      const newQueue = [...prev];
+      // Find and remove the last occurrence of this question
+      for (let i = newQueue.length - 1; i >= 0; i--) {
+        if (newQueue[i].key === question.key) {
+          newQueue.splice(i, 1);
+          break;
+        }
+      }
+      return newQueue;
+    });
+
+    // Update item progress - mark as correct and decrement incorrect count
+    const currentProgress = _itemProgress.get(item.id)!;
+    const wasComplete = currentProgress.meaningCorrect && currentProgress.readingCorrect;
+
+    setItemProgress(prev => {
+      const newProgress = new Map(prev);
+      const itemProgress = { ...newProgress.get(item.id)! };
+
+      // Mark this question type as correct
+      if (type === 'meaning') {
+        itemProgress.meaningCorrect = true;
+        // Decrement incorrect count since we're overriding
+        if (itemProgress.incorrectMeaningAnswers > 0) {
+          itemProgress.incorrectMeaningAnswers--;
+        }
+      } else {
+        itemProgress.readingCorrect = true;
+        if (itemProgress.incorrectReadingAnswers > 0) {
+          itemProgress.incorrectReadingAnswers--;
+        }
+      }
+
+      newProgress.set(item.id, itemProgress);
+      return newProgress;
+    });
+
+    // Check if item is now complete
+    const willMeaningBeCorrect =
+      type === 'meaning' ? true : currentProgress.meaningCorrect;
+    const willReadingBeCorrect =
+      type === 'reading' ? true : currentProgress.readingCorrect;
+    const willBeComplete = willMeaningBeCorrect && willReadingBeCorrect;
+    const itemJustCompleted = willBeComplete && !wasComplete;
+
+    if (itemJustCompleted) {
+      const newCompletedCount = completedItemCount + 1;
+      setCompletedItemCount(newCompletedCount);
+
+      // Check session completion
+      let sessionComplete: boolean;
+      if (isWrappingUp) {
+        // In wrap-up mode: complete when all introduced items are done
+        sessionComplete = (() => {
+          for (const itemId of introducedItemIds) {
+            if (itemId === item.id) continue;
+            const progress = _itemProgress.get(itemId);
+            if (!progress || !(progress.meaningCorrect && progress.readingCorrect)) {
+              return false;
+            }
+          }
+          return true;
+        })();
+      } else {
+        sessionComplete = newCompletedCount >= totalItemCount;
+      }
+
+      if (sessionComplete) {
+        // Build the final progress map for the callback
+        const finalProgress = new Map<number, ItemProgress>();
+        const itemsToInclude = isWrappingUp ? introducedItemIds : new Set(_itemProgress.keys());
+        for (const itemId of itemsToInclude) {
+          const progress = _itemProgress.get(itemId)!;
+          if (itemId === item.id) {
+            // Include the update for the current item
+            const updatedProgress = { ...progress };
+            if (type === 'meaning') {
+              updatedProgress.meaningCorrect = true;
+              if (updatedProgress.incorrectMeaningAnswers > 0) {
+                updatedProgress.incorrectMeaningAnswers--;
+              }
+            } else {
+              updatedProgress.readingCorrect = true;
+              if (updatedProgress.incorrectReadingAnswers > 0) {
+                updatedProgress.incorrectReadingAnswers--;
+              }
+            }
+            finalProgress.set(itemId, updatedProgress);
+          } else {
+            finalProgress.set(itemId, progress);
+          }
+        }
+        onSessionComplete?.(finalProgress);
+      }
+    }
+
+    // Advance to next question
+    advanceToNextQuestion();
+  }, [
+    incorrectFeedback,
+    onAnswer,
+    onSessionComplete,
+    _itemProgress,
+    completedItemCount,
+    totalItemCount,
+    isWrappingUp,
+    introducedItemIds,
+    advanceToNextQuestion,
+  ]);
+
   // Trigger shake animation for invalid input
   const triggerShake = useCallback(() => {
     shakeAnimation.setValue(0);
@@ -741,6 +864,8 @@ export function ReviewSession({
     autoAdvanceDelay,
     isWrappingUp,
     introducedItemIds,
+    hasRomajiCharacters,
+    triggerShake,
   ]);
 
   // Handle edge case of empty items array
@@ -899,20 +1024,29 @@ export function ReviewSession({
           </View>
         </ScrollView>
 
-        {/* Continue button */}
-        <TouchableOpacity
-          style={[styles.submitButton, styles.continueButton]}
-          onPress={handleContinue}
-          activeOpacity={0.8}
-          testID="review-session-continue"
-        >
-          <Text style={styles.submitButtonText}>Continue</Text>
-        </TouchableOpacity>
+        {/* Button row: Mark as Correct + Continue */}
+        <View style={styles.incorrectButtonRow}>
+          <TouchableOpacity
+            style={styles.markCorrectButton}
+            onPress={handleMarkAsCorrect}
+            activeOpacity={0.8}
+            testID="review-session-mark-correct"
+          >
+            <Text style={styles.markCorrectButtonText}>Mark as Correct</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.submitButton, styles.continueButton, styles.continueButtonFlex]}
+            onPress={handleContinue}
+            activeOpacity={0.8}
+            testID="review-session-continue"
+          >
+            <Text style={styles.submitButtonText}>Continue</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
   const backgroundColor = getSubjectColor(item.subjectType);
-  const questionPrompt = getQuestionPrompt(type);
   const placeholder =
     type === 'meaning' ? 'Enter meaning...' : 'Type reading (romaji)...';
 
@@ -1357,5 +1491,32 @@ const styles = StyleSheet.create({
   },
   wrapUpButtonTextActive: {
     color: COLORS.text.inverse,
+  },
+  // Incorrect feedback button row
+  incorrectButtonRow: {
+    flexDirection: 'row',
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.lg,
+    gap: SPACING.md,
+  },
+  continueButtonFlex: {
+    flex: 1,
+    margin: 0,
+  },
+  markCorrectButton: {
+    paddingVertical: SPACING.lg,
+    paddingHorizontal: SPACING.xl,
+    minHeight: MIN_TOUCH_TARGET,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.neutral.gray100,
+    borderWidth: 2,
+    borderColor: COLORS.neutral.gray400,
+  },
+  markCorrectButtonText: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: 'bold',
+    color: COLORS.text.secondary,
   },
 });

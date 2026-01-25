@@ -1521,6 +1521,142 @@ describe('LessonQuiz', () => {
     });
   });
 
+  describe('Mark as Correct functionality', () => {
+    it('shows "Mark as Correct" button on incorrect feedback screen', () => {
+      const items = [sampleRadical];
+      const { getByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+      );
+
+      // Submit wrong answer
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      // Should show Mark as Correct button alongside Continue
+      expect(getByTestId('lesson-quiz-mark-correct')).toBeTruthy();
+      expect(getByTestId('lesson-quiz-continue')).toBeTruthy();
+    });
+
+    it('marks question as correct when "Mark as Correct" is pressed', () => {
+      const onAnswer = jest.fn();
+      const items = [sampleRadical];
+      const { getByTestId, getByText } = render(
+        <LessonQuiz items={items} onAnswer={onAnswer} autoAdvanceDelay={0} />,
+      );
+
+      // Submit wrong answer
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      // First call should be incorrect
+      expect(onAnswer).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isCorrect: false,
+        }),
+      );
+
+      // Press Mark as Correct
+      fireEvent.press(getByTestId('lesson-quiz-mark-correct'));
+
+      // Second call should be correct (overriding the incorrect answer)
+      expect(onAnswer).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          isCorrect: true,
+        }),
+      );
+
+      // Quiz should be complete (single item)
+      expect(getByText('Quiz Complete!')).toBeTruthy();
+    });
+
+    it('advances to next question after "Mark as Correct" is pressed', () => {
+      const items = [sampleRadical, sampleRadical2]; // 2 questions
+      const { getByTestId, queryByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+      );
+
+      // Get first question character
+      const firstChar = getByTestId('lesson-quiz-characters').props.children;
+
+      // Submit wrong answer
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      // Press Mark as Correct
+      fireEvent.press(getByTestId('lesson-quiz-mark-correct'));
+
+      // Should be on next question (not showing feedback)
+      expect(queryByTestId('lesson-quiz-incorrect-feedback')).toBeNull();
+      expect(getByTestId('lesson-quiz')).toBeTruthy();
+
+      // Second question should have different character
+      const secondChar = getByTestId('lesson-quiz-characters').props.children;
+      expect(secondChar).not.toBe(firstChar);
+    });
+
+    it('removes re-queued question when "Mark as Correct" is pressed', () => {
+      const items = [sampleRadical]; // Single item
+      const { getByTestId, getByText } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+      );
+
+      // Submit wrong answer (question gets re-queued)
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      // Press Mark as Correct
+      fireEvent.press(getByTestId('lesson-quiz-mark-correct'));
+
+      // Quiz should be complete immediately (re-queued question was removed)
+      expect(getByText('Quiz Complete!')).toBeTruthy();
+    });
+
+    it('calls onQuizComplete when all questions marked correct', () => {
+      const onQuizComplete = jest.fn();
+      const items = [sampleRadical];
+      const { getByTestId } = render(
+        <LessonQuiz
+          items={items}
+          onQuizComplete={onQuizComplete}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Submit wrong answer
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      // Press Mark as Correct
+      fireEvent.press(getByTestId('lesson-quiz-mark-correct'));
+
+      // onQuizComplete should be called
+      expect(onQuizComplete).toHaveBeenCalledTimes(1);
+    });
+
+    it('preserves user answer when marking as correct', () => {
+      const onAnswer = jest.fn();
+      const items = [sampleRadical];
+      const { getByTestId } = render(
+        <LessonQuiz items={items} onAnswer={onAnswer} autoAdvanceDelay={0} />,
+      );
+
+      // Submit wrong answer
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'my typo answer');
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      // Press Mark as Correct
+      fireEvent.press(getByTestId('lesson-quiz-mark-correct'));
+
+      // The corrected result should preserve the user's original answer
+      expect(onAnswer).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          userAnswer: 'my typo answer',
+          isCorrect: true,
+        }),
+      );
+    });
+  });
+
   describe('input positioning', () => {
     it('has padding for appropriate spacing', () => {
       const items = [sampleRadical];
