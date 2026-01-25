@@ -13,6 +13,20 @@ Started: Sun Jan 25 20:13:24 CET 2026
 
 ---
 
+## 2026-01-25 - US-005
+- **What was implemented**: Damerau-Levenshtein distance algorithm for typo forgiveness in answer validation
+- **Files changed**:
+  - `src/utils/stringDistance.ts` - New utility with damerauLevenshtein() and isWithinDistance() functions
+  - `src/utils/index.ts` - Exported new string distance functions and types
+  - `__tests__/utils/stringDistance.test.ts` - 64 comprehensive tests for the algorithm
+- **Learnings for future iterations:**
+  - Damerau-Levenshtein algorithm handles 4 operations: insertion, deletion, substitution, transposition
+  - Early termination optimization via maxDistance option avoids unnecessary computation
+  - The algorithm returns maxDistance + 1 when distance exceeds threshold (not the actual distance)
+  - isWithinDistance() is a convenience wrapper for checking if strings are within acceptable edit distance
+
+---
+
 ## 2026-01-25 - US-004
 - **What was implemented**: Display user's current WaniKani level on the home screen in the stats area
 - **Files changed**:
