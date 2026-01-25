@@ -269,6 +269,7 @@ export function ReviewSession({
   const [_itemProgress, setItemProgress] =
     useState<Map<number, ItemProgress>>(initialItemProgress);
   const [showCorrectFeedback, setShowCorrectFeedback] = useState(false);
+  const [isFuzzyMatch, setIsFuzzyMatch] = useState(false);
   const [incorrectFeedback, setIncorrectFeedback] =
     useState<IncorrectFeedback | null>(null);
 
@@ -312,6 +313,7 @@ export function ReviewSession({
     setItemProgress(newProgress);
     setCompletedItemCount(0);
     setShowCorrectFeedback(false);
+    setIsFuzzyMatch(false);
     setIncorrectFeedback(null);
     setIsWrappingUp(false);
     setIntroducedItemIds(new Set());
@@ -467,6 +469,7 @@ export function ReviewSession({
     setPendingRomaji('');
     setIncorrectFeedback(null);
     setShowCorrectFeedback(false);
+    setIsFuzzyMatch(false);
   }, [
     findNextQuestionIndex,
     questionQueue,
@@ -545,6 +548,7 @@ export function ReviewSession({
 
     // Validate the answer
     let isCorrect = false;
+    let fuzzyMatch = false;
     if (type === 'meaning') {
       const validationResult = validateMeaningAnswer(
         answer,
@@ -552,6 +556,7 @@ export function ReviewSession({
         item.auxiliaryMeanings ?? [],
       );
       isCorrect = validationResult.isCorrect;
+      fuzzyMatch = validationResult.isFuzzyMatch ?? false;
     } else {
       const validationResult = validateReadingAnswer(
         answer,
@@ -684,8 +689,10 @@ export function ReviewSession({
     if (isCorrect) {
       // Show brief correct feedback then auto-advance
       setShowCorrectFeedback(true);
+      setIsFuzzyMatch(fuzzyMatch);
       setTimeout(() => {
         setShowCorrectFeedback(false);
+        setIsFuzzyMatch(false);
 
         // Update completed count if item just completed (deferred so feedback shows first)
         if (itemJustCompleted) {
@@ -971,11 +978,15 @@ export function ReviewSession({
         </View>
       </View>
 
-      {/* Character display - with green tint if showing correct feedback */}
+      {/* Character display - with green/yellow tint if showing correct feedback */}
       <View
         style={[
           styles.characterContainer,
-          showCorrectFeedback ? styles.correctHeader : { backgroundColor },
+          showCorrectFeedback
+            ? isFuzzyMatch
+              ? styles.fuzzyMatchHeader
+              : styles.correctHeader
+            : { backgroundColor },
         ]}
         testID="review-session-character-container"
       >
@@ -985,9 +996,13 @@ export function ReviewSession({
         {showCorrectFeedback ? (
           <Text
             style={styles.correctLabel}
-            testID="review-session-correct-label"
+            testID={
+              isFuzzyMatch
+                ? 'review-session-fuzzy-match-label'
+                : 'review-session-correct-label'
+            }
           >
-            Correct!
+            {isFuzzyMatch ? 'Close enough!' : 'Correct!'}
           </Text>
         ) : (
           <Text style={styles.subjectType} testID="review-session-subject-type">
@@ -1164,6 +1179,10 @@ const styles = StyleSheet.create({
   // Correct feedback styles
   correctHeader: {
     backgroundColor: COLORS.feedback.correct,
+  },
+  // Fuzzy match (typo-forgiven) feedback styles
+  fuzzyMatchHeader: {
+    backgroundColor: COLORS.feedback.fuzzyMatch,
   },
   correctLabel: {
     fontSize: FONT_SIZES.sm,

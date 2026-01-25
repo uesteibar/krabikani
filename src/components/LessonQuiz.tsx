@@ -213,6 +213,7 @@ export function LessonQuiz({
   const [incorrectFeedback, setIncorrectFeedback] =
     useState<IncorrectFeedback | null>(null);
   const [showCorrectFeedback, setShowCorrectFeedback] = useState(false);
+  const [isFuzzyMatch, setIsFuzzyMatch] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Track completed questions (answered correctly)
@@ -240,6 +241,7 @@ export function LessonQuiz({
     setResults([]);
     setIncorrectFeedback(null);
     setShowCorrectFeedback(false);
+    setIsFuzzyMatch(false);
     setCompletedQuestionKeys(new Set());
     answeredQuestionsCount.current = 0;
   }, [items]);
@@ -294,6 +296,7 @@ export function LessonQuiz({
     setPendingRomaji('');
     setIncorrectFeedback(null);
     setShowCorrectFeedback(false);
+    setIsFuzzyMatch(false);
   }, []);
 
   // Handle tap to continue after incorrect answer
@@ -363,6 +366,7 @@ export function LessonQuiz({
 
     // Validate the answer
     let isCorrect = false;
+    let fuzzyMatch = false;
     if (type === 'meaning') {
       const validationResult = validateMeaningAnswer(
         answer,
@@ -370,6 +374,7 @@ export function LessonQuiz({
         item.auxiliaryMeanings ?? [],
       );
       isCorrect = validationResult.isCorrect;
+      fuzzyMatch = validationResult.isFuzzyMatch ?? false;
     } else {
       const validationResult = validateReadingAnswer(
         answer,
@@ -402,8 +407,10 @@ export function LessonQuiz({
 
       // Show brief correct feedback then auto-advance
       setShowCorrectFeedback(true);
+      setIsFuzzyMatch(fuzzyMatch);
       setTimeout(() => {
         setShowCorrectFeedback(false);
+        setIsFuzzyMatch(false);
         setIsSubmitting(false);
 
         // Check if quiz is now complete
@@ -625,11 +632,15 @@ export function LessonQuiz({
         </View>
       </View>
 
-      {/* Character display - with green tint if showing correct feedback */}
+      {/* Character display - with green/yellow tint if showing correct feedback */}
       <View
         style={[
           styles.characterContainer,
-          showCorrectFeedback ? styles.correctHeader : { backgroundColor },
+          showCorrectFeedback
+            ? isFuzzyMatch
+              ? styles.fuzzyMatchHeader
+              : styles.correctHeader
+            : { backgroundColor },
         ]}
         testID="lesson-quiz-character-container"
       >
@@ -637,8 +648,15 @@ export function LessonQuiz({
           {item.characters ?? '?'}
         </Text>
         {showCorrectFeedback ? (
-          <Text style={styles.correctLabel} testID="lesson-quiz-correct-label">
-            Correct!
+          <Text
+            style={styles.correctLabel}
+            testID={
+              isFuzzyMatch
+                ? 'lesson-quiz-fuzzy-match-label'
+                : 'lesson-quiz-correct-label'
+            }
+          >
+            {isFuzzyMatch ? 'Close enough!' : 'Correct!'}
           </Text>
         ) : (
           <Text style={styles.subjectType} testID="lesson-quiz-subject-type">
@@ -861,6 +879,10 @@ const styles = StyleSheet.create({
   // Correct feedback styles
   correctHeader: {
     backgroundColor: COLORS.feedback.correct,
+  },
+  // Fuzzy match (typo-forgiven) feedback styles
+  fuzzyMatchHeader: {
+    backgroundColor: COLORS.feedback.fuzzyMatch,
   },
   correctLabel: {
     fontSize: FONT_SIZES.sm,
