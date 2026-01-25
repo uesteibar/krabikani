@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, act } from '@testing-library/react-native';
 
 import {
   LessonQuiz,
@@ -134,12 +134,17 @@ const defaultProps: LessonQuizProps = {
   items: fiveItems,
   onAnswer: jest.fn(),
   onQuizComplete: jest.fn(),
+  autoAdvanceDelay: 0, // No delay for tests
 };
 
 describe('LessonQuiz', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Mock Math.random for predictable question order in some tests
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   describe('generateQuizQuestions', () => {
@@ -313,7 +318,7 @@ describe('LessonQuiz', () => {
     it('displays the subject characters', () => {
       const items = [sampleKanji];
       const { getByTestId } = render(
-        <LessonQuiz items={items} onAnswer={jest.fn()} />,
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
       expect(getByTestId('lesson-quiz-characters').props.children).toBe('大');
@@ -322,7 +327,7 @@ describe('LessonQuiz', () => {
     it('displays the subject type', () => {
       const items = [sampleKanji];
       const { getByTestId } = render(
-        <LessonQuiz items={items} onAnswer={jest.fn()} />,
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
       expect(getByTestId('lesson-quiz-subject-type').props.children).toBe('kanji');
@@ -331,7 +336,7 @@ describe('LessonQuiz', () => {
     it('displays kana_vocabulary as "kana vocabulary"', () => {
       const items = [sampleKanaVocabulary];
       const { getByTestId } = render(
-        <LessonQuiz items={items} onAnswer={jest.fn()} />,
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
       expect(getByTestId('lesson-quiz-subject-type').props.children).toBe('kana vocabulary');
@@ -343,7 +348,7 @@ describe('LessonQuiz', () => {
         characters: null,
       };
       const { getByTestId } = render(
-        <LessonQuiz items={[itemWithNullChar]} onAnswer={jest.fn()} />,
+        <LessonQuiz items={[itemWithNullChar]} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
       expect(getByTestId('lesson-quiz-characters').props.children).toBe('?');
@@ -355,7 +360,7 @@ describe('LessonQuiz', () => {
       // Use a radical to guarantee a meaning question
       const items = [sampleRadical];
       const { getByTestId } = render(
-        <LessonQuiz items={items} onAnswer={jest.fn()} />,
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
       expect(getByTestId('lesson-quiz-prompt').props.children).toBe('What is the meaning?');
@@ -367,7 +372,7 @@ describe('LessonQuiz', () => {
       // Since order is randomized, we'll check both possible prompts
       const items = [sampleKanji];
       const { getByTestId } = render(
-        <LessonQuiz items={items} onAnswer={jest.fn()} />,
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
       const prompt = getByTestId('lesson-quiz-prompt').props.children;
@@ -387,7 +392,7 @@ describe('LessonQuiz', () => {
     it('accepts text input for meaning questions', () => {
       const items = [sampleRadical]; // Radical only has meaning
       const { getByTestId } = render(
-        <LessonQuiz items={items} onAnswer={jest.fn()} />,
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
       const input = getByTestId('lesson-quiz-input');
@@ -400,7 +405,7 @@ describe('LessonQuiz', () => {
       // We need a non-radical to potentially get a reading question
       const items = [sampleVocabulary];
       const { getByTestId, queryByTestId } = render(
-        <LessonQuiz items={items} onAnswer={jest.fn()} />,
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
       const type = getByTestId('lesson-quiz-question-type').props.children;
@@ -420,7 +425,7 @@ describe('LessonQuiz', () => {
     it('shows converted display only for reading questions', () => {
       const items = [sampleRadical]; // Radical only has meaning
       const { getByTestId, queryByTestId } = render(
-        <LessonQuiz items={items} onAnswer={jest.fn()} />,
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
       const input = getByTestId('lesson-quiz-input');
@@ -430,16 +435,16 @@ describe('LessonQuiz', () => {
     });
   });
 
-  describe('submit handling', () => {
-    it('calls onAnswer when submit is pressed', () => {
+  describe('correct answer handling', () => {
+    it('calls onAnswer with isCorrect=true for correct meaning answer', () => {
       const onAnswer = jest.fn();
       const items = [sampleRadical];
       const { getByTestId } = render(
-        <LessonQuiz items={items} onAnswer={onAnswer} />,
+        <LessonQuiz items={items} onAnswer={onAnswer} autoAdvanceDelay={0} />,
       );
 
       const input = getByTestId('lesson-quiz-input');
-      fireEvent.changeText(input, 'ground');
+      fireEvent.changeText(input, 'Ground');
 
       const submit = getByTestId('lesson-quiz-submit');
       fireEvent.press(submit);
@@ -447,52 +452,328 @@ describe('LessonQuiz', () => {
       expect(onAnswer).toHaveBeenCalledTimes(1);
       expect(onAnswer).toHaveBeenCalledWith(
         expect.objectContaining({
-          userAnswer: 'ground',
-          question: expect.objectContaining({
-            type: 'meaning',
-          }),
+          userAnswer: 'Ground',
+          isCorrect: true,
         }),
       );
     });
 
-    it('clears input after submit', () => {
-      const items = [sampleRadical, sampleRadical2]; // Two radicals = 2 meaning questions
+    it('accepts case-insensitive meaning answers', () => {
+      const onAnswer = jest.fn();
+      const items = [sampleRadical];
       const { getByTestId } = render(
-        <LessonQuiz items={items} onAnswer={jest.fn()} />,
+        <LessonQuiz items={items} onAnswer={onAnswer} autoAdvanceDelay={0} />,
       );
 
       const input = getByTestId('lesson-quiz-input');
       fireEvent.changeText(input, 'ground');
 
-      const submit = getByTestId('lesson-quiz-submit');
-      fireEvent.press(submit);
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
 
-      expect(input.props.value).toBe('');
+      expect(onAnswer).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isCorrect: true,
+        }),
+      );
     });
 
-    it('advances to next question after submit', () => {
-      const items = [sampleRadical, sampleRadical2]; // Two radicals = 2 meaning questions
+    it('auto-advances after correct answer', async () => {
+      const items = [sampleRadical, sampleRadical2]; // 2 meaning questions
       const { getByTestId } = render(
-        <LessonQuiz items={items} onAnswer={jest.fn()} />,
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
-      const submit = getByTestId('lesson-quiz-submit');
-      fireEvent.press(submit);
+      // Determine which radical is shown first and answer correctly
+      const firstChar = getByTestId('lesson-quiz-characters').props.children;
+      const firstAnswer = firstChar === '一' ? 'Ground' : 'Person';
 
+      // Answer first question correctly
+      const input = getByTestId('lesson-quiz-input');
+      fireEvent.changeText(input, firstAnswer);
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      // Run timers for auto-advance
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Should have advanced to next question
       const progressText = getByTestId('lesson-quiz-progress-text');
       expect(progressText.props.children).toEqual([2, ' / ', 2]);
+    });
+
+    it('shows correct feedback briefly before advancing', () => {
+      const items = [sampleRadical, sampleRadical2];
+      const { getByTestId, queryByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={100} />,
+      );
+
+      // Determine which radical is shown first and answer correctly
+      const firstChar = getByTestId('lesson-quiz-characters').props.children;
+      const firstAnswer = firstChar === '一' ? 'Ground' : 'Person';
+
+      // Answer correctly
+      const input = getByTestId('lesson-quiz-input');
+      fireEvent.changeText(input, firstAnswer);
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      // Should show correct label
+      expect(queryByTestId('lesson-quiz-correct-label')).toBeTruthy();
+
+      // Run timers
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // After delay, should have advanced - check we're on question 2
+      const progressText = getByTestId('lesson-quiz-progress-text');
+      expect(progressText.props.children).toEqual([2, ' / ', 2]);
+    });
+
+    it('calls onQuizComplete when all questions answered correctly', () => {
+      const onQuizComplete = jest.fn();
+      const items = [sampleRadical]; // Just 1 question
+      const { getByTestId } = render(
+        <LessonQuiz items={items} onQuizComplete={onQuizComplete} autoAdvanceDelay={0} />,
+      );
+
+      // Answer correctly
+      const input = getByTestId('lesson-quiz-input');
+      fireEvent.changeText(input, 'Ground');
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      expect(onQuizComplete).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('incorrect answer handling', () => {
+    it('calls onAnswer with isCorrect=false for incorrect answer', () => {
+      const onAnswer = jest.fn();
+      const items = [sampleRadical];
+      const { getByTestId } = render(
+        <LessonQuiz items={items} onAnswer={onAnswer} autoAdvanceDelay={0} />,
+      );
+
+      const input = getByTestId('lesson-quiz-input');
+      fireEvent.changeText(input, 'wrong answer');
+
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      expect(onAnswer).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userAnswer: 'wrong answer',
+          isCorrect: false,
+        }),
+      );
+    });
+
+    it('shows incorrect feedback screen after wrong answer', () => {
+      const items = [sampleRadical];
+      const { getByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+      );
+
+      // Submit wrong answer
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      // Should show incorrect feedback
+      expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
+      expect(getByTestId('lesson-quiz-incorrect-label')).toBeTruthy();
+    });
+
+    it('displays user answer in feedback', () => {
+      const items = [sampleRadical];
+      const { getByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+      );
+
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'my wrong answer');
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      expect(getByTestId('lesson-quiz-your-answer').props.children).toBe('my wrong answer');
+    });
+
+    it('displays empty answer placeholder', () => {
+      const items = [sampleRadical];
+      const { getByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+      );
+
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      expect(getByTestId('lesson-quiz-your-answer').props.children).toBe('(empty)');
+    });
+
+    it('displays correct answer in feedback', () => {
+      const items = [sampleRadical];
+      const { getByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+      );
+
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      expect(getByTestId('lesson-quiz-correct-answer').props.children).toBe('Ground');
+    });
+
+    it('displays mnemonic in feedback', () => {
+      const items = [sampleRadical];
+      const { getByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+      );
+
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      expect(getByTestId('lesson-quiz-mnemonic').props.children).toBe('Mnemonic for Ground');
+      expect(getByTestId('lesson-quiz-mnemonic-label').props.children).toBe('Meaning Mnemonic:');
+    });
+
+    it('shows continue button after incorrect answer', () => {
+      const items = [sampleRadical];
+      const { getByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+      );
+
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      expect(getByTestId('lesson-quiz-continue')).toBeTruthy();
+    });
+
+    it('advances to next question when continue is pressed', () => {
+      const items = [sampleRadical, sampleRadical2]; // 2 questions
+      const { getByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+      );
+
+      // Submit wrong answer
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      // Press continue
+      fireEvent.press(getByTestId('lesson-quiz-continue'));
+
+      // Should be back at quiz view (not feedback)
+      expect(getByTestId('lesson-quiz')).toBeTruthy();
+    });
+  });
+
+  describe('re-queue incorrect items', () => {
+    it('re-queues incorrect question to appear later', () => {
+      const onAnswer = jest.fn();
+      // Just one radical with 1 question
+      const items = [sampleRadical];
+      const { getByTestId } = render(
+        <LessonQuiz items={items} onAnswer={onAnswer} autoAdvanceDelay={0} />,
+      );
+
+      // Answer incorrectly
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      // Press continue
+      fireEvent.press(getByTestId('lesson-quiz-continue'));
+
+      // The same question should appear again (it was re-queued)
+      expect(getByTestId('lesson-quiz')).toBeTruthy();
+      expect(getByTestId('lesson-quiz-characters').props.children).toBe('一');
+
+      // Now answer correctly
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'Ground');
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Now quiz should be complete
+      expect(getByTestId('lesson-quiz-complete')).toBeTruthy();
+    });
+
+    it('tracks incorrect items until answered correctly', () => {
+      const onAnswer = jest.fn();
+      const items = [sampleRadical];
+      const { getByTestId } = render(
+        <LessonQuiz items={items} onAnswer={onAnswer} autoAdvanceDelay={0} />,
+      );
+
+      // Answer wrong 3 times
+      for (let i = 0; i < 3; i++) {
+        fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
+        fireEvent.press(getByTestId('lesson-quiz-submit'));
+        fireEvent.press(getByTestId('lesson-quiz-continue'));
+      }
+
+      // Should still be showing the question
+      expect(getByTestId('lesson-quiz')).toBeTruthy();
+
+      // Now answer correctly
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'Ground');
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Quiz should be complete
+      expect(getByTestId('lesson-quiz-complete')).toBeTruthy();
+      expect(onAnswer).toHaveBeenCalledTimes(4); // 3 wrong + 1 correct
+    });
+
+    it('shows reading mnemonic for reading questions', () => {
+      // Force a reading question by using vocabulary
+      const vocabItem: QuizItem = {
+        ...sampleVocabulary,
+        meanings: createMeanings([{ meaning: 'Big', primary: true }]),
+        readings: createReadings([{ reading: 'おおきい', primary: true }]),
+        meaningMnemonic: 'This is the meaning mnemonic',
+        readingMnemonic: 'This is the reading mnemonic',
+      };
+      const items = [vocabItem];
+      const { getByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+      );
+
+      const questionType = getByTestId('lesson-quiz-question-type').props.children;
+
+      if (questionType === 'READING') {
+        // Submit wrong answer
+        fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
+        fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+        // Should show reading mnemonic
+        expect(getByTestId('lesson-quiz-mnemonic-label').props.children).toBe('Reading Mnemonic:');
+        expect(getByTestId('lesson-quiz-mnemonic').props.children).toBe('This is the reading mnemonic');
+      } else {
+        // Meaning question - answer wrong
+        fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
+        fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+        expect(getByTestId('lesson-quiz-mnemonic-label').props.children).toBe('Meaning Mnemonic:');
+      }
     });
   });
 
   describe('quiz completion', () => {
-    it('shows completion state when all questions answered', () => {
-      const items = [sampleRadical]; // Just one question
+    it('shows completion state when all questions answered correctly', () => {
+      const items = [sampleRadical];
       const { getByTestId } = render(
-        <LessonQuiz items={items} onAnswer={jest.fn()} />,
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
-      const submit = getByTestId('lesson-quiz-submit');
-      fireEvent.press(submit);
+      // Answer correctly
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'Ground');
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      act(() => {
+        jest.runAllTimers();
+      });
 
       expect(getByTestId('lesson-quiz-complete')).toBeTruthy();
     });
@@ -500,45 +781,43 @@ describe('LessonQuiz', () => {
     it('displays completion message', () => {
       const items = [sampleRadical];
       const { getByTestId, getByText } = render(
-        <LessonQuiz items={items} onAnswer={jest.fn()} />,
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
-      const submit = getByTestId('lesson-quiz-submit');
-      fireEvent.press(submit);
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'Ground');
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      act(() => {
+        jest.runAllTimers();
+      });
 
       expect(getByText('Quiz Complete!')).toBeTruthy();
     });
 
-    it('displays number of questions answered', () => {
+    it('displays number of questions answered including retries', () => {
       const items = [sampleRadical];
       const { getByTestId, getByText } = render(
-        <LessonQuiz items={items} onAnswer={jest.fn()} />,
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
-      const submit = getByTestId('lesson-quiz-submit');
-      fireEvent.press(submit);
+      // Answer wrong twice, then correct
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+      fireEvent.press(getByTestId('lesson-quiz-continue'));
 
-      expect(getByText('1 questions answered')).toBeTruthy();
-    });
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong again');
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+      fireEvent.press(getByTestId('lesson-quiz-continue'));
 
-    it('calls onQuizComplete when all questions answered', () => {
-      const onQuizComplete = jest.fn();
-      const items = [sampleRadical];
-      const { getByTestId } = render(
-        <LessonQuiz items={items} onAnswer={jest.fn()} onQuizComplete={onQuizComplete} />,
-      );
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'Ground');
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
 
-      const submit = getByTestId('lesson-quiz-submit');
-      fireEvent.press(submit);
+      act(() => {
+        jest.runAllTimers();
+      });
 
-      expect(onQuizComplete).toHaveBeenCalledTimes(1);
-      expect(onQuizComplete).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            question: expect.objectContaining({ type: 'meaning' }),
-          }),
-        ]),
-      );
+      // Should show 3 questions answered (2 wrong + 1 correct)
+      expect(getByText('3 questions answered')).toBeTruthy();
     });
   });
 
@@ -546,7 +825,7 @@ describe('LessonQuiz', () => {
     it('uses blue background for radicals', () => {
       const items = [sampleRadical];
       const { getByTestId } = render(
-        <LessonQuiz items={items} onAnswer={jest.fn()} />,
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
       const container = getByTestId('lesson-quiz-character-container');
@@ -558,7 +837,7 @@ describe('LessonQuiz', () => {
     it('uses pink background for kanji', () => {
       const items = [sampleKanji];
       const { getByTestId } = render(
-        <LessonQuiz items={items} onAnswer={jest.fn()} />,
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
       const container = getByTestId('lesson-quiz-character-container');
@@ -570,7 +849,7 @@ describe('LessonQuiz', () => {
     it('uses purple background for vocabulary', () => {
       const items = [sampleVocabulary];
       const { getByTestId } = render(
-        <LessonQuiz items={items} onAnswer={jest.fn()} />,
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
       const container = getByTestId('lesson-quiz-character-container');
@@ -582,7 +861,7 @@ describe('LessonQuiz', () => {
     it('uses purple background for kana_vocabulary', () => {
       const items = [sampleKanaVocabulary];
       const { getByTestId } = render(
-        <LessonQuiz items={items} onAnswer={jest.fn()} />,
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
       const container = getByTestId('lesson-quiz-character-container');
@@ -596,7 +875,7 @@ describe('LessonQuiz', () => {
     it('shows "Enter meaning..." for meaning questions', () => {
       const items = [sampleRadical];
       const { getByTestId } = render(
-        <LessonQuiz items={items} onAnswer={jest.fn()} />,
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
       const input = getByTestId('lesson-quiz-input');
@@ -605,24 +884,42 @@ describe('LessonQuiz', () => {
   });
 
   describe('multiple items quiz flow', () => {
-    it('cycles through all questions', () => {
+    it('cycles through all questions when answered correctly', () => {
       const items = [sampleRadical, sampleRadical2]; // 2 meaning questions
       const onAnswer = jest.fn();
-      const { getByTestId } = render(
-        <LessonQuiz items={items} onAnswer={onAnswer} />,
+      const { getByTestId, getByText } = render(
+        <LessonQuiz items={items} onAnswer={onAnswer} autoAdvanceDelay={0} />,
       );
 
-      // Answer first question
+      // Get the first question's expected answer
+      const firstChar = getByTestId('lesson-quiz-characters').props.children;
+      const firstAnswer = firstChar === '一' ? 'Ground' : 'Person';
+
+      // Answer first question correctly
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), firstAnswer);
       fireEvent.press(getByTestId('lesson-quiz-submit'));
 
-      // Should be on second question now
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Should be on second question
       expect(getByTestId('lesson-quiz-progress-text').props.children).toEqual([2, ' / ', 2]);
 
-      // Answer second question
+      // Get the second question's expected answer
+      const secondChar = getByTestId('lesson-quiz-characters').props.children;
+      const secondAnswer = secondChar === '一' ? 'Ground' : 'Person';
+
+      // Answer second question correctly
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), secondAnswer);
       fireEvent.press(getByTestId('lesson-quiz-submit'));
 
+      act(() => {
+        jest.runAllTimers();
+      });
+
       // Should show completion
-      expect(getByTestId('lesson-quiz-complete')).toBeTruthy();
+      expect(getByText('Quiz Complete!')).toBeTruthy();
       expect(onAnswer).toHaveBeenCalledTimes(2);
     });
 
@@ -640,7 +937,7 @@ describe('LessonQuiz', () => {
       const onAnswer = jest.fn();
       const items = [sampleRadical];
       const { getByTestId } = render(
-        <LessonQuiz items={items} onAnswer={onAnswer} />,
+        <LessonQuiz items={items} onAnswer={onAnswer} autoAdvanceDelay={0} />,
       );
 
       const input = getByTestId('lesson-quiz-input');
@@ -655,14 +952,14 @@ describe('LessonQuiz', () => {
           key: '1-meaning',
         }),
         userAnswer: 'ground',
-        isCorrect: false, // Placeholder - actual validation in US-018
-        correctAnswer: 'Ground',
+        isCorrect: true,
+        correctAnswer: 'Ground', // All accepted meanings
       });
     });
   });
 
   describe('kanji with multiple meanings', () => {
-    it('handles items with multiple meanings', () => {
+    it('accepts any valid meaning', () => {
       const itemWithMultipleMeanings: QuizItem = {
         ...sampleKanji,
         meanings: createMeanings([
@@ -674,18 +971,19 @@ describe('LessonQuiz', () => {
 
       const onAnswer = jest.fn();
       const { getByTestId } = render(
-        <LessonQuiz items={[itemWithMultipleMeanings]} onAnswer={onAnswer} />,
+        <LessonQuiz items={[itemWithMultipleMeanings]} onAnswer={onAnswer} autoAdvanceDelay={0} />,
       );
 
       const type = getByTestId('lesson-quiz-question-type').props.children;
 
       if (type === 'MEANING') {
-        fireEvent.changeText(getByTestId('lesson-quiz-input'), 'big');
+        // Try alternate meaning
+        fireEvent.changeText(getByTestId('lesson-quiz-input'), 'Large');
         fireEvent.press(getByTestId('lesson-quiz-submit'));
 
         expect(onAnswer).toHaveBeenCalledWith(
           expect.objectContaining({
-            correctAnswer: 'Big', // Primary meaning
+            isCorrect: true,
           }),
         );
       }
@@ -704,7 +1002,7 @@ describe('LessonQuiz', () => {
 
       const onAnswer = jest.fn();
       const { getByTestId } = render(
-        <LessonQuiz items={[itemWithMultipleReadings]} onAnswer={onAnswer} />,
+        <LessonQuiz items={[itemWithMultipleReadings]} onAnswer={onAnswer} autoAdvanceDelay={0} />,
       );
 
       const type = getByTestId('lesson-quiz-question-type').props.children;
@@ -715,7 +1013,7 @@ describe('LessonQuiz', () => {
 
         expect(onAnswer).toHaveBeenCalledWith(
           expect.objectContaining({
-            correctAnswer: 'おおきい', // Primary reading
+            correctAnswer: expect.stringContaining('おおきい'), // Primary reading
           }),
         );
       }
@@ -725,6 +1023,7 @@ describe('LessonQuiz', () => {
   describe('question randomization', () => {
     it('generates questions in shuffled order', () => {
       // Run generateQuizQuestions multiple times and verify randomization
+      jest.useRealTimers(); // Need real random for this test
       const items = [sampleKanji, sampleVocabulary]; // 4 questions total
 
       const orderCounts = new Map<string, number>();
@@ -738,6 +1037,8 @@ describe('LessonQuiz', () => {
       // With 4 questions, there are 24 possible orderings
       // After 50 runs, we should see more than 1 unique ordering
       expect(orderCounts.size).toBeGreaterThan(1);
+
+      jest.useFakeTimers();
     });
   });
 
@@ -746,12 +1047,18 @@ describe('LessonQuiz', () => {
       const items = [sampleRadical];
       const onQuizComplete = jest.fn();
       const { getByTestId, getByText } = render(
-        <LessonQuiz items={items} onQuizComplete={onQuizComplete} />,
+        <LessonQuiz items={items} onQuizComplete={onQuizComplete} autoAdvanceDelay={0} />,
       );
 
       expect(getByTestId('lesson-quiz-progress-text').props.children).toEqual([1, ' / ', 1]);
 
+      // Answer correctly
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'Ground');
       fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      act(() => {
+        jest.runAllTimers();
+      });
 
       expect(getByText('Quiz Complete!')).toBeTruthy();
       expect(onQuizComplete).toHaveBeenCalledTimes(1);
@@ -760,18 +1067,32 @@ describe('LessonQuiz', () => {
     it('handles a single kanji (2 questions)', () => {
       const items = [sampleKanji];
       const { getByTestId, getByText } = render(
-        <LessonQuiz items={items} onAnswer={jest.fn()} />,
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
       expect(getByTestId('lesson-quiz-progress-text').props.children).toEqual([1, ' / ', 2]);
 
-      // Answer first question
+      // Answer first question (could be meaning or reading)
+      const firstType = getByTestId('lesson-quiz-question-type').props.children;
+      const firstAnswer = firstType === 'MEANING' ? 'Big' : 'oo';
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), firstAnswer);
       fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      act(() => {
+        jest.runAllTimers();
+      });
 
       expect(getByTestId('lesson-quiz-progress-text').props.children).toEqual([2, ' / ', 2]);
 
       // Answer second question
+      const secondType = getByTestId('lesson-quiz-question-type').props.children;
+      const secondAnswer = secondType === 'MEANING' ? 'Big' : 'oo';
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), secondAnswer);
       fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      act(() => {
+        jest.runAllTimers();
+      });
 
       expect(getByText('Quiz Complete!')).toBeTruthy();
     });
@@ -780,24 +1101,61 @@ describe('LessonQuiz', () => {
   describe('callbacks are optional', () => {
     it('works without onAnswer callback', () => {
       const items = [sampleRadical];
-      const { getByTestId } = render(
-        <LessonQuiz items={items} />,
+      const { getByTestId, getByText } = render(
+        <LessonQuiz items={items} autoAdvanceDelay={0} />,
       );
 
-      // Should not throw
+      // Answer correctly - should not throw
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'Ground');
       fireEvent.press(getByTestId('lesson-quiz-submit'));
-      expect(getByTestId('lesson-quiz-complete')).toBeTruthy();
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      expect(getByText('Quiz Complete!')).toBeTruthy();
     });
 
     it('works without onQuizComplete callback', () => {
       const items = [sampleRadical];
       const { getByTestId, getByText } = render(
-        <LessonQuiz items={items} onAnswer={jest.fn()} />,
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
-      // Should not throw
+      // Answer correctly - should not throw
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'Ground');
       fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
       expect(getByText('Quiz Complete!')).toBeTruthy();
+    });
+  });
+
+  describe('reading answer validation', () => {
+    it('validates hiragana reading answers correctly', () => {
+      // Create a vocabulary item where we control the question order
+      const vocabItem = createVocabularyItem(10, 'たべる', 'Eat', 'たべる');
+      const onAnswer = jest.fn();
+      const { getByTestId } = render(
+        <LessonQuiz items={[vocabItem]} onAnswer={onAnswer} autoAdvanceDelay={0} />,
+      );
+
+      const questionType = getByTestId('lesson-quiz-question-type').props.children;
+
+      if (questionType === 'READING') {
+        // Type romaji which should convert to hiragana
+        fireEvent.changeText(getByTestId('lesson-quiz-input'), 'taberu');
+        fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+        expect(onAnswer).toHaveBeenCalledWith(
+          expect.objectContaining({
+            isCorrect: true,
+          }),
+        );
+      }
     });
   });
 });

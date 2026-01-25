@@ -39,4 +39,5 @@ export {
   type QuizQuestion,
   type QuestionType,
   type AnswerResult,
+  type IncorrectFeedback,
 } from './LessonQuiz';
