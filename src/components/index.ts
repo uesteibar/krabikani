@@ -46,3 +46,15 @@ export {
   LessonCompletion,
   type LessonCompletionProps,
 } from './LessonCompletion';
+
+export {
+  ReviewSession,
+  generateReviewQuestions,
+  shuffleArray as shuffleReviewArray,
+  type ReviewSessionProps,
+  type ReviewItem,
+  type ReviewQuestion,
+  type ReviewQuestionType,
+  type ReviewAnswerResult,
+  type ItemProgress,
+} from './ReviewSession';
