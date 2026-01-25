@@ -18,7 +18,10 @@
 - Use react-native-sqlite-storage for local SQLite database
 - Mock react-native-sqlite-storage in __mocks__/react-native-sqlite-storage.ts
 - Database types (DatabaseSubject, DatabaseAssignment, etc.) are in src/storage/database.ts
-- Import mock helpers directly from mock file (e.g., `import { __resetMockDatabase } from '../../__mocks__/react-native-sqlite-storage'`)
+- Import mock helpers using jest.requireMock() NOT direct file imports (prevents separate module instances)
+  - CORRECT: `const { __resetMock } = jest.requireMock('@react-native-community/netinfo')`
+  - WRONG: `import { __resetMock } from '../../__mocks__/@react-native-community/netinfo'`
+- Network connectivity detection uses @react-native-community/netinfo, utility in src/utils/networkStatus.ts
 - CRUD input types (SubjectInput, AssignmentInput, PendingReviewInput, SyncStatusUpdate) in src/storage/database.ts
 - Use upsertSubject/upsertAssignment for insert-or-replace operations
 - Transaction-based batch operations (upsertSubjects, upsertAssignments) for bulk inserts
@@ -253,5 +256,43 @@
   - When testing helper functions that accept null, use hasOwnProperty check to distinguish undefined vs null
   - Browser verification not available (no dev-browser skill configured)
   - "Block app usage until sync completes" is a UI-level concern to be addressed in dashboard/initialization story
+
+---
+
+## 2026-01-25 - US-010: Offline Detection and Sync Status
+- What was implemented:
+  - Network connectivity detection using @react-native-community/netinfo
+  - networkStatus utility module (src/utils/networkStatus.ts) with:
+    - initializeNetworkMonitoring() / stopNetworkMonitoring() for lifecycle management
+    - isOnline() / getNetworkStatus() for checking current state
+    - fetchNetworkState() for force-refreshing network state
+    - addNetworkStatusListener() for subscribing to connectivity changes
+  - OfflineIndicator component - red banner showing "No Internet Connection" when offline
+  - LastSyncedIndicator component - shows relative time since last sync ("5 minutes ago", "Never synced", etc.)
+  - Updated HomeScreen to:
+    - Display OfflineIndicator at top when offline
+    - Display LastSyncedIndicator showing last sync time
+    - Show error state ("No Connection") when offline with no cached data
+  - Mock for @react-native-community/netinfo with test helpers (__setMockNetworkState, __triggerNetworkChange, __resetMock)
+  - Comprehensive test suites: 20 tests for networkStatus, 6 tests for OfflineIndicator, 15 tests for LastSyncedIndicator, 14 tests for HomeScreen
+- Files changed:
+  - package.json, package-lock.json (added @react-native-community/netinfo)
+  - src/utils/networkStatus.ts (new - network connectivity utilities)
+  - src/utils/index.ts (new - barrel exports)
+  - src/components/OfflineIndicator.tsx (new - offline banner component)
+  - src/components/LastSyncedIndicator.tsx (new - last synced display)
+  - src/components/index.ts (new - barrel exports)
+  - src/screens/HomeScreen.tsx (updated - integrated offline detection and sync status)
+  - __mocks__/@react-native-community/netinfo.ts (new - mock for testing)
+  - __tests__/utils/networkStatus.test.ts (new - 20 tests)
+  - __tests__/components/OfflineIndicator.test.tsx (new - 6 tests)
+  - __tests__/components/LastSyncedIndicator.test.tsx (new - 15 tests)
+  - __tests__/screens/HomeScreen.test.tsx (new - 14 tests)
+- **Learnings for future iterations:**
+  - When using Jest manual mocks (__mocks__/), import test helpers using jest.requireMock() NOT direct file imports
+  - Direct imports from __mocks__/ files create separate module instances, breaking state sharing
+  - Use `jest.requireMock('@react-native-community/netinfo')` pattern for accessing mock helpers
+  - useFocusEffect hook is useful for loading data when screen comes into focus
+  - Wrap state-updating operations in act() when testing React components
 
 ---
