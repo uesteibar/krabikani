@@ -1,3 +1,35 @@
 # Ralph Progress Log
 Started: Sun Jan 25 20:13:24 CET 2026
 ---
+
+## Codebase Patterns
+- Database schema changes require migrations in `MIGRATIONS` array in `src/storage/database.ts`
+- When adding new database columns, update both `DatabaseSubject` and `SubjectInput` interfaces
+- For API data extraction, update `convertSubjectToInput()` in `src/sync/syncService.ts`
+- Component exports go in `src/components/index.ts`, utility exports in `src/utils/index.ts`
+- React Native Image.prefetch() provides caching - no need for separate file system caching
+- Tests with `upsertSubject()` need all fields from `SubjectInput` interface
+- For radicals without Unicode characters, WaniKani provides images via `character_images` array
+
+---
+
+## 2026-01-25 - US-001
+- **What was implemented**: Fixed radicals displaying '?' by implementing RadicalImage component that renders images from WaniKani CDN for radicals without Unicode characters
+- **Files changed**:
+  - `src/storage/database.ts` - Added character_images column and migration
+  - `src/sync/syncService.ts` - Extract character_images from API response
+  - `src/utils/imageCache.ts` - New utility for image URL selection and prefetching
+  - `src/components/RadicalImage.tsx` - New component for rendering radical images
+  - `src/components/LessonCard.tsx` - Updated to use RadicalImage when characters is null
+  - `src/components/LessonBatch.tsx` - Updated component radical display to use RadicalImage
+  - `__tests__/utils/imageCache.test.ts` - Tests for image cache utility
+  - `__tests__/components/RadicalImage.test.tsx` - Tests for RadicalImage component
+  - `__tests__/components/LessonCard.test.tsx` - Added tests for radical images
+  - Test files updated to include character_images field
+- **Learnings for future iterations:**
+  - React Native's Image.prefetch() provides native caching - good enough for offline support
+  - Mocking Image.prefetch directly is safer than spreading entire react-native module in tests
+  - PNG images are preferred over SVG for React Native compatibility
+  - WaniKani character_images includes metadata.inline_styles for SVG preference
+
+---
