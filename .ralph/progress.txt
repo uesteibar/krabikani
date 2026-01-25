@@ -494,3 +494,33 @@
   - Browser verification not available (no dev-browser skill configured)
 
 ---
+
+## 2026-01-25 - US-018: Lesson Quiz - Answer Handling
+- What was implemented:
+  - Answer validation using validateMeaningAnswer() and validateReadingAnswer() from answerValidation utils
+  - Correct answer handling with brief visual feedback ("Correct!") and auto-advance
+  - Configurable auto-advance delay via autoAdvanceDelay prop (default 300ms)
+  - Incorrect answer feedback screen showing:
+    - User's submitted answer (or "(empty)" for blank submissions)
+    - All accepted correct answers
+    - Relevant mnemonic (meaning mnemonic for meaning questions, reading mnemonic for reading questions)
+  - Tap-to-continue button required after viewing incorrect feedback
+  - Question re-queue system: incorrect questions are appended to the queue and appear later
+  - Progress tracking based on unique questions completed (not total attempts)
+  - IncorrectFeedback interface for typed feedback state
+  - Input disabled during correct feedback animation
+  - Green background for correct feedback, red background for incorrect feedback
+- Files changed:
+  - src/components/LessonQuiz.tsx (major refactor - added answer validation, feedback states, re-queue logic)
+  - src/components/index.ts (updated - added IncorrectFeedback type export)
+  - __tests__/components/LessonQuiz.test.tsx (updated - 67 comprehensive tests covering all answer handling scenarios)
+- **Learnings for future iterations:**
+  - Use useRef for counting answers to avoid stale closure issues in setTimeout callbacks
+  - Track completed question keys with Set for O(1) completion checking
+  - Re-queue incorrect questions by appending to array (keeps original questions first)
+  - Show all accepted answers in feedback, not just primary (helps users learn alternative valid answers)
+  - Use autoAdvanceDelay=0 in tests with jest.useFakeTimers() and act(() => jest.runAllTimers())
+  - Test assertions on randomized questions need to read the actual displayed character first
+  - Browser verification not available (no dev-browser skill configured)
+
+---
