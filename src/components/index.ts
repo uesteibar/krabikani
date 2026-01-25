@@ -103,3 +103,8 @@ export {
 } from './ComponentDisplay';
 
 export { SrsLevelBadge, type SrsLevelBadgeProps } from './SrsLevelBadge';
+
+export {
+  AnimatedSrsLevelBadge,
+  type AnimatedSrsLevelBadgeProps,
+} from './AnimatedSrsLevelBadge';

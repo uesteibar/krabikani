@@ -3,7 +3,67 @@ Started:
 ---
 
 ## Codebase Patterns
-(To be populated during implementation)
+- SRS levels map: Apprentice (stages 1-4), Guru (5-6), Master (7), Enlightened (8), Burned (9)
+- SRS level colors and utilities are in `src/theme/colors.ts` and exported via `src/theme/index.ts`
+- ReviewItem interface in ReviewSession.tsx includes `srsStage: number`
+- ReviewsScreen.tsx converts DatabaseAssignment.srs_stage to ReviewItem.srsStage in subjectToReviewItem()
+- Badge-style components use position absolute with top/right for header placement
+- react-native-reanimated requires: babel plugin, jest mocks (both reanimated and worklets), all hooks called before early returns
+
+---
+
+## 2026-01-25 - US-001
+- What was implemented: SRS Level Badge displayed on review screens
+  - Added SRS_LEVELS constant with WaniKani colors (#DD0093 Apprentice, #882D9E Guru, #294DDB Master, #0093DD Enlightened, #434343 Burned)
+  - Created getSrsLevelInfo() utility function that maps srs_stage (1-9) to level info
+  - Created SrsLevelBadge component with bar-style icons (▁▃▅▇) and flame (🔥) for Burned
+  - Added srsStage to ReviewItem interface
+  - Displayed badge on question screen header area (positioned top-right)
+  - Displayed badge on incorrect answer feedback screen header area
+- Files changed:
+  - src/theme/colors.ts (added SRS_LEVELS, SrsLevelKey, SrsLevelInfo, getSrsLevelInfo)
+  - src/theme/index.ts (exported new SRS utilities)
+  - src/components/SrsLevelBadge.tsx (new)
+  - src/components/index.ts (exported SrsLevelBadge)
+  - src/components/ReviewSession.tsx (added srsStage to ReviewItem, imported and rendered SrsLevelBadge)
+  - src/screens/ReviewsScreen.tsx (pass srs_stage in subjectToReviewItem)
+  - __tests__/theme/srsLevels.test.ts (new - tests for SRS level utilities)
+  - __tests__/components/SrsLevelBadge.test.tsx (new - component tests)
+  - __tests__/components/ReviewSession.test.tsx (updated test helpers to include srsStage)
+- **Learnings for future iterations:**
+  - Patterns discovered: Badge component pattern using View with absolute position for header overlays
+  - Gotchas encountered: TypeScript requires explicit cast for Object.keys() when iterating over const objects
+  - Useful context: ReviewItem is populated from DatabaseAssignment + DatabaseSubject in ReviewsScreen.tsx
+
+---
+
+## 2026-01-25 - US-002
+- What was implemented: Animate SRS Level Up Transitions
+  - Installed react-native-reanimated for 60fps animations
+  - Created AnimatedSrsLevelBadge component with level-up animation:
+    - OLD level shown for 200ms
+    - Badge scales 1.0 → 1.15 with glow effect
+    - Cross-fade to new level (300ms) using interpolateColor
+    - Particle burst animation with 8 particles
+    - Scale back 1.15 → 1.0
+    - Total duration ~500ms
+  - Animation only plays when the SRS level actually changes (e.g., stage 4→5 = Apprentice→Guru)
+  - Level change calculated based on WaniKani SRS rules (correct = +1 stage)
+  - Integrated AnimatedSrsLevelBadge into ReviewSession during correct feedback phase
+  - Added levelUpAnimation state to track level-up transitions
+- Files changed:
+  - package.json (added react-native-reanimated dependency)
+  - babel.config.js (added react-native-reanimated/plugin)
+  - jest.config.js (added react-native-worklets to transformIgnorePatterns, added setupFilesAfterEnv)
+  - jest.setup.js (new - mocks for react-native-reanimated and react-native-worklets)
+  - src/components/AnimatedSrsLevelBadge.tsx (new - animated badge with level-up transitions)
+  - src/components/index.ts (exported AnimatedSrsLevelBadge)
+  - src/components/ReviewSession.tsx (imports AnimatedSrsLevelBadge and getSrsLevelInfo, added levelUpAnimation state, detects level-up on correct answer)
+  - __tests__/components/AnimatedSrsLevelBadge.test.tsx (new - component tests)
+- **Learnings for future iterations:**
+  - Patterns discovered: react-native-reanimated hooks must be called unconditionally before early returns (hooks rules)
+  - Gotchas encountered: react-native-reanimated requires both babel plugin and jest mocks; react-native-worklets also needs mocking
+  - Useful context: Level changes only occur at stage boundaries (4→5, 6→7, 7→8, 8→9), not within stages
 
 ---
 

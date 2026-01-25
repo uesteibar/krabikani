@@ -47,6 +47,8 @@ import {
 import { MnemonicText } from './MnemonicText';
 import { ComponentDisplay } from './ComponentDisplay';
 import { SrsLevelBadge } from './SrsLevelBadge';
+import { AnimatedSrsLevelBadge } from './AnimatedSrsLevelBadge';
+import { getSrsLevelInfo } from '../theme';
 
 // ============================================
 // Types
@@ -299,6 +301,12 @@ export function ReviewSession({
   const [incorrectFeedback, setIncorrectFeedback] =
     useState<IncorrectFeedback | null>(null);
 
+  // Level-up animation state
+  const [levelUpAnimation, setLevelUpAnimation] = useState<{
+    fromStage: number;
+    toStage: number;
+  } | null>(null);
+
   // Wrap-up mode state
   const [isWrappingUp, setIsWrappingUp] = useState(false);
   // Track which items have been introduced (at least one question shown)
@@ -341,6 +349,7 @@ export function ReviewSession({
     setShowCorrectFeedback(false);
     setIsFuzzyMatch(false);
     setIncorrectFeedback(null);
+    setLevelUpAnimation(null);
     setIsWrappingUp(false);
     setIntroducedItemIds(new Set());
     answeredQuestionsCount.current = 0;
@@ -836,12 +845,30 @@ export function ReviewSession({
     });
 
     if (isCorrect) {
+      // Check if this correct answer causes a level-up
+      // WaniKani SRS: correct = +1 stage (capped at 9 for burned)
+      const currentStage = item.srsStage;
+      const newStage = Math.min(currentStage + 1, 9);
+      const currentLevel = getSrsLevelInfo(currentStage);
+      const newLevel = getSrsLevelInfo(newStage);
+      const isLevelUp =
+        currentLevel && newLevel && currentLevel.key !== newLevel.key;
+
+      // Set level-up animation state if level changed
+      if (isLevelUp) {
+        setLevelUpAnimation({
+          fromStage: currentStage,
+          toStage: newStage,
+        });
+      }
+
       // Show brief correct feedback then auto-advance
       setShowCorrectFeedback(true);
       setIsFuzzyMatch(fuzzyMatch);
       setTimeout(() => {
         setShowCorrectFeedback(false);
         setIsFuzzyMatch(false);
+        setLevelUpAnimation(null);
 
         // Update completed count if item just completed (deferred so feedback shows first)
         if (itemJustCompleted) {
@@ -1211,7 +1238,16 @@ export function ReviewSession({
         testID="review-session-character-container"
       >
         <View style={styles.srsLevelBadgeContainer}>
-          <SrsLevelBadge stage={item.srsStage} testID="review-session-srs-badge" />
+          {showCorrectFeedback && levelUpAnimation ? (
+            <AnimatedSrsLevelBadge
+              stage={levelUpAnimation.toStage}
+              fromStage={levelUpAnimation.fromStage}
+              animateLevelUp={true}
+              testID="review-session-srs-badge"
+            />
+          ) : (
+            <SrsLevelBadge stage={item.srsStage} testID="review-session-srs-badge" />
+          )}
         </View>
         <Text style={styles.characters} testID="review-session-characters">
           {item.characters ?? '?'}
