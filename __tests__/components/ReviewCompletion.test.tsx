@@ -12,7 +12,7 @@ jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockImplementation(
   mockIsReduceMotionEnabled,
 );
 jest.spyOn(AccessibilityInfo, 'addEventListener').mockImplementation(
-  mockAddEventListener,
+  mockAddEventListener as unknown as typeof AccessibilityInfo.addEventListener,
 );
 
 describe('ReviewCompletion', () => {

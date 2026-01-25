@@ -118,3 +118,8 @@ export {
   ExpandableDetails,
   type ExpandableDetailsProps,
 } from './ExpandableDetails';
+
+export {
+  ItemDetails,
+  type ItemDetailsProps,
+} from './ItemDetails';

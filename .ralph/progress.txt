@@ -9,6 +9,8 @@ Started:
 - ReviewsScreen.tsx converts DatabaseAssignment.srs_stage to ReviewItem.srsStage in subjectToReviewItem()
 - Badge-style components use position absolute with top/right for header placement
 - react-native-reanimated requires: babel plugin, jest mocks (both reanimated and worklets), all hooks called before early returns
+- Reduced motion: Use AccessibilityInfo.isReduceMotionEnabled() + addEventListener('reduceMotionChanged') to respect accessibility settings
+- useEffect dependencies: Don't include reanimated shared values in deps - mocks create new objects causing effect to re-run (use eslint-disable comment)
 
 ---
 
@@ -121,6 +123,78 @@ Started:
   - Patterns discovered: Completion screens follow LessonCompletion pattern with iconContainer, summaryContainer, syncStatus, and actionsContainer
   - Gotchas encountered: Easing.back() needs to be mocked in jest.setup.js for reanimated animations
   - Useful context: ReviewSession already tracks incorrect counts per item via _itemProgress Map (incorrectMeaningAnswers + incorrectReadingAnswers)
+
+---
+
+## 2026-01-26 - US-005
+- What was implemented: Add Staggered Entrance Animation to Review Completion
+  - Added staggered entrance animations with 100ms delays between elements:
+    - checkmark (0ms) → title (100ms) → items count (200ms) → incorrect count (300ms) → sync status (400ms) → button (500ms)
+  - Each element fades in (opacity 0 → 1) and slides up (translateY 20px → 0)
+  - Added confetti particles burst animation for perfect sessions (incorrectCount === 0):
+    - 12 confetti particles with varied colors burst from checkmark area
+    - Particles follow curved trajectories with gravity effect and rotation
+    - Particles scale up, then fade out over 800ms
+  - Added reduced motion settings support:
+    - Checks AccessibilityInfo.isReduceMotionEnabled() on mount
+    - Listens for reduceMotionChanged events
+    - Skips all animations (instant display) and disables confetti when reduced motion is enabled
+  - Created ConfettiParticle component with animated trajectory, scale, opacity, and rotation
+- Files changed:
+  - src/components/ReviewCompletion.tsx (added staggered animations, confetti, reduced motion support)
+  - jest.setup.js (no change needed - AccessibilityInfo mocked in test file)
+  - __tests__/components/ReviewCompletion.test.tsx (added tests for staggered animations, confetti, reduced motion)
+- **Learnings for future iterations:**
+  - Patterns discovered: Use AccessibilityInfo.isReduceMotionEnabled() and addEventListener('reduceMotionChanged') for reduced motion support
+  - Gotchas encountered: Mocking AccessibilityInfo requires jest.spyOn in test file, not jest.mock in setup
+  - Useful context: SharedValue from reanimated can be passed as a prop to child components for shared animation state
+
+---
+
+## 2026-01-26 - US-006
+- What was implemented: Add Toggle for Full Item Details on Incorrect Screen
+  - Created ExpandableDetails component with animated chevron and height reveal:
+    - Toggle button with "Show full details" (collapsed) / "Hide details" (expanded) text
+    - Chevron icon (▼) rotates 180° smoothly on toggle (200ms ease-out)
+    - Content area reveals with height animation (250ms ease-out-quart)
+    - Default state is collapsed
+  - Added resetKey prop to reset expanded state for each new incorrect answer
+  - Integrated ExpandableDetails into ReviewSession incorrect feedback screen
+  - Uses react-native-reanimated for smooth 60fps animations
+- Files changed:
+  - src/components/ExpandableDetails.tsx (new - expandable details component with animations)
+  - src/components/index.ts (exported ExpandableDetails)
+  - src/components/ReviewSession.tsx (imported and integrated ExpandableDetails with placeholder content)
+  - __tests__/components/ExpandableDetails.test.tsx (new - comprehensive tests for toggle behavior)
+- **Learnings for future iterations:**
+  - Patterns discovered: useSharedValue dependencies in useEffect must be excluded when mocked (mocks create new objects each render, triggering infinite effect loops)
+  - Gotchas encountered: Don't include reanimated shared values in useEffect dependencies when the effect should only run on specific prop changes
+  - Useful context: The ExpandableDetails component uses resetKey to reset state when showing a new incorrect answer (uses question.key)
+
+---
+
+## 2026-01-26 - US-007
+- What was implemented: Display Full Item Details Content When Expanded
+  - Created ItemDetails component showing all item information in organized sections:
+    - Meanings section: displays all meanings with primary bolded and marked "(primary)", alternatives in regular weight
+    - Readings section: displays all readings, with kanji readings grouped by type (On'yomi, Kun'yomi, Nanori)
+    - Meaning Mnemonic section with MnemonicText formatting (highlights radicals, kanji, vocabulary, reading tags)
+    - Reading Mnemonic section (conditionally rendered when readingMnemonic exists)
+    - Components section: shows component radicals for kanji or component kanji for vocabulary
+  - Sections separated by subtle dividers (1px height, light border color)
+  - Integrated ItemDetails into ReviewSession's ExpandableDetails on incorrect feedback screen
+  - All item data (meanings, readings, mnemonics, components) passed from incorrectFeedback.question.item
+- Files changed:
+  - src/components/ItemDetails.tsx (new - full item details component)
+  - src/components/index.ts (exported ItemDetails and ItemDetailsProps)
+  - src/components/ReviewSession.tsx (imported ItemDetails, replaced placeholder with ItemDetails component)
+  - __tests__/components/ItemDetails.test.tsx (new - comprehensive tests for all sections)
+  - __tests__/components/ReviewCompletion.test.tsx (fixed TypeScript type assertion for AccessibilityInfo mock)
+  - __tests__/components/ReviewSession.test.tsx (updated test to use testID instead of getByText due to duplicate mnemonic text)
+- **Learnings for future iterations:**
+  - Patterns discovered: When a child component renders the same text as its parent, use testID to avoid "multiple elements with text" errors in tests
+  - Gotchas encountered: TypeScript requires `as unknown as typeof X` pattern when mocking functions with complex return types
+  - Useful context: ItemDetails reuses existing components (MnemonicText for formatted mnemonics, ComponentDisplay for radicals/kanji)
 
 ---
 

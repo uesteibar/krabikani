@@ -50,6 +50,7 @@ import { SrsLevelBadge } from './SrsLevelBadge';
 import { AnimatedSrsLevelBadge } from './AnimatedSrsLevelBadge';
 import { ReviewCompletion } from './ReviewCompletion';
 import { ExpandableDetails } from './ExpandableDetails';
+import { ItemDetails } from './ItemDetails';
 import { getSrsLevelInfo, calculateSrsStageAfterIncorrect } from '../theme';
 
 // ============================================
@@ -1205,11 +1206,16 @@ export function ReviewSession({
             resetKey={incorrectFeedback.question.key}
             testID="review-session-expandable-details"
           >
-            <View style={styles.expandableContent}>
-              <Text style={styles.expandablePlaceholder}>
-                Full item details will be shown here
-              </Text>
-            </View>
+            <ItemDetails
+              subjectType={incorrectFeedback.question.item.subjectType}
+              meanings={incorrectFeedback.question.item.meanings}
+              readings={incorrectFeedback.question.item.readings}
+              meaningMnemonic={incorrectFeedback.question.item.meaningMnemonic}
+              readingMnemonic={incorrectFeedback.question.item.readingMnemonic}
+              componentRadicals={incorrectFeedback.question.item.componentRadicals}
+              componentKanji={incorrectFeedback.question.item.componentKanji}
+              testID="review-session-item-details"
+            />
           </ExpandableDetails>
         </ScrollView>
 
@@ -1729,15 +1735,5 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm,
     fontWeight: 'bold',
     color: COLORS.text.secondary,
-  },
-  // Expandable details styles
-  expandableContent: {
-    paddingVertical: SPACING.md,
-  },
-  expandablePlaceholder: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.text.tertiary,
-    fontStyle: 'italic',
-    textAlign: 'center',
   },
 });
