@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 
+import { validateApiKey } from '../api';
 import { clearApiKey, getApiKey, saveApiKey } from '../storage';
 
 export function SettingsScreen() {
@@ -46,12 +47,23 @@ export function SettingsScreen() {
 
     setIsSaving(true);
     try {
-      const result = await saveApiKey(trimmedKey);
-      if (result.success) {
+      // Validate the API key first
+      const validationResult = await validateApiKey(trimmedKey);
+      if (!validationResult.success) {
+        Alert.alert('Validation Failed', validationResult.error || 'Invalid API key');
+        return;
+      }
+
+      // Save the validated API key
+      const saveResult = await saveApiKey(trimmedKey);
+      if (saveResult.success) {
         setHasStoredKey(true);
-        Alert.alert('Success', 'API key saved successfully');
+        Alert.alert(
+          'Success',
+          `API key validated and saved!\nWelcome, ${validationResult.user?.username || 'user'}!`,
+        );
       } else {
-        Alert.alert('Error', result.error || 'Failed to save API key');
+        Alert.alert('Error', saveResult.error || 'Failed to save API key');
       }
     } finally {
       setIsSaving(false);
