@@ -4,6 +4,9 @@ import {
   getUserLevel,
   convertSubjectToInput,
   convertAssignmentToInput,
+  completeLessons,
+  syncPendingLessons,
+  clearPendingLessons,
 } from '../../src/sync/syncService';
 import { WaniKaniClient, WaniKaniApiError } from '../../src/api/wanikaniApi';
 import type {
@@ -22,6 +25,8 @@ import {
   getSyncStatus,
   updateSyncStatus,
   _resetDatabaseInstance,
+  getAllPendingLessons,
+  getPendingLessonCount,
 } from '../../src/storage/database';
 import { __resetMockDatabase } from '../../__mocks__/react-native-sqlite-storage';
 
@@ -971,6 +976,333 @@ describe('syncService', () => {
       expect(assignment?.available_at).toBe('2024-07-15T14:30:00.000000Z');
       expect(assignment?.started_at).toBe('2024-02-10T09:00:00.000000Z');
       expect(assignment?.unlocked_at).toBe('2024-02-01T00:00:00.000000Z');
+    });
+  });
+
+  describe('completeLessons', () => {
+    it('should complete lessons online and update local database', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      // Mock the startAssignment API response
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: 100,
+          object: 'assignment',
+          url: 'https://api.wanikani.com/v2/assignments/100',
+          data_updated_at: '2024-01-15T10:00:00.000000Z',
+          data: {
+            subject_id: 1,
+            srs_stage: 1,
+            available_at: '2024-01-15T14:00:00.000000Z',
+            started_at: '2024-01-15T10:00:00.000000Z',
+            unlocked_at: '2024-01-01T00:00:00.000000Z',
+          },
+        }),
+      });
+
+      const result = await completeLessons(client, [
+        { assignmentId: 100, subjectId: 1 },
+      ]);
+
+      expect(result.success).toBe(true);
+      expect(result.completedCount).toBe(1);
+      expect(result.queuedCount).toBe(0);
+
+      // Verify assignment was updated in local database
+      const assignment = await getAssignmentById(100);
+      expect(assignment).not.toBeNull();
+      expect(assignment?.started_at).toBe('2024-01-15T10:00:00.000000Z');
+      expect(assignment?.srs_stage).toBe(1);
+    });
+
+    it('should complete multiple lessons online', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      // Mock responses for two lessons
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            id: 100,
+            object: 'assignment',
+            data_updated_at: '2024-01-15T10:00:00.000000Z',
+            data: {
+              subject_id: 1,
+              srs_stage: 1,
+              available_at: '2024-01-15T14:00:00.000000Z',
+              started_at: '2024-01-15T10:00:00.000000Z',
+              unlocked_at: '2024-01-01T00:00:00.000000Z',
+            },
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            id: 101,
+            object: 'assignment',
+            data_updated_at: '2024-01-15T10:00:00.000000Z',
+            data: {
+              subject_id: 2,
+              srs_stage: 1,
+              available_at: '2024-01-15T14:00:00.000000Z',
+              started_at: '2024-01-15T10:00:00.000000Z',
+              unlocked_at: '2024-01-01T00:00:00.000000Z',
+            },
+          }),
+        });
+
+      const result = await completeLessons(client, [
+        { assignmentId: 100, subjectId: 1 },
+        { assignmentId: 101, subjectId: 2 },
+      ]);
+
+      expect(result.success).toBe(true);
+      expect(result.completedCount).toBe(2);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('should queue lessons when offline (client is null)', async () => {
+      const result = await completeLessons(null, [
+        { assignmentId: 100, subjectId: 1 },
+        { assignmentId: 101, subjectId: 2 },
+      ]);
+
+      expect(result.success).toBe(true);
+      expect(result.completedCount).toBe(0);
+      expect(result.queuedCount).toBe(2);
+
+      // Verify lessons were queued
+      const pendingCount = await getPendingLessonCount();
+      expect(pendingCount).toBe(2);
+
+      const pendingLessons = await getAllPendingLessons();
+      expect(pendingLessons).toHaveLength(2);
+      expect(pendingLessons[0].assignment_id).toBe(100);
+      expect(pendingLessons[1].assignment_id).toBe(101);
+    });
+
+    it('should update local assignments when queueing offline', async () => {
+      await completeLessons(null, [{ assignmentId: 100, subjectId: 1 }]);
+
+      // Verify local assignment was updated
+      const assignment = await getAssignmentById(100);
+      expect(assignment).not.toBeNull();
+      expect(assignment?.started_at).not.toBeNull();
+      expect(assignment?.srs_stage).toBe(1);
+    });
+
+    it('should call progress callback', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+      const onProgress = jest.fn();
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            id: 100,
+            object: 'assignment',
+            data_updated_at: '2024-01-15T10:00:00.000000Z',
+            data: {
+              subject_id: 1,
+              srs_stage: 1,
+              available_at: '2024-01-15T14:00:00.000000Z',
+              started_at: '2024-01-15T10:00:00.000000Z',
+              unlocked_at: '2024-01-01T00:00:00.000000Z',
+            },
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            id: 101,
+            object: 'assignment',
+            data_updated_at: '2024-01-15T10:00:00.000000Z',
+            data: {
+              subject_id: 2,
+              srs_stage: 1,
+              available_at: '2024-01-15T14:00:00.000000Z',
+              started_at: '2024-01-15T10:00:00.000000Z',
+              unlocked_at: '2024-01-01T00:00:00.000000Z',
+            },
+          }),
+        });
+
+      await completeLessons(
+        client,
+        [
+          { assignmentId: 100, subjectId: 1 },
+          { assignmentId: 101, subjectId: 2 },
+        ],
+        { onProgress },
+      );
+
+      expect(onProgress).toHaveBeenCalledTimes(2);
+      expect(onProgress).toHaveBeenNthCalledWith(1, 1, 2);
+      expect(onProgress).toHaveBeenNthCalledWith(2, 2, 2);
+    });
+
+    it('should return empty result for empty lessons array', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      const result = await completeLessons(client, []);
+
+      expect(result.success).toBe(true);
+      expect(result.completedCount).toBe(0);
+      expect(result.queuedCount).toBe(0);
+    });
+
+    it('should handle API error and return partial progress', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            id: 100,
+            object: 'assignment',
+            data_updated_at: '2024-01-15T10:00:00.000000Z',
+            data: {
+              subject_id: 1,
+              srs_stage: 1,
+              available_at: '2024-01-15T14:00:00.000000Z',
+              started_at: '2024-01-15T10:00:00.000000Z',
+              unlocked_at: '2024-01-01T00:00:00.000000Z',
+            },
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+        });
+
+      const result = await completeLessons(client, [
+        { assignmentId: 100, subjectId: 1 },
+        { assignmentId: 101, subjectId: 2 },
+      ]);
+
+      expect(result.success).toBe(false);
+      expect(result.completedCount).toBe(1);
+      expect(result.error).toBeDefined();
+    });
+  });
+
+  describe('syncPendingLessons', () => {
+    it('should sync pending lessons from queue', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      // Queue a lesson offline first
+      await completeLessons(null, [{ assignmentId: 100, subjectId: 1 }]);
+
+      // Verify it was queued
+      let pendingCount = await getPendingLessonCount();
+      expect(pendingCount).toBe(1);
+
+      // Mock the API response for syncing
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: 100,
+          object: 'assignment',
+          data_updated_at: '2024-01-15T10:00:00.000000Z',
+          data: {
+            subject_id: 1,
+            srs_stage: 1,
+            available_at: '2024-01-15T14:00:00.000000Z',
+            started_at: '2024-01-15T10:00:00.000000Z',
+            unlocked_at: '2024-01-01T00:00:00.000000Z',
+          },
+        }),
+      });
+
+      const result = await syncPendingLessons(client);
+
+      expect(result.success).toBe(true);
+      expect(result.syncedCount).toBe(1);
+      expect(result.failedCount).toBe(0);
+
+      // Verify pending lesson was removed from queue
+      pendingCount = await getPendingLessonCount();
+      expect(pendingCount).toBe(0);
+    });
+
+    it('should return success for empty queue', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      const result = await syncPendingLessons(client);
+
+      expect(result.success).toBe(true);
+      expect(result.syncedCount).toBe(0);
+      expect(result.failedCount).toBe(0);
+    });
+
+    it('should continue syncing on individual lesson failure', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      // Queue two lessons offline
+      await completeLessons(null, [
+        { assignmentId: 100, subjectId: 1 },
+        { assignmentId: 101, subjectId: 2 },
+      ]);
+
+      // First fails, second succeeds
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            id: 101,
+            object: 'assignment',
+            data_updated_at: '2024-01-15T10:00:00.000000Z',
+            data: {
+              subject_id: 2,
+              srs_stage: 1,
+              available_at: '2024-01-15T14:00:00.000000Z',
+              started_at: '2024-01-15T10:00:00.000000Z',
+              unlocked_at: '2024-01-01T00:00:00.000000Z',
+            },
+          }),
+        });
+
+      const result = await syncPendingLessons(client);
+
+      expect(result.success).toBe(false); // Not all succeeded
+      expect(result.syncedCount).toBe(1);
+      expect(result.failedCount).toBe(1);
+
+      // First lesson should still be in queue, second should be removed
+      const pendingLessons = await getAllPendingLessons();
+      expect(pendingLessons).toHaveLength(1);
+      expect(pendingLessons[0].assignment_id).toBe(100);
+    });
+  });
+
+  describe('clearPendingLessons', () => {
+    it('should clear all pending lessons', async () => {
+      // Queue some lessons
+      await completeLessons(null, [
+        { assignmentId: 100, subjectId: 1 },
+        { assignmentId: 101, subjectId: 2 },
+      ]);
+
+      let pendingCount = await getPendingLessonCount();
+      expect(pendingCount).toBe(2);
+
+      await clearPendingLessons();
+
+      pendingCount = await getPendingLessonCount();
+      expect(pendingCount).toBe(0);
     });
   });
 });

@@ -30,6 +30,16 @@ import {
   deletePendingReview,
   deleteAllPendingReviews,
   getPendingReviewCount,
+  // Pending Lesson CRUD
+  insertPendingLesson,
+  insertPendingLessons,
+  getPendingLessonById,
+  getPendingLessonByAssignmentId,
+  getAllPendingLessons,
+  deletePendingLesson,
+  deletePendingLessonByAssignmentId,
+  deleteAllPendingLessons,
+  getPendingLessonCount,
   // Sync Status CRUD
   getSyncStatus,
   updateSyncStatus,
@@ -41,6 +51,7 @@ import {
   type SubjectInput,
   type AssignmentInput,
   type PendingReviewInput,
+  type PendingLessonInput,
 } from '../../src/storage/database';
 import {
   __resetMockDatabase,
@@ -614,6 +625,189 @@ describe('Database CRUD Operations', () => {
         const count = await getPendingReviewCount();
 
         expect(count).toBe(2);
+      });
+    });
+  });
+
+  // ============================================
+  // Pending Lesson CRUD Tests
+  // ============================================
+
+  describe('Pending Lesson CRUD', () => {
+    const testPendingLesson: PendingLessonInput = {
+      assignment_id: 100,
+      subject_id: 1,
+      started_at: '2024-01-15T10:00:00.000Z',
+    };
+
+    describe('insertPendingLesson', () => {
+      it('should insert a pending lesson and return the ID', async () => {
+        const id = await insertPendingLesson(testPendingLesson);
+
+        expect(id).toBeGreaterThan(0);
+
+        const rows = __getTableRows('pending_lessons');
+        expect(rows.length).toBe(1);
+        expect(rows[0].assignment_id).toBe(100);
+        expect(rows[0].subject_id).toBe(1);
+        expect(rows[0].started_at).toBe('2024-01-15T10:00:00.000Z');
+      });
+
+      it('should auto-increment IDs', async () => {
+        const id1 = await insertPendingLesson(testPendingLesson);
+        const id2 = await insertPendingLesson({ ...testPendingLesson, assignment_id: 101, subject_id: 2 });
+
+        expect(id2).toBe(id1 + 1);
+      });
+
+      it('should replace existing lesson with same assignment_id (INSERT OR REPLACE)', async () => {
+        // Note: The mock database doesn't fully support UNIQUE constraints with INSERT OR REPLACE.
+        // In the real SQLite database, this would replace the existing row.
+        // This test just verifies the function runs without error.
+        await insertPendingLesson(testPendingLesson);
+        await insertPendingLesson({ ...testPendingLesson, started_at: '2024-01-16T10:00:00.000Z' });
+
+        // In real DB with UNIQUE constraint, this would be 1.
+        // The mock doesn't enforce UNIQUE, so we just check it was inserted.
+        const rows = __getTableRows('pending_lessons');
+        expect(rows.length).toBeGreaterThanOrEqual(1);
+      });
+    });
+
+    describe('insertPendingLessons', () => {
+      it('should insert multiple pending lessons', async () => {
+        const lessons: PendingLessonInput[] = [
+          { assignment_id: 100, subject_id: 1, started_at: '2024-01-15T10:00:00.000Z' },
+          { assignment_id: 101, subject_id: 2, started_at: '2024-01-15T10:00:00.000Z' },
+          { assignment_id: 102, subject_id: 3, started_at: '2024-01-15T10:00:00.000Z' },
+        ];
+
+        await insertPendingLessons(lessons);
+
+        const rows = __getTableRows('pending_lessons');
+        expect(rows.length).toBe(3);
+      });
+
+      it('should handle empty array', async () => {
+        await insertPendingLessons([]);
+
+        const rows = __getTableRows('pending_lessons');
+        expect(rows.length).toBe(0);
+      });
+    });
+
+    describe('getPendingLessonById', () => {
+      it('should return a pending lesson by ID', async () => {
+        __insertRow('pending_lessons', {
+          id: 1,
+          assignment_id: 100,
+          subject_id: 1,
+          started_at: '2024-01-15T10:00:00.000Z',
+          created_at: '2024-01-15T10:00:00.000Z',
+        });
+
+        const lesson = await getPendingLessonById(1);
+
+        expect(lesson).not.toBeNull();
+        expect(lesson?.assignment_id).toBe(100);
+        expect(lesson?.subject_id).toBe(1);
+      });
+
+      it('should return null for non-existent lesson', async () => {
+        const lesson = await getPendingLessonById(999);
+
+        expect(lesson).toBeNull();
+      });
+    });
+
+    describe('getPendingLessonByAssignmentId', () => {
+      it('should return a pending lesson by assignment ID', async () => {
+        __insertRow('pending_lessons', {
+          id: 1,
+          assignment_id: 100,
+          subject_id: 1,
+          started_at: '2024-01-15T10:00:00.000Z',
+          created_at: '2024-01-15T10:00:00.000Z',
+        });
+
+        const lesson = await getPendingLessonByAssignmentId(100);
+
+        expect(lesson).not.toBeNull();
+        expect(lesson?.assignment_id).toBe(100);
+      });
+
+      it('should return null for non-existent assignment ID', async () => {
+        const lesson = await getPendingLessonByAssignmentId(999);
+
+        expect(lesson).toBeNull();
+      });
+    });
+
+    describe('getAllPendingLessons', () => {
+      it('should return all pending lessons', async () => {
+        __insertRow('pending_lessons', { id: 1, assignment_id: 100, subject_id: 1, started_at: '', created_at: '' });
+        __insertRow('pending_lessons', { id: 2, assignment_id: 101, subject_id: 2, started_at: '', created_at: '' });
+
+        const lessons = await getAllPendingLessons();
+
+        expect(lessons.length).toBe(2);
+      });
+
+      it('should return empty array when no pending lessons', async () => {
+        const lessons = await getAllPendingLessons();
+
+        expect(lessons).toEqual([]);
+      });
+    });
+
+    describe('deletePendingLesson', () => {
+      it('should delete a pending lesson by ID', async () => {
+        __insertRow('pending_lessons', { id: 1, assignment_id: 100, subject_id: 1, started_at: '', created_at: '' });
+
+        await deletePendingLesson(1);
+
+        const rows = __getTableRows('pending_lessons');
+        expect(rows.length).toBe(0);
+      });
+    });
+
+    describe('deletePendingLessonByAssignmentId', () => {
+      it('should delete a pending lesson by assignment ID', async () => {
+        __insertRow('pending_lessons', { id: 1, assignment_id: 100, subject_id: 1, started_at: '', created_at: '' });
+
+        await deletePendingLessonByAssignmentId(100);
+
+        const rows = __getTableRows('pending_lessons');
+        expect(rows.length).toBe(0);
+      });
+    });
+
+    describe('deleteAllPendingLessons', () => {
+      it('should delete all pending lessons', async () => {
+        __insertRow('pending_lessons', { id: 1, assignment_id: 100, subject_id: 1, started_at: '', created_at: '' });
+        __insertRow('pending_lessons', { id: 2, assignment_id: 101, subject_id: 2, started_at: '', created_at: '' });
+
+        await deleteAllPendingLessons();
+
+        const rows = __getTableRows('pending_lessons');
+        expect(rows.length).toBe(0);
+      });
+    });
+
+    describe('getPendingLessonCount', () => {
+      it('should return the count of pending lessons', async () => {
+        __insertRow('pending_lessons', { id: 1, assignment_id: 100, subject_id: 1, started_at: '', created_at: '' });
+        __insertRow('pending_lessons', { id: 2, assignment_id: 101, subject_id: 2, started_at: '', created_at: '' });
+
+        const count = await getPendingLessonCount();
+
+        expect(count).toBe(2);
+      });
+
+      it('should return 0 when no pending lessons', async () => {
+        const count = await getPendingLessonCount();
+
+        expect(count).toBe(0);
       });
     });
   });

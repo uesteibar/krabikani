@@ -10,10 +10,16 @@ import type {
 import {
   upsertSubjects,
   upsertAssignments,
+  upsertAssignment,
   updateSyncStatus,
   getSyncStatus,
+  insertPendingLessons,
+  getAllPendingLessons,
+  deletePendingLessonByAssignmentId,
+  deleteAllPendingLessons,
   type SubjectInput,
   type AssignmentInput,
+  type PendingLessonInput,
 } from '../storage/database';
 
 // ============================================
@@ -308,4 +314,228 @@ export async function syncAssignments(
 export async function getUserLevel(client: WaniKaniClient): Promise<number> {
   const user = await client.getUser();
   return user.data.level;
+}
+
+// ============================================
+// Lesson Completion Types
+// ============================================
+
+export interface LessonToComplete {
+  /** The assignment ID for the lesson */
+  assignmentId: number;
+  /** The subject ID for the lesson */
+  subjectId: number;
+}
+
+export interface CompleteLessonsOptions {
+  /** Progress callback for UI updates */
+  onProgress?: (completed: number, total: number) => void;
+}
+
+export interface CompleteLessonsResult {
+  success: boolean;
+  completedCount: number;
+  queuedCount: number;
+  error?: string;
+}
+
+export interface SyncPendingLessonsResult {
+  success: boolean;
+  syncedCount: number;
+  failedCount: number;
+  error?: string;
+}
+
+// ============================================
+// Lesson Completion Functions
+// ============================================
+
+/**
+ * Completes lessons by calling PUT /assignments/:id/start for each assignment.
+ *
+ * If online: syncs immediately with WaniKani API and updates local database.
+ * If offline (client is null): queues lessons for later sync and updates local database.
+ *
+ * @param client WaniKani API client (null if offline)
+ * @param lessons Array of lessons to complete
+ * @param options Optional configuration including progress callback
+ * @returns Result with counts of completed and queued lessons
+ */
+export async function completeLessons(
+  client: WaniKaniClient | null,
+  lessons: LessonToComplete[],
+  options: CompleteLessonsOptions = {},
+): Promise<CompleteLessonsResult> {
+  const { onProgress } = options;
+
+  if (lessons.length === 0) {
+    return {
+      success: true,
+      completedCount: 0,
+      queuedCount: 0,
+    };
+  }
+
+  const startedAt = new Date().toISOString();
+
+  if (client === null) {
+    // Offline mode: queue lessons for later sync
+    try {
+      const pendingLessons: PendingLessonInput[] = lessons.map(lesson => ({
+        assignment_id: lesson.assignmentId,
+        subject_id: lesson.subjectId,
+        started_at: startedAt,
+      }));
+
+      await insertPendingLessons(pendingLessons);
+
+      // Also update local database to mark lessons as started
+      for (let i = 0; i < lessons.length; i++) {
+        const lesson = lessons[i];
+        await upsertAssignment({
+          id: lesson.assignmentId,
+          subject_id: lesson.subjectId,
+          srs_stage: 1, // Initial SRS stage after lesson
+          available_at: startedAt, // Available for review immediately (or API will set this)
+          started_at: startedAt,
+          unlocked_at: startedAt, // Keep existing or use current
+          data_updated_at: startedAt,
+        });
+        onProgress?.(i + 1, lessons.length);
+      }
+
+      return {
+        success: true,
+        completedCount: 0,
+        queuedCount: lessons.length,
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error queuing lessons';
+      return {
+        success: false,
+        completedCount: 0,
+        queuedCount: 0,
+        error: errorMessage,
+      };
+    }
+  }
+
+  // Online mode: sync immediately with WaniKani API
+  let completedCount = 0;
+
+  try {
+    for (let i = 0; i < lessons.length; i++) {
+      const lesson = lessons[i];
+
+      // Call the WaniKani API to start the assignment
+      const response = await client.startAssignment(lesson.assignmentId, {
+        started_at: startedAt,
+      });
+
+      // Update local database with the API response
+      await upsertAssignment({
+        id: response.id,
+        subject_id: response.data.subject_id,
+        srs_stage: response.data.srs_stage,
+        available_at: response.data.available_at,
+        started_at: response.data.started_at,
+        unlocked_at: response.data.unlocked_at,
+        data_updated_at: response.data_updated_at,
+      });
+
+      completedCount++;
+      onProgress?.(completedCount, lessons.length);
+    }
+
+    return {
+      success: true,
+      completedCount,
+      queuedCount: 0,
+    };
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error completing lessons';
+    return {
+      success: false,
+      completedCount,
+      queuedCount: 0,
+      error: errorMessage,
+    };
+  }
+}
+
+/**
+ * Syncs all pending lessons that were queued while offline.
+ *
+ * @param client WaniKani API client
+ * @returns Result with counts of synced and failed lessons
+ */
+export async function syncPendingLessons(
+  client: WaniKaniClient,
+): Promise<SyncPendingLessonsResult> {
+  try {
+    const pendingLessons = await getAllPendingLessons();
+
+    if (pendingLessons.length === 0) {
+      return {
+        success: true,
+        syncedCount: 0,
+        failedCount: 0,
+      };
+    }
+
+    let syncedCount = 0;
+    let failedCount = 0;
+
+    for (const pending of pendingLessons) {
+      try {
+        // Call the WaniKani API to start the assignment
+        const response = await client.startAssignment(pending.assignment_id, {
+          started_at: pending.started_at,
+        });
+
+        // Update local database with the API response
+        await upsertAssignment({
+          id: response.id,
+          subject_id: response.data.subject_id,
+          srs_stage: response.data.srs_stage,
+          available_at: response.data.available_at,
+          started_at: response.data.started_at,
+          unlocked_at: response.data.unlocked_at,
+          data_updated_at: response.data_updated_at,
+        });
+
+        // Remove from pending queue
+        await deletePendingLessonByAssignmentId(pending.assignment_id);
+        syncedCount++;
+      } catch {
+        // Continue with next lesson on failure
+        failedCount++;
+      }
+    }
+
+    return {
+      success: failedCount === 0,
+      syncedCount,
+      failedCount,
+    };
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error syncing pending lessons';
+    return {
+      success: false,
+      syncedCount: 0,
+      failedCount: 0,
+      error: errorMessage,
+    };
+  }
+}
+
+/**
+ * Clears all pending lessons from the queue.
+ * Useful after successful sync or for cleanup.
+ */
+export async function clearPendingLessons(): Promise<void> {
+  await deleteAllPendingLessons();
 }

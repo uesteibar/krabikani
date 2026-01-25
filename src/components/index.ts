@@ -41,3 +41,8 @@ export {
   type AnswerResult,
   type IncorrectFeedback,
 } from './LessonQuiz';
+
+export {
+  LessonCompletion,
+  type LessonCompletionProps,
+} from './LessonCompletion';

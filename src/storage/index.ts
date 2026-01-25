@@ -45,6 +45,16 @@ export {
   deletePendingReview,
   deleteAllPendingReviews,
   getPendingReviewCount,
+  // Pending Lesson CRUD
+  insertPendingLesson,
+  insertPendingLessons,
+  getPendingLessonById,
+  getPendingLessonByAssignmentId,
+  getAllPendingLessons,
+  deletePendingLesson,
+  deletePendingLessonByAssignmentId,
+  deleteAllPendingLessons,
+  getPendingLessonCount,
   // Sync Status CRUD
   getSyncStatus,
   updateSyncStatus,
@@ -56,9 +66,11 @@ export {
   type DatabaseSubject,
   type DatabaseAssignment,
   type DatabasePendingReview,
+  type DatabasePendingLesson,
   type DatabaseSyncStatus,
   type SubjectInput,
   type AssignmentInput,
   type PendingReviewInput,
+  type PendingLessonInput,
   type SyncStatusUpdate,
 } from './database';

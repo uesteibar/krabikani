@@ -83,6 +83,20 @@ const CREATE_SYNC_STATUS_TABLE = `
 `;
 
 /**
+ * Pending lessons table stores lessons completed offline that need to be synced.
+ * Each row represents a lesson (assignment) that was started locally but not yet synced.
+ */
+const CREATE_PENDING_LESSONS_TABLE = `
+  CREATE TABLE IF NOT EXISTS pending_lessons (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    assignment_id INTEGER NOT NULL UNIQUE,
+    subject_id INTEGER NOT NULL,
+    started_at TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )
+`;
+
+/**
  * Index on assignments for fast lookup by subject_id and available_at.
  */
 const CREATE_ASSIGNMENTS_SUBJECT_INDEX = `
@@ -109,6 +123,7 @@ const SCHEMA_STATEMENTS = [
   CREATE_SUBJECTS_TABLE,
   CREATE_ASSIGNMENTS_TABLE,
   CREATE_PENDING_REVIEWS_TABLE,
+  CREATE_PENDING_LESSONS_TABLE,
   CREATE_SYNC_STATUS_TABLE,
   CREATE_ASSIGNMENTS_SUBJECT_INDEX,
   CREATE_ASSIGNMENTS_AVAILABLE_INDEX,
@@ -161,6 +176,14 @@ export interface DatabaseSyncStatus {
   last_summary_sync: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface DatabasePendingLesson {
+  id: number;
+  assignment_id: number;
+  subject_id: number;
+  started_at: string;
+  created_at: string;
 }
 
 // ============================================
@@ -262,6 +285,7 @@ export const SCHEMA = {
   CREATE_SUBJECTS_TABLE,
   CREATE_ASSIGNMENTS_TABLE,
   CREATE_PENDING_REVIEWS_TABLE,
+  CREATE_PENDING_LESSONS_TABLE,
   CREATE_SYNC_STATUS_TABLE,
   CREATE_ASSIGNMENTS_SUBJECT_INDEX,
   CREATE_ASSIGNMENTS_AVAILABLE_INDEX,
@@ -675,6 +699,131 @@ export async function deleteAllPendingReviews(): Promise<void> {
 export async function getPendingReviewCount(): Promise<number> {
   const result = await executeSql(
     'SELECT COUNT(*) as count FROM pending_reviews',
+    [],
+  );
+  return (result.rows.item(0) as { count: number }).count;
+}
+
+// ============================================
+// Pending Lesson CRUD Operations
+// ============================================
+
+export interface PendingLessonInput {
+  assignment_id: number;
+  subject_id: number;
+  started_at: string;
+}
+
+/**
+ * Inserts a pending lesson into the database.
+ * Uses INSERT OR REPLACE since assignment_id is UNIQUE.
+ * Returns the ID of the inserted row.
+ */
+export async function insertPendingLesson(
+  lesson: PendingLessonInput,
+): Promise<number> {
+  const result = await executeSql(
+    `INSERT OR REPLACE INTO pending_lessons (assignment_id, subject_id, started_at)
+     VALUES (?, ?, ?)`,
+    [lesson.assignment_id, lesson.subject_id, lesson.started_at],
+  );
+  return result.insertId ?? 0;
+}
+
+/**
+ * Inserts multiple pending lessons in a single transaction.
+ */
+export async function insertPendingLessons(
+  lessons: PendingLessonInput[],
+): Promise<void> {
+  if (lessons.length === 0) return;
+
+  const database = await getDatabase();
+  await database.transaction(async tx => {
+    for (const lesson of lessons) {
+      tx.executeSql(
+        `INSERT OR REPLACE INTO pending_lessons (assignment_id, subject_id, started_at)
+         VALUES (?, ?, ?)`,
+        [lesson.assignment_id, lesson.subject_id, lesson.started_at],
+      );
+    }
+  });
+}
+
+/**
+ * Retrieves a pending lesson by ID.
+ */
+export async function getPendingLessonById(
+  id: number,
+): Promise<DatabasePendingLesson | null> {
+  const result = await executeSql(
+    'SELECT * FROM pending_lessons WHERE id = ?',
+    [id],
+  );
+  if (result.rows.length === 0) {
+    return null;
+  }
+  return result.rows.item(0) as DatabasePendingLesson;
+}
+
+/**
+ * Retrieves a pending lesson by assignment ID.
+ */
+export async function getPendingLessonByAssignmentId(
+  assignmentId: number,
+): Promise<DatabasePendingLesson | null> {
+  const result = await executeSql(
+    'SELECT * FROM pending_lessons WHERE assignment_id = ?',
+    [assignmentId],
+  );
+  if (result.rows.length === 0) {
+    return null;
+  }
+  return result.rows.item(0) as DatabasePendingLesson;
+}
+
+/**
+ * Retrieves all pending lessons.
+ */
+export async function getAllPendingLessons(): Promise<DatabasePendingLesson[]> {
+  const result = await executeSql(
+    'SELECT * FROM pending_lessons ORDER BY created_at',
+    [],
+  );
+  return result.rows.raw() as DatabasePendingLesson[];
+}
+
+/**
+ * Deletes a pending lesson by ID.
+ */
+export async function deletePendingLesson(id: number): Promise<void> {
+  await executeSql('DELETE FROM pending_lessons WHERE id = ?', [id]);
+}
+
+/**
+ * Deletes a pending lesson by assignment ID.
+ */
+export async function deletePendingLessonByAssignmentId(
+  assignmentId: number,
+): Promise<void> {
+  await executeSql('DELETE FROM pending_lessons WHERE assignment_id = ?', [
+    assignmentId,
+  ]);
+}
+
+/**
+ * Deletes all pending lessons.
+ */
+export async function deleteAllPendingLessons(): Promise<void> {
+  await executeSql('DELETE FROM pending_lessons', []);
+}
+
+/**
+ * Gets the count of pending lessons.
+ */
+export async function getPendingLessonCount(): Promise<number> {
+  const result = await executeSql(
+    'SELECT COUNT(*) as count FROM pending_lessons',
     [],
   );
   return (result.rows.item(0) as { count: number }).count;
