@@ -13,6 +13,20 @@ Started: Sun Jan 25 20:13:24 CET 2026
 
 ---
 
+## 2026-01-25 - US-009
+- **What was implemented**: Created reusable ComponentDisplay component for rendering radical/kanji items on incorrect answer screens
+- **Files changed**:
+  - `src/components/ComponentDisplay.tsx` - New component that renders radical/kanji with character (or RadicalImage for image-only radicals), meaning/reading, and appropriate background color
+  - `src/components/index.ts` - Exported ComponentDisplay and ComponentDisplayProps
+  - `__tests__/components/ComponentDisplay.test.tsx` - 9 tests covering radical/kanji rendering, image fallback, color schemes, displayText prop
+- **Learnings for future iterations:**
+  - ComponentDisplay uses SUBJECT_COLORS to get blue (radical) or pink (kanji) background
+  - displayText prop allows showing reading instead of meaning (useful for vocabulary component kanji on reading questions)
+  - When characters is null but characterImages exists, use RadicalImage; otherwise show "?" fallback
+  - Component styling matches existing componentItem style from LessonCard for visual consistency
+
+---
+
 ## 2026-01-25 - US-008
 - **What was implemented**: Added 'Mark as Correct' button on incorrect answer screens in both LessonQuiz and ReviewSession
 - **Files changed**:
