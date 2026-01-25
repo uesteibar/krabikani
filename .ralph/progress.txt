@@ -13,6 +13,22 @@ Started: Sun Jan 25 20:13:24 CET 2026
 
 ---
 
+## 2026-01-25 - US-007
+- **What was implemented**: Show yellow/amber feedback for answers accepted via typo forgiveness ("Close enough!") instead of green "Correct!"
+- **Files changed**:
+  - `src/theme/colors.ts` - Added `COLORS.feedback.fuzzyMatch` (#F59E0B amber color)
+  - `src/components/LessonQuiz.tsx` - Added isFuzzyMatch state, track fuzzyMatch from validation result, show yellow header with "Close enough!" label for fuzzy matches, added `fuzzyMatchHeader` style
+  - `src/components/ReviewSession.tsx` - Same changes as LessonQuiz for consistency
+  - `__tests__/components/LessonQuiz.test.tsx` - Added tests for fuzzy match feedback display
+  - `__tests__/components/ReviewSession.test.tsx` - Added tests for fuzzy match feedback display
+- **Learnings for future iterations:**
+  - isFuzzyMatch flag from validateMeaningAnswer() is used to determine UI feedback color
+  - Feedback state (showCorrectFeedback, isFuzzyMatch) must be reset in both item reset effect and advanceToNextQuestion callback
+  - testID should reflect the state being shown (`lesson-quiz-fuzzy-match-label` vs `lesson-quiz-correct-label`)
+  - Only meaning answers support fuzzy matching; reading answers require exact hiragana match
+
+---
+
 ## 2026-01-25 - US-006
 - **What was implemented**: Integrated typo forgiveness into answer validation using the Damerau-Levenshtein distance algorithm
 - **Files changed**:
