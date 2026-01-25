@@ -88,6 +88,7 @@ describe('Database CRUD Operations', () => {
       reading_mnemonic: 'Imagine counting ichi, ni, san...',
       level: 1,
       component_subject_ids: JSON.stringify([440]),
+      character_images: null,
       data_updated_at: '2023-01-01T00:00:00.000Z',
     };
 

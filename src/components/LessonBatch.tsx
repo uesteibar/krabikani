@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, PanResponder, GestureResponderEvent, PanRespond
 
 import type { SubjectType, Meaning, Reading, KanjiReading } from '../api/types';
 import { LessonCard } from './LessonCard';
+import { RadicalImage } from './RadicalImage';
 import {
   getSubjectColor,
   SUBJECT_COLORS,
@@ -30,6 +31,8 @@ export interface LessonItem {
   readingMnemonic: string | null;
   /** Component radical subject IDs (only for kanji) */
   componentSubjectIds?: number[];
+  /** JSON string of character images (for radicals without Unicode characters) */
+  characterImages?: string | null;
 }
 
 /** Data for a component radical */
@@ -40,6 +43,8 @@ export interface ComponentRadical {
   characters: string | null;
   /** Primary meaning of the radical */
   meaning: string;
+  /** JSON string of character images (for radicals without Unicode characters) */
+  characterImages?: string | null;
 }
 
 export interface LessonBatchProps {
@@ -206,9 +211,18 @@ export function LessonBatch({
                 key={radical.id}
                 style={styles.componentItem}
                 testID={`lesson-batch-component-${radical.id}`}>
-                <Text style={styles.componentCharacter}>
-                  {radical.characters ?? '?'}
-                </Text>
+                {radical.characters === null && radical.characterImages ? (
+                  <RadicalImage
+                    characterImages={radical.characterImages}
+                    fallbackText={radical.meaning}
+                    size={FONT_SIZES.xxl}
+                    testID={`lesson-batch-component-${radical.id}-image`}
+                  />
+                ) : (
+                  <Text style={styles.componentCharacter}>
+                    {radical.characters ?? '?'}
+                  </Text>
+                )}
                 <Text style={styles.componentMeaning}>{radical.meaning}</Text>
               </View>
             ))}
@@ -225,6 +239,7 @@ export function LessonBatch({
           readings={currentItem.readings}
           meaningMnemonic={currentItem.meaningMnemonic}
           readingMnemonic={currentItem.readingMnemonic}
+          characterImages={currentItem.characterImages}
           onNext={handleNext}
           onBack={isFirstItem ? undefined : handleBack}
         />

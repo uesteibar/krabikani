@@ -139,6 +139,7 @@ export interface DatabaseSubject {
   reading_mnemonic: string | null;
   level: number;
   component_subject_ids: string | null; // JSON string of number[] or null
+  character_images: string | null; // JSON string of CharacterImage[] or null
   data_updated_at: string | null;
   created_at: string;
 }
@@ -297,6 +298,7 @@ export interface SubjectInput {
   reading_mnemonic: string | null;
   level: number;
   component_subject_ids: string | null; // JSON string
+  character_images: string | null; // JSON string
   data_updated_at: string | null;
 }
 
@@ -307,8 +309,8 @@ export interface SubjectInput {
 export async function upsertSubject(subject: SubjectInput): Promise<void> {
   await executeSql(
     `INSERT OR REPLACE INTO subjects
-      (id, object_type, characters, meanings, readings, meaning_mnemonic, reading_mnemonic, level, component_subject_ids, data_updated_at, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT created_at FROM subjects WHERE id = ?), CURRENT_TIMESTAMP))`,
+      (id, object_type, characters, meanings, readings, meaning_mnemonic, reading_mnemonic, level, component_subject_ids, character_images, data_updated_at, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT created_at FROM subjects WHERE id = ?), CURRENT_TIMESTAMP))`,
     [
       subject.id,
       subject.object_type,
@@ -319,6 +321,7 @@ export async function upsertSubject(subject: SubjectInput): Promise<void> {
       subject.reading_mnemonic,
       subject.level,
       subject.component_subject_ids,
+      subject.character_images,
       subject.data_updated_at,
       subject.id, // For the COALESCE subquery
     ],
@@ -336,8 +339,8 @@ export async function upsertSubjects(subjects: SubjectInput[]): Promise<void> {
     for (const subject of subjects) {
       await tx.execute(
         `INSERT OR REPLACE INTO subjects
-          (id, object_type, characters, meanings, readings, meaning_mnemonic, reading_mnemonic, level, component_subject_ids, data_updated_at, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT created_at FROM subjects WHERE id = ?), CURRENT_TIMESTAMP))`,
+          (id, object_type, characters, meanings, readings, meaning_mnemonic, reading_mnemonic, level, component_subject_ids, character_images, data_updated_at, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT created_at FROM subjects WHERE id = ?), CURRENT_TIMESTAMP))`,
         [
           subject.id,
           subject.object_type,
@@ -348,6 +351,7 @@ export async function upsertSubjects(subjects: SubjectInput[]): Promise<void> {
           subject.reading_mnemonic,
           subject.level,
           subject.component_subject_ids,
+          subject.character_images,
           subject.data_updated_at,
           subject.id,
         ],
@@ -926,14 +930,11 @@ interface Migration {
 // Migrations are stored in order. Each migration contains SQL statements to run.
 // Version 1 is the initial schema, so no migrations needed yet.
 const MIGRATIONS: Migration[] = [
-  // Example migration for future use:
-  // {
-  //   version: 2,
-  //   description: 'Add some_new_column to subjects table',
-  //   up: [
-  //     'ALTER TABLE subjects ADD COLUMN some_new_column TEXT',
-  //   ],
-  // },
+  {
+    version: 2,
+    description: 'Add character_images column to subjects table for radicals',
+    up: ['ALTER TABLE subjects ADD COLUMN character_images TEXT'],
+  },
 ];
 
 /**

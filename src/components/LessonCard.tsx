@@ -9,6 +9,7 @@ import {
 
 import type { SubjectType, Meaning, Reading, KanjiReading } from '../api/types';
 import { MnemonicText } from './MnemonicText';
+import { RadicalImage } from './RadicalImage';
 import {
   getSubjectColor,
   COLORS,
@@ -32,6 +33,8 @@ export interface LessonCardProps {
   meaningMnemonic: string;
   /** Mnemonic for remembering the reading (null for radicals) */
   readingMnemonic: string | null;
+  /** JSON string of character images (for radicals without Unicode characters) */
+  characterImages?: string | null;
   /** Callback when Next button is pressed */
   onNext: () => void;
   /** Optional callback when Back button is pressed (hides button if not provided) */
@@ -85,6 +88,7 @@ export function LessonCard({
   readings,
   meaningMnemonic,
   readingMnemonic,
+  characterImages,
   onNext,
   onBack,
 }: LessonCardProps) {
@@ -95,13 +99,25 @@ export function LessonCard({
   const acceptedReadings = getAcceptedReadings(readings);
   const hasReading = subjectType !== 'radical';
 
+  // Determine if we should show an image instead of text
+  const shouldShowImage = characters === null && characterImages;
+
   return (
     <View style={styles.container} testID="lesson-card">
       {/* Header with characters */}
       <View style={[styles.header, { backgroundColor }]} testID="lesson-card-header">
-        <Text style={styles.characters} testID="lesson-card-characters">
-          {characters ?? '?'}
-        </Text>
+        {shouldShowImage ? (
+          <RadicalImage
+            characterImages={characterImages}
+            fallbackText={primaryMeaning || '?'}
+            size={FONT_SIZES.display}
+            testID="lesson-card-characters"
+          />
+        ) : (
+          <Text style={styles.characters} testID="lesson-card-characters">
+            {characters ?? '?'}
+          </Text>
+        )}
         <Text style={styles.subjectType} testID="lesson-card-type">
           {subjectType.replace('_', ' ')}
         </Text>

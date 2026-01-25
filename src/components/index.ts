@@ -85,3 +85,5 @@ export {
   FocusableInput,
   type FocusableInputProps,
 } from './FocusableInput';
+
+export { RadicalImage, type RadicalImageProps } from './RadicalImage';
