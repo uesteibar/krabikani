@@ -8,6 +8,8 @@
 - Use @testing-library/react-native for component tests
 - Mock native modules in __mocks__/ directory (e.g., react-native-keychain.ts)
 - Export modules via index.ts barrel files in each directory
+- WaniKani API: use `Wanikani-Revision: 20170710` and `Authorization: Bearer <token>` headers
+- Mock global fetch in tests: `(globalThis as { fetch: typeof fetch }).fetch = mockFetch`
 
 ---
 
@@ -60,5 +62,29 @@
   - Alert.alert callbacks need to be tested by extracting them from mock calls
   - Use act() wrapper when testing async state updates from callbacks
   - Browser verification not available (no dev-browser skill configured)
+
+---
+
+## 2026-01-25 - US-003: API Key Validation
+- What was implemented:
+  - WaniKani API client module with validateApiKey function (calls GET /v2/user)
+  - Typed interfaces for WaniKaniUser, ValidationResult, and API responses
+  - WaniKaniApiError class for typed error handling
+  - SettingsScreen now validates API key before saving
+  - Success feedback shows username from WaniKani account
+  - Error feedback with specific messages (invalid key, network error, server error)
+  - Comprehensive test suite (7 tests for wanikaniApi, 12 tests for SettingsScreen)
+- Files changed:
+  - src/api/wanikaniApi.ts (new - API client with validation)
+  - src/api/index.ts (new - barrel exports)
+  - src/screens/SettingsScreen.tsx (added validation before save)
+  - __tests__/api/wanikaniApi.test.ts (new - API tests)
+  - __tests__/screens/SettingsScreen.test.tsx (updated - validation tests)
+  - src/api/.gitkeep (deleted)
+- **Learnings for future iterations:**
+  - WaniKani API requires `Wanikani-Revision: 20170710` header and `Authorization: Bearer <token>`
+  - Use `(globalThis as { fetch: typeof fetch }).fetch = mockFetch` for TypeScript-safe global fetch mocking
+  - API responses wrap data in `{ object, url, data_updated_at, data }` structure
+  - Always validate API key before saving to provide immediate feedback to user
 
 ---
