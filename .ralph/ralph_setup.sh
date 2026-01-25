@@ -122,10 +122,9 @@ fi
 # Track current worktree
 echo "$WORKTREE_PATH" > "$LAST_WORKTREE_FILE"
 
-# Copy .ralph directory to worktree (enables parallel execution with separate prd.json files)
-if [ ! -d "$WORKTREE_PATH/.ralph" ]; then
-  cp -R "$SCRIPT_DIR" "$WORKTREE_PATH/.ralph"
-  echo "Copied .ralph directory to worktree"
+# Copy .env file to the worktree if it exists
+if [ -f "$PROJECT_ROOT/.env" ]; then
+  cp "$PROJECT_ROOT/.env" "$WORKTREE_PATH/"
 fi
 
 echo ""
