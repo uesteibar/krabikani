@@ -1,4 +1,10 @@
-import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import React, {
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+  useRef,
+} from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,9 +16,21 @@ import {
   ScrollView,
 } from 'react-native';
 
-import type { SubjectType, Meaning, Reading, KanjiReading, AuxiliaryMeaning } from '../api/types';
-import { processRomajiInput, romajiToHiragana } from '../utils/romajiToHiragana';
-import { validateMeaningAnswer, validateReadingAnswer } from '../utils/answerValidation';
+import type {
+  SubjectType,
+  Meaning,
+  Reading,
+  KanjiReading,
+  AuxiliaryMeaning,
+} from '../api/types';
+import {
+  processRomajiInput,
+  romajiToHiragana,
+} from '../utils/romajiToHiragana';
+import {
+  validateMeaningAnswer,
+  validateReadingAnswer,
+} from '../utils/answerValidation';
 import {
   getSubjectColor,
   COLORS,
@@ -92,7 +110,7 @@ export interface LessonQuizProps {
  * Get the prompt text based on question type.
  */
 function getQuestionPrompt(type: QuestionType): string {
-  return type === 'meaning' ? "What is the meaning?" : "What is the reading?";
+  return type === 'meaning' ? 'What is the meaning?' : 'What is the reading?';
 }
 
 /**
@@ -106,7 +124,9 @@ function getAcceptedMeaningsDisplay(meanings: Meaning[]): string {
 /**
  * Get all accepted readings as a string for display.
  */
-function getAcceptedReadingsDisplay(readings: Reading[] | KanjiReading[] | null): string {
+function getAcceptedReadingsDisplay(
+  readings: Reading[] | KanjiReading[] | null,
+): string {
   if (!readings) return '';
   const accepted = readings.filter(r => r.accepted_answer);
   return accepted.map(r => r.reading).join(', ');
@@ -115,8 +135,8 @@ function getAcceptedReadingsDisplay(readings: Reading[] | KanjiReading[] | null)
 /**
  * Generates quiz questions for a set of items.
  * Each item gets a meaning question (and reading question if not a radical).
- * The order of questions is randomized, and for each item, whether meaning
- * or reading comes first is also randomized.
+ * Questions are kept in order (not shuffled) - meaning first, then reading for each item.
+ * This preserves the lesson order, unlike reviews which are randomized.
  */
 export function generateQuizQuestions(items: QuizItem[]): QuizQuestion[] {
   const questions: QuizQuestion[] = [];
@@ -139,8 +159,8 @@ export function generateQuizQuestions(items: QuizItem[]): QuizQuestion[] {
     }
   }
 
-  // Shuffle the questions using Fisher-Yates algorithm
-  return shuffleArray(questions);
+  // Lessons maintain order - do not shuffle
+  return questions;
 }
 
 /**
@@ -179,18 +199,22 @@ export function LessonQuiz({
   const initialQuestions = useMemo(() => generateQuizQuestions(items), [items]);
 
   // Question queue: includes initial questions + re-queued incorrect ones
-  const [questionQueue, setQuestionQueue] = useState<QuizQuestion[]>(initialQuestions);
+  const [questionQueue, setQuestionQueue] =
+    useState<QuizQuestion[]>(initialQuestions);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [inputValue, setInputValue] = useState('');
   const [displayValue, setDisplayValue] = useState('');
   const [pendingRomaji, setPendingRomaji] = useState('');
   const [results, setResults] = useState<AnswerResult[]>([]);
-  const [incorrectFeedback, setIncorrectFeedback] = useState<IncorrectFeedback | null>(null);
+  const [incorrectFeedback, setIncorrectFeedback] =
+    useState<IncorrectFeedback | null>(null);
   const [showCorrectFeedback, setShowCorrectFeedback] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Track completed questions (answered correctly)
-  const [completedQuestionKeys, setCompletedQuestionKeys] = useState<Set<string>>(new Set());
+  const [completedQuestionKeys, setCompletedQuestionKeys] = useState<
+    Set<string>
+  >(new Set());
 
   // Track answer counts to report in final results
   const answeredQuestionsCount = useRef(0);
@@ -230,9 +254,10 @@ export function LessonQuiz({
   }, []);
 
   // Get the current input handler based on question type
-  const handleInputChange = currentQuestion?.type === 'reading'
-    ? handleReadingInputChange
-    : handleMeaningInputChange;
+  const handleInputChange =
+    currentQuestion?.type === 'reading'
+      ? handleReadingInputChange
+      : handleMeaningInputChange;
 
   // Advance to next question (clearing input and feedback)
   const advanceToNextQuestion = useCallback(() => {
@@ -258,9 +283,8 @@ export function LessonQuiz({
     const { item, type } = currentQuestion;
 
     // Get the final answer
-    const answer = type === 'reading'
-      ? romajiToHiragana(inputValue)
-      : inputValue.trim();
+    const answer =
+      type === 'reading' ? romajiToHiragana(inputValue) : inputValue.trim();
 
     // Validate the answer
     let isCorrect = false;
@@ -280,9 +304,10 @@ export function LessonQuiz({
     }
 
     // Get correct answer for display
-    const correctAnswer = type === 'meaning'
-      ? getAcceptedMeaningsDisplay(item.meanings)
-      : getAcceptedReadingsDisplay(item.readings);
+    const correctAnswer =
+      type === 'meaning'
+        ? getAcceptedMeaningsDisplay(item.meanings)
+        : getAcceptedReadingsDisplay(item.readings);
 
     const result: AnswerResult = {
       question: currentQuestion,
@@ -317,9 +342,10 @@ export function LessonQuiz({
       }, autoAdvanceDelay);
     } else {
       // Show incorrect feedback
-      const mnemonic = type === 'meaning'
-        ? item.meaningMnemonic
-        : (item.readingMnemonic ?? item.meaningMnemonic);
+      const mnemonic =
+        type === 'meaning'
+          ? item.meaningMnemonic
+          : item.readingMnemonic ?? item.meaningMnemonic;
 
       setIncorrectFeedback({
         question: currentQuestion,
@@ -378,12 +404,12 @@ export function LessonQuiz({
   const { item, type } = currentQuestion;
   const backgroundColor = getSubjectColor(item.subjectType);
   const questionPrompt = getQuestionPrompt(type);
-  const placeholder = type === 'meaning' ? 'Enter meaning...' : 'Type reading (romaji)...';
+  const placeholder =
+    type === 'meaning' ? 'Enter meaning...' : 'Type reading (romaji)...';
 
   // For reading input, show the converted hiragana + any pending romaji
-  const displayText = type === 'reading'
-    ? displayValue + pendingRomaji
-    : displayValue;
+  const displayText =
+    type === 'reading' ? displayValue + pendingRomaji : displayValue;
 
   // Calculate progress: completed questions out of total original questions
   const progressCount = completedQuestionKeys.size + 1; // +1 for current question being worked on
@@ -401,7 +427,11 @@ export function LessonQuiz({
             <View
               style={[
                 styles.progressFill,
-                { width: `${(completedQuestionKeys.size / totalOriginalQuestions) * 100}%` },
+                {
+                  width: `${
+                    (completedQuestionKeys.size / totalOriginalQuestions) * 100
+                  }%`,
+                },
               ]}
               testID="lesson-quiz-progress-fill"
             />
@@ -409,20 +439,34 @@ export function LessonQuiz({
         </View>
 
         {/* Character display with red tint for incorrect */}
-        <View style={[styles.characterContainer, styles.incorrectHeader]} testID="lesson-quiz-character-container">
+        <View
+          style={[styles.characterContainer, styles.incorrectHeader]}
+          testID="lesson-quiz-character-container"
+        >
           <Text style={styles.characters} testID="lesson-quiz-characters">
             {incorrectFeedback.question.item.characters ?? '?'}
           </Text>
-          <Text style={styles.incorrectLabel} testID="lesson-quiz-incorrect-label">
+          <Text
+            style={styles.incorrectLabel}
+            testID="lesson-quiz-incorrect-label"
+          >
             Incorrect
           </Text>
         </View>
 
         {/* Feedback content */}
-        <ScrollView style={styles.feedbackContainer} contentContainerStyle={styles.feedbackContent}>
+        <ScrollView
+          style={styles.feedbackContainer}
+          contentContainerStyle={styles.feedbackContent}
+        >
           {/* User's answer */}
           <View style={styles.feedbackSection}>
-            <Text style={styles.feedbackLabel} testID="lesson-quiz-your-answer-label">Your Answer:</Text>
+            <Text
+              style={styles.feedbackLabel}
+              testID="lesson-quiz-your-answer-label"
+            >
+              Your Answer:
+            </Text>
             <Text style={styles.userAnswer} testID="lesson-quiz-your-answer">
               {incorrectFeedback.userAnswer || '(empty)'}
             </Text>
@@ -430,16 +474,29 @@ export function LessonQuiz({
 
           {/* Correct answer */}
           <View style={styles.feedbackSection}>
-            <Text style={styles.feedbackLabel} testID="lesson-quiz-correct-answer-label">Correct Answer:</Text>
-            <Text style={styles.correctAnswerText} testID="lesson-quiz-correct-answer">
+            <Text
+              style={styles.feedbackLabel}
+              testID="lesson-quiz-correct-answer-label"
+            >
+              Correct Answer:
+            </Text>
+            <Text
+              style={styles.correctAnswerText}
+              testID="lesson-quiz-correct-answer"
+            >
               {incorrectFeedback.correctAnswer}
             </Text>
           </View>
 
           {/* Mnemonic */}
           <View style={styles.feedbackSection}>
-            <Text style={styles.feedbackLabel} testID="lesson-quiz-mnemonic-label">
-              {incorrectFeedback.question.type === 'meaning' ? 'Meaning Mnemonic:' : 'Reading Mnemonic:'}
+            <Text
+              style={styles.feedbackLabel}
+              testID="lesson-quiz-mnemonic-label"
+            >
+              {incorrectFeedback.question.type === 'meaning'
+                ? 'Meaning Mnemonic:'
+                : 'Reading Mnemonic:'}
             </Text>
             <Text style={styles.mnemonicText} testID="lesson-quiz-mnemonic">
               {incorrectFeedback.mnemonic}
@@ -469,13 +526,22 @@ export function LessonQuiz({
       {/* Progress indicator */}
       <View style={styles.progressContainer} testID="lesson-quiz-progress">
         <Text style={styles.progressText} testID="lesson-quiz-progress-text">
-          {progressCount > totalOriginalQuestions ? totalOriginalQuestions : progressCount} / {totalOriginalQuestions}
+          {progressCount > totalOriginalQuestions
+            ? totalOriginalQuestions
+            : progressCount}{' '}
+          / {totalOriginalQuestions}
         </Text>
         <View style={styles.progressBar}>
           <View
             style={[
               styles.progressFill,
-              { width: `${(Math.min(progressCount, totalOriginalQuestions) / totalOriginalQuestions) * 100}%` },
+              {
+                width: `${
+                  (Math.min(progressCount, totalOriginalQuestions) /
+                    totalOriginalQuestions) *
+                  100
+                }%`,
+              },
             ]}
             testID="lesson-quiz-progress-fill"
           />
@@ -518,23 +584,25 @@ export function LessonQuiz({
       <View style={styles.inputContainer}>
         {/* For reading questions, show the converted display */}
         {type === 'reading' && displayText && (
-          <Text style={styles.convertedDisplay} testID="lesson-quiz-converted-display">
+          <Text
+            style={styles.convertedDisplay}
+            testID="lesson-quiz-converted-display"
+          >
             {displayText}
           </Text>
         )}
         <TextInput
-          style={[
-            styles.input,
-            { borderColor: backgroundColor },
-          ]}
+          style={[styles.input, { borderColor: backgroundColor }]}
           value={inputValue}
           onChangeText={handleInputChange}
+          onSubmitEditing={handleSubmit}
           placeholder={placeholder}
           placeholderTextColor="#999"
           autoCapitalize={type === 'meaning' ? 'none' : 'none'}
           autoCorrect={false}
           autoComplete="off"
           keyboardType={type === 'reading' ? 'ascii-capable' : 'default'}
+          returnKeyType="done"
           editable={!showCorrectFeedback}
           testID="lesson-quiz-input"
         />

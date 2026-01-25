@@ -1,4 +1,10 @@
-import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import React, {
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+  useRef,
+} from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,9 +16,21 @@ import {
   ScrollView,
 } from 'react-native';
 
-import type { SubjectType, Meaning, Reading, KanjiReading, AuxiliaryMeaning } from '../api/types';
-import { processRomajiInput, romajiToHiragana } from '../utils/romajiToHiragana';
-import { validateMeaningAnswer, validateReadingAnswer } from '../utils/answerValidation';
+import type {
+  SubjectType,
+  Meaning,
+  Reading,
+  KanjiReading,
+  AuxiliaryMeaning,
+} from '../api/types';
+import {
+  processRomajiInput,
+  romajiToHiragana,
+} from '../utils/romajiToHiragana';
+import {
+  validateMeaningAnswer,
+  validateReadingAnswer,
+} from '../utils/answerValidation';
 import {
   getSubjectColor,
   COLORS,
@@ -108,7 +126,7 @@ export interface ReviewSessionProps {
  * Get the prompt text based on question type.
  */
 function getQuestionPrompt(type: ReviewQuestionType): string {
-  return type === 'meaning' ? "What is the meaning?" : "What is the reading?";
+  return type === 'meaning' ? 'What is the meaning?' : 'What is the reading?';
 }
 
 /**
@@ -122,7 +140,9 @@ function getAcceptedMeaningsDisplay(meanings: Meaning[]): string {
 /**
  * Get all accepted readings as a string for display.
  */
-function getAcceptedReadingsDisplay(readings: Reading[] | KanjiReading[] | null): string {
+function getAcceptedReadingsDisplay(
+  readings: Reading[] | KanjiReading[] | null,
+): string {
   if (!readings) return '';
   const accepted = readings.filter(r => r.accepted_answer);
   return accepted.map(r => r.reading).join(', ');
@@ -217,7 +237,10 @@ export function ReviewSession({
   onWrapUpToggle,
 }: ReviewSessionProps) {
   // Generate initial questions once when items change
-  const initialQuestions = useMemo(() => generateReviewQuestions(items), [items]);
+  const initialQuestions = useMemo(
+    () => generateReviewQuestions(items),
+    [items],
+  );
 
   // Initialize item progress tracking
   const initialItemProgress = useMemo(() => {
@@ -234,19 +257,24 @@ export function ReviewSession({
   }, [items]);
 
   // Question queue: includes initial questions + re-queued incorrect ones
-  const [questionQueue, setQuestionQueue] = useState<ReviewQuestion[]>(initialQuestions);
+  const [questionQueue, setQuestionQueue] =
+    useState<ReviewQuestion[]>(initialQuestions);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [inputValue, setInputValue] = useState('');
   const [displayValue, setDisplayValue] = useState('');
   const [pendingRomaji, setPendingRomaji] = useState('');
-  const [_itemProgress, setItemProgress] = useState<Map<number, ItemProgress>>(initialItemProgress);
+  const [_itemProgress, setItemProgress] =
+    useState<Map<number, ItemProgress>>(initialItemProgress);
   const [showCorrectFeedback, setShowCorrectFeedback] = useState(false);
-  const [incorrectFeedback, setIncorrectFeedback] = useState<IncorrectFeedback | null>(null);
+  const [incorrectFeedback, setIncorrectFeedback] =
+    useState<IncorrectFeedback | null>(null);
 
   // Wrap-up mode state
   const [isWrappingUp, setIsWrappingUp] = useState(false);
   // Track which items have been introduced (at least one question shown)
-  const [introducedItemIds, setIntroducedItemIds] = useState<Set<number>>(new Set());
+  const [introducedItemIds, setIntroducedItemIds] = useState<Set<number>>(
+    new Set(),
+  );
 
   // Track completed questions for session progress
   const [completedItemCount, setCompletedItemCount] = useState(0);
@@ -292,14 +320,23 @@ export function ReviewSession({
       if (introducedItemIds.size === 0) return false;
       for (const itemId of introducedItemIds) {
         const progress = _itemProgress.get(itemId);
-        if (!progress || !(progress.meaningCorrect && progress.readingCorrect)) {
+        if (
+          !progress ||
+          !(progress.meaningCorrect && progress.readingCorrect)
+        ) {
           return false;
         }
       }
       return true;
     }
     return completedItemCount >= totalItemCount;
-  }, [isWrappingUp, introducedItemIds, _itemProgress, completedItemCount, totalItemCount]);
+  }, [
+    isWrappingUp,
+    introducedItemIds,
+    _itemProgress,
+    completedItemCount,
+    totalItemCount,
+  ]);
 
   // Track introduced items when showing a new question
   useEffect(() => {
@@ -346,52 +383,71 @@ export function ReviewSession({
   }, []);
 
   // Get the current input handler based on question type
-  const handleInputChange = currentQuestion?.type === 'reading'
-    ? handleReadingInputChange
-    : handleMeaningInputChange;
+  const handleInputChange =
+    currentQuestion?.type === 'reading'
+      ? handleReadingInputChange
+      : handleMeaningInputChange;
 
   // Find the next valid question index, considering wrap-up mode
-  const findNextQuestionIndex = useCallback((
-    startIndex: number,
-    queue: ReviewQuestion[],
-    wrappingUp: boolean,
-    introduced: Set<number>,
-    progress: Map<number, ItemProgress>,
-  ): number => {
-    let nextIndex = startIndex;
+  const findNextQuestionIndex = useCallback(
+    (
+      startIndex: number,
+      queue: ReviewQuestion[],
+      wrappingUp: boolean,
+      introduced: Set<number>,
+      progress: Map<number, ItemProgress>,
+    ): number => {
+      let nextIndex = startIndex;
 
-    // In wrap-up mode, skip questions for items that haven't been introduced yet
-    // or items that are already complete
-    while (nextIndex < queue.length && wrappingUp) {
-      const question = queue[nextIndex];
-      const itemId = question.item.id;
-      const itemProgress = progress.get(itemId);
-      const isIntroduced = introduced.has(itemId);
-      const isItemDone = itemProgress && itemProgress.meaningCorrect && itemProgress.readingCorrect;
+      // In wrap-up mode, skip questions for items that haven't been introduced yet
+      // or items that are already complete
+      while (nextIndex < queue.length && wrappingUp) {
+        const question = queue[nextIndex];
+        const itemId = question.item.id;
+        const itemProgress = progress.get(itemId);
+        const isIntroduced = introduced.has(itemId);
+        const isItemDone =
+          itemProgress &&
+          itemProgress.meaningCorrect &&
+          itemProgress.readingCorrect;
 
-      // Skip if not introduced or already complete
-      if (!isIntroduced || isItemDone) {
-        nextIndex++;
-      } else {
-        break;
+        // Skip if not introduced or already complete
+        if (!isIntroduced || isItemDone) {
+          nextIndex++;
+        } else {
+          break;
+        }
       }
-    }
 
-    return nextIndex;
-  }, []);
+      return nextIndex;
+    },
+    [],
+  );
 
   // Advance to next question (clearing input and feedback)
   const advanceToNextQuestion = useCallback(() => {
     setCurrentQuestionIndex(prev => {
       const nextIndex = prev + 1;
-      return findNextQuestionIndex(nextIndex, questionQueue, isWrappingUp, introducedItemIds, _itemProgress);
+      return findNextQuestionIndex(
+        nextIndex,
+        questionQueue,
+        isWrappingUp,
+        introducedItemIds,
+        _itemProgress,
+      );
     });
     setInputValue('');
     setDisplayValue('');
     setPendingRomaji('');
     setIncorrectFeedback(null);
     setShowCorrectFeedback(false);
-  }, [findNextQuestionIndex, questionQueue, isWrappingUp, introducedItemIds, _itemProgress]);
+  }, [
+    findNextQuestionIndex,
+    questionQueue,
+    isWrappingUp,
+    introducedItemIds,
+    _itemProgress,
+  ]);
 
   // Handle tap to continue after incorrect answer
   const handleContinue = useCallback(() => {
@@ -410,9 +466,8 @@ export function ReviewSession({
     const { item, type } = currentQuestion;
 
     // Get the final answer
-    const answer = type === 'reading'
-      ? romajiToHiragana(inputValue)
-      : inputValue.trim();
+    const answer =
+      type === 'reading' ? romajiToHiragana(inputValue) : inputValue.trim();
 
     // Validate the answer
     let isCorrect = false;
@@ -432,9 +487,10 @@ export function ReviewSession({
     }
 
     // Get correct answer for display
-    const correctAnswer = type === 'meaning'
-      ? getAcceptedMeaningsDisplay(item.meanings)
-      : getAcceptedReadingsDisplay(item.readings);
+    const correctAnswer =
+      type === 'meaning'
+        ? getAcceptedMeaningsDisplay(item.meanings)
+        : getAcceptedReadingsDisplay(item.readings);
 
     const result: ReviewAnswerResult = {
       question: currentQuestion,
@@ -450,31 +506,40 @@ export function ReviewSession({
     // Compute whether session will complete after this answer
     // We need to read current state to predict the outcome
     const currentProgress = _itemProgress.get(item.id)!;
-    const willMeaningBeCorrect = type === 'meaning' && isCorrect ? true : currentProgress.meaningCorrect;
-    const willReadingBeCorrect = type === 'reading' && isCorrect ? true : currentProgress.readingCorrect;
+    const willMeaningBeCorrect =
+      type === 'meaning' && isCorrect ? true : currentProgress.meaningCorrect;
+    const willReadingBeCorrect =
+      type === 'reading' && isCorrect ? true : currentProgress.readingCorrect;
     const itemWillBeComplete = willMeaningBeCorrect && willReadingBeCorrect;
     const itemWasComplete = isItemComplete(currentProgress);
     const itemJustCompleted = itemWillBeComplete && !itemWasComplete;
-    const newCompletedCount = itemJustCompleted ? completedItemCount + 1 : completedItemCount;
+    const newCompletedCount = itemJustCompleted
+      ? completedItemCount + 1
+      : completedItemCount;
 
     // Check session completion differently for wrap-up mode vs normal mode
     let sessionWillComplete: boolean;
     if (isWrappingUp) {
       // In wrap-up mode: complete when all introduced items are done
-      sessionWillComplete = itemJustCompleted && (() => {
-        // Check if all introduced items will be complete after this answer
-        for (const itemId of introducedItemIds) {
-          if (itemId === item.id) {
-            // This item will be complete
-            continue;
+      sessionWillComplete =
+        itemJustCompleted &&
+        (() => {
+          // Check if all introduced items will be complete after this answer
+          for (const itemId of introducedItemIds) {
+            if (itemId === item.id) {
+              // This item will be complete
+              continue;
+            }
+            const progress = _itemProgress.get(itemId);
+            if (
+              !progress ||
+              !(progress.meaningCorrect && progress.readingCorrect)
+            ) {
+              return false;
+            }
           }
-          const progress = _itemProgress.get(itemId);
-          if (!progress || !(progress.meaningCorrect && progress.readingCorrect)) {
-            return false;
-          }
-        }
-        return true;
-      })();
+          return true;
+        })();
     } else {
       sessionWillComplete = newCompletedCount >= totalItemCount;
     }
@@ -565,9 +630,10 @@ export function ReviewSession({
       }, autoAdvanceDelay);
     } else {
       // Show incorrect feedback - user must tap to continue
-      const mnemonic = type === 'meaning'
-        ? item.meaningMnemonic
-        : (item.readingMnemonic ?? item.meaningMnemonic);
+      const mnemonic =
+        type === 'meaning'
+          ? item.meaningMnemonic
+          : item.readingMnemonic ?? item.meaningMnemonic;
 
       setIncorrectFeedback({
         question: currentQuestion,
@@ -631,29 +697,43 @@ export function ReviewSession({
   // If showing incorrect feedback, render the feedback view
   if (incorrectFeedback) {
     // Calculate progress: In wrap-up mode, use introduced items count
-    const displayTotalCount = isWrappingUp ? introducedItemIds.size : totalItemCount;
+    const displayTotalCount = isWrappingUp
+      ? introducedItemIds.size
+      : totalItemCount;
     const displayCompletedCount = isWrappingUp
       ? introducedItemIds.size - wrapUpRemainingCount
       : completedItemCount;
-    const progressPercentage = displayTotalCount > 0
-      ? (displayCompletedCount / displayTotalCount) * 100
-      : 0;
-    const remainingCount = isWrappingUp ? wrapUpRemainingCount : totalItemCount - completedItemCount;
+    const progressPercentage =
+      displayTotalCount > 0
+        ? (displayCompletedCount / displayTotalCount) * 100
+        : 0;
+    const remainingCount = isWrappingUp
+      ? wrapUpRemainingCount
+      : totalItemCount - completedItemCount;
 
     return (
       <View style={styles.container} testID="review-session-incorrect-feedback">
         {/* Progress indicator */}
         <View style={styles.progressContainer} testID="review-session-progress">
           <View style={styles.progressTextRow}>
-            <Text style={styles.progressText} testID="review-session-progress-text">
+            <Text
+              style={styles.progressText}
+              testID="review-session-progress-text"
+            >
               {displayCompletedCount} / {displayTotalCount}
             </Text>
             {isWrappingUp ? (
-              <Text style={styles.wrapUpText} testID="review-session-wrapping-up-text">
+              <Text
+                style={styles.wrapUpText}
+                testID="review-session-wrapping-up-text"
+              >
                 Wrapping up: {wrapUpRemainingCount} remaining
               </Text>
             ) : (
-              <Text style={styles.remainingText} testID="review-session-remaining-text">
+              <Text
+                style={styles.remainingText}
+                testID="review-session-remaining-text"
+              >
                 {remainingCount} remaining
               </Text>
             )}
@@ -671,20 +751,34 @@ export function ReviewSession({
         </View>
 
         {/* Character display with red tint for incorrect */}
-        <View style={[styles.characterContainer, styles.incorrectHeader]} testID="review-session-character-container">
+        <View
+          style={[styles.characterContainer, styles.incorrectHeader]}
+          testID="review-session-character-container"
+        >
           <Text style={styles.characters} testID="review-session-characters">
             {incorrectFeedback.question.item.characters ?? '?'}
           </Text>
-          <Text style={styles.incorrectLabel} testID="review-session-incorrect-label">
+          <Text
+            style={styles.incorrectLabel}
+            testID="review-session-incorrect-label"
+          >
             Incorrect
           </Text>
         </View>
 
         {/* Feedback content */}
-        <ScrollView style={styles.feedbackContainer} contentContainerStyle={styles.feedbackContent}>
+        <ScrollView
+          style={styles.feedbackContainer}
+          contentContainerStyle={styles.feedbackContent}
+        >
           {/* User's answer */}
           <View style={styles.feedbackSection}>
-            <Text style={styles.feedbackLabel} testID="review-session-your-answer-label">Your Answer:</Text>
+            <Text
+              style={styles.feedbackLabel}
+              testID="review-session-your-answer-label"
+            >
+              Your Answer:
+            </Text>
             <Text style={styles.userAnswer} testID="review-session-your-answer">
               {incorrectFeedback.userAnswer || '(empty)'}
             </Text>
@@ -692,16 +786,29 @@ export function ReviewSession({
 
           {/* Correct answer */}
           <View style={styles.feedbackSection}>
-            <Text style={styles.feedbackLabel} testID="review-session-correct-answer-label">Correct Answer:</Text>
-            <Text style={styles.correctAnswerText} testID="review-session-correct-answer">
+            <Text
+              style={styles.feedbackLabel}
+              testID="review-session-correct-answer-label"
+            >
+              Correct Answer:
+            </Text>
+            <Text
+              style={styles.correctAnswerText}
+              testID="review-session-correct-answer"
+            >
               {incorrectFeedback.correctAnswer}
             </Text>
           </View>
 
           {/* Mnemonic */}
           <View style={styles.feedbackSection}>
-            <Text style={styles.feedbackLabel} testID="review-session-mnemonic-label">
-              {incorrectFeedback.question.type === 'meaning' ? 'Meaning Mnemonic:' : 'Reading Mnemonic:'}
+            <Text
+              style={styles.feedbackLabel}
+              testID="review-session-mnemonic-label"
+            >
+              {incorrectFeedback.question.type === 'meaning'
+                ? 'Meaning Mnemonic:'
+                : 'Reading Mnemonic:'}
             </Text>
             <Text style={styles.mnemonicText} testID="review-session-mnemonic">
               {incorrectFeedback.mnemonic}
@@ -723,22 +830,27 @@ export function ReviewSession({
   }
   const backgroundColor = getSubjectColor(item.subjectType);
   const questionPrompt = getQuestionPrompt(type);
-  const placeholder = type === 'meaning' ? 'Enter meaning...' : 'Type reading (romaji)...';
+  const placeholder =
+    type === 'meaning' ? 'Enter meaning...' : 'Type reading (romaji)...';
 
   // For reading input, show the converted hiragana + any pending romaji
-  const displayText = type === 'reading'
-    ? displayValue + pendingRomaji
-    : displayValue;
+  const displayText =
+    type === 'reading' ? displayValue + pendingRomaji : displayValue;
 
   // Calculate progress: In wrap-up mode, use introduced items count
-  const displayTotalCount = isWrappingUp ? introducedItemIds.size : totalItemCount;
+  const displayTotalCount = isWrappingUp
+    ? introducedItemIds.size
+    : totalItemCount;
   const displayCompletedCount = isWrappingUp
     ? introducedItemIds.size - wrapUpRemainingCount
     : completedItemCount;
-  const progressPercentage = displayTotalCount > 0
-    ? (displayCompletedCount / displayTotalCount) * 100
-    : 0;
-  const remainingCount = isWrappingUp ? wrapUpRemainingCount : totalItemCount - completedItemCount;
+  const progressPercentage =
+    displayTotalCount > 0
+      ? (displayCompletedCount / displayTotalCount) * 100
+      : 0;
+  const remainingCount = isWrappingUp
+    ? wrapUpRemainingCount
+    : totalItemCount - completedItemCount;
 
   return (
     <KeyboardAvoidingView
@@ -749,15 +861,24 @@ export function ReviewSession({
       {/* Progress indicator */}
       <View style={styles.progressContainer} testID="review-session-progress">
         <View style={styles.progressTextRow}>
-          <Text style={styles.progressText} testID="review-session-progress-text">
+          <Text
+            style={styles.progressText}
+            testID="review-session-progress-text"
+          >
             {displayCompletedCount} / {displayTotalCount}
           </Text>
           {isWrappingUp ? (
-            <Text style={styles.wrapUpText} testID="review-session-wrapping-up-text">
+            <Text
+              style={styles.wrapUpText}
+              testID="review-session-wrapping-up-text"
+            >
               Wrapping up: {wrapUpRemainingCount} remaining
             </Text>
           ) : (
-            <Text style={styles.remainingText} testID="review-session-remaining-text">
+            <Text
+              style={styles.remainingText}
+              testID="review-session-remaining-text"
+            >
               {remainingCount} remaining
             </Text>
           )}
@@ -786,7 +907,10 @@ export function ReviewSession({
           {item.characters ?? '?'}
         </Text>
         {showCorrectFeedback ? (
-          <Text style={styles.correctLabel} testID="review-session-correct-label">
+          <Text
+            style={styles.correctLabel}
+            testID="review-session-correct-label"
+          >
             Correct!
           </Text>
         ) : (
@@ -810,23 +934,25 @@ export function ReviewSession({
       <View style={styles.inputContainer}>
         {/* For reading questions, show the converted display */}
         {type === 'reading' && displayText && (
-          <Text style={styles.convertedDisplay} testID="review-session-converted-display">
+          <Text
+            style={styles.convertedDisplay}
+            testID="review-session-converted-display"
+          >
             {displayText}
           </Text>
         )}
         <TextInput
-          style={[
-            styles.input,
-            { borderColor: backgroundColor },
-          ]}
+          style={[styles.input, { borderColor: backgroundColor }]}
           value={inputValue}
           onChangeText={handleInputChange}
+          onSubmitEditing={handleSubmit}
           placeholder={placeholder}
           placeholderTextColor="#999"
           autoCapitalize="none"
           autoCorrect={false}
           autoComplete="off"
           keyboardType={type === 'reading' ? 'ascii-capable' : 'default'}
+          returnKeyType="done"
           editable={!showCorrectFeedback}
           testID="review-session-input"
         />
@@ -836,7 +962,11 @@ export function ReviewSession({
       <View style={styles.buttonRow}>
         {/* Submit button */}
         <TouchableOpacity
-          style={[styles.submitButton, styles.submitButtonFlex, { backgroundColor }]}
+          style={[
+            styles.submitButton,
+            styles.submitButtonFlex,
+            { backgroundColor },
+          ]}
           onPress={handleSubmit}
           disabled={showCorrectFeedback}
           activeOpacity={0.8}
@@ -856,10 +986,12 @@ export function ReviewSession({
           activeOpacity={0.8}
           testID="review-session-wrap-up"
         >
-          <Text style={[
-            styles.wrapUpButtonText,
-            isWrappingUp && styles.wrapUpButtonTextActive,
-          ]}>
+          <Text
+            style={[
+              styles.wrapUpButtonText,
+              isWrappingUp && styles.wrapUpButtonTextActive,
+            ]}
+          >
             {isWrappingUp ? 'Cancel' : 'Wrap Up'}
           </Text>
         </TouchableOpacity>

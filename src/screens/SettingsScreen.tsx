@@ -1,3 +1,5 @@
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -9,14 +11,32 @@ import {
   View,
 } from 'react-native';
 
-import { validateApiKey } from '../api';
-import { clearApiKey, getApiKey, saveApiKey } from '../storage';
+import { validateApiKey, WaniKaniClient } from '../api';
+import type { RootStackParamList } from '../navigation/types';
+import { clearApiKey, getApiKey, saveApiKey, clearAllData } from '../storage';
+import { getUserLevel, syncSubjects, syncAssignments } from '../sync';
+import { COLORS, SPACING, FONT_SIZES } from '../theme';
+
+type SettingsScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'Settings'
+>;
+
+export type SettingsScreenState =
+  | 'loading'
+  | 'idle'
+  | 'validating'
+  | 'syncing'
+  | 'syncError';
 
 export function SettingsScreen() {
+  const navigation = useNavigation<SettingsScreenNavigationProp>();
   const [apiKey, setApiKey] = useState('');
   const [hasStoredKey, setHasStoredKey] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   const loadStoredKey = useCallback(async () => {
     setIsLoading(true);
@@ -38,6 +58,41 @@ export function SettingsScreen() {
     loadStoredKey();
   }, [loadStoredKey]);
 
+  const performSync = useCallback(
+    async (keyToUse: string) => {
+      setIsSyncing(true);
+      setSyncError(null);
+
+      try {
+        const client = new WaniKaniClient(keyToUse);
+        const userLevel = await getUserLevel(client);
+
+        // Sync subjects and assignments in parallel
+        await Promise.all([
+          syncSubjects(client, { maxLevel: userLevel }),
+          syncAssignments(client),
+        ]);
+
+        // Navigate to Home screen after successful sync
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Home' }],
+        });
+      } catch (error) {
+        setIsSyncing(false);
+        const errorMessage =
+          error instanceof Error ? error.message : 'An unknown error occurred';
+        setSyncError(errorMessage);
+      }
+    },
+    [navigation],
+  );
+
+  const handleRetry = useCallback(() => {
+    const trimmedKey = apiKey.trim();
+    performSync(trimmedKey);
+  }, [apiKey, performSync]);
+
   const handleSave = async () => {
     const trimmedKey = apiKey.trim();
     if (!trimmedKey) {
@@ -50,7 +105,11 @@ export function SettingsScreen() {
       // Validate the API key first
       const validationResult = await validateApiKey(trimmedKey);
       if (!validationResult.success) {
-        Alert.alert('Validation Failed', validationResult.error || 'Invalid API key');
+        Alert.alert(
+          'Validation Failed',
+          validationResult.error || 'Invalid API key',
+        );
+        setIsSaving(false);
         return;
       }
 
@@ -58,14 +117,14 @@ export function SettingsScreen() {
       const saveResult = await saveApiKey(trimmedKey);
       if (saveResult.success) {
         setHasStoredKey(true);
-        Alert.alert(
-          'Success',
-          `API key validated and saved!\nWelcome, ${validationResult.user?.username || 'user'}!`,
-        );
+        setIsSaving(false);
+        // Perform the actual sync
+        await performSync(trimmedKey);
       } else {
         Alert.alert('Error', saveResult.error || 'Failed to save API key');
+        setIsSaving(false);
       }
-    } finally {
+    } catch {
       setIsSaving(false);
     }
   };
@@ -73,7 +132,7 @@ export function SettingsScreen() {
   const handleClear = () => {
     Alert.alert(
       'Clear API Key',
-      'Are you sure you want to remove your API key?',
+      'Are you sure you want to remove your API key? This will also delete all synced data.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -82,13 +141,12 @@ export function SettingsScreen() {
           onPress: async () => {
             const result = await clearApiKey();
             if (result.success) {
+              // Clear all synced data from the database
+              await clearAllData();
               setApiKey('');
               setHasStoredKey(false);
             } else {
-              Alert.alert(
-                'Error',
-                result.error || 'Failed to clear API key',
-              );
+              Alert.alert('Error', result.error || 'Failed to clear API key');
             }
           },
         },
@@ -100,6 +158,43 @@ export function SettingsScreen() {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color="#8f5bc4" />
+      </View>
+    );
+  }
+
+  // Show syncing UI after successful API key validation and save
+  if (isSyncing) {
+    return (
+      <View style={styles.syncingContainer} testID="syncing-view">
+        <ActivityIndicator
+          size="large"
+          color={COLORS.subject.vocabulary}
+          testID="syncing-spinner"
+        />
+        <Text style={styles.syncingText} testID="syncing-message">
+          Syncing your WaniKani data...
+        </Text>
+      </View>
+    );
+  }
+
+  // Show sync error UI with retry option
+  if (syncError) {
+    return (
+      <View style={styles.syncingContainer} testID="sync-error-view">
+        <Text style={styles.errorTitle} testID="sync-error-title">
+          Sync Failed
+        </Text>
+        <Text style={styles.errorMessage} testID="sync-error-message">
+          {syncError}
+        </Text>
+        <TouchableOpacity
+          style={[styles.button, styles.retryButton]}
+          onPress={handleRetry}
+          testID="retry-button"
+        >
+          <Text style={styles.buttonText}>Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -124,10 +219,15 @@ export function SettingsScreen() {
         />
 
         <TouchableOpacity
-          style={[styles.button, styles.saveButton, isSaving && styles.buttonDisabled]}
+          style={[
+            styles.button,
+            styles.saveButton,
+            isSaving && styles.buttonDisabled,
+          ]}
           onPress={handleSave}
           disabled={isSaving}
-          testID="save-button">
+          testID="save-button"
+        >
           {isSaving ? (
             <ActivityIndicator color="#fff" />
           ) : (
@@ -139,7 +239,8 @@ export function SettingsScreen() {
           <TouchableOpacity
             style={[styles.button, styles.clearButton]}
             onPress={handleClear}
-            testID="clear-button">
+            testID="clear-button"
+          >
             <Text style={[styles.buttonText, styles.clearButtonText]}>
               Clear API Key
             </Text>
@@ -155,6 +256,37 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     justifyContent: 'center',
+  },
+  syncingContainer: {
+    flex: 1,
+    backgroundColor: COLORS.background.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.lg,
+  },
+  syncingText: {
+    marginTop: SPACING.lg,
+    fontSize: FONT_SIZES.lg,
+    color: COLORS.text.secondary,
+    textAlign: 'center',
+  },
+  errorTitle: {
+    fontSize: FONT_SIZES.xl,
+    fontWeight: '600',
+    color: COLORS.feedback.incorrect,
+    marginBottom: SPACING.md,
+    textAlign: 'center',
+  },
+  errorMessage: {
+    fontSize: FONT_SIZES.base,
+    color: COLORS.text.secondary,
+    textAlign: 'center',
+    marginBottom: SPACING.xl,
+    paddingHorizontal: SPACING.lg,
+  },
+  retryButton: {
+    backgroundColor: COLORS.subject.vocabulary,
+    minWidth: 150,
   },
   content: {
     padding: 20,

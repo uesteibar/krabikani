@@ -17,6 +17,7 @@ import {
   DashboardStats,
   NextReviewIndicator,
   PendingSyncIndicator,
+  SyncingIndicator,
 } from '../components';
 import {
   COLORS,
@@ -300,6 +301,7 @@ export function HomeScreen() {
             />
           </View>
           <LastSyncedIndicator lastSyncedAt={syncStatus.lastSyncedAt} />
+          <SyncingIndicator isSyncing={refreshing} />
           <PendingSyncIndicator
             pendingLessonsCount={pendingData.pendingLessonsCount}
             pendingReviewsCount={pendingData.pendingReviewsCount}

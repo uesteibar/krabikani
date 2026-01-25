@@ -150,15 +150,23 @@ export async function syncSubjects(
 ): Promise<SyncSubjectsResult> {
   const { maxLevel, onProgress, updatedAfter } = options;
 
+  console.log('[syncSubjects] Starting sync', { maxLevel, updatedAfter });
+
   try {
     // Build levels array from 1 to maxLevel
     const levels = Array.from({ length: maxLevel }, (_, i) => i + 1);
+    console.log('[syncSubjects] Fetching subjects for levels:', levels);
 
     // Fetch first page to get total count
+    console.log('[syncSubjects] Calling API getSubjects...');
     const firstPage = await client.getSubjects({
       levels,
       hidden: false,
       updated_after: updatedAfter,
+    });
+    console.log('[syncSubjects] First page received', {
+      totalCount: firstPage.total_count,
+      dataLength: firstPage.data.length,
     });
 
     const totalCount = firstPage.total_count;
@@ -171,14 +179,25 @@ export async function syncSubjects(
     }
 
     if (subjectsToInsert.length > 0) {
+      console.log(
+        '[syncSubjects] Upserting first batch of',
+        subjectsToInsert.length,
+        'subjects',
+      );
       await upsertSubjects(subjectsToInsert);
       syncedCount += subjectsToInsert.length;
+      console.log('[syncSubjects] Progress:', syncedCount, '/', totalCount);
       onProgress?.(syncedCount, totalCount);
     }
 
     // Fetch remaining pages
     let currentPage = firstPage;
+    console.log('[syncSubjects] Fetching remaining pages...');
     while (currentPage.pages.next_url) {
+      console.log(
+        '[syncSubjects] Fetching next page:',
+        currentPage.pages.next_url,
+      );
       const nextPage = await client.getNextPage(currentPage);
       if (!nextPage) break;
 
@@ -190,6 +209,7 @@ export async function syncSubjects(
       if (pageSubjects.length > 0) {
         await upsertSubjects(pageSubjects);
         syncedCount += pageSubjects.length;
+        console.log('[syncSubjects] Progress:', syncedCount, '/', totalCount);
         onProgress?.(syncedCount, totalCount);
       }
 
@@ -197,16 +217,20 @@ export async function syncSubjects(
     }
 
     // Update sync status
+    console.log('[syncSubjects] Updating sync status...');
     await updateSyncStatus({
       last_subjects_sync: new Date().toISOString(),
     });
 
+    console.log('[syncSubjects] Sync complete! Total synced:', syncedCount);
     return {
       success: true,
       syncedCount,
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error during sync';
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error during sync';
+    console.error('[syncSubjects] Error:', errorMessage, error);
     return {
       success: false,
       syncedCount: 0,
@@ -236,23 +260,35 @@ export async function syncAssignments(
   let { updatedAfter } = options;
   let resumed = false;
 
+  console.log('[syncAssignments] Starting sync', { updatedAfter });
+
   try {
     // If no updatedAfter is provided, check if we have a previous incomplete sync
     // to resume from. This allows resuming interrupted syncs.
     if (!updatedAfter) {
       const syncStatus = await getSyncStatus();
+      console.log(
+        '[syncAssignments] Checking for previous sync status:',
+        syncStatus,
+      );
       if (syncStatus?.last_assignments_sync) {
         // We have a previous sync timestamp - use it for incremental sync
         updatedAfter = syncStatus.last_assignments_sync;
         resumed = true;
+        console.log('[syncAssignments] Resuming from:', updatedAfter);
       }
     }
 
     // Fetch first page to get total count
     // We only fetch unlocked assignments (unlocked=true)
+    console.log('[syncAssignments] Calling API getAssignments...');
     const firstPage = await client.getAssignments({
       unlocked: true,
       updated_after: updatedAfter,
+    });
+    console.log('[syncAssignments] First page received', {
+      totalCount: firstPage.total_count,
+      dataLength: firstPage.data.length,
     });
 
     const totalCount = firstPage.total_count;
@@ -265,14 +301,25 @@ export async function syncAssignments(
     }
 
     if (assignmentsToInsert.length > 0) {
+      console.log(
+        '[syncAssignments] Upserting first batch of',
+        assignmentsToInsert.length,
+        'assignments',
+      );
       await upsertAssignments(assignmentsToInsert);
       syncedCount += assignmentsToInsert.length;
+      console.log('[syncAssignments] Progress:', syncedCount, '/', totalCount);
       onProgress?.(syncedCount, totalCount);
     }
 
     // Fetch remaining pages
     let currentPage = firstPage;
+    console.log('[syncAssignments] Fetching remaining pages...');
     while (currentPage.pages.next_url) {
+      console.log(
+        '[syncAssignments] Fetching next page:',
+        currentPage.pages.next_url,
+      );
       const nextPage = await client.getNextPage(currentPage);
       if (!nextPage) break;
 
@@ -284,6 +331,12 @@ export async function syncAssignments(
       if (pageAssignments.length > 0) {
         await upsertAssignments(pageAssignments);
         syncedCount += pageAssignments.length;
+        console.log(
+          '[syncAssignments] Progress:',
+          syncedCount,
+          '/',
+          totalCount,
+        );
         onProgress?.(syncedCount, totalCount);
       }
 
@@ -291,10 +344,12 @@ export async function syncAssignments(
     }
 
     // Update sync status
+    console.log('[syncAssignments] Updating sync status...');
     await updateSyncStatus({
       last_assignments_sync: new Date().toISOString(),
     });
 
+    console.log('[syncAssignments] Sync complete! Total synced:', syncedCount);
     return {
       success: true,
       syncedCount,
@@ -303,6 +358,7 @@ export async function syncAssignments(
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error during sync';
+    console.error('[syncAssignments] Error:', errorMessage, error);
     return {
       success: false,
       syncedCount: 0,
@@ -317,7 +373,9 @@ export async function syncAssignments(
  * Useful for determining maxLevel for syncSubjects.
  */
 export async function getUserLevel(client: WaniKaniClient): Promise<number> {
+  console.log('[getUserLevel] Fetching user info...');
   const user = await client.getUser();
+  console.log('[getUserLevel] User level:', user.data.level);
   return user.data.level;
 }
 
@@ -416,7 +474,9 @@ export async function completeLessons(
       };
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error queuing lessons';
+        error instanceof Error
+          ? error.message
+          : 'Unknown error queuing lessons';
       return {
         success: false,
         completedCount: 0,
@@ -460,7 +520,9 @@ export async function completeLessons(
     };
   } catch (error) {
     const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error completing lessons';
+      error instanceof Error
+        ? error.message
+        : 'Unknown error completing lessons';
     return {
       success: false,
       completedCount,
@@ -527,7 +589,9 @@ export async function syncPendingLessons(
     };
   } catch (error) {
     const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error syncing pending lessons';
+      error instanceof Error
+        ? error.message
+        : 'Unknown error syncing pending lessons';
     return {
       success: false,
       syncedCount: 0,
@@ -631,7 +695,9 @@ export async function submitReviews(
       };
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error queuing reviews';
+        error instanceof Error
+          ? error.message
+          : 'Unknown error queuing reviews';
       return {
         success: false,
         submittedCount: 0,
@@ -678,7 +744,9 @@ export async function submitReviews(
     };
   } catch (error) {
     const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error submitting reviews';
+      error instanceof Error
+        ? error.message
+        : 'Unknown error submitting reviews';
     return {
       success: false,
       submittedCount,
@@ -748,7 +816,9 @@ export async function syncPendingReviews(
     };
   } catch (error) {
     const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error syncing pending reviews';
+      error instanceof Error
+        ? error.message
+        : 'Unknown error syncing pending reviews';
     return {
       success: false,
       syncedCount: 0,
@@ -877,7 +947,10 @@ export async function backgroundSync(
     const assignmentsResult = await syncAssignments(client);
 
     return {
-      success: pendingResult.success && subjectsResult.success && assignmentsResult.success,
+      success:
+        pendingResult.success &&
+        subjectsResult.success &&
+        assignmentsResult.success,
       skipped: false,
       pendingData: pendingResult,
       subjects: subjectsResult,
@@ -885,7 +958,9 @@ export async function backgroundSync(
     };
   } catch (error) {
     const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error during background sync';
+      error instanceof Error
+        ? error.message
+        : 'Unknown error during background sync';
     return {
       success: false,
       skipped: false,
