@@ -296,3 +296,32 @@
   - Wrap state-updating operations in act() when testing React components
 
 ---
+
+## 2026-01-25 - US-011: Dashboard Screen - Layout
+- What was implemented:
+  - DashboardStats component showing lessons and reviews counts prominently
+  - WaniKani-inspired color scheme (pink for lessons, purple for reviews)
+  - NextReviewIndicator component showing next review time or "Reviews available now"/"No upcoming reviews"
+  - formatTimeUntil() helper function for countdown formatting (in X hours/minutes/days)
+  - getNextReviewTime() database function to query earliest future review
+  - Updated HomeScreen to integrate dashboard components
+  - Dashboard data loaded from local SQLite cache (getAvailableLessons, getAvailableReviews)
+  - Clear visual hierarchy with large count displays (100x100dp stat boxes)
+- Files changed:
+  - src/components/DashboardStats.tsx (new - dashboard stats display)
+  - src/components/NextReviewIndicator.tsx (new - next review countdown)
+  - src/components/index.ts (updated - exports for new components)
+  - src/storage/database.ts (added getNextReviewTime function)
+  - src/storage/index.ts (updated - export getNextReviewTime)
+  - src/screens/HomeScreen.tsx (updated - integrated dashboard components)
+  - __tests__/components/DashboardStats.test.tsx (new - 7 tests)
+  - __tests__/components/NextReviewIndicator.test.tsx (new - 18 tests)
+  - __tests__/storage/databaseCrud.test.ts (updated - 3 new tests for getNextReviewTime)
+  - __tests__/screens/HomeScreen.test.tsx (updated - 9 new tests for dashboard)
+- **Learnings for future iterations:**
+  - MIN() aggregate queries work well for finding earliest/latest timestamps
+  - Component props children can be accessed via props.children in test assertions
+  - Dashboard components should use testID attributes for reliable test targeting
+  - Browser verification not available (no dev-browser skill configured)
+
+---

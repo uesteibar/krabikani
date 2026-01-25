@@ -8,3 +8,14 @@ export {
   formatTimeSince,
   type LastSyncedIndicatorProps,
 } from './LastSyncedIndicator';
+
+export {
+  DashboardStats,
+  type DashboardStatsProps,
+} from './DashboardStats';
+
+export {
+  NextReviewIndicator,
+  formatTimeUntil,
+  type NextReviewIndicatorProps,
+} from './NextReviewIndicator';

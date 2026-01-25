@@ -37,6 +37,7 @@ export {
   getAllAssignments,
   deleteAssignment,
   getAssignmentCount,
+  getNextReviewTime,
   // Pending Review CRUD
   insertPendingReview,
   getPendingReviewById,

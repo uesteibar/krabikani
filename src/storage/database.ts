@@ -578,6 +578,25 @@ export async function getAssignmentCount(): Promise<number> {
   return (result.rows.item(0) as { count: number }).count;
 }
 
+/**
+ * Gets the next review time (earliest available_at after now).
+ * Returns null if no upcoming reviews are scheduled.
+ */
+export async function getNextReviewTime(): Promise<string | null> {
+  const now = new Date().toISOString();
+  const result = await executeSql(
+    `SELECT MIN(available_at) as next_review
+     FROM assignments
+     WHERE available_at IS NOT NULL
+       AND available_at > ?
+       AND started_at IS NOT NULL
+       AND srs_stage > 0`,
+    [now],
+  );
+  const row = result.rows.item(0);
+  return row?.next_review ?? null;
+}
+
 // ============================================
 // Pending Review CRUD Operations
 // ============================================

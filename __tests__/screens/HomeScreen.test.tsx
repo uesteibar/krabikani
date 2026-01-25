@@ -16,6 +16,7 @@ import {
   initializeDatabase,
   _resetDatabaseInstance,
   upsertSubject,
+  upsertAssignment,
   updateSyncStatus,
 } from '../../src/storage/database';
 
@@ -108,6 +109,106 @@ describe('HomeScreen', () => {
 
       await waitFor(() => {
         expect(queryByTestId('offline-indicator')).toBeNull();
+      });
+    });
+
+    it('renders the dashboard stats component', async () => {
+      const { getByTestId } = renderWithNavigation(<HomeScreen />);
+
+      await waitFor(() => {
+        expect(getByTestId('dashboard-stats')).toBeTruthy();
+      });
+    });
+
+    it('renders the next review indicator component', async () => {
+      const { getByTestId } = renderWithNavigation(<HomeScreen />);
+
+      await waitFor(() => {
+        expect(getByTestId('next-review-indicator')).toBeTruthy();
+      });
+    });
+
+    it('shows zero counts when no lessons or reviews available', async () => {
+      const { getByTestId } = renderWithNavigation(<HomeScreen />);
+
+      await waitFor(() => {
+        expect(getByTestId('lessons-count').props.children).toBe(0);
+        expect(getByTestId('reviews-count').props.children).toBe(0);
+      });
+    });
+
+    it('shows lessons count from local cache', async () => {
+      // Add a subject first
+      await upsertSubject({
+        id: 100,
+        object_type: 'radical',
+        characters: '一',
+        meanings: JSON.stringify([{ meaning: 'one', primary: true, accepted_answer: true }]),
+        readings: null,
+        meaning_mnemonic: 'Test mnemonic',
+        reading_mnemonic: null,
+        level: 1,
+        component_subject_ids: null,
+        data_updated_at: null,
+      });
+
+      // Add an assignment that is a lesson (unlocked but not started)
+      await upsertAssignment({
+        id: 1,
+        subject_id: 100,
+        srs_stage: 0,
+        available_at: null,
+        started_at: null,
+        unlocked_at: new Date().toISOString(),
+        data_updated_at: null,
+      });
+
+      const { getByTestId } = renderWithNavigation(<HomeScreen />);
+
+      await waitFor(() => {
+        expect(getByTestId('lessons-count').props.children).toBe(1);
+      });
+    });
+
+    it('shows reviews count from local cache', async () => {
+      // Add a subject first
+      await upsertSubject({
+        id: 100,
+        object_type: 'kanji',
+        characters: '一',
+        meanings: JSON.stringify([{ meaning: 'one', primary: true, accepted_answer: true }]),
+        readings: JSON.stringify([{ reading: 'いち', primary: true, accepted_answer: true }]),
+        meaning_mnemonic: 'Test mnemonic',
+        reading_mnemonic: 'Reading mnemonic',
+        level: 1,
+        component_subject_ids: null,
+        data_updated_at: null,
+      });
+
+      // Add an assignment that is a review (started, available now)
+      const pastTime = new Date(Date.now() - 60000).toISOString();
+      await upsertAssignment({
+        id: 1,
+        subject_id: 100,
+        srs_stage: 5,
+        available_at: pastTime,
+        started_at: pastTime,
+        unlocked_at: pastTime,
+        data_updated_at: null,
+      });
+
+      const { getByTestId } = renderWithNavigation(<HomeScreen />);
+
+      await waitFor(() => {
+        expect(getByTestId('reviews-count').props.children).toBe(1);
+      });
+    });
+
+    it('shows "No upcoming reviews" when no future reviews', async () => {
+      const { getByText } = renderWithNavigation(<HomeScreen />);
+
+      await waitFor(() => {
+        expect(getByText('No upcoming reviews')).toBeTruthy();
       });
     });
   });
