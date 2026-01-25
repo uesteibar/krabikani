@@ -625,6 +625,9 @@ describe('ReviewSession', () => {
       fireEvent.changeText(input, 'Wrong');
       fireEvent.press(submit);
 
+      // Tap continue to dismiss incorrect feedback
+      fireEvent.press(getByTestId('review-session-continue'));
+
       // Then answer correctly
       fireEvent.changeText(getByTestId('review-session-input'), 'Ground');
       fireEvent.press(getByTestId('review-session-submit'));
@@ -1006,6 +1009,301 @@ describe('ReviewSession', () => {
       // Subject type should be hidden, correct label shown instead
       expect(queryByTestId('review-session-subject-type')).toBeNull();
       expect(queryByTestId('review-session-correct-label')).toBeTruthy();
+    });
+  });
+
+  describe('Incorrect Answer Handling', () => {
+    it('should show incorrect feedback screen when answer is wrong', () => {
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[sampleRadical]} />,
+      );
+
+      const input = getByTestId('review-session-input');
+      const submit = getByTestId('review-session-submit');
+
+      fireEvent.changeText(input, 'Wrong');
+      fireEvent.press(submit);
+
+      // Should show incorrect feedback screen
+      expect(queryByTestId('review-session-incorrect-feedback')).toBeTruthy();
+      expect(queryByTestId('review-session-incorrect-label')).toBeTruthy();
+      expect(queryByTestId('review-session-incorrect-label')?.props.children).toBe('Incorrect');
+    });
+
+    it('should show correct answer prominently', () => {
+      const { getByTestId } = render(
+        <ReviewSession items={[sampleRadical]} />,
+      );
+
+      const input = getByTestId('review-session-input');
+      const submit = getByTestId('review-session-submit');
+
+      fireEvent.changeText(input, 'Wrong');
+      fireEvent.press(submit);
+
+      // Should show correct answer
+      expect(getByTestId('review-session-correct-answer').props.children).toBe('Ground');
+    });
+
+    it('should show user answer on incorrect feedback', () => {
+      const { getByTestId } = render(
+        <ReviewSession items={[sampleRadical]} />,
+      );
+
+      const input = getByTestId('review-session-input');
+      const submit = getByTestId('review-session-submit');
+
+      fireEvent.changeText(input, 'Wrong');
+      fireEvent.press(submit);
+
+      // Should show user's incorrect answer
+      expect(getByTestId('review-session-your-answer').props.children).toBe('Wrong');
+    });
+
+    it('should show "(empty)" when user submits empty answer', () => {
+      const { getByTestId } = render(
+        <ReviewSession items={[sampleRadical]} />,
+      );
+
+      const submit = getByTestId('review-session-submit');
+
+      // Submit without entering anything
+      fireEvent.press(submit);
+
+      // Should show (empty) for user's answer
+      expect(getByTestId('review-session-your-answer').props.children).toBe('(empty)');
+    });
+
+    it('should show meaning mnemonic for meaning questions', () => {
+      const { getByTestId } = render(
+        <ReviewSession items={[sampleRadical]} />,
+      );
+
+      const input = getByTestId('review-session-input');
+      const submit = getByTestId('review-session-submit');
+
+      fireEvent.changeText(input, 'Wrong');
+      fireEvent.press(submit);
+
+      // Should show meaning mnemonic
+      expect(getByTestId('review-session-mnemonic-label').props.children).toBe('Meaning Mnemonic:');
+      expect(getByTestId('review-session-mnemonic').props.children).toBe('Mnemonic for Ground');
+    });
+
+    it('should show reading mnemonic for reading questions', () => {
+      // Force reading question first
+      let callIndex = 0;
+      (Math.random as jest.Mock).mockImplementation(() => {
+        const values = [0.6, 0.1, 0.1, 0.1, 0.1];
+        return values[callIndex++ % values.length];
+      });
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[sampleKanji]} />,
+      );
+
+      // Check if it's a reading question
+      const questionType = getByTestId('review-session-question-type').props.children;
+      if (questionType === 'READING') {
+        const input = getByTestId('review-session-input');
+        const submit = getByTestId('review-session-submit');
+
+        fireEvent.changeText(input, 'wrong');
+        fireEvent.press(submit);
+
+        // Should show reading mnemonic
+        if (queryByTestId('review-session-mnemonic-label')) {
+          expect(getByTestId('review-session-mnemonic-label').props.children).toBe('Reading Mnemonic:');
+        }
+      }
+    });
+
+    it('should require tap to continue after incorrect answer', () => {
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[sampleRadical]} />,
+      );
+
+      const input = getByTestId('review-session-input');
+      const submit = getByTestId('review-session-submit');
+
+      fireEvent.changeText(input, 'Wrong');
+      fireEvent.press(submit);
+
+      // Should show continue button
+      expect(queryByTestId('review-session-continue')).toBeTruthy();
+
+      // Session should still be showing incorrect feedback (not auto-advanced)
+      expect(queryByTestId('review-session-incorrect-feedback')).toBeTruthy();
+    });
+
+    it('should advance to next question when continue is pressed', () => {
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[sampleRadical]} />,
+      );
+
+      const input = getByTestId('review-session-input');
+      const submit = getByTestId('review-session-submit');
+
+      fireEvent.changeText(input, 'Wrong');
+      fireEvent.press(submit);
+
+      // Press continue
+      fireEvent.press(getByTestId('review-session-continue'));
+
+      // Should no longer show incorrect feedback
+      expect(queryByTestId('review-session-incorrect-feedback')).toBeNull();
+      // Should show main review session
+      expect(queryByTestId('review-session')).toBeTruthy();
+      // Should have input field again
+      expect(queryByTestId('review-session-input')).toBeTruthy();
+    });
+
+    it('should show red header background for incorrect answer', () => {
+      const { getByTestId } = render(
+        <ReviewSession items={[sampleRadical]} />,
+      );
+
+      const input = getByTestId('review-session-input');
+      const submit = getByTestId('review-session-submit');
+
+      fireEvent.changeText(input, 'Wrong');
+      fireEvent.press(submit);
+
+      // Character container should have red background
+      const container = getByTestId('review-session-character-container');
+      expect(container.props.style).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ backgroundColor: '#f44336' }),
+        ]),
+      );
+    });
+
+    it('should re-queue incorrect question to appear later', () => {
+      jest.useFakeTimers();
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[sampleRadical]} autoAdvanceDelay={0} />,
+      );
+
+      const input = getByTestId('review-session-input');
+      const submit = getByTestId('review-session-submit');
+
+      // Answer incorrectly
+      fireEvent.changeText(input, 'Wrong');
+      fireEvent.press(submit);
+
+      // Press continue
+      fireEvent.press(getByTestId('review-session-continue'));
+
+      // Should still be showing a question (not complete) because question was re-queued
+      expect(queryByTestId('review-session-complete')).toBeNull();
+      expect(queryByTestId('review-session')).toBeTruthy();
+
+      jest.useRealTimers();
+    });
+
+    it('should maintain progress when showing incorrect feedback', () => {
+      const { getByTestId } = render(
+        <ReviewSession items={[sampleRadical]} />,
+      );
+
+      // Initially 0 / 1
+      expect(getByTestId('review-session-progress-text').props.children).toEqual([0, ' / ', 1]);
+
+      const input = getByTestId('review-session-input');
+      const submit = getByTestId('review-session-submit');
+
+      fireEvent.changeText(input, 'Wrong');
+      fireEvent.press(submit);
+
+      // Progress should still be 0 / 1 in feedback view
+      expect(getByTestId('review-session-progress-text').props.children).toEqual([0, ' / ', 1]);
+    });
+
+    it('should track incorrect answer counts correctly', () => {
+      jest.useFakeTimers();
+      const onSessionComplete = jest.fn();
+
+      const { getByTestId } = render(
+        <ReviewSession
+          items={[sampleRadical]}
+          onSessionComplete={onSessionComplete}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Answer incorrectly twice
+      fireEvent.changeText(getByTestId('review-session-input'), 'Wrong1');
+      fireEvent.press(getByTestId('review-session-submit'));
+      fireEvent.press(getByTestId('review-session-continue'));
+
+      fireEvent.changeText(getByTestId('review-session-input'), 'Wrong2');
+      fireEvent.press(getByTestId('review-session-submit'));
+      fireEvent.press(getByTestId('review-session-continue'));
+
+      // Then answer correctly
+      fireEvent.changeText(getByTestId('review-session-input'), 'Ground');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      const progressMap = onSessionComplete.mock.calls[0][0];
+      expect(progressMap.get(sampleRadical.id)).toEqual(
+        expect.objectContaining({
+          meaningCorrect: true,
+          incorrectMeaningAnswers: 2,
+        }),
+      );
+
+      jest.useRealTimers();
+    });
+
+    it('should display character in incorrect feedback view', () => {
+      const { getByTestId } = render(
+        <ReviewSession items={[sampleRadical]} />,
+      );
+
+      const input = getByTestId('review-session-input');
+      const submit = getByTestId('review-session-submit');
+
+      fireEvent.changeText(input, 'Wrong');
+      fireEvent.press(submit);
+
+      // Should show character
+      expect(getByTestId('review-session-characters').props.children).toBe('一');
+    });
+
+    it('should complete session after answering incorrectly then correctly', () => {
+      jest.useFakeTimers();
+      const onSessionComplete = jest.fn();
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession
+          items={[sampleRadical]}
+          onSessionComplete={onSessionComplete}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Answer incorrectly
+      fireEvent.changeText(getByTestId('review-session-input'), 'Wrong');
+      fireEvent.press(getByTestId('review-session-submit'));
+      fireEvent.press(getByTestId('review-session-continue'));
+
+      // Then answer correctly
+      fireEvent.changeText(getByTestId('review-session-input'), 'Ground');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Should show completion
+      expect(queryByTestId('review-session-complete')).toBeTruthy();
+      expect(onSessionComplete).toHaveBeenCalled();
+
+      jest.useRealTimers();
     });
   });
 });

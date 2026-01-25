@@ -249,6 +249,9 @@ describe('ReviewsScreen', () => {
       fireEvent.changeText(input, 'Wrong');
       fireEvent.press(submit);
 
+      // Press continue to dismiss incorrect feedback
+      fireEvent.press(getByTestId('review-session-continue'));
+
       // Then answer correctly
       fireEvent.changeText(getByTestId('review-session-input'), 'Ground');
       fireEvent.press(getByTestId('review-session-submit'));
@@ -278,8 +281,14 @@ describe('ReviewsScreen', () => {
       fireEvent.changeText(input, 'Wrong1');
       fireEvent.press(submit);
 
+      // Press continue to dismiss incorrect feedback
+      fireEvent.press(getByTestId('review-session-continue'));
+
       fireEvent.changeText(getByTestId('review-session-input'), 'Wrong2');
       fireEvent.press(getByTestId('review-session-submit'));
+
+      // Press continue to dismiss incorrect feedback
+      fireEvent.press(getByTestId('review-session-continue'));
 
       // Then answer correctly
       fireEvent.changeText(getByTestId('review-session-input'), 'Ground');

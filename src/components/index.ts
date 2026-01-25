@@ -57,4 +57,5 @@ export {
   type ReviewQuestionType,
   type ReviewAnswerResult,
   type ItemProgress,
+  type IncorrectFeedback as ReviewIncorrectFeedback,
 } from './ReviewSession';

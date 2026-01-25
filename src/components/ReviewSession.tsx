@@ -7,6 +7,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 
 import type { SubjectType, Meaning, Reading, KanjiReading, AuxiliaryMeaning } from '../api/types';
@@ -58,6 +59,14 @@ export interface ReviewAnswerResult {
   userAnswer: string;
   isCorrect: boolean;
   correctAnswer: string;
+}
+
+/** Feedback state when showing incorrect answer */
+export interface IncorrectFeedback {
+  question: ReviewQuestion;
+  userAnswer: string;
+  correctAnswer: string;
+  mnemonic: string;
 }
 
 /** Tracks completion status and incorrect counts for each item */
@@ -241,6 +250,7 @@ export function ReviewSession({
   const [pendingRomaji, setPendingRomaji] = useState('');
   const [_itemProgress, setItemProgress] = useState<Map<number, ItemProgress>>(initialItemProgress);
   const [showCorrectFeedback, setShowCorrectFeedback] = useState(false);
+  const [incorrectFeedback, setIncorrectFeedback] = useState<IncorrectFeedback | null>(null);
 
   // Track completed questions for session progress
   const [completedItemCount, setCompletedItemCount] = useState(0);
@@ -269,6 +279,7 @@ export function ReviewSession({
     setItemProgress(newProgress);
     setCompletedItemCount(0);
     setShowCorrectFeedback(false);
+    setIncorrectFeedback(null);
     answeredQuestionsCount.current = 0;
   }, [items]);
 
@@ -295,13 +306,20 @@ export function ReviewSession({
     ? handleReadingInputChange
     : handleMeaningInputChange;
 
-  // Advance to next question (clearing input)
+  // Advance to next question (clearing input and feedback)
   const advanceToNextQuestion = useCallback(() => {
     setCurrentQuestionIndex(prev => prev + 1);
     setInputValue('');
     setDisplayValue('');
     setPendingRomaji('');
+    setIncorrectFeedback(null);
+    setShowCorrectFeedback(false);
   }, []);
+
+  // Handle tap to continue after incorrect answer
+  const handleContinue = useCallback(() => {
+    advanceToNextQuestion();
+  }, [advanceToNextQuestion]);
 
   // Check if an item is fully completed (both meaning and reading correct)
   const isItemComplete = useCallback((progress: ItemProgress): boolean => {
@@ -310,7 +328,7 @@ export function ReviewSession({
 
   // Handle answer submission
   const handleSubmit = useCallback(() => {
-    if (!currentQuestion || showCorrectFeedback) return;
+    if (!currentQuestion || showCorrectFeedback || incorrectFeedback) return;
 
     const { item, type } = currentQuestion;
 
@@ -430,25 +448,26 @@ export function ReviewSession({
         }
       }, autoAdvanceDelay);
     } else {
-      // Update completed count immediately for incorrect answers
-      if (itemJustCompleted) {
-        setCompletedItemCount(newCompletedCount);
-      }
+      // Show incorrect feedback - user must tap to continue
+      const mnemonic = type === 'meaning'
+        ? item.meaningMnemonic
+        : (item.readingMnemonic ?? item.meaningMnemonic);
 
-      // Call onSessionComplete immediately for incorrect answers if session complete (edge case)
-      if (newProgressForCallback) {
-        onSessionComplete?.(newProgressForCallback);
-      }
+      setIncorrectFeedback({
+        question: currentQuestion,
+        userAnswer: answer,
+        correctAnswer,
+        mnemonic,
+      });
 
-      // Advance to next question immediately for incorrect answers
-      if (!sessionWillComplete) {
-        advanceToNextQuestion();
-      }
+      // Note: Completed count update and session completion callbacks are not triggered
+      // for incorrect answers since the question is re-queued and not yet completed
     }
   }, [
     currentQuestion,
     inputValue,
     showCorrectFeedback,
+    incorrectFeedback,
     onAnswer,
     onSessionComplete,
     totalItemCount,
@@ -490,6 +509,87 @@ export function ReviewSession({
   }
 
   const { item, type } = currentQuestion;
+
+  // If showing incorrect feedback, render the feedback view
+  if (incorrectFeedback) {
+    // Calculate progress: completed items out of total items
+    const progressPercentage = (completedItemCount / totalItemCount) * 100;
+    const remainingCount = totalItemCount - completedItemCount;
+
+    return (
+      <View style={styles.container} testID="review-session-incorrect-feedback">
+        {/* Progress indicator */}
+        <View style={styles.progressContainer} testID="review-session-progress">
+          <View style={styles.progressTextRow}>
+            <Text style={styles.progressText} testID="review-session-progress-text">
+              {completedItemCount} / {totalItemCount}
+            </Text>
+            <Text style={styles.remainingText} testID="review-session-remaining-text">
+              {remainingCount} remaining
+            </Text>
+          </View>
+          <View style={styles.progressBar}>
+            <View
+              style={[
+                styles.progressFill,
+                { width: `${progressPercentage}%` },
+              ]}
+              testID="review-session-progress-fill"
+            />
+          </View>
+        </View>
+
+        {/* Character display with red tint for incorrect */}
+        <View style={[styles.characterContainer, styles.incorrectHeader]} testID="review-session-character-container">
+          <Text style={styles.characters} testID="review-session-characters">
+            {incorrectFeedback.question.item.characters ?? '?'}
+          </Text>
+          <Text style={styles.incorrectLabel} testID="review-session-incorrect-label">
+            Incorrect
+          </Text>
+        </View>
+
+        {/* Feedback content */}
+        <ScrollView style={styles.feedbackContainer} contentContainerStyle={styles.feedbackContent}>
+          {/* User's answer */}
+          <View style={styles.feedbackSection}>
+            <Text style={styles.feedbackLabel} testID="review-session-your-answer-label">Your Answer:</Text>
+            <Text style={styles.userAnswer} testID="review-session-your-answer">
+              {incorrectFeedback.userAnswer || '(empty)'}
+            </Text>
+          </View>
+
+          {/* Correct answer */}
+          <View style={styles.feedbackSection}>
+            <Text style={styles.feedbackLabel} testID="review-session-correct-answer-label">Correct Answer:</Text>
+            <Text style={styles.correctAnswerText} testID="review-session-correct-answer">
+              {incorrectFeedback.correctAnswer}
+            </Text>
+          </View>
+
+          {/* Mnemonic */}
+          <View style={styles.feedbackSection}>
+            <Text style={styles.feedbackLabel} testID="review-session-mnemonic-label">
+              {incorrectFeedback.question.type === 'meaning' ? 'Meaning Mnemonic:' : 'Reading Mnemonic:'}
+            </Text>
+            <Text style={styles.mnemonicText} testID="review-session-mnemonic">
+              {incorrectFeedback.mnemonic}
+            </Text>
+          </View>
+        </ScrollView>
+
+        {/* Continue button */}
+        <TouchableOpacity
+          style={[styles.submitButton, styles.continueButton]}
+          onPress={handleContinue}
+          activeOpacity={0.8}
+          testID="review-session-continue"
+        >
+          <Text style={styles.submitButtonText}>Continue</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
   const backgroundColor = getSubjectColor(item.subjectType);
   const questionPrompt = getQuestionPrompt(type);
   const placeholder = type === 'meaning' ? 'Enter meaning...' : 'Type reading (romaji)...';
@@ -747,5 +847,50 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     marginTop: 8,
+  },
+  // Incorrect feedback styles
+  incorrectHeader: {
+    backgroundColor: '#f44336',
+  },
+  incorrectLabel: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginTop: 8,
+  },
+  feedbackContainer: {
+    flex: 1,
+  },
+  feedbackContent: {
+    padding: 16,
+  },
+  feedbackSection: {
+    marginBottom: 20,
+  },
+  feedbackLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  userAnswer: {
+    fontSize: 20,
+    color: '#f44336',
+    fontWeight: '500',
+  },
+  correctAnswerText: {
+    fontSize: 24,
+    color: '#4caf50',
+    fontWeight: 'bold',
+  },
+  mnemonicText: {
+    fontSize: 16,
+    color: '#333',
+    lineHeight: 24,
+  },
+  continueButton: {
+    backgroundColor: '#666',
   },
 });
