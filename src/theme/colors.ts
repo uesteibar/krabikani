@@ -49,6 +49,8 @@ export const COLORS = {
     incorrect: '#F44336',
     /** Orange - used for warnings and wrap-up mode */
     warning: '#E67E22',
+    /** Amber/Yellow - used for fuzzy match (typo-forgiven) answers */
+    fuzzyMatch: '#F59E0B',
   },
 
   // Status colors

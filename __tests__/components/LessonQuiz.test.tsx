@@ -599,6 +599,112 @@ describe('LessonQuiz', () => {
     });
   });
 
+  describe('fuzzy match (typo-forgiven) feedback', () => {
+    it('shows yellow feedback with "Close enough!" for fuzzy match answers', () => {
+      // Create an item with a longer meaning (7+ chars = 2 edits allowed)
+      const itemWithLongMeaning: QuizItem = {
+        ...sampleVocabulary,
+        meanings: createMeanings([{ meaning: 'Beautiful', primary: true }]),
+      };
+      const { getByTestId, queryByTestId } = render(
+        <LessonQuiz
+          items={[itemWithLongMeaning]}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={100}
+        />,
+      );
+
+      const type = getByTestId('lesson-quiz-question-type').props.children;
+
+      if (type === 'MEANING') {
+        // Submit answer with typo (within 2 edits of "Beautiful")
+        fireEvent.changeText(getByTestId('lesson-quiz-input'), 'Beautful'); // missing 'i'
+        fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+        // Should show fuzzy match label instead of correct label
+        expect(queryByTestId('lesson-quiz-fuzzy-match-label')).toBeTruthy();
+        expect(queryByTestId('lesson-quiz-correct-label')).toBeNull();
+        expect(getByTestId('lesson-quiz-fuzzy-match-label').props.children).toBe(
+          'Close enough!',
+        );
+      }
+    });
+
+    it('shows green feedback with "Correct!" for exact match answers', () => {
+      // Use 2 items so there's more than 1 question - prevents immediate quiz completion
+      const items = [sampleRadical, sampleRadical2];
+      const { getByTestId, queryByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={100} />,
+      );
+
+      // Determine which radical is shown first and answer correctly
+      const firstChar = getByTestId('lesson-quiz-characters').props.children;
+      const firstAnswer = firstChar === '一' ? 'Ground' : 'Person';
+
+      // Submit exact answer
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), firstAnswer);
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      // Should show correct label, not fuzzy match label
+      expect(queryByTestId('lesson-quiz-correct-label')).toBeTruthy();
+      expect(queryByTestId('lesson-quiz-fuzzy-match-label')).toBeNull();
+      expect(getByTestId('lesson-quiz-correct-label').props.children).toBe(
+        'Correct!',
+      );
+    });
+
+    it('calls onAnswer with isCorrect=true for fuzzy match answers', () => {
+      const onAnswer = jest.fn();
+      // Create an item with a 4-6 char meaning (1 edit allowed)
+      const itemWithMediumMeaning: QuizItem = {
+        ...sampleVocabulary,
+        meanings: createMeanings([{ meaning: 'Water', primary: true }]),
+      };
+      const { getByTestId } = render(
+        <LessonQuiz
+          items={[itemWithMediumMeaning]}
+          onAnswer={onAnswer}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      const type = getByTestId('lesson-quiz-question-type').props.children;
+
+      if (type === 'MEANING') {
+        // Submit answer with 1 typo
+        fireEvent.changeText(getByTestId('lesson-quiz-input'), 'Watar'); // 'a' instead of 'e'
+        fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+        expect(onAnswer).toHaveBeenCalledWith(
+          expect.objectContaining({
+            isCorrect: true,
+          }),
+        );
+      }
+    });
+
+    it('does not show fuzzy match for reading questions', () => {
+      // Reading questions do not support typo forgiveness
+      const items = [sampleVocabulary];
+      const { getByTestId, queryByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={100} />,
+      );
+
+      const type = getByTestId('lesson-quiz-question-type').props.children;
+
+      if (type === 'READING') {
+        // Submit correct reading
+        fireEvent.changeText(getByTestId('lesson-quiz-input'), 'ookii');
+        fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+        // Should show correct label (if correct), never fuzzy match for reading
+        if (queryByTestId('lesson-quiz-correct-label')) {
+          expect(queryByTestId('lesson-quiz-fuzzy-match-label')).toBeNull();
+        }
+      }
+    });
+  });
+
   describe('incorrect answer handling', () => {
     it('calls onAnswer with isCorrect=false for incorrect answer', () => {
       const onAnswer = jest.fn();

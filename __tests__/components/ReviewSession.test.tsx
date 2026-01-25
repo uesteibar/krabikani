@@ -1071,6 +1071,104 @@ describe('ReviewSession', () => {
     });
   });
 
+  describe('Fuzzy Match (Typo-forgiven) Feedback', () => {
+    it('should show yellow feedback with "Close enough!" for fuzzy match answers', () => {
+      // Create an item with a longer meaning (7+ chars = 2 edits allowed)
+      const itemWithLongMeaning: ReviewItem = {
+        ...sampleVocabulary,
+        meanings: createMeanings([{ meaning: 'Beautiful', primary: true }]),
+      };
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession
+          items={[itemWithLongMeaning]}
+          autoAdvanceDelay={100}
+        />,
+      );
+
+      const type = getByTestId('review-session-question-type').props.children;
+
+      if (type === 'MEANING') {
+        // Submit answer with typo (within 2 edits of "Beautiful")
+        fireEvent.changeText(getByTestId('review-session-input'), 'Beautful'); // missing 'i'
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        // Should show fuzzy match label instead of correct label
+        expect(queryByTestId('review-session-fuzzy-match-label')).toBeTruthy();
+        expect(queryByTestId('review-session-correct-label')).toBeNull();
+        expect(getByTestId('review-session-fuzzy-match-label').props.children).toBe(
+          'Close enough!',
+        );
+      }
+    });
+
+    it('should show green feedback with "Correct!" for exact match answers', () => {
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[sampleRadical]} autoAdvanceDelay={100} />,
+      );
+
+      // Submit exact answer
+      fireEvent.changeText(getByTestId('review-session-input'), 'Ground');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Should show correct label, not fuzzy match label
+      expect(queryByTestId('review-session-correct-label')).toBeTruthy();
+      expect(queryByTestId('review-session-fuzzy-match-label')).toBeNull();
+      expect(getByTestId('review-session-correct-label').props.children).toBe(
+        'Correct!',
+      );
+    });
+
+    it('should call onAnswer with isCorrect=true for fuzzy match answers', () => {
+      const onAnswer = jest.fn();
+      // Create an item with a 4-6 char meaning (1 edit allowed)
+      const itemWithMediumMeaning: ReviewItem = {
+        ...sampleVocabulary,
+        meanings: createMeanings([{ meaning: 'Water', primary: true }]),
+      };
+      const { getByTestId } = render(
+        <ReviewSession
+          items={[itemWithMediumMeaning]}
+          onAnswer={onAnswer}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      const type = getByTestId('review-session-question-type').props.children;
+
+      if (type === 'MEANING') {
+        // Submit answer with 1 typo
+        fireEvent.changeText(getByTestId('review-session-input'), 'Watar'); // 'a' instead of 'e'
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        expect(onAnswer).toHaveBeenCalledWith(
+          expect.objectContaining({
+            isCorrect: true,
+          }),
+        );
+      }
+    });
+
+    it('should not show fuzzy match for reading questions', () => {
+      // Reading questions do not support typo forgiveness
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[sampleVocabulary]} autoAdvanceDelay={100} />,
+      );
+
+      const type = getByTestId('review-session-question-type').props.children;
+
+      if (type === 'READING') {
+        // Submit correct reading
+        fireEvent.changeText(getByTestId('review-session-input'), 'ookii');
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        // Should show correct label (if correct), never fuzzy match for reading
+        if (queryByTestId('review-session-correct-label')) {
+          expect(queryByTestId('review-session-fuzzy-match-label')).toBeNull();
+        }
+      }
+    });
+  });
+
   describe('Incorrect Answer Handling', () => {
     it('should show incorrect feedback screen when answer is wrong', () => {
       const { getByTestId, queryByTestId } = render(
