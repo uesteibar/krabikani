@@ -571,3 +571,38 @@
   - Browser verification not available (no dev-browser skill configured)
 
 ---
+
+## 2026-01-25 - US-020: Review Session - Basic Flow
+- What was implemented:
+  - ReviewSession component for presenting review questions in random order
+  - ReviewItem type with assignmentId field for tracking
+  - Progress bar showing completed items / total items at top
+  - Remaining count display ("X remaining")
+  - Fisher-Yates shuffle algorithm for randomizing both item order and question order (meaning vs reading)
+  - generateReviewQuestions() function that creates questions for each item
+  - Radicals get meaning-only questions; kanji/vocabulary/kana_vocabulary get both meaning and reading
+  - Question queue system that re-queues incorrect answers for later
+  - ItemProgress tracking: meaningCorrect, readingCorrect, incorrectMeaningAnswers, incorrectReadingAnswers
+  - Session completion detection when all items have both meaning and reading correct
+  - onSessionComplete callback with full item progress Map
+  - ReviewsScreen integration:
+    - Phase-based state machine: loading -> reviewing -> complete -> error
+    - Loads available reviews from database using getAvailableReviews()
+    - Converts DatabaseSubject + DatabaseAssignment to ReviewItem
+    - Completion screen showing items reviewed and incorrect answer count
+    - Return to Dashboard button
+- Files changed:
+  - src/components/ReviewSession.tsx (new - review session component)
+  - src/components/index.ts (updated - exports ReviewSession and related types)
+  - src/screens/ReviewsScreen.tsx (full implementation of review flow)
+  - __tests__/components/ReviewSession.test.tsx (new - 47 comprehensive tests)
+  - __tests__/screens/ReviewsScreen.test.tsx (updated - full test coverage for review flow)
+- **Learnings for future iterations:**
+  - Computing session completion needs to be done synchronously before state updates to avoid race conditions
+  - Cannot call parent callbacks (like onSessionComplete) inside React state setters - causes "cannot update component while rendering" warning
+  - Pre-compute the progress map value before setting state, then call the callback after state update
+  - Fisher-Yates shuffle with constant Math.random can swap elements unexpectedly - tests should read actual displayed values
+  - _itemProgress prefix for unused state variable avoids ESLint warning while keeping setter functional
+  - Browser verification not available (no dev-browser skill configured)
+
+---
