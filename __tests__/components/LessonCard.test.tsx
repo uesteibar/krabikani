@@ -393,6 +393,69 @@ describe('LessonCard', () => {
     });
   });
 
+  describe('back button', () => {
+    it('does not render back button when onBack is not provided', () => {
+      const { queryByTestId } = render(<LessonCard {...defaultRadicalProps} />);
+      expect(queryByTestId('lesson-card-back-button')).toBeNull();
+    });
+
+    it('renders back button when onBack is provided', () => {
+      const onBack = jest.fn();
+      const props = { ...defaultRadicalProps, onBack };
+      const { getByTestId } = render(<LessonCard {...props} />);
+      expect(getByTestId('lesson-card-back-button')).toBeTruthy();
+    });
+
+    it('displays "Back" text on the back button', () => {
+      const onBack = jest.fn();
+      const props = { ...defaultRadicalProps, onBack };
+      const { getByText } = render(<LessonCard {...props} />);
+      expect(getByText('Back')).toBeTruthy();
+    });
+
+    it('calls onBack when back button is pressed', () => {
+      const onBack = jest.fn();
+      const props = { ...defaultRadicalProps, onBack };
+      const { getByTestId } = render(<LessonCard {...props} />);
+
+      fireEvent.press(getByTestId('lesson-card-back-button'));
+      expect(onBack).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders footer with both buttons when onBack is provided', () => {
+      const onBack = jest.fn();
+      const props = { ...defaultRadicalProps, onBack };
+      const { getByTestId } = render(<LessonCard {...props} />);
+
+      expect(getByTestId('lesson-card-footer')).toBeTruthy();
+      expect(getByTestId('lesson-card-back-button')).toBeTruthy();
+      expect(getByTestId('lesson-card-next-button')).toBeTruthy();
+    });
+
+    it('back button uses subject color for border', () => {
+      const onBack = jest.fn();
+      const props = { ...defaultRadicalProps, onBack };
+      const { getByTestId } = render(<LessonCard {...props} />);
+      const backButton = getByTestId('lesson-card-back-button');
+
+      expect(backButton.props.style).toEqual(
+        expect.objectContaining({ borderColor: SUBJECT_COLORS.radical }),
+      );
+    });
+
+    it('back button uses subject color for text', () => {
+      const onBack = jest.fn();
+      const props = { ...defaultKanjiProps, onBack };
+      const { getByTestId } = render(<LessonCard {...props} />);
+      const backButton = getByTestId('lesson-card-back-button');
+      const backButtonText = backButton.findByProps({ children: 'Back' });
+
+      expect(backButtonText.props.style).toEqual(
+        expect.arrayContaining([expect.objectContaining({ color: SUBJECT_COLORS.kanji })]),
+      );
+    });
+  });
+
   describe('edge cases', () => {
     it('handles empty meanings array', () => {
       const props = { ...defaultRadicalProps, meanings: [] };

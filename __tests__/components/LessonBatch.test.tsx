@@ -268,6 +268,134 @@ describe('LessonBatch', () => {
     });
   });
 
+  describe('back button navigation', () => {
+    it('does not show back button on the first item', () => {
+      const { queryByTestId } = render(<LessonBatch {...defaultProps} />);
+
+      // On first item, back button should not exist
+      expect(queryByTestId('lesson-card-back-button')).toBeNull();
+    });
+
+    it('shows back button when not on the first item', () => {
+      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+
+      // Advance to second item
+      fireEvent.press(getByTestId('lesson-card-next-button'));
+
+      // Back button should now be visible
+      expect(getByTestId('lesson-card-back-button')).toBeTruthy();
+    });
+
+    it('goes back to previous item when Back is pressed', () => {
+      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+
+      // First item is "一"
+      expect(getByTestId('lesson-card-characters').props.children).toBe('一');
+
+      // Advance to second item "大"
+      fireEvent.press(getByTestId('lesson-card-next-button'));
+      expect(getByTestId('lesson-card-characters').props.children).toBe('大');
+
+      // Go back to first item
+      fireEvent.press(getByTestId('lesson-card-back-button'));
+      expect(getByTestId('lesson-card-characters').props.children).toBe('一');
+    });
+
+    it('hides back button after going back to first item', () => {
+      const { getByTestId, queryByTestId } = render(<LessonBatch {...defaultProps} />);
+
+      // Advance to second item
+      fireEvent.press(getByTestId('lesson-card-next-button'));
+      expect(getByTestId('lesson-card-back-button')).toBeTruthy();
+
+      // Go back to first item
+      fireEvent.press(getByTestId('lesson-card-back-button'));
+
+      // Back button should be hidden again
+      expect(queryByTestId('lesson-card-back-button')).toBeNull();
+    });
+
+    it('updates progress text when going back', () => {
+      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+
+      // Advance to third item (index 2)
+      fireEvent.press(getByTestId('lesson-card-next-button'));
+      fireEvent.press(getByTestId('lesson-card-next-button'));
+
+      expect(getByTestId('lesson-batch-progress-text').props.children).toEqual([
+        3,
+        ' / ',
+        5,
+      ]);
+
+      // Go back
+      fireEvent.press(getByTestId('lesson-card-back-button'));
+
+      expect(getByTestId('lesson-batch-progress-text').props.children).toEqual([
+        2,
+        ' / ',
+        5,
+      ]);
+    });
+
+    it('can navigate back and forth multiple times', () => {
+      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+
+      const expectedCharacters = ['一', '大', '大きい', '人', '小'];
+
+      // Navigate forward to item 3
+      fireEvent.press(getByTestId('lesson-card-next-button'));
+      fireEvent.press(getByTestId('lesson-card-next-button'));
+      expect(getByTestId('lesson-card-characters').props.children).toBe(expectedCharacters[2]);
+
+      // Go back twice
+      fireEvent.press(getByTestId('lesson-card-back-button'));
+      fireEvent.press(getByTestId('lesson-card-back-button'));
+      expect(getByTestId('lesson-card-characters').props.children).toBe(expectedCharacters[0]);
+
+      // Go forward again
+      fireEvent.press(getByTestId('lesson-card-next-button'));
+      expect(getByTestId('lesson-card-characters').props.children).toBe(expectedCharacters[1]);
+    });
+
+    it('shows back button on the last item', () => {
+      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+
+      // Navigate to the last item
+      for (let i = 0; i < 4; i++) {
+        fireEvent.press(getByTestId('lesson-card-next-button'));
+      }
+
+      // Verify we're on the last item
+      expect(getByTestId('lesson-batch-progress-text').props.children).toEqual([
+        5,
+        ' / ',
+        5,
+      ]);
+
+      // Back button should be visible
+      expect(getByTestId('lesson-card-back-button')).toBeTruthy();
+    });
+
+    it('can go back from the last item', () => {
+      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+
+      // Navigate to the last item
+      for (let i = 0; i < 4; i++) {
+        fireEvent.press(getByTestId('lesson-card-next-button'));
+      }
+
+      // Go back
+      fireEvent.press(getByTestId('lesson-card-back-button'));
+
+      expect(getByTestId('lesson-batch-progress-text').props.children).toEqual([
+        4,
+        ' / ',
+        5,
+      ]);
+    });
+  });
+
   describe('batch completion', () => {
     it('calls onBatchComplete when pressing Next on the last item', () => {
       const onBatchComplete = jest.fn();

@@ -81,6 +81,7 @@ export function LessonBatch({
   const currentItem = items[currentIndex];
   const totalItems = items.length;
   const isLastItem = currentIndex === totalItems - 1;
+  const isFirstItem = currentIndex === 0;
 
   // Get component radicals for the current item (if kanji)
   const currentComponentRadicals = useMemo(() => {
@@ -104,6 +105,12 @@ export function LessonBatch({
       setCurrentIndex(prev => prev + 1);
     }
   }, [isLastItem, onBatchComplete]);
+
+  const handleBack = useCallback(() => {
+    if (!isFirstItem) {
+      setCurrentIndex(prev => prev - 1);
+    }
+  }, [isFirstItem]);
 
   // Handle edge case of empty items array
   if (!currentItem) {
@@ -172,6 +179,7 @@ export function LessonBatch({
           meaningMnemonic={currentItem.meaningMnemonic}
           readingMnemonic={currentItem.readingMnemonic}
           onNext={handleNext}
+          onBack={isFirstItem ? undefined : handleBack}
         />
       </View>
     </View>

@@ -81,3 +81,23 @@ Started: Sun Jan 25 10:42:13 CET 2026
   - MnemonicText accepts `text`, `style`, and `testID` props, making it a drop-in replacement for Text elements displaying mnemonic content
   - The MnemonicText component preserves the style prop, so existing styles (like `styles.mnemonicText`) work unchanged
 ---
+
+## 2026-01-25 - US-005
+- **What was implemented**: Added back button to lesson navigation
+  - Added optional `onBack` prop to LessonCard component
+  - Back button appears on the left side of the footer when `onBack` is provided
+  - Next button remains on the right side of the footer (using flex layout)
+  - Back button styled with outline (border) in subject color, text in subject color
+  - LessonBatch passes `handleBack` to LessonCard only when `currentIndex > 0`
+  - First item shows only the Next button (onBack is undefined)
+- **Files changed**:
+  - src/components/LessonCard.tsx (added onBack prop, footer container, back button styles)
+  - src/components/LessonBatch.tsx (added isFirstItem check, handleBack callback)
+  - __tests__/components/LessonCard.test.tsx (added 8 back button tests)
+  - __tests__/components/LessonBatch.test.tsx (added 9 back navigation tests)
+- **Learnings for future iterations**:
+  - LessonCard receives navigation callbacks from LessonBatch via props (onNext, onBack)
+  - Use conditional rendering with spacer view to maintain button positioning when back button is hidden
+  - Test for flattened style objects (TouchableOpacity) use expect.objectContaining, not expect.arrayContaining
+  - Back button uses outline style (borderWidth + borderColor) instead of filled background for visual distinction
+---

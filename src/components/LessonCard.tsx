@@ -34,6 +34,8 @@ export interface LessonCardProps {
   readingMnemonic: string | null;
   /** Callback when Next button is pressed */
   onNext: () => void;
+  /** Optional callback when Back button is pressed (hides button if not provided) */
+  onBack?: () => void;
 }
 
 /**
@@ -84,6 +86,7 @@ export function LessonCard({
   meaningMnemonic,
   readingMnemonic,
   onNext,
+  onBack,
 }: LessonCardProps) {
   const backgroundColor = getSubjectColor(subjectType);
   const primaryMeaning = getPrimaryMeaning(meanings);
@@ -158,14 +161,27 @@ export function LessonCard({
         )}
       </ScrollView>
 
-      {/* Next button */}
-      <TouchableOpacity
-        style={[styles.nextButton, { backgroundColor }]}
-        onPress={onNext}
-        activeOpacity={0.8}
-        testID="lesson-card-next-button">
-        <Text style={styles.nextButtonText}>Next</Text>
-      </TouchableOpacity>
+      {/* Navigation buttons */}
+      <View style={styles.footer} testID="lesson-card-footer">
+        {onBack ? (
+          <TouchableOpacity
+            style={[styles.backButton, { borderColor: backgroundColor }]}
+            onPress={onBack}
+            activeOpacity={0.8}
+            testID="lesson-card-back-button">
+            <Text style={[styles.backButtonText, { color: backgroundColor }]}>Back</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.buttonSpacer} />
+        )}
+        <TouchableOpacity
+          style={[styles.nextButton, { backgroundColor }]}
+          onPress={onNext}
+          activeOpacity={0.8}
+          testID="lesson-card-next-button">
+          <Text style={styles.nextButtonText}>Next</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -226,9 +242,31 @@ const styles = StyleSheet.create({
     lineHeight: FONT_SIZES.xxl,
     color: COLORS.text.primary,
   },
+  footer: {
+    flexDirection: 'row',
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.lg,
+    gap: SPACING.md,
+  },
+  buttonSpacer: {
+    flex: 1,
+  },
+  backButton: {
+    flex: 1,
+    paddingVertical: SPACING.lg,
+    minHeight: MIN_TOUCH_TARGET,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    backgroundColor: COLORS.background.primary,
+  },
+  backButtonText: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: 'bold',
+  },
   nextButton: {
-    margin: SPACING.lg,
-    marginTop: 0,
+    flex: 1,
     paddingVertical: SPACING.lg,
     minHeight: MIN_TOUCH_TARGET,
     borderRadius: BORDER_RADIUS.md,
