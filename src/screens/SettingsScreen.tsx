@@ -9,8 +9,9 @@ import {
   View,
 } from 'react-native';
 
-import { validateApiKey } from '../api';
+import { validateApiKey, WaniKaniClient } from '../api';
 import { clearApiKey, getApiKey, saveApiKey } from '../storage';
+import { getUserLevel, syncSubjects, syncAssignments } from '../sync';
 import { COLORS, SPACING, FONT_SIZES } from '../theme';
 
 export type SettingsScreenState =
@@ -70,8 +71,20 @@ export function SettingsScreen() {
         // Transition to syncing state instead of showing Alert
         setIsSaving(false);
         setIsSyncing(true);
-        // Note: The actual sync will be triggered in US-002
-        // For now, we just show the syncing UI
+
+        // Perform the actual sync
+        try {
+          const client = new WaniKaniClient(trimmedKey);
+          const userLevel = await getUserLevel(client);
+
+          // Sync subjects and assignments in parallel
+          await Promise.all([
+            syncSubjects(client, { maxLevel: userLevel }),
+            syncAssignments(client),
+          ]);
+        } catch {
+          // Sync errors will be handled in US-004
+        }
       } else {
         Alert.alert('Error', saveResult.error || 'Failed to save API key');
         setIsSaving(false);

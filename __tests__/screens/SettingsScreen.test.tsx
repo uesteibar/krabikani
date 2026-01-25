@@ -10,13 +10,16 @@ import { Alert } from 'react-native';
 import { SettingsScreen } from '../../src/screens/SettingsScreen';
 import * as wanikaniApi from '../../src/api/wanikaniApi';
 import * as secureStorage from '../../src/storage/secureStorage';
+import * as syncService from '../../src/sync/syncService';
 
 jest.mock('../../src/storage/secureStorage');
 jest.mock('../../src/api/wanikaniApi');
+jest.mock('../../src/sync/syncService');
 jest.spyOn(Alert, 'alert');
 
 const mockSecureStorage = secureStorage as jest.Mocked<typeof secureStorage>;
 const mockWanikaniApi = wanikaniApi as jest.Mocked<typeof wanikaniApi>;
+const mockSyncService = syncService as jest.Mocked<typeof syncService>;
 
 describe('SettingsScreen', () => {
   beforeEach(() => {
@@ -27,6 +30,16 @@ describe('SettingsScreen', () => {
     mockWanikaniApi.validateApiKey.mockResolvedValue({
       success: true,
       user: { id: 1, username: 'testuser', level: 10 },
+    });
+    // Default mock for sync service
+    mockSyncService.getUserLevel.mockResolvedValue(10);
+    mockSyncService.syncSubjects.mockResolvedValue({
+      success: true,
+      syncedCount: 100,
+    });
+    mockSyncService.syncAssignments.mockResolvedValue({
+      success: true,
+      syncedCount: 50,
     });
   });
 
@@ -392,6 +405,202 @@ describe('SettingsScreen', () => {
       // Should still show the input form, not syncing view
       expect(queryByTestId('syncing-view')).toBeNull();
       expect(getByTestId('api-key-input')).toBeTruthy();
+    });
+  });
+
+  describe('Sync after API key save', () => {
+    it('should fetch user level after API key save', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockWanikaniApi.validateApiKey.mockResolvedValue({
+        success: true,
+        user: { id: 1, username: 'testuser', level: 15 },
+      });
+      mockSyncService.getUserLevel.mockResolvedValue(15);
+
+      const { getByTestId } = render(<SettingsScreen />);
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('api-key-input'), 'valid-api-key');
+      fireEvent.press(getByTestId('save-button'));
+
+      await waitFor(() => {
+        expect(mockSyncService.getUserLevel).toHaveBeenCalled();
+      });
+
+      // Verify client was created with the correct API key
+      const getUserLevelCall = mockSyncService.getUserLevel.mock.calls[0];
+      expect(getUserLevelCall[0]).toBeInstanceOf(wanikaniApi.WaniKaniClient);
+    });
+
+    it('should call syncSubjects with user level after API key save', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockWanikaniApi.validateApiKey.mockResolvedValue({
+        success: true,
+        user: { id: 1, username: 'testuser', level: 10 },
+      });
+      mockSyncService.getUserLevel.mockResolvedValue(12);
+
+      const { getByTestId } = render(<SettingsScreen />);
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('api-key-input'), 'valid-api-key');
+      fireEvent.press(getByTestId('save-button'));
+
+      await waitFor(() => {
+        expect(mockSyncService.syncSubjects).toHaveBeenCalled();
+      });
+
+      // Verify syncSubjects was called with correct maxLevel
+      const syncSubjectsCall = mockSyncService.syncSubjects.mock.calls[0];
+      expect(syncSubjectsCall[0]).toBeInstanceOf(wanikaniApi.WaniKaniClient);
+      expect(syncSubjectsCall[1]).toEqual({ maxLevel: 12 });
+    });
+
+    it('should call syncAssignments after API key save', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockWanikaniApi.validateApiKey.mockResolvedValue({
+        success: true,
+        user: { id: 1, username: 'testuser', level: 10 },
+      });
+
+      const { getByTestId } = render(<SettingsScreen />);
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('api-key-input'), 'valid-api-key');
+      fireEvent.press(getByTestId('save-button'));
+
+      await waitFor(() => {
+        expect(mockSyncService.syncAssignments).toHaveBeenCalled();
+      });
+
+      // Verify syncAssignments was called with a client
+      const syncAssignmentsCall = mockSyncService.syncAssignments.mock.calls[0];
+      expect(syncAssignmentsCall[0]).toBeInstanceOf(wanikaniApi.WaniKaniClient);
+    });
+
+    it('should call syncSubjects and syncAssignments in parallel', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockWanikaniApi.validateApiKey.mockResolvedValue({
+        success: true,
+        user: { id: 1, username: 'testuser', level: 10 },
+      });
+      mockSyncService.getUserLevel.mockResolvedValue(5);
+
+      // Track call order using timestamps
+      const callOrder: string[] = [];
+
+      mockSyncService.syncSubjects.mockImplementation(async () => {
+        callOrder.push('syncSubjects-start');
+        // Simulate async work
+        await new Promise<void>(resolve => setTimeout(resolve, 10));
+        callOrder.push('syncSubjects-end');
+        return { success: true, syncedCount: 100 };
+      });
+
+      mockSyncService.syncAssignments.mockImplementation(async () => {
+        callOrder.push('syncAssignments-start');
+        // Simulate async work
+        await new Promise<void>(resolve => setTimeout(resolve, 10));
+        callOrder.push('syncAssignments-end');
+        return { success: true, syncedCount: 50 };
+      });
+
+      const { getByTestId } = render(<SettingsScreen />);
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('api-key-input'), 'valid-api-key');
+      fireEvent.press(getByTestId('save-button'));
+
+      await waitFor(() => {
+        expect(mockSyncService.syncSubjects).toHaveBeenCalled();
+        expect(mockSyncService.syncAssignments).toHaveBeenCalled();
+      });
+
+      // Both should start before either ends (parallel execution)
+      await waitFor(() => {
+        expect(callOrder).toContain('syncSubjects-start');
+        expect(callOrder).toContain('syncAssignments-start');
+      });
+
+      // Verify parallel execution: both starts should happen before any end
+      const subjectsStartIndex = callOrder.indexOf('syncSubjects-start');
+      const assignmentsStartIndex = callOrder.indexOf('syncAssignments-start');
+      const firstEndIndex = Math.min(
+        callOrder.indexOf('syncSubjects-end'),
+        callOrder.indexOf('syncAssignments-end'),
+      );
+
+      expect(subjectsStartIndex).toBeLessThan(firstEndIndex);
+      expect(assignmentsStartIndex).toBeLessThan(firstEndIndex);
+    });
+
+    it('should not call sync functions when API key validation fails', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockWanikaniApi.validateApiKey.mockResolvedValue({
+        success: false,
+        error: 'Invalid API key',
+      });
+
+      const { getByTestId } = render(<SettingsScreen />);
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('api-key-input'), 'invalid-api-key');
+      fireEvent.press(getByTestId('save-button'));
+
+      await waitFor(() => {
+        expect(Alert.alert).toHaveBeenCalledWith(
+          'Validation Failed',
+          'Invalid API key',
+        );
+      });
+
+      expect(mockSyncService.getUserLevel).not.toHaveBeenCalled();
+      expect(mockSyncService.syncSubjects).not.toHaveBeenCalled();
+      expect(mockSyncService.syncAssignments).not.toHaveBeenCalled();
+    });
+
+    it('should not call sync functions when save fails', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockWanikaniApi.validateApiKey.mockResolvedValue({
+        success: true,
+        user: { id: 1, username: 'testuser', level: 10 },
+      });
+      mockSecureStorage.saveApiKey.mockResolvedValue({
+        success: false,
+        error: 'Storage unavailable',
+      });
+
+      const { getByTestId } = render(<SettingsScreen />);
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('api-key-input'), 'valid-api-key');
+      fireEvent.press(getByTestId('save-button'));
+
+      await waitFor(() => {
+        expect(Alert.alert).toHaveBeenCalledWith('Error', 'Storage unavailable');
+      });
+
+      expect(mockSyncService.getUserLevel).not.toHaveBeenCalled();
+      expect(mockSyncService.syncSubjects).not.toHaveBeenCalled();
+      expect(mockSyncService.syncAssignments).not.toHaveBeenCalled();
     });
   });
 });
