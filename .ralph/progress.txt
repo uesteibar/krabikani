@@ -122,3 +122,18 @@ Started: Sun Jan 25 10:42:13 CET 2026
   - Structural tests verify swipe area exists and has handlers attached; functional swipe testing requires manual browser verification or E2E tests
   - The swipe area wraps the LessonCard with {...panResponder.panHandlers} spread
 ---
+
+## 2026-01-25 - US-007
+- **What was implemented**: Verified and tested lesson completion screen behavior
+  - Analyzed lesson completion flow (LessonsScreen → LessonQuiz → LessonCompletion)
+  - Confirmed no auto-advance bug exists - LessonCompletion component correctly waits for user input
+  - Added 5 regression tests to verify completion screen waits for user interaction
+  - Tests verify: no callbacks on mount, no auto-advance after waiting, screen remains visible, navigation only on button press
+- **Files changed**:
+  - __tests__/components/LessonCompletion.test.tsx (added 5 regression tests for no auto-advance behavior)
+- **Learnings for future iterations**:
+  - LessonCompletion is a pure presentational component - it receives callbacks via props and only calls them when user presses buttons
+  - The lesson flow phases are: loading → learning → quiz → syncing → complete (managed by LessonsScreen)
+  - Regression tests using fake timers (jest.useFakeTimers/advanceTimersByTime) effectively verify no timer-based auto-navigation
+  - When verifying UI stays visible, use rerender() with same props after advancing timers to ensure no state changes occurred
+---
