@@ -11,12 +11,20 @@ import {
 
 import { validateApiKey } from '../api';
 import { clearApiKey, getApiKey, saveApiKey } from '../storage';
+import { COLORS, SPACING, FONT_SIZES } from '../theme';
+
+export type SettingsScreenState =
+  | 'loading'
+  | 'idle'
+  | 'validating'
+  | 'syncing';
 
 export function SettingsScreen() {
   const [apiKey, setApiKey] = useState('');
   const [hasStoredKey, setHasStoredKey] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const loadStoredKey = useCallback(async () => {
     setIsLoading(true);
@@ -51,6 +59,7 @@ export function SettingsScreen() {
       const validationResult = await validateApiKey(trimmedKey);
       if (!validationResult.success) {
         Alert.alert('Validation Failed', validationResult.error || 'Invalid API key');
+        setIsSaving(false);
         return;
       }
 
@@ -58,14 +67,16 @@ export function SettingsScreen() {
       const saveResult = await saveApiKey(trimmedKey);
       if (saveResult.success) {
         setHasStoredKey(true);
-        Alert.alert(
-          'Success',
-          `API key validated and saved!\nWelcome, ${validationResult.user?.username || 'user'}!`,
-        );
+        // Transition to syncing state instead of showing Alert
+        setIsSaving(false);
+        setIsSyncing(true);
+        // Note: The actual sync will be triggered in US-002
+        // For now, we just show the syncing UI
       } else {
         Alert.alert('Error', saveResult.error || 'Failed to save API key');
+        setIsSaving(false);
       }
-    } finally {
+    } catch {
       setIsSaving(false);
     }
   };
@@ -100,6 +111,22 @@ export function SettingsScreen() {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color="#8f5bc4" />
+      </View>
+    );
+  }
+
+  // Show syncing UI after successful API key validation and save
+  if (isSyncing) {
+    return (
+      <View style={styles.syncingContainer} testID="syncing-view">
+        <ActivityIndicator
+          size="large"
+          color={COLORS.subject.vocabulary}
+          testID="syncing-spinner"
+        />
+        <Text style={styles.syncingText} testID="syncing-message">
+          Syncing your WaniKani data...
+        </Text>
       </View>
     );
   }
@@ -155,6 +182,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     justifyContent: 'center',
+  },
+  syncingContainer: {
+    flex: 1,
+    backgroundColor: COLORS.background.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.lg,
+  },
+  syncingText: {
+    marginTop: SPACING.lg,
+    fontSize: FONT_SIZES.lg,
+    color: COLORS.text.secondary,
+    textAlign: 'center',
   },
   content: {
     padding: 20,

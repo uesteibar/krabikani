@@ -67,7 +67,7 @@ describe('SettingsScreen', () => {
     expect(getByTestId('clear-button')).toBeTruthy();
   });
 
-  it('should validate and save API key when save button is pressed', async () => {
+  it('should validate, save API key, and show syncing UI when save button is pressed', async () => {
     mockSecureStorage.getApiKey.mockResolvedValue(null);
     mockWanikaniApi.validateApiKey.mockResolvedValue({
       success: true,
@@ -91,9 +91,20 @@ describe('SettingsScreen', () => {
       expect(mockSecureStorage.saveApiKey).toHaveBeenCalledWith('new-api-key');
     });
 
-    expect(Alert.alert).toHaveBeenCalledWith(
+    // After successful validation and save, should show syncing UI instead of Alert
+    await waitFor(() => {
+      expect(getByTestId('syncing-view')).toBeTruthy();
+    });
+
+    expect(getByTestId('syncing-spinner')).toBeTruthy();
+    expect(getByTestId('syncing-message').props.children).toBe(
+      'Syncing your WaniKani data...',
+    );
+
+    // Should NOT show success Alert anymore
+    expect(Alert.alert).not.toHaveBeenCalledWith(
       'Success',
-      'API key validated and saved!\nWelcome, happyuser!',
+      expect.any(String),
     );
   });
 
@@ -271,6 +282,116 @@ describe('SettingsScreen', () => {
 
     await waitFor(() => {
       expect(mockSecureStorage.saveApiKey).toHaveBeenCalledWith('trimmed-key');
+    });
+  });
+
+  describe('Syncing UI', () => {
+    it('should hide input form when in syncing state', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockWanikaniApi.validateApiKey.mockResolvedValue({
+        success: true,
+        user: { id: 1, username: 'testuser', level: 10 },
+      });
+
+      const { getByTestId, queryByTestId } = render(<SettingsScreen />);
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('api-key-input'), 'valid-api-key');
+      fireEvent.press(getByTestId('save-button'));
+
+      // Wait for syncing view to appear
+      await waitFor(() => {
+        expect(getByTestId('syncing-view')).toBeTruthy();
+      });
+
+      // Input form should not be visible during syncing
+      expect(queryByTestId('api-key-input')).toBeNull();
+      expect(queryByTestId('save-button')).toBeNull();
+    });
+
+    it('should show correct syncing message text', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockWanikaniApi.validateApiKey.mockResolvedValue({
+        success: true,
+        user: { id: 1, username: 'testuser', level: 10 },
+      });
+
+      const { getByTestId } = render(<SettingsScreen />);
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('api-key-input'), 'valid-api-key');
+      fireEvent.press(getByTestId('save-button'));
+
+      await waitFor(() => {
+        expect(getByTestId('syncing-message')).toBeTruthy();
+      });
+
+      expect(getByTestId('syncing-message').props.children).toBe(
+        'Syncing your WaniKani data...',
+      );
+    });
+
+    it('should not show syncing UI when validation fails', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockWanikaniApi.validateApiKey.mockResolvedValue({
+        success: false,
+        error: 'Invalid API key',
+      });
+
+      const { getByTestId, queryByTestId } = render(<SettingsScreen />);
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('api-key-input'), 'bad-api-key');
+      fireEvent.press(getByTestId('save-button'));
+
+      await waitFor(() => {
+        expect(Alert.alert).toHaveBeenCalledWith(
+          'Validation Failed',
+          'Invalid API key',
+        );
+      });
+
+      // Should still show the input form, not syncing view
+      expect(queryByTestId('syncing-view')).toBeNull();
+      expect(getByTestId('api-key-input')).toBeTruthy();
+    });
+
+    it('should not show syncing UI when save fails', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockWanikaniApi.validateApiKey.mockResolvedValue({
+        success: true,
+        user: { id: 1, username: 'testuser', level: 10 },
+      });
+      mockSecureStorage.saveApiKey.mockResolvedValue({
+        success: false,
+        error: 'Storage unavailable',
+      });
+
+      const { getByTestId, queryByTestId } = render(<SettingsScreen />);
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('api-key-input'), 'valid-api-key');
+      fireEvent.press(getByTestId('save-button'));
+
+      await waitFor(() => {
+        expect(Alert.alert).toHaveBeenCalledWith('Error', 'Storage unavailable');
+      });
+
+      // Should still show the input form, not syncing view
+      expect(queryByTestId('syncing-view')).toBeNull();
+      expect(getByTestId('api-key-input')).toBeTruthy();
     });
   });
 });
