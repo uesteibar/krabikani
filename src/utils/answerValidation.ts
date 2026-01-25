@@ -7,6 +7,7 @@
  */
 
 import type { Meaning, AuxiliaryMeaning, Reading, KanjiReading } from '../api/types';
+import { damerauLevenshtein } from './stringDistance';
 
 // ============================================
 // Types
@@ -20,6 +21,8 @@ export interface MeaningValidationResult {
   isAuxiliary?: boolean;
   /** True if the answer matched a blacklisted meaning */
   isBlacklisted?: boolean;
+  /** True if the answer was accepted via typo forgiveness (fuzzy match) */
+  isFuzzyMatch?: boolean;
 }
 
 export interface ReadingValidationResult {
@@ -51,6 +54,18 @@ function normalizeReadingAnswer(answer: string): string {
   return answer.trim();
 }
 
+/**
+ * Gets the maximum allowed edit distance for typo forgiveness based on word length.
+ * - 1-3 characters: 0 (exact match only)
+ * - 4-6 characters: 1 edit allowed
+ * - 7+ characters: 2 edits allowed
+ */
+function getAllowedEditDistance(wordLength: number): number {
+  if (wordLength <= 3) return 0;
+  if (wordLength <= 6) return 1;
+  return 2;
+}
+
 // ============================================
 // Meaning Validation
 // ============================================
@@ -65,6 +80,10 @@ function normalizeReadingAnswer(answer: string): string {
  * - Accepts all meanings with accepted_answer: true
  * - Accepts auxiliary meanings with type: 'whitelist' (marked as auxiliary)
  * - Rejects auxiliary meanings with type: 'blacklist' (marked as blacklisted)
+ * - Typo forgiveness: accepts answers within edit distance threshold:
+ *   - 1-3 chars: exact match only
+ *   - 4-6 chars: 1 edit allowed
+ *   - 7+ chars: 2 edits allowed
  *
  * @param answer - The user's answer
  * @param meanings - Array of valid meanings from WaniKani
@@ -83,24 +102,55 @@ export function validateMeaningAnswer(
     return { isCorrect: false };
   }
 
-  // Check against blacklist first (rejects take priority)
+  // Check against blacklist first (rejects take priority) - exact match only for blacklist
   for (const aux of auxiliaryMeanings) {
     if (aux.type === 'blacklist' && normalizeMeaningAnswer(aux.meaning) === normalizedAnswer) {
       return { isCorrect: false, isBlacklisted: true };
     }
   }
 
-  // Check against primary and alternative meanings
+  // Check against primary and alternative meanings - exact match
   for (const meaning of meanings) {
     if (meaning.accepted_answer && normalizeMeaningAnswer(meaning.meaning) === normalizedAnswer) {
       return { isCorrect: true, matchedMeaning: meaning.meaning };
     }
   }
 
-  // Check against whitelist auxiliary meanings
+  // Check against whitelist auxiliary meanings - exact match
   for (const aux of auxiliaryMeanings) {
     if (aux.type === 'whitelist' && normalizeMeaningAnswer(aux.meaning) === normalizedAnswer) {
       return { isCorrect: true, isAuxiliary: true, matchedMeaning: aux.meaning };
+    }
+  }
+
+  // Typo forgiveness: check for fuzzy matches within allowed edit distance
+  const allowedDistance = getAllowedEditDistance(normalizedAnswer.length);
+
+  if (allowedDistance > 0) {
+    // Check primary meanings with fuzzy matching
+    for (const meaning of meanings) {
+      if (meaning.accepted_answer) {
+        const normalizedMeaning = normalizeMeaningAnswer(meaning.meaning);
+        const distance = damerauLevenshtein(normalizedAnswer, normalizedMeaning, {
+          maxDistance: allowedDistance,
+        });
+        if (distance <= allowedDistance) {
+          return { isCorrect: true, matchedMeaning: meaning.meaning, isFuzzyMatch: true };
+        }
+      }
+    }
+
+    // Check whitelist auxiliary meanings with fuzzy matching
+    for (const aux of auxiliaryMeanings) {
+      if (aux.type === 'whitelist') {
+        const normalizedAux = normalizeMeaningAnswer(aux.meaning);
+        const distance = damerauLevenshtein(normalizedAnswer, normalizedAux, {
+          maxDistance: allowedDistance,
+        });
+        if (distance <= allowedDistance) {
+          return { isCorrect: true, isAuxiliary: true, matchedMeaning: aux.meaning, isFuzzyMatch: true };
+        }
+      }
     }
   }
 
