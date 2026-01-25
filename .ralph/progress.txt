@@ -13,6 +13,8 @@
 - API types are in src/api/types.ts, API client logic in src/api/wanikaniApi.ts
 - WaniKaniClient class handles authentication and typed requests
 - WaniKaniApiError has code (ApiErrorCode), statusCode, message, and retryable properties
+- WaniKaniClient supports retry with `new WaniKaniClient(apiKey, { maxRetries: 3, initialDelayMs: 1000 })`
+- For tests with WaniKaniClient, use `{ maxRetries: 0 }` for deterministic behavior
 
 ---
 
@@ -115,5 +117,30 @@
   - 4xx errors are not retryable, 5xx and 429 errors are retryable
   - Full URLs (e.g., pagination next_url) should be passed directly to fetch, not prepended with base URL
   - Types should be in a separate types.ts file for cleaner organization
+
+---
+
+## 2026-01-25 - US-005: WaniKani API Client - Endpoints
+- What was implemented:
+  - GET /v2/summary endpoint with Summary, SummaryData, SummaryLesson, SummaryReview types
+  - GET /v2/subjects endpoint with pagination and filters (ids, types, slugs, levels, hidden, updated_after)
+  - GET /v2/assignments endpoint with pagination and comprehensive filters
+  - PUT /v2/assignments/:id/start endpoint for marking lessons as completed
+  - POST /v2/reviews endpoint with CreateReviewParams and CreateReviewResponse types
+  - getNextPage() helper for paginated collections
+  - Exponential backoff retry logic (1s, 2s, 4s delays, max 3 retries)
+  - Only retry on 5xx, 429 (rate limit), and network errors; 4xx fails immediately
+  - buildQueryString helper function (URLSearchParams not fully typed in RN)
+- Files changed:
+  - src/api/types.ts (added Summary, Review, CreateReviewParams, CreateReviewResponse types)
+  - src/api/wanikaniApi.ts (added endpoints, retry logic, post/put methods)
+  - src/api/index.ts (updated exports for new types)
+  - __tests__/api/wanikaniApi.test.ts (22 new tests for endpoints and retry logic)
+- **Learnings for future iterations:**
+  - URLSearchParams.set() not properly typed in React Native - use custom buildQueryString helper
+  - For retry logic tests, use small delays (10ms) with real timers instead of fake timers
+  - Create clients with { maxRetries: 0 } in tests for deterministic behavior
+  - validateApiKey should use maxRetries: 0 for fast feedback on invalid keys
+  - WaniKani POST /reviews requires body wrapped in `{ review: params }`
 
 ---
