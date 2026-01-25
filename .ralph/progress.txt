@@ -28,6 +28,9 @@
 - Migrations use schema_version table; runMigrations() is idempotent
 - Sync service exports: syncSubjects(), getUserLevel(), convertSubjectToInput(), and related types
 - Sync service is in src/sync/syncService.ts with barrel exports in src/sync/index.ts
+- Session state tracking: use sessionState module (startSession, endSession, isSessionActive) to track lesson/review sessions
+- App state sync: use appStateSync module for automatic background sync on app foreground
+- Background sync skips during active sessions via shouldSkip callback pattern
 
 ---
 
@@ -736,6 +739,48 @@
   - useRef is helpful to prevent concurrent async operations (isSyncingPending pattern)
   - useFocusEffect can be used multiple times - one for loading data, one for syncing pending
   - Sync lessons before reviews (order matters for new lessons that unlock reviews)
+  - Browser verification not available (no dev-browser skill configured)
+
+---
+
+## 2026-01-25 - US-026: Background Sync
+- What was implemented:
+  - sessionState module (src/utils/sessionState.ts) to track active lesson/review sessions
+    - startSession(type), endSession(), isSessionActive(), getActiveSessionType(), getSessionStartTime()
+    - Listener support via addSessionStateListener() for session state changes
+  - appStateSync module (src/utils/appStateSync.ts) for foreground detection and background sync
+    - Uses React Native's AppState to detect when app comes from background/inactive to active
+    - initializeAppStateSync(), stopAppStateSync(), addBackgroundSyncListener()
+    - Triggers backgroundSync() when app comes to foreground (if online and no active session)
+  - backgroundSync() function in syncService:
+    - Syncs pending lessons and reviews first (via syncPendingData)
+    - Fetches new subjects up to user's level (incremental using last_subjects_sync)
+    - Fetches new assignments (incremental using last_assignments_sync)
+    - Accepts shouldSkip callback to skip sync during active sessions
+  - App.tsx integration:
+    - Initializes network monitoring and app state sync on mount
+    - Cleans up on unmount
+  - LessonsScreen and ReviewsScreen updates:
+    - Call startSession('lesson'/'review') on mount
+    - Call endSession() on unmount via cleanup return
+- Files changed:
+  - src/utils/sessionState.ts (new - session state tracking module)
+  - src/utils/appStateSync.ts (new - app state monitoring and background sync trigger)
+  - src/utils/index.ts (updated - export session state and app state sync modules)
+  - src/sync/syncService.ts (added backgroundSync function and types)
+  - src/sync/index.ts (updated exports)
+  - App.tsx (added initialization of network monitoring and app state sync)
+  - src/screens/LessonsScreen.tsx (added session tracking)
+  - src/screens/ReviewsScreen.tsx (added session tracking)
+  - __tests__/utils/sessionState.test.ts (new - 18 tests)
+  - __tests__/utils/appStateSync.test.ts (new - 12 tests)
+  - __tests__/sync/backgroundSync.test.ts (new - 8 tests)
+- **Learnings for future iterations:**
+  - Use React Native's AppState.addEventListener('change', handler) for app lifecycle events
+  - AppState values: 'active', 'background', 'inactive' (iOS only for inactive)
+  - Check previousState vs nextState to detect foreground transition
+  - Use module-level state for singleton services (sessionState, appStateSync)
+  - shouldSkip callback pattern allows flexible sync skipping conditions
   - Browser verification not available (no dev-browser skill configured)
 
 ---

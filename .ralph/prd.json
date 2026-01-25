@@ -438,8 +438,8 @@
         "All quality checks pass"
       ],
       "priority": 26,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented background sync triggered when app comes to foreground using AppState. Created sessionState module to track active lesson/review sessions. Created appStateSync module that listens for foreground events and triggers backgroundSync(). backgroundSync() syncs pending lessons/reviews, fetches new subjects (incremental using last_subjects_sync), and fetches new assignments. Sync is skipped when a lesson or review session is active via shouldSkip callback. App.tsx initializes both network monitoring and app state sync on mount. All 842 tests pass."
     },
     {
       "id": "US-027",
