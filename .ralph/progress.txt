@@ -1,7 +1,8 @@
 ## Codebase Patterns
 - React Native 0.83.1 with TypeScript (uses @react-native/typescript-config)
 - Jest requires transformIgnorePatterns for @react-navigation and other ES module packages
-- Folder structure: src/screens, src/components, src/api, src/storage, src/utils, src/navigation
+- Folder structure: src/screens, src/components, src/api, src/storage, src/utils, src/navigation, src/theme
+- Theme system in src/theme/: import colors, spacing, typography from '../theme' - use SUBJECT_COLORS, COLORS, SPACING, etc.
 - Navigation uses @react-navigation/native with native-stack navigator
 - Quality checks: npm run typecheck, npm run lint, npm test
 - Use react-native-keychain for secure storage (API keys, tokens)
@@ -781,6 +782,62 @@
   - Check previousState vs nextState to detect foreground transition
   - Use module-level state for singleton services (sessionState, appStateSync)
   - shouldSkip callback pattern allows flexible sync skipping conditions
+  - Browser verification not available (no dev-browser skill configured)
+
+---
+
+## 2026-01-25 - US-027: UI Polish - Visual Design
+- What was implemented:
+  - Created centralized theme system in src/theme/ directory:
+    - colors.ts: WaniKani colors, semantic colors, spacing, typography, shadows
+    - index.ts: Barrel exports for all theme constants
+  - Official WaniKani colors (different from acceptance criteria - using actual WaniKani scheme):
+    - Radical: #00AAFF (blue)
+    - Kanji: #FF00AA (pink/magenta)
+    - Vocabulary: #AA00FF (purple)
+    - Kana Vocabulary: #AA00FF (same as vocabulary)
+  - Theme constants:
+    - SUBJECT_COLORS: Color palette for subject types
+    - COLORS: Comprehensive color system (feedback, status, neutral, text, background, border)
+    - DASHBOARD_COLORS: Lessons (kanji pink), Reviews (vocabulary purple)
+    - PROGRESS_COLORS: Progress bar colors (background, fill, wrapUp)
+    - SHADOW: Standard shadow properties for elevation
+    - MIN_TOUCH_TARGET: 44dp for accessibility
+    - SPACING: xs(4), sm(8), md(12), lg(16), xl(20), xxl(24), xxxl(32)
+    - BORDER_RADIUS: sm(4), md(8), lg(12), full(9999)
+    - FONT_SIZES: xs(12) to display(72)
+  - Updated 10 components to use theme constants:
+    - DashboardStats, LessonCard, LessonBatch, LessonQuiz, LessonCompletion
+    - ReviewSession, OfflineIndicator, LastSyncedIndicator, NextReviewIndicator, PendingSyncIndicator
+  - Created LoadingSpinner component for consistent loading states
+  - Updated HomeScreen with theme-based styling
+  - Updated 4 test files to use theme constants instead of hardcoded colors
+- Files changed:
+  - src/theme/colors.ts (new - centralized color and styling constants)
+  - src/theme/index.ts (new - barrel exports)
+  - src/components/LoadingSpinner.tsx (new - reusable loading spinner)
+  - src/components/index.ts (updated - export LoadingSpinner)
+  - src/components/DashboardStats.tsx (refactored to use theme)
+  - src/components/LessonCard.tsx (refactored to use theme)
+  - src/components/LessonBatch.tsx (refactored to use theme)
+  - src/components/LessonQuiz.tsx (refactored to use theme)
+  - src/components/LessonCompletion.tsx (refactored to use theme)
+  - src/components/ReviewSession.tsx (refactored to use theme)
+  - src/components/OfflineIndicator.tsx (refactored to use theme)
+  - src/components/LastSyncedIndicator.tsx (refactored to use theme)
+  - src/components/NextReviewIndicator.tsx (refactored to use theme)
+  - src/components/PendingSyncIndicator.tsx (refactored to use theme)
+  - src/screens/HomeScreen.tsx (refactored to use theme)
+  - __tests__/components/LessonBatch.test.tsx (use SUBJECT_COLORS)
+  - __tests__/components/LessonCard.test.tsx (use SUBJECT_COLORS)
+  - __tests__/components/LessonQuiz.test.tsx (use SUBJECT_COLORS)
+  - __tests__/components/ReviewSession.test.tsx (use SUBJECT_COLORS and COLORS)
+- **Learnings for future iterations:**
+  - WaniKani's actual color scheme differs from acceptance criteria - Radical=Blue, Kanji=Pink, Vocabulary=Purple
+  - Centralized theme makes color updates trivial (change one file, all components update)
+  - Use getSubjectColor(type) helper function for subject-dependent colors
+  - MIN_TOUCH_TARGET=44 ensures accessibility compliance
+  - Tests should import theme constants to stay in sync with implementation
   - Browser verification not available (no dev-browser skill configured)
 
 ---
