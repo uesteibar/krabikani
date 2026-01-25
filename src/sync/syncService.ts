@@ -119,6 +119,12 @@ export function convertSubjectToInput(
     componentSubjectIds = JSON.stringify(ids);
   }
 
+  // Extract character_images (for radicals without Unicode characters)
+  let characterImages: string | null = null;
+  if ('character_images' in data && data.character_images) {
+    characterImages = JSON.stringify(data.character_images);
+  }
+
   return {
     id: resource.id,
     object_type: objectType,
@@ -129,6 +135,7 @@ export function convertSubjectToInput(
     reading_mnemonic: readingMnemonic,
     level: data.level,
     component_subject_ids: componentSubjectIds,
+    character_images: characterImages,
     data_updated_at: resource.data_updated_at,
   };
 }

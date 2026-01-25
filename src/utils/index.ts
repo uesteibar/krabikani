@@ -52,3 +52,11 @@ export {
   type AppStateChangeListener,
   type BackgroundSyncListener,
 } from './appStateSync';
+
+export {
+  getPreferredImageUrl,
+  prefetchImage,
+  prefetchImages,
+  parseCharacterImages,
+  type CharacterImage,
+} from './imageCache';

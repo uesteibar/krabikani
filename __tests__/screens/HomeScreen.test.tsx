@@ -191,6 +191,7 @@ describe('HomeScreen', () => {
         reading_mnemonic: null,
         level: 1,
         component_subject_ids: null,
+        character_images: null,
         data_updated_at: null,
       });
 
@@ -228,6 +229,7 @@ describe('HomeScreen', () => {
         reading_mnemonic: 'Reading mnemonic',
         level: 1,
         component_subject_ids: null,
+        character_images: null,
         data_updated_at: null,
       });
 
@@ -274,6 +276,7 @@ describe('HomeScreen', () => {
         reading_mnemonic: null,
         level: 1,
         component_subject_ids: null,
+        character_images: null,
         data_updated_at: null,
       });
 
@@ -392,6 +395,7 @@ describe('HomeScreen', () => {
         reading_mnemonic: null,
         level: 1,
         component_subject_ids: null,
+        character_images: null,
         data_updated_at: null,
       });
 
@@ -435,6 +439,7 @@ describe('HomeScreen', () => {
         reading_mnemonic: 'Reading mnemonic',
         level: 1,
         component_subject_ids: null,
+        character_images: null,
         data_updated_at: null,
       });
 
@@ -545,6 +550,7 @@ describe('HomeScreen', () => {
         reading_mnemonic: null,
         level: 1,
         component_subject_ids: null,
+        character_images: null,
         data_updated_at: null,
       });
 

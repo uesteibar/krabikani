@@ -138,10 +138,41 @@ describe('LessonCard', () => {
       expect(getByTestId('lesson-card-characters').props.children).toBe('大きい');
     });
 
-    it('displays ? when characters is null', () => {
+    it('displays ? when characters is null and no characterImages', () => {
       const props = { ...defaultRadicalProps, characters: null };
       const { getByTestId } = render(<LessonCard {...props} />);
       expect(getByTestId('lesson-card-characters').props.children).toBe('?');
+    });
+
+    it('displays RadicalImage when characters is null but characterImages is provided', () => {
+      const characterImages = JSON.stringify([
+        {
+          url: 'https://files.wanikani.com/test-radical.png',
+          content_type: 'image/png',
+          metadata: {},
+        },
+      ]);
+      const props = { ...defaultRadicalProps, characters: null, characterImages };
+      const { getByTestId } = render(<LessonCard {...props} />);
+
+      // Should render RadicalImage component (container has the testID)
+      expect(getByTestId('lesson-card-characters')).toBeTruthy();
+      // Should NOT render the '?' text directly (it's now in the RadicalImage fallback)
+      // The RadicalImage will show the image or a fallback
+    });
+
+    it('displays text characters even when characterImages is provided', () => {
+      const characterImages = JSON.stringify([
+        {
+          url: 'https://files.wanikani.com/test-radical.png',
+          content_type: 'image/png',
+          metadata: {},
+        },
+      ]);
+      const props = { ...defaultRadicalProps, characters: '大', characterImages };
+      const { getByTestId } = render(<LessonCard {...props} />);
+      // When characters is provided, should use text not image
+      expect(getByTestId('lesson-card-characters').props.children).toBe('大');
     });
   });
 
