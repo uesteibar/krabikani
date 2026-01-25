@@ -136,6 +136,77 @@ describe('MnemonicText', () => {
     });
   });
 
+  describe('reading tag parsing', () => {
+    it('renders text within <reading> tags in italic', () => {
+      const { getByText } = render(
+        <MnemonicText text="The reading is <reading>たい</reading>" testID="mnemonic" />,
+      );
+      const readingText = getByText('たい');
+      expect(readingText.props.style).toEqual(
+        expect.objectContaining({ fontStyle: 'italic' }),
+      );
+    });
+
+    it('renders reading tags without bold', () => {
+      const { getByText } = render(
+        <MnemonicText text="<reading>おお</reading>" testID="mnemonic" />,
+      );
+      const readingText = getByText('おお');
+      // Should not have bold styling
+      expect(readingText.props.style).not.toEqual(
+        expect.objectContaining({ fontWeight: 'bold' }),
+      );
+    });
+
+    it('renders reading tags without color', () => {
+      const { getByText } = render(
+        <MnemonicText text="<reading>きい</reading>" testID="mnemonic" />,
+      );
+      const readingText = getByText('きい');
+      // Should not have color styling
+      expect(readingText.props.style).not.toEqual(
+        expect.objectContaining({ color: expect.anything() }),
+      );
+    });
+
+    it('handles multiple reading tags', () => {
+      const { getByText } = render(
+        <MnemonicText
+          text="<reading>だい</reading> or <reading>たい</reading>"
+          testID="mnemonic"
+        />,
+      );
+      const daiText = getByText('だい');
+      const taiText = getByText('たい');
+      expect(daiText.props.style).toEqual(
+        expect.objectContaining({ fontStyle: 'italic' }),
+      );
+      expect(taiText.props.style).toEqual(
+        expect.objectContaining({ fontStyle: 'italic' }),
+      );
+    });
+
+    it('renders text before reading tag normally', () => {
+      const { getByText } = render(
+        <MnemonicText text="Before <reading>text</reading>" testID="mnemonic" />,
+      );
+      const beforeText = getByText('Before ');
+      expect(beforeText.props.style).not.toEqual(
+        expect.objectContaining({ fontStyle: 'italic' }),
+      );
+    });
+
+    it('renders text after reading tag normally', () => {
+      const { getByText } = render(
+        <MnemonicText text="<reading>text</reading> after" testID="mnemonic" />,
+      );
+      const afterText = getByText(' after');
+      expect(afterText.props.style).not.toEqual(
+        expect.objectContaining({ fontStyle: 'italic' }),
+      );
+    });
+  });
+
   describe('mixed tags', () => {
     it('handles radical, kanji, and vocabulary tags together', () => {
       const { getByText } = render(
@@ -156,6 +227,28 @@ describe('MnemonicText', () => {
       );
       expect(vocabText.props.style).toEqual(
         expect.arrayContaining([expect.objectContaining({ color: SUBJECT_COLORS.vocabulary })]),
+      );
+    });
+
+    it('handles reading tags mixed with other tag types', () => {
+      const { getByText } = render(
+        <MnemonicText
+          text="The <kanji>大</kanji> kanji is read as <reading>おお</reading> or <reading>だい</reading>"
+          testID="mnemonic"
+        />,
+      );
+      const kanjiText = getByText('大');
+      const ooReading = getByText('おお');
+      const daiReading = getByText('だい');
+
+      expect(kanjiText.props.style).toEqual(
+        expect.arrayContaining([expect.objectContaining({ color: SUBJECT_COLORS.kanji })]),
+      );
+      expect(ooReading.props.style).toEqual(
+        expect.objectContaining({ fontStyle: 'italic' }),
+      );
+      expect(daiReading.props.style).toEqual(
+        expect.objectContaining({ fontStyle: 'italic' }),
       );
     });
 
