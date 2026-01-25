@@ -13,6 +13,26 @@ Started: Sun Jan 25 20:13:24 CET 2026
 
 ---
 
+## 2026-01-25 - US-004
+- **What was implemented**: Display user's current WaniKani level on the home screen in the stats area
+- **Files changed**:
+  - `src/storage/database.ts` - Added user_level column to sync_status table, added migration (version 3), added getCachedUserLevel() and saveCachedUserLevel() functions, updated SyncStatusUpdate and DatabaseSyncStatus interfaces
+  - `src/storage/index.ts` - Exported new user level functions
+  - `src/sync/syncService.ts` - Updated getUserLevel() to cache user level when fetched
+  - `src/components/LevelIndicator.tsx` - New component displaying "Level X" with subtle styling
+  - `src/components/index.ts` - Exported LevelIndicator component
+  - `src/screens/HomeScreen.tsx` - Added userLevel state, loads cached level in loadDashboardData(), displays LevelIndicator above DashboardStats
+  - `__tests__/components/LevelIndicator.test.tsx` - Tests for LevelIndicator component
+  - `__tests__/screens/HomeScreen.test.tsx` - Added tests for level indicator display
+  - `__tests__/sync/backgroundSync.test.ts` - Added mock for saveCachedUserLevel
+- **Learnings for future iterations:**
+  - sync_status table can be used to cache user profile data (not just sync timestamps)
+  - When adding new database columns, need to: update interface, add migration, update functions that use the data
+  - updateSyncStatus values array should be typed as (string | number | null)[] to support different column types
+  - When modifying syncService functions that use storage, update test mocks in backgroundSync.test.ts
+
+---
+
 ## 2026-01-25 - US-003
 - **What was implemented**: Moved the 'Made up of' section from above the LessonCard to below the kanji character block (header) inside LessonCard
 - **Files changed**:
