@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 
 import { DashboardStats } from '../../src/components/DashboardStats';
 
@@ -53,5 +53,72 @@ describe('DashboardStats', () => {
       <DashboardStats lessonsCount={0} reviewsCount={0} />,
     );
     expect(getByText('Reviews')).toBeTruthy();
+  });
+
+  describe('press handlers', () => {
+    it('calls onLessonsPress when lessons button is pressed and count > 0', () => {
+      const onLessonsPress = jest.fn();
+      const { getByTestId } = render(
+        <DashboardStats
+          lessonsCount={5}
+          reviewsCount={0}
+          onLessonsPress={onLessonsPress}
+        />,
+      );
+
+      fireEvent.press(getByTestId('lessons-button'));
+      expect(onLessonsPress).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not call onLessonsPress when lessons count is 0', () => {
+      const onLessonsPress = jest.fn();
+      const { getByTestId } = render(
+        <DashboardStats
+          lessonsCount={0}
+          reviewsCount={0}
+          onLessonsPress={onLessonsPress}
+        />,
+      );
+
+      fireEvent.press(getByTestId('lessons-button'));
+      expect(onLessonsPress).not.toHaveBeenCalled();
+    });
+
+    it('calls onReviewsPress when reviews button is pressed and count > 0', () => {
+      const onReviewsPress = jest.fn();
+      const { getByTestId } = render(
+        <DashboardStats
+          lessonsCount={0}
+          reviewsCount={10}
+          onReviewsPress={onReviewsPress}
+        />,
+      );
+
+      fireEvent.press(getByTestId('reviews-button'));
+      expect(onReviewsPress).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not call onReviewsPress when reviews count is 0', () => {
+      const onReviewsPress = jest.fn();
+      const { getByTestId } = render(
+        <DashboardStats
+          lessonsCount={0}
+          reviewsCount={0}
+          onReviewsPress={onReviewsPress}
+        />,
+      );
+
+      fireEvent.press(getByTestId('reviews-button'));
+      expect(onReviewsPress).not.toHaveBeenCalled();
+    });
+
+    it('renders buttons as testIDs', () => {
+      const { getByTestId } = render(
+        <DashboardStats lessonsCount={0} reviewsCount={0} />,
+      );
+
+      expect(getByTestId('lessons-button')).toBeTruthy();
+      expect(getByTestId('reviews-button')).toBeTruthy();
+    });
   });
 });
