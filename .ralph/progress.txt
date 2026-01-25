@@ -1,0 +1,34 @@
+## Codebase Patterns
+- React Native 0.83.1 with TypeScript (uses @react-native/typescript-config)
+- Jest requires transformIgnorePatterns for @react-navigation and other ES module packages
+- Folder structure: src/screens, src/components, src/api, src/storage, src/utils, src/navigation
+- Navigation uses @react-navigation/native with native-stack navigator
+- Quality checks: npm run typecheck, npm run lint, npm test
+
+---
+
+## 2026-01-25 - US-001: Initialize React Native Project
+- What was implemented:
+  - React Native 0.83.1 project with TypeScript initialized
+  - Android build configuration (Gradle, SDK 36, Kotlin 2.1.20)
+  - Folder structure created: src/screens, src/components, src/api, src/storage, src/utils, src/navigation
+  - React Navigation v7 installed and configured with native stack navigator
+  - Basic HomeScreen component created
+  - Jest configuration updated for ES modules compatibility
+  - TypeScript typecheck script added to package.json
+- Files changed:
+  - package.json (dependencies, typecheck script)
+  - jest.config.js (transformIgnorePatterns)
+  - App.tsx (navigation setup)
+  - src/navigation/types.ts (navigation types)
+  - src/navigation/RootNavigator.tsx (navigator component)
+  - src/navigation/index.ts (exports)
+  - src/screens/HomeScreen.tsx (placeholder home screen)
+  - .gitkeep files in empty directories
+- **Learnings for future iterations:**
+  - React Navigation v7 exports ES modules that need transformIgnorePatterns in Jest
+  - React Native 0.83+ includes TypeScript by default (no separate template needed)
+  - Android builds require Java Runtime and Android SDK (not available in all CI environments)
+  - Navigation types should be defined in src/navigation/types.ts for app-wide type safety
+
+---
