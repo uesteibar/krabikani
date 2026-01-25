@@ -52,8 +52,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Moved component radicals display from LessonBatch to LessonCard. The 'Made up of' section now renders directly below the header (character block) inside LessonCard, using the componentRadicals prop."
     },
     {
       "id": "US-004",

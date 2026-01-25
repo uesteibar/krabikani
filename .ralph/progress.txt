@@ -13,6 +13,21 @@ Started: Sun Jan 25 20:13:24 CET 2026
 
 ---
 
+## 2026-01-25 - US-003
+- **What was implemented**: Moved the 'Made up of' section from above the LessonCard to below the kanji character block (header) inside LessonCard
+- **Files changed**:
+  - `src/components/LessonCard.tsx` - Added ComponentRadical interface and componentRadicals prop, added component radicals section below header with same styling
+  - `src/components/LessonBatch.tsx` - Removed component radicals display, now passes componentRadicals to LessonCard
+  - `src/components/index.ts` - Updated to export ComponentRadical from LessonCard instead of LessonBatch
+  - `__tests__/components/LessonCard.test.tsx` - Added tests for component radicals section
+  - `__tests__/components/LessonBatch.test.tsx` - Updated testIDs and imports to reflect the change
+- **Learnings for future iterations:**
+  - ComponentRadical type is used by both LessonCard and LessonBatch - canonical location is now LessonCard
+  - When moving a section from a parent to child component, update testIDs in tests accordingly
+  - LessonCard now handles its own component radicals display, making it more self-contained
+
+---
+
 ## 2026-01-25 - US-002
 - **What was implemented**: Added support for `<reading>` tags in MnemonicText component that render in italic style (no color, no bold)
 - **Files changed**:
