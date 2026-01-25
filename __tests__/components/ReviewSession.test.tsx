@@ -1769,6 +1769,207 @@ describe('ReviewSession', () => {
     });
   });
 
+  describe('Mark as Correct functionality', () => {
+    it('shows "Mark as Correct" button on incorrect feedback screen', () => {
+      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
+
+      // Submit wrong answer
+      fireEvent.changeText(getByTestId('review-session-input'), 'wrong');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Should show Mark as Correct button alongside Continue
+      expect(getByTestId('review-session-mark-correct')).toBeTruthy();
+      expect(getByTestId('review-session-continue')).toBeTruthy();
+    });
+
+    it('marks question as correct when "Mark as Correct" is pressed', () => {
+      jest.useFakeTimers();
+      const onAnswer = jest.fn();
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession
+          items={[sampleRadical]}
+          onAnswer={onAnswer}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Submit wrong answer
+      fireEvent.changeText(getByTestId('review-session-input'), 'wrong');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // First call should be incorrect
+      expect(onAnswer).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isCorrect: false,
+        }),
+      );
+
+      // Press Mark as Correct
+      fireEvent.press(getByTestId('review-session-mark-correct'));
+
+      // Second call should be correct (overriding the incorrect answer)
+      expect(onAnswer).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          isCorrect: true,
+        }),
+      );
+
+      // Session should be complete (single item radical)
+      expect(queryByTestId('review-session-complete')).toBeTruthy();
+
+      jest.useRealTimers();
+    });
+
+    it('advances to next question after "Mark as Correct" is pressed', () => {
+      jest.useFakeTimers();
+      // Use kanji which has 2 questions (meaning + reading)
+      (Math.random as jest.Mock).mockReturnValue(0.1);
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[sampleKanji]} autoAdvanceDelay={0} />,
+      );
+
+      // Submit wrong answer
+      fireEvent.changeText(getByTestId('review-session-input'), 'wrong');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Press Mark as Correct
+      fireEvent.press(getByTestId('review-session-mark-correct'));
+
+      // Should be on next question (not showing feedback)
+      expect(queryByTestId('review-session-incorrect-feedback')).toBeNull();
+      expect(queryByTestId('review-session')).toBeTruthy();
+
+      jest.useRealTimers();
+    });
+
+    it('removes re-queued question when "Mark as Correct" is pressed', () => {
+      jest.useFakeTimers();
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[sampleRadical]} autoAdvanceDelay={0} />,
+      );
+
+      // Submit wrong answer (question gets re-queued)
+      fireEvent.changeText(getByTestId('review-session-input'), 'wrong');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Press Mark as Correct
+      fireEvent.press(getByTestId('review-session-mark-correct'));
+
+      // Session should be complete immediately (re-queued question was removed)
+      expect(queryByTestId('review-session-complete')).toBeTruthy();
+
+      jest.useRealTimers();
+    });
+
+    it('calls onSessionComplete when all items marked correct', () => {
+      jest.useFakeTimers();
+      const onSessionComplete = jest.fn();
+
+      const { getByTestId } = render(
+        <ReviewSession
+          items={[sampleRadical]}
+          onSessionComplete={onSessionComplete}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Submit wrong answer
+      fireEvent.changeText(getByTestId('review-session-input'), 'wrong');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Press Mark as Correct
+      fireEvent.press(getByTestId('review-session-mark-correct'));
+
+      // onSessionComplete should be called
+      expect(onSessionComplete).toHaveBeenCalledTimes(1);
+
+      jest.useRealTimers();
+    });
+
+    it('updates item progress correctly when marking as correct', () => {
+      jest.useFakeTimers();
+      const onSessionComplete = jest.fn();
+
+      const { getByTestId } = render(
+        <ReviewSession
+          items={[sampleRadical]}
+          onSessionComplete={onSessionComplete}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Submit wrong answer
+      fireEvent.changeText(getByTestId('review-session-input'), 'wrong');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Press Mark as Correct
+      fireEvent.press(getByTestId('review-session-mark-correct'));
+
+      // Check that progress has meaningCorrect = true
+      const progressMap = onSessionComplete.mock.calls[0][0];
+      expect(progressMap.get(sampleRadical.id)).toEqual(
+        expect.objectContaining({
+          meaningCorrect: true,
+        }),
+      );
+
+      jest.useRealTimers();
+    });
+
+    it('decrements incorrect count when marking as correct', () => {
+      jest.useFakeTimers();
+      const onSessionComplete = jest.fn();
+
+      const { getByTestId } = render(
+        <ReviewSession
+          items={[sampleRadical]}
+          onSessionComplete={onSessionComplete}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Submit wrong answer
+      fireEvent.changeText(getByTestId('review-session-input'), 'wrong');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Press Mark as Correct
+      fireEvent.press(getByTestId('review-session-mark-correct'));
+
+      // Incorrect count should be 0 (was 1, then decremented)
+      const progressMap = onSessionComplete.mock.calls[0][0];
+      expect(progressMap.get(sampleRadical.id)).toEqual(
+        expect.objectContaining({
+          incorrectMeaningAnswers: 0,
+        }),
+      );
+
+      jest.useRealTimers();
+    });
+
+    it('preserves user answer when marking as correct', () => {
+      const onAnswer = jest.fn();
+      const { getByTestId } = render(
+        <ReviewSession items={[sampleRadical]} onAnswer={onAnswer} />,
+      );
+
+      // Submit wrong answer
+      fireEvent.changeText(getByTestId('review-session-input'), 'my typo answer');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Press Mark as Correct
+      fireEvent.press(getByTestId('review-session-mark-correct'));
+
+      // The corrected result should preserve the user's original answer
+      expect(onAnswer).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          userAnswer: 'my typo answer',
+          isCorrect: true,
+        }),
+      );
+    });
+  });
+
   describe('auto-focus input', () => {
     it('auto-focuses input on initial render', () => {
       jest.useFakeTimers();

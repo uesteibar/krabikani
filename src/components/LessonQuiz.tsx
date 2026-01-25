@@ -14,7 +14,6 @@ import {
   Platform,
   TouchableOpacity,
   ScrollView,
-  TouchableWithoutFeedback,
   Animated,
   type TextInput as TextInputType,
 } from 'react-native';
@@ -108,13 +107,6 @@ export interface LessonQuizProps {
   onQuizComplete?: (results: AnswerResult[]) => void;
   /** Auto-advance delay in ms for correct answers (default: 500) */
   autoAdvanceDelay?: number;
-}
-
-/**
- * Get the prompt text based on question type.
- */
-function getQuestionPrompt(type: QuestionType): string {
-  return type === 'meaning' ? 'What is the meaning?' : 'What is the reading?';
 }
 
 /**
@@ -304,6 +296,60 @@ export function LessonQuiz({
     advanceToNextQuestion();
   }, [advanceToNextQuestion]);
 
+  // Handle "Mark as Correct" - treat incorrect answer as correct
+  const handleMarkAsCorrect = useCallback(() => {
+    if (!incorrectFeedback) return;
+
+    const question = incorrectFeedback.question;
+
+    // Mark question as completed (same as if answered correctly)
+    setCompletedQuestionKeys(prev => new Set(prev).add(question.key));
+
+    // Create result as if it were correct
+    const result: AnswerResult = {
+      question,
+      userAnswer: incorrectFeedback.userAnswer,
+      isCorrect: true,
+      correctAnswer: incorrectFeedback.correctAnswer,
+    };
+
+    // Notify parent of the corrected result
+    onAnswer?.(result);
+    setResults(prev => [...prev, result]);
+
+    // Remove the re-queued question (it was added when marked incorrect)
+    // The question should be at the end of the queue since it was just re-queued
+    setQuestionQueue(prev => {
+      const newQueue = [...prev];
+      // Find and remove the last occurrence of this question
+      for (let i = newQueue.length - 1; i >= 0; i--) {
+        if (newQueue[i].key === question.key) {
+          newQueue.splice(i, 1);
+          break;
+        }
+      }
+      return newQueue;
+    });
+
+    // Check if quiz is now complete
+    const newCompletedCount = completedQuestionKeys.size + 1;
+    if (newCompletedCount >= totalOriginalQuestions) {
+      // Quiz complete
+      onQuizComplete?.([...results, result]);
+    }
+
+    // Advance to next question
+    advanceToNextQuestion();
+  }, [
+    incorrectFeedback,
+    onAnswer,
+    onQuizComplete,
+    results,
+    completedQuestionKeys.size,
+    totalOriginalQuestions,
+    advanceToNextQuestion,
+  ]);
+
   // Trigger shake animation for invalid input
   const triggerShake = useCallback(() => {
     shakeAnimation.setValue(0);
@@ -451,6 +497,8 @@ export function LessonQuiz({
     totalOriginalQuestions,
     autoAdvanceDelay,
     advanceToNextQuestion,
+    hasRomajiCharacters,
+    triggerShake,
   ]);
 
   // Handle edge case of empty items array
@@ -485,7 +533,6 @@ export function LessonQuiz({
 
   const { item, type } = currentQuestion;
   const backgroundColor = getSubjectColor(item.subjectType);
-  const questionPrompt = getQuestionPrompt(type);
   const placeholder =
     type === 'meaning' ? 'Enter meaning...' : 'Type reading (romaji)...';
 
@@ -588,15 +635,25 @@ export function LessonQuiz({
           </View>
         </ScrollView>
 
-        {/* Continue button */}
-        <TouchableOpacity
-          style={[styles.submitButton, styles.continueButton]}
-          onPress={handleContinue}
-          activeOpacity={0.8}
-          testID="lesson-quiz-continue"
-        >
-          <Text style={styles.submitButtonText}>Continue</Text>
-        </TouchableOpacity>
+        {/* Button row: Mark as Correct + Continue */}
+        <View style={styles.incorrectButtonRow}>
+          <TouchableOpacity
+            style={styles.markCorrectButton}
+            onPress={handleMarkAsCorrect}
+            activeOpacity={0.8}
+            testID="lesson-quiz-mark-correct"
+          >
+            <Text style={styles.markCorrectButtonText}>Mark as Correct</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.submitButton, styles.continueButton, styles.continueButtonFlex]}
+            onPress={handleContinue}
+            activeOpacity={0.8}
+            testID="lesson-quiz-continue"
+          >
+            <Text style={styles.submitButtonText}>Continue</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -934,5 +991,32 @@ const styles = StyleSheet.create({
   },
   continueButton: {
     backgroundColor: COLORS.neutral.gray600,
+  },
+  // Incorrect feedback button row
+  incorrectButtonRow: {
+    flexDirection: 'row',
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.lg,
+    gap: SPACING.md,
+  },
+  continueButtonFlex: {
+    flex: 1,
+    margin: 0,
+  },
+  markCorrectButton: {
+    paddingVertical: SPACING.lg,
+    paddingHorizontal: SPACING.xl,
+    minHeight: MIN_TOUCH_TARGET,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.neutral.gray100,
+    borderWidth: 2,
+    borderColor: COLORS.neutral.gray400,
+  },
+  markCorrectButtonText: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: 'bold',
+    color: COLORS.text.secondary,
   },
 });
