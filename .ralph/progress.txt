@@ -43,3 +43,41 @@ Started: Sun Jan 25 10:42:13 CET 2026
   - Tests use jest.useFakeTimers() and jest.advanceTimersByTime() to verify timing behavior
   - Pre-existing test failures (progress text format) don't affect new feature tests
 ---
+
+## 2026-01-25 - US-003
+- **What was implemented**: Created MnemonicText component for parsing and rendering mnemonic tags
+  - New MnemonicText component parses `<radical>`, `<kanji>`, and `<vocabulary>` tags
+  - Radical text highlighted with blue color (#00AAFF / SUBJECT_COLORS.radical)
+  - Kanji text highlighted with pink color (#FF00AA / SUBJECT_COLORS.kanji)
+  - Vocabulary text highlighted with purple color (#AA00FF / SUBJECT_COLORS.vocabulary)
+  - Highlighted text also rendered with bold font weight
+  - Malformed, unclosed, mismatched, and unknown tags render as plain text (graceful handling)
+  - Regular text between tags renders normally
+- **Files changed**:
+  - src/components/MnemonicText.tsx (new component with parseMnemonicText function)
+  - __tests__/components/MnemonicText.test.tsx (25 comprehensive tests)
+- **Learnings for future iterations**:
+  - SUBJECT_COLORS from theme/colors.ts already defines exact WaniKani colors for radical/kanji/vocabulary
+  - React Native style arrays (using `style={[a, b]}`) require test assertions with expect.arrayContaining([expect.objectContaining({...})])
+  - Regex with backreference `\1` ensures matching opening/closing tags (prevents `<radical>...</kanji>` from matching)
+  - Global regex in JS needs `lastIndex` reset when reusing the pattern
+---
+
+## 2026-01-25 - US-004
+- **What was implemented**: Integrated MnemonicText component in lesson and review screens
+  - LessonCard now uses MnemonicText for meaningMnemonic and readingMnemonic sections
+  - LessonQuiz uses MnemonicText in incorrect answer feedback view
+  - ReviewSession uses MnemonicText in incorrect answer feedback view
+  - Updated tests to use getByText() instead of props.children for mnemonic text assertions
+- **Files changed**:
+  - src/components/LessonCard.tsx (replaced Text with MnemonicText for mnemonics)
+  - src/components/LessonQuiz.tsx (replaced Text with MnemonicText in feedback)
+  - src/components/ReviewSession.tsx (replaced Text with MnemonicText in feedback)
+  - __tests__/components/LessonCard.test.tsx (updated mnemonic text assertions)
+  - __tests__/components/LessonQuiz.test.tsx (updated mnemonic text assertions)
+  - __tests__/components/ReviewSession.test.tsx (updated mnemonic text assertions)
+- **Learnings for future iterations**:
+  - When replacing Text with a custom component like MnemonicText, tests that check `.props.children` need to be updated to use `getByText()` instead
+  - MnemonicText accepts `text`, `style`, and `testID` props, making it a drop-in replacement for Text elements displaying mnemonic content
+  - The MnemonicText component preserves the style prop, so existing styles (like `styles.mnemonicText`) work unchanged
+---
