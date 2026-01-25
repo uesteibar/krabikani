@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, act } from '@testing-library/react-native';
 
 import {
   ReviewSession,
@@ -416,9 +416,11 @@ describe('ReviewSession', () => {
     });
 
     it('should advance to next question after submission', () => {
+      jest.useFakeTimers();
+
       // Use single radical item for simplicity
       const { getByTestId, queryByTestId } = render(
-        <ReviewSession items={[sampleRadical]} />,
+        <ReviewSession items={[sampleRadical]} autoAdvanceDelay={0} />,
       );
 
       const input = getByTestId('review-session-input');
@@ -428,8 +430,15 @@ describe('ReviewSession', () => {
       fireEvent.changeText(input, 'Ground');
       fireEvent.press(submit);
 
+      // Run timers to trigger auto-advance
+      act(() => {
+        jest.runAllTimers();
+      });
+
       // Should show completion (only 1 item)
       expect(queryByTestId('review-session-complete')).toBeTruthy();
+
+      jest.useRealTimers();
     });
 
     it('should re-queue incorrect questions', () => {
@@ -454,9 +463,11 @@ describe('ReviewSession', () => {
 
   describe('Progress Tracking', () => {
     it('should increment completed count when item is fully answered', () => {
+      jest.useFakeTimers();
+
       // Use single radical (1 question only)
       const { getByTestId } = render(
-        <ReviewSession items={[sampleRadical]} />,
+        <ReviewSession items={[sampleRadical]} autoAdvanceDelay={0} />,
       );
 
       const input = getByTestId('review-session-input');
@@ -471,16 +482,25 @@ describe('ReviewSession', () => {
       fireEvent.changeText(input, 'Ground');
       fireEvent.press(submit);
 
+      // Run timers to trigger auto-advance
+      act(() => {
+        jest.runAllTimers();
+      });
+
       // Should show complete state
       expect(getByTestId('review-session-complete')).toBeTruthy();
+
+      jest.useRealTimers();
     });
 
     it('should track item as complete only when both meaning and reading are correct', () => {
+      jest.useFakeTimers();
+
       // Single kanji with 2 questions
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
       const { getByTestId, queryByTestId } = render(
-        <ReviewSession items={[sampleKanji]} />,
+        <ReviewSession items={[sampleKanji]} autoAdvanceDelay={0} />,
       );
 
       // With Math.random=0.1, questions get shuffled such that we need to answer
@@ -497,6 +517,11 @@ describe('ReviewSession', () => {
       fireEvent.changeText(input, firstAnswer);
       fireEvent.press(submit);
 
+      // Run timers to trigger auto-advance
+      act(() => {
+        jest.runAllTimers();
+      });
+
       // Item not complete yet (other question still pending)
       expect(queryByTestId('review-session-complete')).toBeNull();
 
@@ -504,13 +529,21 @@ describe('ReviewSession', () => {
       fireEvent.changeText(getByTestId('review-session-input'), secondAnswer);
       fireEvent.press(getByTestId('review-session-submit'));
 
+      // Run timers to trigger auto-advance
+      act(() => {
+        jest.runAllTimers();
+      });
+
       // Now should be complete
       expect(queryByTestId('review-session-complete')).toBeTruthy();
+
+      jest.useRealTimers();
     });
   });
 
   describe('Session Completion', () => {
     it('should call onSessionComplete when all items are answered correctly', () => {
+      jest.useFakeTimers();
       const onSessionComplete = jest.fn();
 
       // Single radical item for simplicity
@@ -518,6 +551,7 @@ describe('ReviewSession', () => {
         <ReviewSession
           items={[sampleRadical]}
           onSessionComplete={onSessionComplete}
+          autoAdvanceDelay={0}
         />,
       );
 
@@ -527,16 +561,24 @@ describe('ReviewSession', () => {
       fireEvent.changeText(input, 'Ground');
       fireEvent.press(submit);
 
+      // Run timers to trigger callback
+      act(() => {
+        jest.runAllTimers();
+      });
+
       expect(onSessionComplete).toHaveBeenCalled();
+      jest.useRealTimers();
     });
 
     it('should include item progress in completion callback', () => {
+      jest.useFakeTimers();
       const onSessionComplete = jest.fn();
 
       const { getByTestId } = render(
         <ReviewSession
           items={[sampleRadical]}
           onSessionComplete={onSessionComplete}
+          autoAdvanceDelay={0}
         />,
       );
 
@@ -545,6 +587,11 @@ describe('ReviewSession', () => {
 
       fireEvent.changeText(input, 'Ground');
       fireEvent.press(submit);
+
+      // Run timers to trigger callback
+      act(() => {
+        jest.runAllTimers();
+      });
 
       expect(onSessionComplete).toHaveBeenCalledWith(expect.any(Map));
       const progressMap = onSessionComplete.mock.calls[0][0];
@@ -556,15 +603,18 @@ describe('ReviewSession', () => {
           incorrectReadingAnswers: 0,
         }),
       );
+      jest.useRealTimers();
     });
 
     it('should track incorrect answer counts in progress', () => {
+      jest.useFakeTimers();
       const onSessionComplete = jest.fn();
 
       const { getByTestId } = render(
         <ReviewSession
           items={[sampleRadical]}
           onSessionComplete={onSessionComplete}
+          autoAdvanceDelay={0}
         />,
       );
 
@@ -579,6 +629,11 @@ describe('ReviewSession', () => {
       fireEvent.changeText(getByTestId('review-session-input'), 'Ground');
       fireEvent.press(getByTestId('review-session-submit'));
 
+      // Run timers to trigger callback
+      act(() => {
+        jest.runAllTimers();
+      });
+
       const progressMap = onSessionComplete.mock.calls[0][0];
       expect(progressMap.get(sampleRadical.id)).toEqual(
         expect.objectContaining({
@@ -586,11 +641,13 @@ describe('ReviewSession', () => {
           incorrectMeaningAnswers: 1,
         }),
       );
+      jest.useRealTimers();
     });
 
     it('should display completion screen with answered count', () => {
+      jest.useFakeTimers();
       const { getByTestId, getByText } = render(
-        <ReviewSession items={[sampleRadical]} />,
+        <ReviewSession items={[sampleRadical]} autoAdvanceDelay={0} />,
       );
 
       const input = getByTestId('review-session-input');
@@ -599,9 +656,15 @@ describe('ReviewSession', () => {
       fireEvent.changeText(input, 'Ground');
       fireEvent.press(submit);
 
+      // Run timers to complete
+      act(() => {
+        jest.runAllTimers();
+      });
+
       expect(getByTestId('review-session-complete')).toBeTruthy();
       expect(getByText('Session Complete!')).toBeTruthy();
       expect(getByText('1 questions answered')).toBeTruthy();
+      jest.useRealTimers();
     });
   });
 
@@ -692,13 +755,14 @@ describe('ReviewSession', () => {
 
   describe('Multiple Items Session', () => {
     it('should complete session when all 5 items are answered correctly', () => {
+      jest.useFakeTimers();
       const onSessionComplete = jest.fn();
 
       // Control randomization for predictable test
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
       const { getByTestId, queryByTestId } = render(
-        <ReviewSession items={fiveItems} onSessionComplete={onSessionComplete} />,
+        <ReviewSession items={fiveItems} onSessionComplete={onSessionComplete} autoAdvanceDelay={0} />,
       );
 
       // Answer all questions correctly
@@ -730,6 +794,11 @@ describe('ReviewSession', () => {
         fireEvent.changeText(input, answer);
         fireEvent.press(submit);
 
+        // Run timers to advance past correct feedback
+        act(() => {
+          jest.runAllTimers();
+        });
+
         // Check if complete after each submission
         if (queryByTestId('review-session-complete')) {
           break;
@@ -737,6 +806,206 @@ describe('ReviewSession', () => {
       }
 
       expect(onSessionComplete).toHaveBeenCalled();
+      jest.useRealTimers();
+    });
+  });
+
+  describe('Correct Answer Handling', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('should show visual feedback when answer is correct', () => {
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[sampleRadical]} autoAdvanceDelay={100} />,
+      );
+
+      const input = getByTestId('review-session-input');
+      const submit = getByTestId('review-session-submit');
+
+      fireEvent.changeText(input, 'Ground');
+      fireEvent.press(submit);
+
+      // Should show correct feedback label
+      expect(queryByTestId('review-session-correct-label')).toBeTruthy();
+      expect(queryByTestId('review-session-correct-label')?.props.children).toBe('Correct!');
+    });
+
+    it('should show green header background during correct feedback', () => {
+      const { getByTestId } = render(
+        <ReviewSession items={[sampleRadical]} autoAdvanceDelay={100} />,
+      );
+
+      const input = getByTestId('review-session-input');
+      const submit = getByTestId('review-session-submit');
+
+      fireEvent.changeText(input, 'Ground');
+      fireEvent.press(submit);
+
+      // Character container should have green background
+      const container = getByTestId('review-session-character-container');
+      expect(container.props.style).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ backgroundColor: '#4caf50' }),
+        ]),
+      );
+    });
+
+    it('should auto-advance after correct answer feedback delay', () => {
+      const onSessionComplete = jest.fn();
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession
+          items={[sampleRadical]}
+          onSessionComplete={onSessionComplete}
+          autoAdvanceDelay={50}
+        />,
+      );
+
+      const input = getByTestId('review-session-input');
+      const submit = getByTestId('review-session-submit');
+
+      fireEvent.changeText(input, 'Ground');
+      fireEvent.press(submit);
+
+      // Before timer fires, should still show feedback
+      expect(queryByTestId('review-session-correct-label')).toBeTruthy();
+
+      // Run timers to trigger auto-advance
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // After timer, should show completion (single item session)
+      expect(queryByTestId('review-session-complete')).toBeTruthy();
+      expect(onSessionComplete).toHaveBeenCalled();
+    });
+
+    it('should disable input during correct feedback', () => {
+      const { getByTestId } = render(
+        <ReviewSession items={[sampleRadical]} autoAdvanceDelay={100} />,
+      );
+
+      const input = getByTestId('review-session-input');
+      const submit = getByTestId('review-session-submit');
+
+      fireEvent.changeText(input, 'Ground');
+      fireEvent.press(submit);
+
+      // Input should be disabled (editable=false)
+      expect(getByTestId('review-session-input').props.editable).toBe(false);
+    });
+
+    it('should disable submit button during correct feedback', () => {
+      const { getByTestId } = render(
+        <ReviewSession items={[sampleRadical]} autoAdvanceDelay={100} />,
+      );
+
+      const input = getByTestId('review-session-input');
+      const submit = getByTestId('review-session-submit');
+
+      fireEvent.changeText(input, 'Ground');
+      fireEvent.press(submit);
+
+      // Submit button should be disabled
+      expect(getByTestId('review-session-submit').props.accessibilityState).toEqual(
+        expect.objectContaining({ disabled: true }),
+      );
+    });
+
+    it('should NOT show correct feedback for incorrect answers', () => {
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[sampleRadical]} autoAdvanceDelay={100} />,
+      );
+
+      const input = getByTestId('review-session-input');
+      const submit = getByTestId('review-session-submit');
+
+      fireEvent.changeText(input, 'Wrong');
+      fireEvent.press(submit);
+
+      // Should NOT show correct feedback label
+      expect(queryByTestId('review-session-correct-label')).toBeNull();
+    });
+
+    it('should advance to next question for multi-item session', () => {
+      // Use kanji item which has 2 questions (meaning + reading)
+      (Math.random as jest.Mock).mockReturnValue(0.1);
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[sampleKanji]} autoAdvanceDelay={50} />,
+      );
+
+      // Get the first question type
+      const firstQuestionType = getByTestId('review-session-question-type').props.children;
+      const firstAnswer = firstQuestionType === 'MEANING' ? 'Big' : 'oo';
+
+      const input = getByTestId('review-session-input');
+      const submit = getByTestId('review-session-submit');
+
+      // Answer first question correctly
+      fireEvent.changeText(input, firstAnswer);
+      fireEvent.press(submit);
+
+      // Should show feedback
+      expect(queryByTestId('review-session-correct-label')).toBeTruthy();
+
+      // Run timers to advance
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Should NOT be complete yet (still has second question)
+      expect(queryByTestId('review-session-complete')).toBeNull();
+
+      // Should be showing the next question
+      expect(getByTestId('review-session-input')).toBeTruthy();
+    });
+
+    it('should use default autoAdvanceDelay of 50ms', () => {
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[sampleRadical]} />,
+      );
+
+      const input = getByTestId('review-session-input');
+      const submit = getByTestId('review-session-submit');
+
+      fireEvent.changeText(input, 'Ground');
+      fireEvent.press(submit);
+
+      // Feedback should be showing
+      expect(queryByTestId('review-session-correct-label')).toBeTruthy();
+
+      // Advance time by less than 50ms - should still show feedback
+      act(() => {
+        jest.advanceTimersByTime(30);
+      });
+      expect(queryByTestId('review-session-correct-label')).toBeTruthy();
+
+      // Advance past 50ms - should complete
+      act(() => {
+        jest.advanceTimersByTime(30);
+      });
+      expect(queryByTestId('review-session-complete')).toBeTruthy();
+    });
+
+    it('should hide subject type label during correct feedback', () => {
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[sampleRadical]} autoAdvanceDelay={100} />,
+      );
+
+      const input = getByTestId('review-session-input');
+      const submit = getByTestId('review-session-submit');
+
+      fireEvent.changeText(input, 'Ground');
+      fireEvent.press(submit);
+
+      // Subject type should be hidden, correct label shown instead
+      expect(queryByTestId('review-session-subject-type')).toBeNull();
+      expect(queryByTestId('review-session-correct-label')).toBeTruthy();
     });
   });
 });

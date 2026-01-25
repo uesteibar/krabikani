@@ -79,6 +79,8 @@ export interface ReviewSessionProps {
   onAnswer?: (result: ReviewAnswerResult) => void;
   /** Callback when the session is complete (all items reviewed) */
   onSessionComplete?: (itemProgress: Map<number, ItemProgress>) => void;
+  /** Delay in ms before auto-advancing after correct answer (default: 50ms for near-instant feedback) */
+  autoAdvanceDelay?: number;
 }
 
 // ============================================
@@ -212,6 +214,7 @@ export function ReviewSession({
   items,
   onAnswer,
   onSessionComplete,
+  autoAdvanceDelay = 50,
 }: ReviewSessionProps) {
   // Generate initial questions once when items change
   const initialQuestions = useMemo(() => generateReviewQuestions(items), [items]);
@@ -237,6 +240,7 @@ export function ReviewSession({
   const [displayValue, setDisplayValue] = useState('');
   const [pendingRomaji, setPendingRomaji] = useState('');
   const [_itemProgress, setItemProgress] = useState<Map<number, ItemProgress>>(initialItemProgress);
+  const [showCorrectFeedback, setShowCorrectFeedback] = useState(false);
 
   // Track completed questions for session progress
   const [completedItemCount, setCompletedItemCount] = useState(0);
@@ -264,6 +268,7 @@ export function ReviewSession({
     setPendingRomaji('');
     setItemProgress(newProgress);
     setCompletedItemCount(0);
+    setShowCorrectFeedback(false);
     answeredQuestionsCount.current = 0;
   }, [items]);
 
@@ -305,7 +310,7 @@ export function ReviewSession({
 
   // Handle answer submission
   const handleSubmit = useCallback(() => {
-    if (!currentQuestion) return;
+    if (!currentQuestion || showCorrectFeedback) return;
 
     const { item, type } = currentQuestion;
 
@@ -403,23 +408,47 @@ export function ReviewSession({
       return newProgress;
     });
 
-    // Update completed count if item just completed
-    if (itemJustCompleted) {
-      setCompletedItemCount(newCompletedCount);
-    }
+    if (isCorrect) {
+      // Show brief correct feedback then auto-advance
+      setShowCorrectFeedback(true);
+      setTimeout(() => {
+        setShowCorrectFeedback(false);
 
-    // Call onSessionComplete outside of state setter to avoid warning
-    if (newProgressForCallback) {
-      onSessionComplete?.(newProgressForCallback);
-    }
+        // Update completed count if item just completed (deferred so feedback shows first)
+        if (itemJustCompleted) {
+          setCompletedItemCount(newCompletedCount);
+        }
 
-    // Only advance to next question if session is not complete
-    if (!sessionWillComplete) {
-      advanceToNextQuestion();
+        // Call onSessionComplete if session is complete
+        if (newProgressForCallback) {
+          onSessionComplete?.(newProgressForCallback);
+        }
+
+        // Only advance to next question if session is not complete
+        if (!sessionWillComplete) {
+          advanceToNextQuestion();
+        }
+      }, autoAdvanceDelay);
+    } else {
+      // Update completed count immediately for incorrect answers
+      if (itemJustCompleted) {
+        setCompletedItemCount(newCompletedCount);
+      }
+
+      // Call onSessionComplete immediately for incorrect answers if session complete (edge case)
+      if (newProgressForCallback) {
+        onSessionComplete?.(newProgressForCallback);
+      }
+
+      // Advance to next question immediately for incorrect answers
+      if (!sessionWillComplete) {
+        advanceToNextQuestion();
+      }
     }
   }, [
     currentQuestion,
     inputValue,
+    showCorrectFeedback,
     onAnswer,
     onSessionComplete,
     totalItemCount,
@@ -427,6 +456,7 @@ export function ReviewSession({
     _itemProgress,
     advanceToNextQuestion,
     isItemComplete,
+    autoAdvanceDelay,
   ]);
 
   // Handle edge case of empty items array
@@ -500,17 +530,26 @@ export function ReviewSession({
         </View>
       </View>
 
-      {/* Character display */}
+      {/* Character display - with green tint if showing correct feedback */}
       <View
-        style={[styles.characterContainer, { backgroundColor }]}
+        style={[
+          styles.characterContainer,
+          showCorrectFeedback ? styles.correctHeader : { backgroundColor },
+        ]}
         testID="review-session-character-container"
       >
         <Text style={styles.characters} testID="review-session-characters">
           {item.characters ?? '?'}
         </Text>
-        <Text style={styles.subjectType} testID="review-session-subject-type">
-          {item.subjectType.replace('_', ' ')}
-        </Text>
+        {showCorrectFeedback ? (
+          <Text style={styles.correctLabel} testID="review-session-correct-label">
+            Correct!
+          </Text>
+        ) : (
+          <Text style={styles.subjectType} testID="review-session-subject-type">
+            {item.subjectType.replace('_', ' ')}
+          </Text>
+        )}
       </View>
 
       {/* Question prompt */}
@@ -544,6 +583,7 @@ export function ReviewSession({
           autoCorrect={false}
           autoComplete="off"
           keyboardType={type === 'reading' ? 'ascii-capable' : 'default'}
+          editable={!showCorrectFeedback}
           testID="review-session-input"
         />
       </View>
@@ -552,6 +592,7 @@ export function ReviewSession({
       <TouchableOpacity
         style={[styles.submitButton, { backgroundColor }]}
         onPress={handleSubmit}
+        disabled={showCorrectFeedback}
         activeOpacity={0.8}
         testID="review-session-submit"
       >
@@ -621,6 +662,16 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.8)',
     marginTop: 8,
     textTransform: 'capitalize',
+  },
+  // Correct feedback styles
+  correctHeader: {
+    backgroundColor: '#4caf50',
+  },
+  correctLabel: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginTop: 8,
   },
   questionContainer: {
     paddingVertical: 16,

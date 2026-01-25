@@ -606,3 +606,24 @@
   - Browser verification not available (no dev-browser skill configured)
 
 ---
+
+## 2026-01-25 - US-021: Review Session - Correct Answer Handling
+- What was implemented:
+  - showCorrectFeedback state to track when to display correct feedback
+  - Green header with "Correct!" label when answer is correct
+  - Auto-advance to next question after configurable delay (default 50ms for < 100ms perceived delay)
+  - autoAdvanceDelay prop on ReviewSession for customization (useful for tests)
+  - Input field disabled (editable=false) during correct feedback
+  - Submit button disabled during correct feedback
+  - Deferred completedItemCount update to after feedback timeout (ensures feedback shows before completion screen)
+- Files changed:
+  - src/components/ReviewSession.tsx (added showCorrectFeedback state, correctHeader/correctLabel styles, autoAdvanceDelay prop)
+  - __tests__/components/ReviewSession.test.tsx (added 9 new tests for correct answer handling, updated existing tests to use fake timers with autoAdvanceDelay=0)
+- **Learnings for future iterations:**
+  - When showing visual feedback before session completion, defer the completed count update to inside the setTimeout callback
+  - Otherwise, React will re-render with isComplete=true before the feedback is visible
+  - Use autoAdvanceDelay=0 in tests combined with jest.useFakeTimers() and act(() => jest.runAllTimers()) for deterministic behavior
+  - Tests checking for correct feedback must use fake timers to prevent immediate auto-advance
+  - Browser verification not available (no dev-browser skill configured)
+
+---
