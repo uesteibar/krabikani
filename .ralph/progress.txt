@@ -18,8 +18,8 @@
 - WaniKaniApiError has code (ApiErrorCode), statusCode, message, and retryable properties
 - WaniKaniClient supports retry with `new WaniKaniClient(apiKey, { maxRetries: 3, initialDelayMs: 1000 })`
 - For tests with WaniKaniClient, use `{ maxRetries: 0 }` for deterministic behavior
-- Use react-native-sqlite-storage for local SQLite database
-- Mock react-native-sqlite-storage in __mocks__/react-native-sqlite-storage.ts
+- Use @op-engineering/op-sqlite for local SQLite database (fastest RN SQLite, uses JSI)
+- Mock op-sqlite in __mocks__/@op-engineering/op-sqlite.ts
 - Database types (DatabaseSubject, DatabaseAssignment, etc.) are in src/storage/database.ts
 - Import mock helpers using jest.requireMock() NOT direct file imports (prevents separate module instances)
   - CORRECT: `const { __resetMock } = jest.requireMock('@react-native-community/netinfo')`
@@ -88,6 +88,33 @@
   - Alert.alert callbacks need to be tested by extracting them from mock calls
   - Use act() wrapper when testing async state updates from callbacks
   - Browser verification not available (no dev-browser skill configured)
+
+---
+
+## 2026-01-25 - Fix: SQLite Library Migration (jcenter deprecation)
+- What was implemented:
+  - Migrated from react-native-sqlite-storage to @op-engineering/op-sqlite
+  - Fixed Android build failure caused by deprecated jcenter() repository
+  - Updated database.ts API: open() instead of openDatabase(), db.execute() instead of db.executeSql()
+  - Results now use { rows } directly instead of tuple destructuring
+  - Added android/local.properties with sdk.dir for Android SDK path
+- Files changed:
+  - package.json, package-lock.json (removed react-native-sqlite-storage, added @op-engineering/op-sqlite)
+  - src/storage/database.ts (full API migration to op-sqlite)
+  - __mocks__/@op-engineering/op-sqlite.ts (new mock file)
+  - __mocks__/react-native-sqlite-storage.ts (deleted)
+  - __tests__/storage/database.test.ts (updated imports)
+  - __tests__/storage/databaseCrud.test.ts (updated imports)
+  - __tests__/sync/syncService.test.ts (updated imports)
+  - __tests__/screens/HomeScreen.test.tsx (updated imports)
+  - android/local.properties (new - SDK path configuration)
+- **Learnings for future iterations:**
+  - react-native-sqlite-storage uses deprecated jcenter() which fails on modern Gradle
+  - op-sqlite is actively maintained, faster (5x), and uses JSI for direct native bridge
+  - op-sqlite API: open({ name }) returns DB sync, execute() returns { rows } directly
+  - For TypeScript row casting, use `as unknown as Type` pattern (double cast)
+  - Mock helpers should use jest.requireMock() pattern for consistent imports
+  - Android SDK path can be set in android/local.properties: sdk.dir=/path/to/sdk
 
 ---
 

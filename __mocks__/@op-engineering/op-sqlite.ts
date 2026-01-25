@@ -26,7 +26,9 @@ let mockDatabase: MockDatabase = {
 let isOpen = false;
 
 // Helper to parse CREATE TABLE statement and extract table name and columns
-function parseCreateTable(sql: string): { tableName: string; columns: string[] } | null {
+function parseCreateTable(
+  sql: string,
+): { tableName: string; columns: string[] } | null {
   const match = sql.match(/CREATE TABLE IF NOT EXISTS (\w+)\s*\(([\s\S]*)\)/i);
   if (!match) return null;
 
@@ -52,7 +54,10 @@ function parseCreateTable(sql: string): { tableName: string; columns: string[] }
 }
 
 // Helper to parse INSERT statement
-function parseInsert(sql: string, params: (string | number | boolean | null)[]): {
+function parseInsert(
+  sql: string,
+  params: (string | number | boolean | null)[],
+): {
   tableName: string;
   columns: string[];
   values: (string | number | boolean | null)[];
@@ -60,7 +65,9 @@ function parseInsert(sql: string, params: (string | number | boolean | null)[]):
   isIgnore: boolean;
 } | null {
   // Match: INSERT [OR REPLACE/IGNORE] INTO tableName (columns) VALUES (?)
-  const matchWithCols = sql.match(/INSERT\s+(?:OR\s+(\w+)\s+)?INTO\s+(\w+)\s*\(([^)]+)\)\s*VALUES\s*\(([^)]+)\)/i);
+  const matchWithCols = sql.match(
+    /INSERT\s+(?:OR\s+(\w+)\s+)?INTO\s+(\w+)\s*\(([^)]+)\)\s*VALUES\s*\(([^)]+)\)/i,
+  );
   if (matchWithCols) {
     const modifier = matchWithCols[1]?.toUpperCase();
     const tableName = matchWithCols[2];
@@ -75,7 +82,9 @@ function parseInsert(sql: string, params: (string | number | boolean | null)[]):
   }
 
   // Match: INSERT [OR IGNORE] INTO tableName (column) VALUES (value) - single static value
-  const matchStatic = sql.match(/INSERT\s+(?:OR\s+(\w+)\s+)?INTO\s+(\w+)\s*\((\w+)\)\s*VALUES\s*\((\d+)\)/i);
+  const matchStatic = sql.match(
+    /INSERT\s+(?:OR\s+(\w+)\s+)?INTO\s+(\w+)\s*\((\w+)\)\s*VALUES\s*\((\d+)\)/i,
+  );
   if (matchStatic) {
     const modifier = matchStatic[1]?.toUpperCase();
     return {
@@ -91,13 +100,18 @@ function parseInsert(sql: string, params: (string | number | boolean | null)[]):
 }
 
 // Helper to parse WHERE clause and extract conditions
-function parseWhereClause(sql: string, params: (string | number | boolean | null)[]): {
+function parseWhereClause(
+  sql: string,
+  params: (string | number | boolean | null)[],
+): {
   column: string;
   value: string | number | boolean | null;
   operator: string;
 } | null {
   // Try matching with placeholder first
-  const whereMatchPlaceholder = sql.match(/WHERE\s+(\w+)\s*(=|<=|>=|<|>)\s*\?/i);
+  const whereMatchPlaceholder = sql.match(
+    /WHERE\s+(\w+)\s*(=|<=|>=|<|>)\s*\?/i,
+  );
   if (whereMatchPlaceholder) {
     const column = whereMatchPlaceholder[1];
     const operator = whereMatchPlaceholder[2].toUpperCase();
@@ -140,7 +154,11 @@ interface MockQueryResult {
   insertId?: number;
 }
 
-function createQueryResult(rows: MockRow[] = [], rowsAffected = 0, insertId?: number): MockQueryResult {
+function createQueryResult(
+  rows: MockRow[] = [],
+  rowsAffected = 0,
+  insertId?: number,
+): MockQueryResult {
   return {
     rows,
     rowsAffected,
@@ -149,7 +167,10 @@ function createQueryResult(rows: MockRow[] = [], rowsAffected = 0, insertId?: nu
 }
 
 // Execute SQL implementation
-function executeSqlImpl(sql: string, params: (string | number | boolean | null)[] = []): MockQueryResult {
+function executeSqlImpl(
+  sql: string,
+  params: (string | number | boolean | null)[] = [],
+): MockQueryResult {
   mockDatabase.executedStatements.push(sql);
 
   // Handle CREATE TABLE
@@ -177,7 +198,7 @@ function executeSqlImpl(sql: string, params: (string | number | boolean | null)[
       const table = mockDatabase.tables[parsed.tableName];
       if (table) {
         const row: MockRow = {};
-        let insertId: number | undefined = undefined;
+        let insertId: number | undefined;
 
         // Initialize all table columns with null first
         for (const col of table.columns) {
@@ -244,16 +265,20 @@ function executeSqlImpl(sql: string, params: (string | number | boolean | null)[
               case '=':
                 return rowValue === whereCondition.value;
               case '<=':
-                if (rowValue === null || whereCondition.value === null) return false;
+                if (rowValue === null || whereCondition.value === null)
+                  return false;
                 return rowValue <= whereCondition.value;
               case '>=':
-                if (rowValue === null || whereCondition.value === null) return false;
+                if (rowValue === null || whereCondition.value === null)
+                  return false;
                 return rowValue >= whereCondition.value;
               case '<':
-                if (rowValue === null || whereCondition.value === null) return false;
+                if (rowValue === null || whereCondition.value === null)
+                  return false;
                 return rowValue < whereCondition.value;
               case '>':
-                if (rowValue === null || whereCondition.value === null) return false;
+                if (rowValue === null || whereCondition.value === null)
+                  return false;
                 return rowValue > whereCondition.value;
               case 'IS NULL':
                 return rowValue === null;
@@ -269,7 +294,9 @@ function executeSqlImpl(sql: string, params: (string | number | boolean | null)[
         const inMatch = sql.match(/WHERE\s+(\w+)\s+IN\s*\(/i);
         if (inMatch) {
           const column = inMatch[1];
-          rows = rows.filter(r => params.includes(r[column] as string | number | boolean | null));
+          rows = rows.filter(r =>
+            params.includes(r[column] as string | number | boolean | null),
+          );
         }
 
         // Handle COUNT(*)
@@ -283,8 +310,14 @@ function executeSqlImpl(sql: string, params: (string | number | boolean | null)[
           if (minMatch) {
             const column = minMatch[1];
             const alias = minMatch[2];
-            const values = rows.map(r => r[column]).filter(v => v !== null) as (string | number)[];
-            const minValue = values.length > 0 ? values.reduce((a, b) => a < b ? a : b) : null;
+            const values = rows.map(r => r[column]).filter(v => v !== null) as (
+              | string
+              | number
+            )[];
+            const minValue =
+              values.length > 0
+                ? values.reduce((a, b) => (a < b ? a : b))
+                : null;
             return createQueryResult([{ [alias]: minValue }]);
           }
         }
@@ -294,7 +327,9 @@ function executeSqlImpl(sql: string, params: (string | number | boolean | null)[
           const maxMatch = sql.match(/MAX\s*\(\s*(\w+)\s*\)/i);
           if (maxMatch) {
             const column = maxMatch[1];
-            const values = rows.map(r => r[column]).filter(v => v !== null) as number[];
+            const values = rows
+              .map(r => r[column])
+              .filter(v => v !== null) as number[];
             const maxValue = values.length > 0 ? Math.max(...values) : null;
             return createQueryResult([{ [column]: maxValue }]);
           }
@@ -326,7 +361,10 @@ function executeSqlImpl(sql: string, params: (string | number | boolean | null)[
             // Check WHERE condition
             if (whereCondition) {
               const rowValue = row[whereCondition.column];
-              if (whereCondition.operator === '=' && rowValue !== whereCondition.value) {
+              if (
+                whereCondition.operator === '=' &&
+                rowValue !== whereCondition.value
+              ) {
                 return;
               }
             }
@@ -334,7 +372,9 @@ function executeSqlImpl(sql: string, params: (string | number | boolean | null)[
             // Apply updates
             let paramIndex = 0;
             assignments.forEach(assignment => {
-              const match = assignment.match(/(\w+)\s*=\s*(\?|CURRENT_TIMESTAMP|NULL)/i);
+              const match = assignment.match(
+                /(\w+)\s*=\s*(\?|CURRENT_TIMESTAMP|NULL)/i,
+              );
               if (match) {
                 const column = match[1];
                 const valueType = match[2].toUpperCase();
@@ -395,16 +435,25 @@ function executeSqlImpl(sql: string, params: (string | number | boolean | null)[
 
 // Mock Transaction interface
 interface MockTransaction {
-  execute: (sql: string, params?: (string | number | boolean | null)[]) => Promise<MockQueryResult>;
+  execute: (
+    sql: string,
+    params?: (string | number | boolean | null)[],
+  ) => Promise<MockQueryResult>;
   commit: () => Promise<MockQueryResult>;
   rollback: () => MockQueryResult;
 }
 
+// Type for params array
+type Params = (string | number | boolean | null)[];
+
 // Mock DB interface matching op-sqlite
 interface MockDB {
-  execute: jest.Mock<Promise<MockQueryResult>, [string, (string | number | boolean | null)?[]]>;
-  executeSync: jest.Mock<MockQueryResult, [string, (string | number | boolean | null)?[]]>;
-  transaction: jest.Mock<Promise<void>, [(tx: MockTransaction) => Promise<void>]>;
+  execute: jest.Mock<Promise<MockQueryResult>, [string, Params?]>;
+  executeSync: jest.Mock<MockQueryResult, [string, Params?]>;
+  transaction: jest.Mock<
+    Promise<void>,
+    [(tx: MockTransaction) => Promise<void>]
+  >;
   close: jest.Mock<void, []>;
   delete: jest.Mock<void, [string?]>;
   getDbPath: jest.Mock<string, [string?]>;
@@ -413,28 +462,45 @@ interface MockDB {
 // Create mock database instance
 function createMockDbInstance(): MockDB {
   return {
-    execute: jest.fn(async (sql: string, params: (string | number | boolean | null)[] = []): Promise<MockQueryResult> => {
-      return executeSqlImpl(sql, params);
-    }),
+    execute: jest.fn(
+      async (
+        sql: string,
+        params: (string | number | boolean | null)[] = [],
+      ): Promise<MockQueryResult> => {
+        return executeSqlImpl(sql, params);
+      },
+    ),
 
-    executeSync: jest.fn((sql: string, params: (string | number | boolean | null)[] = []): MockQueryResult => {
-      return executeSqlImpl(sql, params);
-    }),
+    executeSync: jest.fn(
+      (
+        sql: string,
+        params: (string | number | boolean | null)[] = [],
+      ): MockQueryResult => {
+        return executeSqlImpl(sql, params);
+      },
+    ),
 
-    transaction: jest.fn(async (callback: (tx: MockTransaction) => Promise<void>): Promise<void> => {
-      const tx: MockTransaction = {
-        execute: async (sql: string, params: (string | number | boolean | null)[] = []): Promise<MockQueryResult> => {
-          return executeSqlImpl(sql, params);
-        },
-        commit: async (): Promise<MockQueryResult> => {
-          return createQueryResult();
-        },
-        rollback: (): MockQueryResult => {
-          return createQueryResult();
-        },
-      };
-      await callback(tx);
-    }),
+    transaction: jest.fn(
+      async (
+        callback: (tx: MockTransaction) => Promise<void>,
+      ): Promise<void> => {
+        const tx: MockTransaction = {
+          execute: async (
+            sql: string,
+            params: (string | number | boolean | null)[] = [],
+          ): Promise<MockQueryResult> => {
+            return executeSqlImpl(sql, params);
+          },
+          commit: async (): Promise<MockQueryResult> => {
+            return createQueryResult();
+          },
+          rollback: (): MockQueryResult => {
+            return createQueryResult();
+          },
+        };
+        await callback(tx);
+      },
+    ),
 
     close: jest.fn((): void => {
       isOpen = false;
@@ -456,10 +522,16 @@ function createMockDbInstance(): MockDB {
 let mockDbInstance: MockDB = createMockDbInstance();
 
 // Open database - matching op-sqlite's open function
-export const open = jest.fn((_config: { name: string; location?: string; encryptionKey?: string }): MockDB => {
-  isOpen = true;
-  return mockDbInstance;
-});
+export const open = jest.fn(
+  (_config: {
+    name: string;
+    location?: string;
+    encryptionKey?: string;
+  }): MockDB => {
+    isOpen = true;
+    return mockDbInstance;
+  },
+);
 
 // Test helpers
 export const __resetMockDatabase = (): void => {
@@ -470,15 +542,22 @@ export const __resetMockDatabase = (): void => {
   isOpen = false;
   mockDbInstance = createMockDbInstance();
   open.mockClear();
-  open.mockImplementation((_config: { name: string; location?: string; encryptionKey?: string }): MockDB => {
-    isOpen = true;
-    return mockDbInstance;
-  });
+  open.mockImplementation(
+    (_config: {
+      name: string;
+      location?: string;
+      encryptionKey?: string;
+    }): MockDB => {
+      isOpen = true;
+      return mockDbInstance;
+    },
+  );
 };
 
 export const __getMockDatabase = (): MockDatabase => mockDatabase;
 
-export const __getExecutedStatements = (): string[] => mockDatabase.executedStatements;
+export const __getExecutedStatements = (): string[] =>
+  mockDatabase.executedStatements;
 
 export const __isOpen = (): boolean => isOpen;
 

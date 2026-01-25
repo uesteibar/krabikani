@@ -1,12 +1,14 @@
 // Mock the modules
 jest.mock('@react-native-community/netinfo');
-jest.mock('react-native-sqlite-storage');
+jest.mock('@op-engineering/op-sqlite');
 jest.mock('react-native-keychain');
 
 // Mock the sync module
 jest.mock('../../src/sync/syncService', () => ({
   syncSubjects: jest.fn().mockResolvedValue({ success: true, syncedCount: 10 }),
-  syncAssignments: jest.fn().mockResolvedValue({ success: true, syncedCount: 5 }),
+  syncAssignments: jest
+    .fn()
+    .mockResolvedValue({ success: true, syncedCount: 5 }),
   getUserLevel: jest.fn().mockResolvedValue(5),
 }));
 
@@ -39,21 +41,18 @@ import {
 import type { RootStackParamList } from '../../src/navigation/types';
 
 // Get mock helpers from the mocked modules
-const {
-  __setMockNetworkState,
-  __resetMock,
-} = jest.requireMock('@react-native-community/netinfo');
+const { __setMockNetworkState, __resetMock } = jest.requireMock(
+  '@react-native-community/netinfo',
+);
 
-const {
-  __resetMockDatabase,
-} = jest.requireMock('react-native-sqlite-storage');
+const { __resetMockDatabase } = jest.requireMock('@op-engineering/op-sqlite');
 
-const {
-  __setStoredApiKey,
-  __resetMock: __resetKeychainMock,
-} = jest.requireMock('react-native-keychain');
+const { __setStoredApiKey, __resetMock: __resetKeychainMock } =
+  jest.requireMock('react-native-keychain');
 
-const { syncSubjects, syncAssignments } = jest.requireMock('../../src/sync/syncService');
+const { syncSubjects, syncAssignments } = jest.requireMock(
+  '../../src/sync/syncService',
+);
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -61,9 +60,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 function renderWithNavigation(component: React.ReactElement) {
   return render(
     <ThemeProvider forcedColorScheme="light">
-      <NavigationContainer>
-        {component}
-      </NavigationContainer>
+      <NavigationContainer>{component}</NavigationContainer>
     </ThemeProvider>,
   );
 }
@@ -187,7 +184,9 @@ describe('HomeScreen', () => {
         id: 100,
         object_type: 'radical',
         characters: '一',
-        meanings: JSON.stringify([{ meaning: 'one', primary: true, accepted_answer: true }]),
+        meanings: JSON.stringify([
+          { meaning: 'one', primary: true, accepted_answer: true },
+        ]),
         readings: null,
         meaning_mnemonic: 'Test mnemonic',
         reading_mnemonic: null,
@@ -220,8 +219,12 @@ describe('HomeScreen', () => {
         id: 100,
         object_type: 'kanji',
         characters: '一',
-        meanings: JSON.stringify([{ meaning: 'one', primary: true, accepted_answer: true }]),
-        readings: JSON.stringify([{ reading: 'いち', primary: true, accepted_answer: true }]),
+        meanings: JSON.stringify([
+          { meaning: 'one', primary: true, accepted_answer: true },
+        ]),
+        readings: JSON.stringify([
+          { reading: 'いち', primary: true, accepted_answer: true },
+        ]),
         meaning_mnemonic: 'Test mnemonic',
         reading_mnemonic: 'Reading mnemonic',
         level: 1,
@@ -264,7 +267,9 @@ describe('HomeScreen', () => {
         id: 1,
         object_type: 'radical',
         characters: '一',
-        meanings: JSON.stringify([{ meaning: 'one', primary: true, accepted_answer: true }]),
+        meanings: JSON.stringify([
+          { meaning: 'one', primary: true, accepted_answer: true },
+        ]),
         readings: null,
         meaning_mnemonic: 'Test mnemonic',
         reading_mnemonic: null,
@@ -380,7 +385,9 @@ describe('HomeScreen', () => {
         id: 100,
         object_type: 'radical',
         characters: '一',
-        meanings: JSON.stringify([{ meaning: 'one', primary: true, accepted_answer: true }]),
+        meanings: JSON.stringify([
+          { meaning: 'one', primary: true, accepted_answer: true },
+        ]),
         readings: null,
         meaning_mnemonic: 'Test mnemonic',
         reading_mnemonic: null,
@@ -419,8 +426,12 @@ describe('HomeScreen', () => {
         id: 100,
         object_type: 'kanji',
         characters: '一',
-        meanings: JSON.stringify([{ meaning: 'one', primary: true, accepted_answer: true }]),
-        readings: JSON.stringify([{ reading: 'いち', primary: true, accepted_answer: true }]),
+        meanings: JSON.stringify([
+          { meaning: 'one', primary: true, accepted_answer: true },
+        ]),
+        readings: JSON.stringify([
+          { reading: 'いち', primary: true, accepted_answer: true },
+        ]),
         meaning_mnemonic: 'Test mnemonic',
         reading_mnemonic: 'Reading mnemonic',
         level: 1,
@@ -527,7 +538,9 @@ describe('HomeScreen', () => {
         id: 1,
         object_type: 'radical',
         characters: '一',
-        meanings: JSON.stringify([{ meaning: 'one', primary: true, accepted_answer: true }]),
+        meanings: JSON.stringify([
+          { meaning: 'one', primary: true, accepted_answer: true },
+        ]),
         readings: null,
         meaning_mnemonic: 'Test mnemonic',
         reading_mnemonic: null,

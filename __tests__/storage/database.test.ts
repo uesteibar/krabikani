@@ -1,4 +1,4 @@
-import SQLite from 'react-native-sqlite-storage';
+import { open } from '@op-engineering/op-sqlite';
 
 import {
   closeDatabase,
@@ -13,9 +13,9 @@ import {
 import {
   __resetMockDatabase,
   __getExecutedStatements,
-} from '../../__mocks__/react-native-sqlite-storage';
+} from '../../__mocks__/@op-engineering/op-sqlite';
 
-jest.mock('react-native-sqlite-storage');
+jest.mock('@op-engineering/op-sqlite');
 
 describe('database', () => {
   beforeEach(() => {
@@ -37,23 +37,20 @@ describe('database', () => {
   });
 
   describe('getDatabase', () => {
-    it('should open the database connection', async () => {
-      await getDatabase();
+    it('should open the database connection', () => {
+      getDatabase();
 
-      // enablePromise is called at module load time, not when getDatabase is called
-      // so we only check that openDatabase was called with the correct config
-      expect(SQLite.openDatabase).toHaveBeenCalledWith({
+      expect(open).toHaveBeenCalledWith({
         name: 'wanikani.db',
-        location: 'default',
       });
     });
 
-    it('should return the same database instance on subsequent calls', async () => {
-      const db1 = await getDatabase();
-      const db2 = await getDatabase();
+    it('should return the same database instance on subsequent calls', () => {
+      const db1 = getDatabase();
+      const db2 = getDatabase();
 
       expect(db1).toBe(db2);
-      expect(SQLite.openDatabase).toHaveBeenCalledTimes(1);
+      expect(open).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -68,7 +65,9 @@ describe('database', () => {
       await initializeDatabase();
 
       const statements = __getExecutedStatements();
-      const createSubjects = statements.find(s => s.includes('CREATE TABLE IF NOT EXISTS subjects'));
+      const createSubjects = statements.find(s =>
+        s.includes('CREATE TABLE IF NOT EXISTS subjects'),
+      );
 
       expect(createSubjects).toBeDefined();
       expect(createSubjects).toContain('id INTEGER PRIMARY KEY');
@@ -86,7 +85,9 @@ describe('database', () => {
       await initializeDatabase();
 
       const statements = __getExecutedStatements();
-      const createAssignments = statements.find(s => s.includes('CREATE TABLE IF NOT EXISTS assignments'));
+      const createAssignments = statements.find(s =>
+        s.includes('CREATE TABLE IF NOT EXISTS assignments'),
+      );
 
       expect(createAssignments).toBeDefined();
       expect(createAssignments).toContain('id INTEGER PRIMARY KEY');
@@ -95,32 +96,48 @@ describe('database', () => {
       expect(createAssignments).toContain('available_at TEXT');
       expect(createAssignments).toContain('started_at TEXT');
       expect(createAssignments).toContain('unlocked_at TEXT');
-      expect(createAssignments).toContain('FOREIGN KEY (subject_id) REFERENCES subjects(id)');
+      expect(createAssignments).toContain(
+        'FOREIGN KEY (subject_id) REFERENCES subjects(id)',
+      );
     });
 
     it('should create the pending_reviews table', async () => {
       await initializeDatabase();
 
       const statements = __getExecutedStatements();
-      const createPendingReviews = statements.find(s => s.includes('CREATE TABLE IF NOT EXISTS pending_reviews'));
+      const createPendingReviews = statements.find(s =>
+        s.includes('CREATE TABLE IF NOT EXISTS pending_reviews'),
+      );
 
       expect(createPendingReviews).toBeDefined();
-      expect(createPendingReviews).toContain('id INTEGER PRIMARY KEY AUTOINCREMENT');
+      expect(createPendingReviews).toContain(
+        'id INTEGER PRIMARY KEY AUTOINCREMENT',
+      );
       expect(createPendingReviews).toContain('assignment_id INTEGER NOT NULL');
       expect(createPendingReviews).toContain('subject_id INTEGER NOT NULL');
-      expect(createPendingReviews).toContain('incorrect_meaning_answers INTEGER NOT NULL DEFAULT 0');
-      expect(createPendingReviews).toContain('incorrect_reading_answers INTEGER NOT NULL DEFAULT 0');
-      expect(createPendingReviews).toContain('created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP');
+      expect(createPendingReviews).toContain(
+        'incorrect_meaning_answers INTEGER NOT NULL DEFAULT 0',
+      );
+      expect(createPendingReviews).toContain(
+        'incorrect_reading_answers INTEGER NOT NULL DEFAULT 0',
+      );
+      expect(createPendingReviews).toContain(
+        'created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP',
+      );
     });
 
     it('should create the sync_status table', async () => {
       await initializeDatabase();
 
       const statements = __getExecutedStatements();
-      const createSyncStatus = statements.find(s => s.includes('CREATE TABLE IF NOT EXISTS sync_status'));
+      const createSyncStatus = statements.find(s =>
+        s.includes('CREATE TABLE IF NOT EXISTS sync_status'),
+      );
 
       expect(createSyncStatus).toBeDefined();
-      expect(createSyncStatus).toContain('id INTEGER PRIMARY KEY CHECK (id = 1)');
+      expect(createSyncStatus).toContain(
+        'id INTEGER PRIMARY KEY CHECK (id = 1)',
+      );
       expect(createSyncStatus).toContain('last_subjects_sync TEXT');
       expect(createSyncStatus).toContain('last_assignments_sync TEXT');
       expect(createSyncStatus).toContain('last_summary_sync TEXT');
@@ -130,8 +147,12 @@ describe('database', () => {
       await initializeDatabase();
 
       const statements = __getExecutedStatements();
-      const subjectIndex = statements.find(s => s.includes('idx_assignments_subject_id'));
-      const availableIndex = statements.find(s => s.includes('idx_assignments_available_at'));
+      const subjectIndex = statements.find(s =>
+        s.includes('idx_assignments_subject_id'),
+      );
+      const availableIndex = statements.find(s =>
+        s.includes('idx_assignments_available_at'),
+      );
 
       expect(subjectIndex).toContain('CREATE INDEX IF NOT EXISTS');
       expect(subjectIndex).toContain('ON assignments(subject_id)');
@@ -144,7 +165,9 @@ describe('database', () => {
 
       const statements = __getExecutedStatements();
       const levelIndex = statements.find(s => s.includes('idx_subjects_level'));
-      const typeIndex = statements.find(s => s.includes('idx_subjects_object_type'));
+      const typeIndex = statements.find(s =>
+        s.includes('idx_subjects_object_type'),
+      );
 
       expect(levelIndex).toContain('CREATE INDEX IF NOT EXISTS');
       expect(levelIndex).toContain('ON subjects(level)');
@@ -156,7 +179,9 @@ describe('database', () => {
       await initializeDatabase();
 
       const statements = __getExecutedStatements();
-      const initSync = statements.find(s => s.includes('INSERT OR IGNORE INTO sync_status'));
+      const initSync = statements.find(s =>
+        s.includes('INSERT OR IGNORE INTO sync_status'),
+      );
 
       expect(initSync).toBeDefined();
       expect(initSync).toContain('VALUES (1)');
@@ -172,24 +197,24 @@ describe('database', () => {
   });
 
   describe('closeDatabase', () => {
-    it('should close an open database connection', async () => {
-      const db = await getDatabase();
-      await closeDatabase();
+    it('should close an open database connection', () => {
+      const db = getDatabase();
+      closeDatabase();
 
       expect(db.close).toHaveBeenCalled();
     });
 
-    it('should handle closing when no database is open', async () => {
+    it('should handle closing when no database is open', () => {
       // Should not throw
-      await expect(closeDatabase()).resolves.toBeUndefined();
+      expect(() => closeDatabase()).not.toThrow();
     });
 
-    it('should allow reopening after close', async () => {
-      await getDatabase();
-      await closeDatabase();
-      await getDatabase();
+    it('should allow reopening after close', () => {
+      getDatabase();
+      closeDatabase();
+      getDatabase();
 
-      expect(SQLite.openDatabase).toHaveBeenCalledTimes(2);
+      expect(open).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -215,26 +240,42 @@ describe('database', () => {
 
   describe('SCHEMA exports', () => {
     it('should export CREATE_SUBJECTS_TABLE', () => {
-      expect(SCHEMA.CREATE_SUBJECTS_TABLE).toContain('CREATE TABLE IF NOT EXISTS subjects');
+      expect(SCHEMA.CREATE_SUBJECTS_TABLE).toContain(
+        'CREATE TABLE IF NOT EXISTS subjects',
+      );
     });
 
     it('should export CREATE_ASSIGNMENTS_TABLE', () => {
-      expect(SCHEMA.CREATE_ASSIGNMENTS_TABLE).toContain('CREATE TABLE IF NOT EXISTS assignments');
+      expect(SCHEMA.CREATE_ASSIGNMENTS_TABLE).toContain(
+        'CREATE TABLE IF NOT EXISTS assignments',
+      );
     });
 
     it('should export CREATE_PENDING_REVIEWS_TABLE', () => {
-      expect(SCHEMA.CREATE_PENDING_REVIEWS_TABLE).toContain('CREATE TABLE IF NOT EXISTS pending_reviews');
+      expect(SCHEMA.CREATE_PENDING_REVIEWS_TABLE).toContain(
+        'CREATE TABLE IF NOT EXISTS pending_reviews',
+      );
     });
 
     it('should export CREATE_SYNC_STATUS_TABLE', () => {
-      expect(SCHEMA.CREATE_SYNC_STATUS_TABLE).toContain('CREATE TABLE IF NOT EXISTS sync_status');
+      expect(SCHEMA.CREATE_SYNC_STATUS_TABLE).toContain(
+        'CREATE TABLE IF NOT EXISTS sync_status',
+      );
     });
 
     it('should export all index creation statements', () => {
-      expect(SCHEMA.CREATE_ASSIGNMENTS_SUBJECT_INDEX).toContain('idx_assignments_subject_id');
-      expect(SCHEMA.CREATE_ASSIGNMENTS_AVAILABLE_INDEX).toContain('idx_assignments_available_at');
-      expect(SCHEMA.CREATE_SUBJECTS_LEVEL_INDEX).toContain('idx_subjects_level');
-      expect(SCHEMA.CREATE_SUBJECTS_TYPE_INDEX).toContain('idx_subjects_object_type');
+      expect(SCHEMA.CREATE_ASSIGNMENTS_SUBJECT_INDEX).toContain(
+        'idx_assignments_subject_id',
+      );
+      expect(SCHEMA.CREATE_ASSIGNMENTS_AVAILABLE_INDEX).toContain(
+        'idx_assignments_available_at',
+      );
+      expect(SCHEMA.CREATE_SUBJECTS_LEVEL_INDEX).toContain(
+        'idx_subjects_level',
+      );
+      expect(SCHEMA.CREATE_SUBJECTS_TYPE_INDEX).toContain(
+        'idx_subjects_object_type',
+      );
     });
   });
 
@@ -243,7 +284,9 @@ describe('database', () => {
       await initializeDatabase();
 
       const statements = __getExecutedStatements();
-      const createSubjects = statements.find(s => s.includes('CREATE TABLE IF NOT EXISTS subjects'));
+      const createSubjects = statements.find(s =>
+        s.includes('CREATE TABLE IF NOT EXISTS subjects'),
+      );
 
       expect(createSubjects).toContain('data_updated_at TEXT');
     });
@@ -252,7 +295,9 @@ describe('database', () => {
       await initializeDatabase();
 
       const statements = __getExecutedStatements();
-      const createAssignments = statements.find(s => s.includes('CREATE TABLE IF NOT EXISTS assignments'));
+      const createAssignments = statements.find(s =>
+        s.includes('CREATE TABLE IF NOT EXISTS assignments'),
+      );
 
       expect(createAssignments).toContain('data_updated_at TEXT');
     });

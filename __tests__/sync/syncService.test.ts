@@ -34,14 +34,17 @@ import {
   getAllPendingReviews,
   getPendingReviewCount,
 } from '../../src/storage/database';
-import { __resetMockDatabase } from '../../__mocks__/react-native-sqlite-storage';
+import { __resetMockDatabase } from '../../__mocks__/@op-engineering/op-sqlite';
 
 // Mock fetch globally
 const mockFetch = jest.fn();
 (globalThis as { fetch: typeof fetch }).fetch = mockFetch;
 
 // Helper to create mock radical data
-function createMockRadical(id: number, level: number): WaniKaniResource<RadicalData> {
+function createMockRadical(
+  id: number,
+  level: number,
+): WaniKaniResource<RadicalData> {
   return {
     id,
     object: 'radical',
@@ -65,7 +68,10 @@ function createMockRadical(id: number, level: number): WaniKaniResource<RadicalD
 }
 
 // Helper to create mock kanji data
-function createMockKanji(id: number, level: number): WaniKaniResource<KanjiData> {
+function createMockKanji(
+  id: number,
+  level: number,
+): WaniKaniResource<KanjiData> {
   return {
     id,
     object: 'kanji',
@@ -89,8 +95,18 @@ function createMockKanji(id: number, level: number): WaniKaniResource<KanjiData>
       reading_hint: null,
       reading_mnemonic: 'As you count up, say "ITCHY"',
       readings: [
-        { reading: 'いち', primary: true, accepted_answer: true, type: 'onyomi' },
-        { reading: 'ひと', primary: false, accepted_answer: true, type: 'kunyomi' },
+        {
+          reading: 'いち',
+          primary: true,
+          accepted_answer: true,
+          type: 'onyomi',
+        },
+        {
+          reading: 'ひと',
+          primary: false,
+          accepted_answer: true,
+          type: 'kunyomi',
+        },
       ],
       visually_similar_subject_ids: [],
     },
@@ -98,7 +114,10 @@ function createMockKanji(id: number, level: number): WaniKaniResource<KanjiData>
 }
 
 // Helper to create mock vocabulary data
-function createMockVocabulary(id: number, level: number): WaniKaniResource<VocabularyData> {
+function createMockVocabulary(
+  id: number,
+  level: number,
+): WaniKaniResource<VocabularyData> {
   return {
     id,
     object: 'vocabulary',
@@ -117,7 +136,9 @@ function createMockVocabulary(id: number, level: number): WaniKaniResource<Vocab
       slug: 'one',
       spaced_repetition_system_id: 1,
       component_subject_ids: [440],
-      context_sentences: [{ en: 'I have one apple.', ja: 'りんごが一つあります。' }],
+      context_sentences: [
+        { en: 'I have one apple.', ja: 'りんごが一つあります。' },
+      ],
       meaning_hint: null,
       parts_of_speech: ['numeral'],
       pronunciation_audios: [],
@@ -139,9 +160,18 @@ function createMockAssignment(
   } = {},
 ): WaniKaniResource<AssignmentData> {
   // Use 'hasOwnProperty' check to distinguish between undefined (use default) and null (explicit null)
-  const hasAvailableAt = Object.prototype.hasOwnProperty.call(options, 'availableAt');
-  const hasStartedAt = Object.prototype.hasOwnProperty.call(options, 'startedAt');
-  const hasUnlockedAt = Object.prototype.hasOwnProperty.call(options, 'unlockedAt');
+  const hasAvailableAt = Object.prototype.hasOwnProperty.call(
+    options,
+    'availableAt',
+  );
+  const hasStartedAt = Object.prototype.hasOwnProperty.call(
+    options,
+    'startedAt',
+  );
+  const hasUnlockedAt = Object.prototype.hasOwnProperty.call(
+    options,
+    'unlockedAt',
+  );
 
   return {
     id,
@@ -149,17 +179,23 @@ function createMockAssignment(
     url: `https://api.wanikani.com/v2/assignments/${id}`,
     data_updated_at: '2024-01-01T00:00:00.000000Z',
     data: {
-      available_at: hasAvailableAt ? options.availableAt! : '2024-01-01T00:00:00.000000Z',
+      available_at: hasAvailableAt
+        ? options.availableAt!
+        : '2024-01-01T00:00:00.000000Z',
       burned_at: null,
       created_at: '2023-01-01T00:00:00.000000Z',
       hidden: false,
       passed_at: null,
       resurrected_at: null,
       srs_stage: options.srsStage ?? 1,
-      started_at: hasStartedAt ? options.startedAt! : '2023-06-01T00:00:00.000000Z',
+      started_at: hasStartedAt
+        ? options.startedAt!
+        : '2023-06-01T00:00:00.000000Z',
       subject_id: subjectId,
       subject_type: 'radical',
-      unlocked_at: hasUnlockedAt ? options.unlockedAt! : '2023-01-01T00:00:00.000000Z',
+      unlocked_at: hasUnlockedAt
+        ? options.unlockedAt!
+        : '2023-01-01T00:00:00.000000Z',
     },
   };
 }
@@ -188,7 +224,9 @@ describe('syncService', () => {
 
       // Verify meanings are serialized as JSON
       const meanings = JSON.parse(input.meanings);
-      expect(meanings).toEqual([{ meaning: 'Ground', primary: true, accepted_answer: true }]);
+      expect(meanings).toEqual([
+        { meaning: 'Ground', primary: true, accepted_answer: true },
+      ]);
     });
 
     it('should convert a kanji subject to database input', () => {
@@ -636,10 +674,7 @@ describe('syncService', () => {
           pages: { per_page: 500, next_url: null, previous_url: null },
           total_count: 2,
           data_updated_at: '2024-01-01T00:00:00.000000Z',
-          data: [
-            createMockAssignment(100, 1),
-            createMockAssignment(101, 2),
-          ],
+          data: [createMockAssignment(100, 1), createMockAssignment(101, 2)],
         }),
       });
 
@@ -674,15 +709,13 @@ describe('syncService', () => {
           url: 'https://api.wanikani.com/v2/assignments',
           pages: {
             per_page: 2,
-            next_url: 'https://api.wanikani.com/v2/assignments?page_after_id=101',
+            next_url:
+              'https://api.wanikani.com/v2/assignments?page_after_id=101',
             previous_url: null,
           },
           total_count: 4,
           data_updated_at: '2024-01-01T00:00:00.000000Z',
-          data: [
-            createMockAssignment(100, 1),
-            createMockAssignment(101, 2),
-          ],
+          data: [createMockAssignment(100, 1), createMockAssignment(101, 2)],
         }),
       });
 
@@ -696,10 +729,7 @@ describe('syncService', () => {
           pages: { per_page: 2, next_url: null, previous_url: null },
           total_count: 4,
           data_updated_at: '2024-01-01T00:00:00.000000Z',
-          data: [
-            createMockAssignment(102, 3),
-            createMockAssignment(103, 4),
-          ],
+          data: [createMockAssignment(102, 3), createMockAssignment(103, 4)],
         }),
       });
 
@@ -729,15 +759,13 @@ describe('syncService', () => {
           url: 'https://api.wanikani.com/v2/assignments',
           pages: {
             per_page: 2,
-            next_url: 'https://api.wanikani.com/v2/assignments?page_after_id=101',
+            next_url:
+              'https://api.wanikani.com/v2/assignments?page_after_id=101',
             previous_url: null,
           },
           total_count: 5,
           data_updated_at: '2024-01-01T00:00:00.000000Z',
-          data: [
-            createMockAssignment(100, 1),
-            createMockAssignment(101, 2),
-          ],
+          data: [createMockAssignment(100, 1), createMockAssignment(101, 2)],
         }),
       });
 
@@ -925,7 +953,9 @@ describe('syncService', () => {
       const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
 
       // Set a previous sync timestamp
-      await updateSyncStatus({ last_assignments_sync: '2024-05-01T00:00:00.000000Z' });
+      await updateSyncStatus({
+        last_assignments_sync: '2024-05-01T00:00:00.000000Z',
+      });
 
       mockFetch.mockResolvedValueOnce({
         ok: true,

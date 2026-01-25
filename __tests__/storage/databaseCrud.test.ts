@@ -57,9 +57,9 @@ import {
   __resetMockDatabase,
   __insertRow,
   __getTableRows,
-} from '../../__mocks__/react-native-sqlite-storage';
+} from '../../__mocks__/@op-engineering/op-sqlite';
 
-jest.mock('react-native-sqlite-storage');
+jest.mock('@op-engineering/op-sqlite');
 
 describe('Database CRUD Operations', () => {
   beforeEach(async () => {
@@ -78,8 +78,12 @@ describe('Database CRUD Operations', () => {
       id: 1,
       object_type: 'kanji',
       characters: '一',
-      meanings: JSON.stringify([{ meaning: 'one', primary: true, accepted_answer: true }]),
-      readings: JSON.stringify([{ reading: 'いち', primary: true, accepted_answer: true }]),
+      meanings: JSON.stringify([
+        { meaning: 'one', primary: true, accepted_answer: true },
+      ]),
+      readings: JSON.stringify([
+        { reading: 'いち', primary: true, accepted_answer: true },
+      ]),
       meaning_mnemonic: 'This is the number one.',
       reading_mnemonic: 'Imagine counting ichi, ni, san...',
       level: 1,
@@ -179,9 +183,33 @@ describe('Database CRUD Operations', () => {
 
     describe('getSubjectsByIds', () => {
       it('should return subjects by IDs', async () => {
-        __insertRow('subjects', { id: 1, object_type: 'kanji', characters: '一', meanings: '[]', meaning_mnemonic: 'test', level: 1, created_at: '' });
-        __insertRow('subjects', { id: 2, object_type: 'kanji', characters: '二', meanings: '[]', meaning_mnemonic: 'test', level: 1, created_at: '' });
-        __insertRow('subjects', { id: 3, object_type: 'kanji', characters: '三', meanings: '[]', meaning_mnemonic: 'test', level: 1, created_at: '' });
+        __insertRow('subjects', {
+          id: 1,
+          object_type: 'kanji',
+          characters: '一',
+          meanings: '[]',
+          meaning_mnemonic: 'test',
+          level: 1,
+          created_at: '',
+        });
+        __insertRow('subjects', {
+          id: 2,
+          object_type: 'kanji',
+          characters: '二',
+          meanings: '[]',
+          meaning_mnemonic: 'test',
+          level: 1,
+          created_at: '',
+        });
+        __insertRow('subjects', {
+          id: 3,
+          object_type: 'kanji',
+          characters: '三',
+          meanings: '[]',
+          meaning_mnemonic: 'test',
+          level: 1,
+          created_at: '',
+        });
 
         const subjects = await getSubjectsByIds([1, 3]);
 
@@ -197,9 +225,33 @@ describe('Database CRUD Operations', () => {
 
     describe('getSubjectsByLevel', () => {
       it('should return subjects at or below a level', async () => {
-        __insertRow('subjects', { id: 1, object_type: 'kanji', characters: '一', meanings: '[]', meaning_mnemonic: 'test', level: 1, created_at: '' });
-        __insertRow('subjects', { id: 2, object_type: 'kanji', characters: '二', meanings: '[]', meaning_mnemonic: 'test', level: 2, created_at: '' });
-        __insertRow('subjects', { id: 3, object_type: 'kanji', characters: '三', meanings: '[]', meaning_mnemonic: 'test', level: 3, created_at: '' });
+        __insertRow('subjects', {
+          id: 1,
+          object_type: 'kanji',
+          characters: '一',
+          meanings: '[]',
+          meaning_mnemonic: 'test',
+          level: 1,
+          created_at: '',
+        });
+        __insertRow('subjects', {
+          id: 2,
+          object_type: 'kanji',
+          characters: '二',
+          meanings: '[]',
+          meaning_mnemonic: 'test',
+          level: 2,
+          created_at: '',
+        });
+        __insertRow('subjects', {
+          id: 3,
+          object_type: 'kanji',
+          characters: '三',
+          meanings: '[]',
+          meaning_mnemonic: 'test',
+          level: 3,
+          created_at: '',
+        });
 
         const subjects = await getSubjectsByLevel(2);
 
@@ -209,9 +261,33 @@ describe('Database CRUD Operations', () => {
 
     describe('getSubjectsByType', () => {
       it('should return subjects by type', async () => {
-        __insertRow('subjects', { id: 1, object_type: 'kanji', characters: '一', meanings: '[]', meaning_mnemonic: 'test', level: 1, created_at: '' });
-        __insertRow('subjects', { id: 2, object_type: 'radical', characters: null, meanings: '[]', meaning_mnemonic: 'test', level: 1, created_at: '' });
-        __insertRow('subjects', { id: 3, object_type: 'kanji', characters: '二', meanings: '[]', meaning_mnemonic: 'test', level: 1, created_at: '' });
+        __insertRow('subjects', {
+          id: 1,
+          object_type: 'kanji',
+          characters: '一',
+          meanings: '[]',
+          meaning_mnemonic: 'test',
+          level: 1,
+          created_at: '',
+        });
+        __insertRow('subjects', {
+          id: 2,
+          object_type: 'radical',
+          characters: null,
+          meanings: '[]',
+          meaning_mnemonic: 'test',
+          level: 1,
+          created_at: '',
+        });
+        __insertRow('subjects', {
+          id: 3,
+          object_type: 'kanji',
+          characters: '二',
+          meanings: '[]',
+          meaning_mnemonic: 'test',
+          level: 1,
+          created_at: '',
+        });
 
         const subjects = await getSubjectsByType('kanji');
 
@@ -221,8 +297,24 @@ describe('Database CRUD Operations', () => {
 
     describe('getAllSubjects', () => {
       it('should return all subjects', async () => {
-        __insertRow('subjects', { id: 1, object_type: 'kanji', characters: '一', meanings: '[]', meaning_mnemonic: 'test', level: 1, created_at: '' });
-        __insertRow('subjects', { id: 2, object_type: 'kanji', characters: '二', meanings: '[]', meaning_mnemonic: 'test', level: 1, created_at: '' });
+        __insertRow('subjects', {
+          id: 1,
+          object_type: 'kanji',
+          characters: '一',
+          meanings: '[]',
+          meaning_mnemonic: 'test',
+          level: 1,
+          created_at: '',
+        });
+        __insertRow('subjects', {
+          id: 2,
+          object_type: 'kanji',
+          characters: '二',
+          meanings: '[]',
+          meaning_mnemonic: 'test',
+          level: 1,
+          created_at: '',
+        });
 
         const subjects = await getAllSubjects();
 
@@ -232,7 +324,15 @@ describe('Database CRUD Operations', () => {
 
     describe('deleteSubject', () => {
       it('should delete a subject', async () => {
-        __insertRow('subjects', { id: 1, object_type: 'kanji', characters: '一', meanings: '[]', meaning_mnemonic: 'test', level: 1, created_at: '' });
+        __insertRow('subjects', {
+          id: 1,
+          object_type: 'kanji',
+          characters: '一',
+          meanings: '[]',
+          meaning_mnemonic: 'test',
+          level: 1,
+          created_at: '',
+        });
 
         await deleteSubject(1);
 
@@ -243,8 +343,24 @@ describe('Database CRUD Operations', () => {
 
     describe('getSubjectCount', () => {
       it('should return the count of subjects', async () => {
-        __insertRow('subjects', { id: 1, object_type: 'kanji', characters: '一', meanings: '[]', meaning_mnemonic: 'test', level: 1, created_at: '' });
-        __insertRow('subjects', { id: 2, object_type: 'kanji', characters: '二', meanings: '[]', meaning_mnemonic: 'test', level: 1, created_at: '' });
+        __insertRow('subjects', {
+          id: 1,
+          object_type: 'kanji',
+          characters: '一',
+          meanings: '[]',
+          meaning_mnemonic: 'test',
+          level: 1,
+          created_at: '',
+        });
+        __insertRow('subjects', {
+          id: 2,
+          object_type: 'kanji',
+          characters: '二',
+          meanings: '[]',
+          meaning_mnemonic: 'test',
+          level: 1,
+          created_at: '',
+        });
 
         const count = await getSubjectCount();
 
@@ -434,8 +550,26 @@ describe('Database CRUD Operations', () => {
 
     describe('getAllAssignments', () => {
       it('should return all assignments', async () => {
-        __insertRow('assignments', { id: 1, subject_id: 100, srs_stage: 5, available_at: null, started_at: null, unlocked_at: null, data_updated_at: null, created_at: '' });
-        __insertRow('assignments', { id: 2, subject_id: 101, srs_stage: 3, available_at: null, started_at: null, unlocked_at: null, data_updated_at: null, created_at: '' });
+        __insertRow('assignments', {
+          id: 1,
+          subject_id: 100,
+          srs_stage: 5,
+          available_at: null,
+          started_at: null,
+          unlocked_at: null,
+          data_updated_at: null,
+          created_at: '',
+        });
+        __insertRow('assignments', {
+          id: 2,
+          subject_id: 101,
+          srs_stage: 3,
+          available_at: null,
+          started_at: null,
+          unlocked_at: null,
+          data_updated_at: null,
+          created_at: '',
+        });
 
         const assignments = await getAllAssignments();
 
@@ -445,7 +579,16 @@ describe('Database CRUD Operations', () => {
 
     describe('deleteAssignment', () => {
       it('should delete an assignment', async () => {
-        __insertRow('assignments', { id: 1, subject_id: 100, srs_stage: 5, available_at: null, started_at: null, unlocked_at: null, data_updated_at: null, created_at: '' });
+        __insertRow('assignments', {
+          id: 1,
+          subject_id: 100,
+          srs_stage: 5,
+          available_at: null,
+          started_at: null,
+          unlocked_at: null,
+          data_updated_at: null,
+          created_at: '',
+        });
 
         await deleteAssignment(1);
 
@@ -456,8 +599,26 @@ describe('Database CRUD Operations', () => {
 
     describe('getAssignmentCount', () => {
       it('should return the count of assignments', async () => {
-        __insertRow('assignments', { id: 1, subject_id: 100, srs_stage: 5, available_at: null, started_at: null, unlocked_at: null, data_updated_at: null, created_at: '' });
-        __insertRow('assignments', { id: 2, subject_id: 101, srs_stage: 3, available_at: null, started_at: null, unlocked_at: null, data_updated_at: null, created_at: '' });
+        __insertRow('assignments', {
+          id: 1,
+          subject_id: 100,
+          srs_stage: 5,
+          available_at: null,
+          started_at: null,
+          unlocked_at: null,
+          data_updated_at: null,
+          created_at: '',
+        });
+        __insertRow('assignments', {
+          id: 2,
+          subject_id: 101,
+          srs_stage: 3,
+          available_at: null,
+          started_at: null,
+          unlocked_at: null,
+          data_updated_at: null,
+          created_at: '',
+        });
 
         const count = await getAssignmentCount();
 
@@ -552,7 +713,10 @@ describe('Database CRUD Operations', () => {
 
       it('should auto-increment IDs', async () => {
         const id1 = await insertPendingReview(testPendingReview);
-        const id2 = await insertPendingReview({ ...testPendingReview, assignment_id: 2 });
+        const id2 = await insertPendingReview({
+          ...testPendingReview,
+          assignment_id: 2,
+        });
 
         expect(id2).toBe(id1 + 1);
       });
@@ -585,8 +749,22 @@ describe('Database CRUD Operations', () => {
 
     describe('getAllPendingReviews', () => {
       it('should return all pending reviews', async () => {
-        __insertRow('pending_reviews', { id: 1, assignment_id: 1, subject_id: 100, incorrect_meaning_answers: 0, incorrect_reading_answers: 0, created_at: '' });
-        __insertRow('pending_reviews', { id: 2, assignment_id: 2, subject_id: 101, incorrect_meaning_answers: 1, incorrect_reading_answers: 0, created_at: '' });
+        __insertRow('pending_reviews', {
+          id: 1,
+          assignment_id: 1,
+          subject_id: 100,
+          incorrect_meaning_answers: 0,
+          incorrect_reading_answers: 0,
+          created_at: '',
+        });
+        __insertRow('pending_reviews', {
+          id: 2,
+          assignment_id: 2,
+          subject_id: 101,
+          incorrect_meaning_answers: 1,
+          incorrect_reading_answers: 0,
+          created_at: '',
+        });
 
         const reviews = await getAllPendingReviews();
 
@@ -596,7 +774,14 @@ describe('Database CRUD Operations', () => {
 
     describe('deletePendingReview', () => {
       it('should delete a pending review by ID', async () => {
-        __insertRow('pending_reviews', { id: 1, assignment_id: 1, subject_id: 100, incorrect_meaning_answers: 0, incorrect_reading_answers: 0, created_at: '' });
+        __insertRow('pending_reviews', {
+          id: 1,
+          assignment_id: 1,
+          subject_id: 100,
+          incorrect_meaning_answers: 0,
+          incorrect_reading_answers: 0,
+          created_at: '',
+        });
 
         await deletePendingReview(1);
 
@@ -607,8 +792,22 @@ describe('Database CRUD Operations', () => {
 
     describe('deleteAllPendingReviews', () => {
       it('should delete all pending reviews', async () => {
-        __insertRow('pending_reviews', { id: 1, assignment_id: 1, subject_id: 100, incorrect_meaning_answers: 0, incorrect_reading_answers: 0, created_at: '' });
-        __insertRow('pending_reviews', { id: 2, assignment_id: 2, subject_id: 101, incorrect_meaning_answers: 1, incorrect_reading_answers: 0, created_at: '' });
+        __insertRow('pending_reviews', {
+          id: 1,
+          assignment_id: 1,
+          subject_id: 100,
+          incorrect_meaning_answers: 0,
+          incorrect_reading_answers: 0,
+          created_at: '',
+        });
+        __insertRow('pending_reviews', {
+          id: 2,
+          assignment_id: 2,
+          subject_id: 101,
+          incorrect_meaning_answers: 1,
+          incorrect_reading_answers: 0,
+          created_at: '',
+        });
 
         await deleteAllPendingReviews();
 
@@ -619,8 +818,22 @@ describe('Database CRUD Operations', () => {
 
     describe('getPendingReviewCount', () => {
       it('should return the count of pending reviews', async () => {
-        __insertRow('pending_reviews', { id: 1, assignment_id: 1, subject_id: 100, incorrect_meaning_answers: 0, incorrect_reading_answers: 0, created_at: '' });
-        __insertRow('pending_reviews', { id: 2, assignment_id: 2, subject_id: 101, incorrect_meaning_answers: 1, incorrect_reading_answers: 0, created_at: '' });
+        __insertRow('pending_reviews', {
+          id: 1,
+          assignment_id: 1,
+          subject_id: 100,
+          incorrect_meaning_answers: 0,
+          incorrect_reading_answers: 0,
+          created_at: '',
+        });
+        __insertRow('pending_reviews', {
+          id: 2,
+          assignment_id: 2,
+          subject_id: 101,
+          incorrect_meaning_answers: 1,
+          incorrect_reading_answers: 0,
+          created_at: '',
+        });
 
         const count = await getPendingReviewCount();
 
@@ -655,7 +868,11 @@ describe('Database CRUD Operations', () => {
 
       it('should auto-increment IDs', async () => {
         const id1 = await insertPendingLesson(testPendingLesson);
-        const id2 = await insertPendingLesson({ ...testPendingLesson, assignment_id: 101, subject_id: 2 });
+        const id2 = await insertPendingLesson({
+          ...testPendingLesson,
+          assignment_id: 101,
+          subject_id: 2,
+        });
 
         expect(id2).toBe(id1 + 1);
       });
@@ -665,7 +882,10 @@ describe('Database CRUD Operations', () => {
         // In the real SQLite database, this would replace the existing row.
         // This test just verifies the function runs without error.
         await insertPendingLesson(testPendingLesson);
-        await insertPendingLesson({ ...testPendingLesson, started_at: '2024-01-16T10:00:00.000Z' });
+        await insertPendingLesson({
+          ...testPendingLesson,
+          started_at: '2024-01-16T10:00:00.000Z',
+        });
 
         // In real DB with UNIQUE constraint, this would be 1.
         // The mock doesn't enforce UNIQUE, so we just check it was inserted.
@@ -677,9 +897,21 @@ describe('Database CRUD Operations', () => {
     describe('insertPendingLessons', () => {
       it('should insert multiple pending lessons', async () => {
         const lessons: PendingLessonInput[] = [
-          { assignment_id: 100, subject_id: 1, started_at: '2024-01-15T10:00:00.000Z' },
-          { assignment_id: 101, subject_id: 2, started_at: '2024-01-15T10:00:00.000Z' },
-          { assignment_id: 102, subject_id: 3, started_at: '2024-01-15T10:00:00.000Z' },
+          {
+            assignment_id: 100,
+            subject_id: 1,
+            started_at: '2024-01-15T10:00:00.000Z',
+          },
+          {
+            assignment_id: 101,
+            subject_id: 2,
+            started_at: '2024-01-15T10:00:00.000Z',
+          },
+          {
+            assignment_id: 102,
+            subject_id: 3,
+            started_at: '2024-01-15T10:00:00.000Z',
+          },
         ];
 
         await insertPendingLessons(lessons);
@@ -745,8 +977,20 @@ describe('Database CRUD Operations', () => {
 
     describe('getAllPendingLessons', () => {
       it('should return all pending lessons', async () => {
-        __insertRow('pending_lessons', { id: 1, assignment_id: 100, subject_id: 1, started_at: '', created_at: '' });
-        __insertRow('pending_lessons', { id: 2, assignment_id: 101, subject_id: 2, started_at: '', created_at: '' });
+        __insertRow('pending_lessons', {
+          id: 1,
+          assignment_id: 100,
+          subject_id: 1,
+          started_at: '',
+          created_at: '',
+        });
+        __insertRow('pending_lessons', {
+          id: 2,
+          assignment_id: 101,
+          subject_id: 2,
+          started_at: '',
+          created_at: '',
+        });
 
         const lessons = await getAllPendingLessons();
 
@@ -762,7 +1006,13 @@ describe('Database CRUD Operations', () => {
 
     describe('deletePendingLesson', () => {
       it('should delete a pending lesson by ID', async () => {
-        __insertRow('pending_lessons', { id: 1, assignment_id: 100, subject_id: 1, started_at: '', created_at: '' });
+        __insertRow('pending_lessons', {
+          id: 1,
+          assignment_id: 100,
+          subject_id: 1,
+          started_at: '',
+          created_at: '',
+        });
 
         await deletePendingLesson(1);
 
@@ -773,7 +1023,13 @@ describe('Database CRUD Operations', () => {
 
     describe('deletePendingLessonByAssignmentId', () => {
       it('should delete a pending lesson by assignment ID', async () => {
-        __insertRow('pending_lessons', { id: 1, assignment_id: 100, subject_id: 1, started_at: '', created_at: '' });
+        __insertRow('pending_lessons', {
+          id: 1,
+          assignment_id: 100,
+          subject_id: 1,
+          started_at: '',
+          created_at: '',
+        });
 
         await deletePendingLessonByAssignmentId(100);
 
@@ -784,8 +1040,20 @@ describe('Database CRUD Operations', () => {
 
     describe('deleteAllPendingLessons', () => {
       it('should delete all pending lessons', async () => {
-        __insertRow('pending_lessons', { id: 1, assignment_id: 100, subject_id: 1, started_at: '', created_at: '' });
-        __insertRow('pending_lessons', { id: 2, assignment_id: 101, subject_id: 2, started_at: '', created_at: '' });
+        __insertRow('pending_lessons', {
+          id: 1,
+          assignment_id: 100,
+          subject_id: 1,
+          started_at: '',
+          created_at: '',
+        });
+        __insertRow('pending_lessons', {
+          id: 2,
+          assignment_id: 101,
+          subject_id: 2,
+          started_at: '',
+          created_at: '',
+        });
 
         await deleteAllPendingLessons();
 
@@ -796,8 +1064,20 @@ describe('Database CRUD Operations', () => {
 
     describe('getPendingLessonCount', () => {
       it('should return the count of pending lessons', async () => {
-        __insertRow('pending_lessons', { id: 1, assignment_id: 100, subject_id: 1, started_at: '', created_at: '' });
-        __insertRow('pending_lessons', { id: 2, assignment_id: 101, subject_id: 2, started_at: '', created_at: '' });
+        __insertRow('pending_lessons', {
+          id: 1,
+          assignment_id: 100,
+          subject_id: 1,
+          started_at: '',
+          created_at: '',
+        });
+        __insertRow('pending_lessons', {
+          id: 2,
+          assignment_id: 101,
+          subject_id: 2,
+          started_at: '',
+          created_at: '',
+        });
 
         const count = await getPendingLessonCount();
 
@@ -829,7 +1109,9 @@ describe('Database CRUD Operations', () => {
       });
 
       it('should return status with values after update', async () => {
-        await updateSyncStatus({ last_subjects_sync: '2023-01-01T00:00:00.000Z' });
+        await updateSyncStatus({
+          last_subjects_sync: '2023-01-01T00:00:00.000Z',
+        });
 
         const status = await getSyncStatus();
 
@@ -840,21 +1122,27 @@ describe('Database CRUD Operations', () => {
 
     describe('updateSyncStatus', () => {
       it('should update last_subjects_sync', async () => {
-        await updateSyncStatus({ last_subjects_sync: '2023-06-01T00:00:00.000Z' });
+        await updateSyncStatus({
+          last_subjects_sync: '2023-06-01T00:00:00.000Z',
+        });
 
         const status = await getSyncStatus();
         expect(status?.last_subjects_sync).toBe('2023-06-01T00:00:00.000Z');
       });
 
       it('should update last_assignments_sync', async () => {
-        await updateSyncStatus({ last_assignments_sync: '2023-06-02T00:00:00.000Z' });
+        await updateSyncStatus({
+          last_assignments_sync: '2023-06-02T00:00:00.000Z',
+        });
 
         const status = await getSyncStatus();
         expect(status?.last_assignments_sync).toBe('2023-06-02T00:00:00.000Z');
       });
 
       it('should update last_summary_sync', async () => {
-        await updateSyncStatus({ last_summary_sync: '2023-06-03T00:00:00.000Z' });
+        await updateSyncStatus({
+          last_summary_sync: '2023-06-03T00:00:00.000Z',
+        });
 
         const status = await getSyncStatus();
         expect(status?.last_summary_sync).toBe('2023-06-03T00:00:00.000Z');

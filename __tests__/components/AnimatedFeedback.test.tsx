@@ -1,8 +1,8 @@
 import React from 'react';
-import { render, waitFor, act } from '@testing-library/react-native';
-import { Text, Animated } from 'react-native';
+import { render, act } from '@testing-library/react-native';
+import { Text } from 'react-native';
 
-import { AnimatedFeedback, FeedbackType } from '../../src/components/AnimatedFeedback';
+import { AnimatedFeedback } from '../../src/components/AnimatedFeedback';
 
 describe('AnimatedFeedback', () => {
   beforeEach(() => {

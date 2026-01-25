@@ -366,7 +366,7 @@ export async function getSubjectById(
   if (result.rows.length === 0) {
     return null;
   }
-  return result.rows[0] as DatabaseSubject;
+  return result.rows[0] as unknown as DatabaseSubject;
 }
 
 /**
@@ -382,7 +382,7 @@ export async function getSubjectsByIds(
     `SELECT * FROM subjects WHERE id IN (${placeholders})`,
     ids,
   );
-  return result.rows as DatabaseSubject[];
+  return result.rows as unknown as DatabaseSubject[];
 }
 
 /**
@@ -395,7 +395,7 @@ export async function getSubjectsByLevel(
     'SELECT * FROM subjects WHERE level <= ? ORDER BY level, id',
     [maxLevel],
   );
-  return result.rows as DatabaseSubject[];
+  return result.rows as unknown as DatabaseSubject[];
 }
 
 /**
@@ -408,7 +408,7 @@ export async function getSubjectsByType(
     'SELECT * FROM subjects WHERE object_type = ? ORDER BY level, id',
     [objectType],
   );
-  return result.rows as DatabaseSubject[];
+  return result.rows as unknown as DatabaseSubject[];
 }
 
 /**
@@ -419,7 +419,7 @@ export async function getAllSubjects(): Promise<DatabaseSubject[]> {
     'SELECT * FROM subjects ORDER BY level, id',
     [],
   );
-  return result.rows as DatabaseSubject[];
+  return result.rows as unknown as DatabaseSubject[];
 }
 
 /**
@@ -516,7 +516,7 @@ export async function getAssignmentById(
   if (result.rows.length === 0) {
     return null;
   }
-  return result.rows[0] as DatabaseAssignment;
+  return result.rows[0] as unknown as DatabaseAssignment;
 }
 
 /**
@@ -532,7 +532,7 @@ export async function getAssignmentBySubjectId(
   if (result.rows.length === 0) {
     return null;
   }
-  return result.rows[0] as DatabaseAssignment;
+  return result.rows[0] as unknown as DatabaseAssignment;
 }
 
 /**
@@ -549,7 +549,7 @@ export async function getAvailableReviews(): Promise<DatabaseAssignment[]> {
      ORDER BY available_at`,
     [now],
   );
-  return result.rows as DatabaseAssignment[];
+  return result.rows as unknown as DatabaseAssignment[];
 }
 
 /**
@@ -563,7 +563,7 @@ export async function getAvailableLessons(): Promise<DatabaseAssignment[]> {
      ORDER BY id`,
     [],
   );
-  return result.rows as DatabaseAssignment[];
+  return result.rows as unknown as DatabaseAssignment[];
 }
 
 /**
@@ -571,7 +571,7 @@ export async function getAvailableLessons(): Promise<DatabaseAssignment[]> {
  */
 export async function getAllAssignments(): Promise<DatabaseAssignment[]> {
   const result = await executeSql('SELECT * FROM assignments ORDER BY id', []);
-  return result.rows as DatabaseAssignment[];
+  return result.rows as unknown as DatabaseAssignment[];
 }
 
 /**
@@ -655,7 +655,7 @@ export async function getPendingReviewById(
   if (result.rows.length === 0) {
     return null;
   }
-  return result.rows[0] as DatabasePendingReview;
+  return result.rows[0] as unknown as DatabasePendingReview;
 }
 
 /**
@@ -666,7 +666,7 @@ export async function getAllPendingReviews(): Promise<DatabasePendingReview[]> {
     'SELECT * FROM pending_reviews ORDER BY created_at',
     [],
   );
-  return result.rows as DatabasePendingReview[];
+  return result.rows as unknown as DatabasePendingReview[];
 }
 
 /**
@@ -753,7 +753,7 @@ export async function getPendingLessonById(
   if (result.rows.length === 0) {
     return null;
   }
-  return result.rows[0] as DatabasePendingLesson;
+  return result.rows[0] as unknown as DatabasePendingLesson;
 }
 
 /**
@@ -769,7 +769,7 @@ export async function getPendingLessonByAssignmentId(
   if (result.rows.length === 0) {
     return null;
   }
-  return result.rows[0] as DatabasePendingLesson;
+  return result.rows[0] as unknown as DatabasePendingLesson;
 }
 
 /**
@@ -780,7 +780,7 @@ export async function getAllPendingLessons(): Promise<DatabasePendingLesson[]> {
     'SELECT * FROM pending_lessons ORDER BY created_at',
     [],
   );
-  return result.rows as DatabasePendingLesson[];
+  return result.rows as unknown as DatabasePendingLesson[];
 }
 
 /**
@@ -831,7 +831,7 @@ export async function getSyncStatus(): Promise<DatabaseSyncStatus | null> {
   if (result.rows.length === 0) {
     return null;
   }
-  return result.rows[0] as DatabaseSyncStatus;
+  return result.rows[0] as unknown as DatabaseSyncStatus;
 }
 
 export interface SyncStatusUpdate {
