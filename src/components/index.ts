@@ -19,3 +19,5 @@ export {
   formatTimeUntil,
   type NextReviewIndicatorProps,
 } from './NextReviewIndicator';
+
+export { LessonCard, type LessonCardProps } from './LessonCard';
