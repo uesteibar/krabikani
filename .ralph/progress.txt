@@ -465,3 +465,32 @@
   - Browser verification not available (no dev-browser skill configured)
 
 ---
+
+## 2026-01-25 - US-017: Lesson Quiz - Question Display
+- What was implemented:
+  - LessonQuiz component for quizzing users on items from learning phase
+  - Question display showing characters prominently with WaniKani-inspired subject-type colors
+  - Meaning questions show "What is the meaning?" prompt, expect English text input
+  - Reading questions show "What is the reading?" prompt, use romaji-to-hiragana conversion
+  - generateQuizQuestions() function to create questions for all items
+  - Radicals get meaning-only questions; kanji/vocabulary/kana_vocabulary get both meaning and reading
+  - shuffleArray() using Fisher-Yates algorithm for randomized question order
+  - Progress indicator with X/Y counter and progress bar
+  - QuizItem interface (same structure as LessonItem)
+  - QuizQuestion interface with item, type, and unique key
+  - AnswerResult interface for tracking answers
+  - Empty state and completion state handling
+  - KeyboardAvoidingView for proper input handling
+- Files changed:
+  - src/components/LessonQuiz.tsx (new - quiz component with question display and romaji input)
+  - src/components/index.ts (updated - added LessonQuiz and related type exports)
+  - __tests__/components/LessonQuiz.test.tsx (new - 54 comprehensive tests)
+- **Learnings for future iterations:**
+  - Use useMemo with items dependency to generate questions only once
+  - processRomajiInput returns { hiragana, pending } for real-time display
+  - romajiToHiragana (with forceComplete) for final submission
+  - Question validation is a placeholder in this story - actual validation comes in US-018
+  - KeyboardAvoidingView behavior differs between iOS ('padding') and Android ('height')
+  - Browser verification not available (no dev-browser skill configured)
+
+---
