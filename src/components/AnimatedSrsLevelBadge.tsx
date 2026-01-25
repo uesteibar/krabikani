@@ -29,6 +29,8 @@ export interface AnimatedSrsLevelBadgeProps {
   fromStage?: number;
   /** Whether to show the level-up animation */
   animateLevelUp?: boolean;
+  /** Whether to show the level-down animation */
+  animateLevelDown?: boolean;
   /** Callback when animation completes */
   onAnimationComplete?: () => void;
   testID?: string;
@@ -48,11 +50,18 @@ const LEVEL_ICONS: Record<SrsLevelKey, string> = {
 // Default fallback color for invalid stages
 const DEFAULT_COLOR = SRS_LEVELS.apprentice.color;
 
-// Animation timing constants
+// Animation timing constants - Level Up
 const INITIAL_DISPLAY_DURATION = 200;
 const SCALE_UP_DURATION = 150;
 const CROSSFADE_DURATION = 300;
 const SCALE_DOWN_DURATION = 150;
+
+// Animation timing constants - Level Down
+const LEVEL_DOWN_INITIAL_DISPLAY = 200;
+const LEVEL_DOWN_SHAKE_DURATION = 50; // Duration per shake oscillation
+const LEVEL_DOWN_SHAKE_COUNT = 3; // Number of full shake cycles
+const LEVEL_DOWN_CROSSFADE_DURATION = 250;
+const LEVEL_DOWN_RED_PULSE_DURATION = 150;
 
 // Particle configuration
 const PARTICLE_COUNT = 8;
@@ -114,6 +123,7 @@ export function AnimatedSrsLevelBadge({
   stage,
   fromStage,
   animateLevelUp = false,
+  animateLevelDown = false,
   onAnimationComplete,
   testID,
 }: AnimatedSrsLevelBadgeProps) {
@@ -126,17 +136,24 @@ export function AnimatedSrsLevelBadge({
     currentLevelInfo &&
     previousLevelInfo.key !== currentLevelInfo.key;
 
-  const shouldAnimate = animateLevelUp && levelActuallyChanged;
+  const shouldAnimateLevelUp = animateLevelUp && levelActuallyChanged;
+  const shouldAnimateLevelDown = animateLevelDown && levelActuallyChanged;
 
   // Get colors for animation (use defaults for invalid stages to satisfy hooks)
   const currentColor = currentLevelInfo?.color ?? DEFAULT_COLOR;
   const previousColor = previousLevelInfo?.color ?? currentColor;
+
+  // Determine if any animation should play
+  const shouldAnimate = shouldAnimateLevelUp || shouldAnimateLevelDown;
 
   // Shared values for animation
   const scale = useSharedValue(1);
   const crossfadeProgress = useSharedValue(shouldAnimate ? 0 : 1);
   const glowOpacity = useSharedValue(0);
   const particleProgress = useSharedValue(0);
+  // Level-down specific shared values
+  const shakeOffset = useSharedValue(0);
+  const redTintOpacity = useSharedValue(0);
 
   // Animation complete callback
   const handleAnimationComplete = useCallback(() => {
@@ -145,12 +162,19 @@ export function AnimatedSrsLevelBadge({
 
   // Animated styles - must be called unconditionally before any early returns
   const containerAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    transform: [
+      { scale: scale.value },
+      { translateX: shakeOffset.value },
+    ],
   }));
 
   const glowAnimatedStyle = useAnimatedStyle(() => ({
     opacity: glowOpacity.value,
     shadowOpacity: glowOpacity.value,
+  }));
+
+  const redTintAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: redTintOpacity.value,
   }));
 
   const oldLevelAnimatedStyle = useAnimatedStyle(() => ({
@@ -180,27 +204,26 @@ export function AnimatedSrsLevelBadge({
     return { backgroundColor };
   });
 
-  // Generate particles for burst effect (must be before early return)
+  // Generate particles for burst effect (only for level-up, must be before early return)
   const particles = useMemo(() =>
-    shouldAnimate
+    shouldAnimateLevelUp
       ? Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
           id: i,
           color: PARTICLE_COLORS[i % PARTICLE_COLORS.length],
         }))
       : [],
-    [shouldAnimate],
+    [shouldAnimateLevelUp],
   );
 
   // Run the level-up animation
   useEffect(() => {
-    if (!shouldAnimate) {
-      // Reset to final state immediately
-      scale.value = 1;
-      crossfadeProgress.value = 1;
-      glowOpacity.value = 0;
-      particleProgress.value = 0;
+    if (!shouldAnimateLevelUp) {
       return;
     }
+
+    // Reset level-down values
+    shakeOffset.value = 0;
+    redTintOpacity.value = 0;
 
     // Animation sequence
     // 1. Show old level for 200ms (already showing at crossfadeProgress = 0)
@@ -263,13 +286,96 @@ export function AnimatedSrsLevelBadge({
       }),
     );
   }, [
-    shouldAnimate,
+    shouldAnimateLevelUp,
     scale,
     crossfadeProgress,
     glowOpacity,
     particleProgress,
+    shakeOffset,
+    redTintOpacity,
     handleAnimationComplete,
   ]);
+
+  // Run the level-down animation
+  useEffect(() => {
+    if (!shouldAnimateLevelDown) {
+      return;
+    }
+
+    // Reset level-up values
+    scale.value = 1;
+    glowOpacity.value = 0;
+    particleProgress.value = 0;
+
+    // Total shake duration
+    const totalShakeDuration = LEVEL_DOWN_SHAKE_DURATION * LEVEL_DOWN_SHAKE_COUNT * 2;
+
+    // 1. Show old level for initial display period, then shake
+    // Shake: oscillate left-right 3 times (each cycle = left + right)
+    shakeOffset.value = withDelay(
+      LEVEL_DOWN_INITIAL_DISPLAY,
+      withSequence(
+        // Shake cycle 1
+        withTiming(8, { duration: LEVEL_DOWN_SHAKE_DURATION, easing: Easing.linear }),
+        withTiming(-8, { duration: LEVEL_DOWN_SHAKE_DURATION, easing: Easing.linear }),
+        // Shake cycle 2
+        withTiming(8, { duration: LEVEL_DOWN_SHAKE_DURATION, easing: Easing.linear }),
+        withTiming(-8, { duration: LEVEL_DOWN_SHAKE_DURATION, easing: Easing.linear }),
+        // Shake cycle 3
+        withTiming(6, { duration: LEVEL_DOWN_SHAKE_DURATION, easing: Easing.linear }),
+        withTiming(0, { duration: LEVEL_DOWN_SHAKE_DURATION, easing: Easing.out(Easing.cubic) }),
+      ),
+    );
+
+    // 2. Red tint pulse during shake
+    redTintOpacity.value = withDelay(
+      LEVEL_DOWN_INITIAL_DISPLAY,
+      withSequence(
+        withTiming(0.4, {
+          duration: LEVEL_DOWN_RED_PULSE_DURATION,
+          easing: Easing.out(Easing.cubic),
+        }),
+        withTiming(0, {
+          duration: totalShakeDuration - LEVEL_DOWN_RED_PULSE_DURATION,
+          easing: Easing.in(Easing.cubic),
+        }),
+      ),
+    );
+
+    // 3. Cross-fade to new level after shake completes
+    crossfadeProgress.value = withDelay(
+      LEVEL_DOWN_INITIAL_DISPLAY + totalShakeDuration,
+      withTiming(1, {
+        duration: LEVEL_DOWN_CROSSFADE_DURATION,
+        easing: Easing.out(Easing.poly(4)),
+      }, (finished) => {
+        if (finished) {
+          runOnJS(handleAnimationComplete)();
+        }
+      }),
+    );
+  }, [
+    shouldAnimateLevelDown,
+    shakeOffset,
+    redTintOpacity,
+    crossfadeProgress,
+    scale,
+    glowOpacity,
+    particleProgress,
+    handleAnimationComplete,
+  ]);
+
+  // Reset to final state when not animating
+  useEffect(() => {
+    if (!shouldAnimate) {
+      scale.value = 1;
+      crossfadeProgress.value = 1;
+      glowOpacity.value = 0;
+      particleProgress.value = 0;
+      shakeOffset.value = 0;
+      redTintOpacity.value = 0;
+    }
+  }, [shouldAnimate, scale, crossfadeProgress, glowOpacity, particleProgress, shakeOffset, redTintOpacity]);
 
   // Don't render for invalid stages (after all hooks are called)
   if (!currentLevelInfo) {
@@ -308,6 +414,14 @@ export function AnimatedSrsLevelBadge({
 
         {/* Main badge container with animated background */}
         <Animated.View style={[styles.container, backgroundAnimatedStyle]}>
+          {/* Red tint overlay for level-down animation */}
+          {shouldAnimateLevelDown && (
+            <Animated.View
+              style={[styles.redTintOverlay, redTintAnimatedStyle]}
+              testID="srs-level-red-tint"
+            />
+          )}
+
           {/* Old level content (fades out) */}
           {shouldAnimate && previousLevelInfo && (
             <Animated.View style={[styles.levelContent, oldLevelAnimatedStyle]}>
@@ -375,6 +489,15 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     shadowRadius: 12,
     elevation: 8,
+  },
+  redTintOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: COLORS.feedback.incorrect,
+    borderRadius: BORDER_RADIUS.md,
   },
   icon: {
     fontSize: FONT_SIZES.sm,

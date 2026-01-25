@@ -1,3 +1,4 @@
+/* eslint-env jest */
 // Mock react-native-worklets first (dependency of reanimated)
 jest.mock('react-native-worklets', () => ({
   init: jest.fn(),
@@ -28,6 +29,8 @@ jest.mock('react-native-reanimated', () => {
       in: jest.fn(() => ({})),
       inOut: jest.fn(() => ({})),
       cubic: {},
+      linear: {},
+      poly: jest.fn(() => ({})),
     },
     interpolateColor: jest.fn((progress, inputRange, outputRange) => {
       // Return the second color (end color) by default

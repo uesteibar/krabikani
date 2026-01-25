@@ -125,4 +125,68 @@ describe('AnimatedSrsLevelBadge', () => {
     // which requires native bindings. This cannot be tested with mocks.
     // Manual testing or E2E testing is required for animation callback verification.
   });
+
+  describe('level-down animation', () => {
+    it('does not animate when animateLevelDown is false', () => {
+      const { queryByTestId } = render(
+        <AnimatedSrsLevelBadge stage={4} fromStage={5} animateLevelDown={false} />,
+      );
+      // Should show current level only, no old level
+      expect(queryByTestId('srs-level-name-old')).toBeNull();
+      // Should not show red tint overlay
+      expect(queryByTestId('srs-level-red-tint')).toBeNull();
+    });
+
+    it('does not animate when level stays the same', () => {
+      // Stage 2 -> 1 is still Apprentice, no level change
+      const { queryByTestId } = render(
+        <AnimatedSrsLevelBadge stage={1} fromStage={2} animateLevelDown={true} />,
+      );
+      // Should not show old level since level didn't actually change
+      expect(queryByTestId('srs-level-name-old')).toBeNull();
+      // Should not show red tint overlay
+      expect(queryByTestId('srs-level-red-tint')).toBeNull();
+    });
+
+    it('shows old level and red tint when animating level-down (Guru -> Apprentice)', () => {
+      // Stage 5 -> 4 is Guru -> Apprentice level change
+      const { getByTestId, queryByTestId } = render(
+        <AnimatedSrsLevelBadge stage={4} fromStage={5} animateLevelDown={true} />,
+      );
+      // Should show both old and new level during animation
+      expect(getByTestId('srs-level-name-old').props.children).toBe('Guru');
+      expect(getByTestId('srs-level-name').props.children).toBe('Apprentice');
+      // Should show red tint overlay for level-down
+      expect(queryByTestId('srs-level-red-tint')).toBeTruthy();
+    });
+
+    it('shows old level and red tint when animating level-down (Master -> Guru)', () => {
+      // Stage 7 -> 5 is Master -> Guru level change
+      const { getByTestId, queryByTestId } = render(
+        <AnimatedSrsLevelBadge stage={5} fromStage={7} animateLevelDown={true} />,
+      );
+      expect(getByTestId('srs-level-name-old').props.children).toBe('Master');
+      expect(getByTestId('srs-level-name').props.children).toBe('Guru');
+      expect(queryByTestId('srs-level-red-tint')).toBeTruthy();
+    });
+
+    it('shows old level and red tint when animating level-down (Enlightened -> Guru)', () => {
+      // Stage 8 -> 5 is Enlightened -> Guru level change
+      const { getByTestId, queryByTestId } = render(
+        <AnimatedSrsLevelBadge stage={5} fromStage={8} animateLevelDown={true} />,
+      );
+      expect(getByTestId('srs-level-name-old').props.children).toBe('Enlightened');
+      expect(getByTestId('srs-level-name').props.children).toBe('Guru');
+      expect(queryByTestId('srs-level-red-tint')).toBeTruthy();
+    });
+
+    it('does not show red tint overlay for level-up', () => {
+      // Stage 4 -> 5 is Apprentice -> Guru level UP
+      const { queryByTestId } = render(
+        <AnimatedSrsLevelBadge stage={5} fromStage={4} animateLevelUp={true} />,
+      );
+      // Should NOT show red tint overlay for level-up
+      expect(queryByTestId('srs-level-red-tint')).toBeNull();
+    });
+  });
 });

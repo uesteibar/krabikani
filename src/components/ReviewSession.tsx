@@ -48,7 +48,7 @@ import { MnemonicText } from './MnemonicText';
 import { ComponentDisplay } from './ComponentDisplay';
 import { SrsLevelBadge } from './SrsLevelBadge';
 import { AnimatedSrsLevelBadge } from './AnimatedSrsLevelBadge';
-import { getSrsLevelInfo } from '../theme';
+import { getSrsLevelInfo, calculateSrsStageAfterIncorrect } from '../theme';
 
 // ============================================
 // Types
@@ -307,6 +307,12 @@ export function ReviewSession({
     toStage: number;
   } | null>(null);
 
+  // Level-down animation state
+  const [levelDownAnimation, setLevelDownAnimation] = useState<{
+    fromStage: number;
+    toStage: number;
+  } | null>(null);
+
   // Wrap-up mode state
   const [isWrappingUp, setIsWrappingUp] = useState(false);
   // Track which items have been introduced (at least one question shown)
@@ -350,6 +356,7 @@ export function ReviewSession({
     setIsFuzzyMatch(false);
     setIncorrectFeedback(null);
     setLevelUpAnimation(null);
+    setLevelDownAnimation(null);
     setIsWrappingUp(false);
     setIntroducedItemIds(new Set());
     answeredQuestionsCount.current = 0;
@@ -505,6 +512,7 @@ export function ReviewSession({
     setIncorrectFeedback(null);
     setShowCorrectFeedback(false);
     setIsFuzzyMatch(false);
+    setLevelDownAnimation(null);
   }, [
     findNextQuestionIndex,
     questionQueue,
@@ -892,6 +900,23 @@ export function ReviewSession({
           ? item.meaningMnemonic
           : item.readingMnemonic ?? item.meaningMnemonic;
 
+      // Check if this incorrect answer causes a level-down
+      // WaniKani SRS: incorrect = penalty based on current stage
+      const currentStage = item.srsStage;
+      const newStage = calculateSrsStageAfterIncorrect(currentStage);
+      const currentLevel = getSrsLevelInfo(currentStage);
+      const newLevel = getSrsLevelInfo(newStage);
+      const isLevelDown =
+        currentLevel && newLevel && currentLevel.key !== newLevel.key;
+
+      // Set level-down animation state if level changed
+      if (isLevelDown) {
+        setLevelDownAnimation({
+          fromStage: currentStage,
+          toStage: newStage,
+        });
+      }
+
       setIncorrectFeedback({
         question: currentQuestion,
         userAnswer: answer,
@@ -1014,10 +1039,19 @@ export function ReviewSession({
           testID="review-session-character-container"
         >
           <View style={styles.srsLevelBadgeContainer}>
-            <SrsLevelBadge
-              stage={incorrectFeedback.question.item.srsStage}
-              testID="review-session-srs-badge"
-            />
+            {levelDownAnimation ? (
+              <AnimatedSrsLevelBadge
+                stage={levelDownAnimation.toStage}
+                fromStage={levelDownAnimation.fromStage}
+                animateLevelDown={true}
+                testID="review-session-srs-badge"
+              />
+            ) : (
+              <SrsLevelBadge
+                stage={incorrectFeedback.question.item.srsStage}
+                testID="review-session-srs-badge"
+              />
+            )}
           </View>
           <Text style={styles.characters} testID="review-session-characters">
             {incorrectFeedback.question.item.characters ?? '?'}

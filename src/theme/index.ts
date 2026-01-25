@@ -15,6 +15,7 @@ export {
   FONT_SIZES,
   SRS_LEVELS,
   getSrsLevelInfo,
+  calculateSrsStageAfterIncorrect,
 } from './colors';
 
 export type { SrsLevelKey, SrsLevelInfo } from './colors';
