@@ -37,3 +37,15 @@ Started:
   - Use __insertRow and __getTableRows from the mock database for testing CRUD operations
 ---
 
+## 2026-01-26 - US-003
+- What was implemented: Added Zen Mode Setting Toggle to the Settings screen
+- Files changed:
+  - `src/screens/SettingsScreen.tsx` - Added Switch import, zenModeEnabled state, handleZenModeToggle handler, and "Review Settings" section with zen mode toggle UI
+  - `__tests__/screens/SettingsScreen.test.tsx` - Added 7 new tests for Zen Mode Settings (render, load defaults, toggle on/off, persist to database)
+- **Learnings for future iterations:**
+  - The SettingsScreen loads settings with Promise.all to fetch API key and zen mode setting concurrently
+  - React Native's Switch component uses `onValueChange` (not `onChange`) for toggle events
+  - In tests, mock database.getSetting and database.setSetting - the storage index re-exports these from database module
+  - No browser testing tools available for this React Native project - manual verification in simulator needed
+---
+
