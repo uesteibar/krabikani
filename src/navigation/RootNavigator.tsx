@@ -2,6 +2,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 
 import { HomeScreen } from '../screens/HomeScreen';
+import { ItemDetailScreen } from '../screens/ItemDetailScreen';
 import { LessonsScreen } from '../screens/LessonsScreen';
 import { ReviewsScreen } from '../screens/ReviewsScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
@@ -64,6 +65,11 @@ export function RootNavigator() {
         name="Settings"
         component={SettingsScreen}
         options={{ title: 'Settings' }}
+      />
+      <Stack.Screen
+        name="ItemDetail"
+        component={ItemDetailScreen}
+        options={{ title: 'Item Details' }}
       />
     </Stack.Navigator>
   );
