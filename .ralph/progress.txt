@@ -200,3 +200,40 @@ Started:
   - Use `COLORS.text.tertiary` with `fontStyle: 'italic'` for helper text on disabled controls
 ---
 
+## 2026-01-26 - US-009
+- What was implemented:
+  - Created `src/services/reviewNotificationScheduler.ts` for hourly review notification scheduling
+  - Implemented `scheduleNextHourlyCheck()` function that schedules a trigger notification for next top of the hour
+  - Implemented `performHourlyReviewCheck()` function that:
+    - Skips notification if app is in foreground (uses AppState API)
+    - Skips notification if permissions not granted or notifications disabled
+    - Only displays notification if review count >= 20
+    - Schedules next hourly check after completing
+  - Implemented `handleNotificationEvent()` function to handle notifee events (foreground and background)
+  - Implemented `isAppInForeground()` function using AppState.currentState
+  - Added background event handler in `index.js` using `notifee.onBackgroundEvent()`
+  - Added foreground event handler in `App.tsx` using `notifee.onForegroundEvent()`
+  - Added `initializeReviewNotificationScheduler()` to start scheduler on app launch (if permissions granted)
+  - Added `stopReviewNotificationScheduler()` to cleanup on app termination
+  - Notification tap opens app to home screen via `pressAction: { id: 'default' }`
+  - Added EventType enum and cancelTriggerNotifications mock to notifee mock
+  - Added 25 unit tests covering all scheduling logic scenarios
+
+- Files changed:
+  - src/services/reviewNotificationScheduler.ts (new)
+  - src/services/index.ts (added exports for scheduler functions)
+  - index.js (added notifee background event handler)
+  - App.tsx (added foreground event handler and scheduler initialization)
+  - __mocks__/@notifee/react-native.ts (added EventType enum and cancelTriggerNotifications mock)
+  - __tests__/services/reviewNotificationScheduler.test.ts (new - 25 tests)
+
+- **Learnings for future iterations:**
+  - notifee.onBackgroundEvent() must be called BEFORE AppRegistry.registerComponent() in index.js
+  - Use dynamic import in background event handler to avoid circular dependencies: `const { fn } = await import('./path')`
+  - notifee.onForegroundEvent() returns an unsubscribe function that should be called in cleanup
+  - EventType.DELIVERED and EventType.TRIGGER_NOTIFICATION_CREATED are useful for handling scheduled notifications
+  - cancelTriggerNotifications() cancels by notification ID array, while cancelNotification() cancels single notifications
+  - AppState.currentState provides synchronous access to current app state ('active', 'background', 'inactive')
+  - Minimum review threshold (20) is a constant that can be adjusted easily
+---
+

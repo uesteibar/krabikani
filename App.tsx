@@ -3,6 +3,7 @@ import {
   DefaultTheme,
   DarkTheme,
 } from '@react-navigation/native';
+import notifee from '@notifee/react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   StatusBar,
@@ -13,6 +14,11 @@ import {
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { RootNavigator } from './src/navigation';
+import {
+  initializeReviewNotificationScheduler,
+  stopReviewNotificationScheduler,
+  handleNotificationEvent,
+} from './src/services';
 import { initializeDatabaseWithMigrations } from './src/storage';
 import { ThemeProvider, COLORS } from './src/theme';
 import {
@@ -78,6 +84,28 @@ function App() {
       stopAppStateSync();
     };
   }, []);
+
+  // Initialize review notification scheduler after database is ready
+  useEffect(() => {
+    if (!isDbReady) {
+      return;
+    }
+
+    // Initialize the scheduler
+    initializeReviewNotificationScheduler();
+
+    // Set up foreground notification event handler
+    const unsubscribeForeground = notifee.onForegroundEvent(
+      async ({ type, detail }) => {
+        await handleNotificationEvent(type, detail.notification?.id);
+      },
+    );
+
+    return () => {
+      unsubscribeForeground();
+      stopReviewNotificationScheduler();
+    };
+  }, [isDbReady]);
 
   // Memoize navigation theme to prevent unnecessary re-renders
   const navigationTheme = useMemo(

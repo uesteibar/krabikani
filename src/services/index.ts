@@ -20,3 +20,15 @@ export {
   openNotificationSettings,
   type PermissionStatus,
 } from './notificationService';
+
+export {
+  getReviewCountAtHour,
+  getNextHourTimestamp as getNextHourTimestampForScheduler,
+  isAppInForeground,
+  performHourlyReviewCheck,
+  scheduleNextHourlyCheck,
+  handleNotificationEvent,
+  initializeReviewNotificationScheduler,
+  stopReviewNotificationScheduler,
+  getMinReviewsForNotification,
+} from './reviewNotificationScheduler';

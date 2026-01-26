@@ -1,0 +1,343 @@
+import notifee, {
+  AuthorizationStatus,
+  TriggerType,
+  EventType,
+} from '@notifee/react-native';
+import {AppState} from 'react-native';
+import {
+  getReviewCountAtHour,
+  getNextHourTimestamp,
+  isAppInForeground,
+  performHourlyReviewCheck,
+  scheduleNextHourlyCheck,
+  handleNotificationEvent,
+  initializeReviewNotificationScheduler,
+  stopReviewNotificationScheduler,
+  getMinReviewsForNotification,
+} from '../../src/services/reviewNotificationScheduler';
+import {getAvailableReviews, getUpcomingReviewsByHour} from '../../src/storage';
+import {
+  checkPermissions,
+  getNotificationsEnabled,
+} from '../../src/services/notificationService';
+
+jest.mock('react-native', () => ({
+  Platform: {OS: 'ios'},
+  AppState: {
+    currentState: 'active',
+  },
+}));
+
+jest.mock('@notifee/react-native');
+jest.mock('../../src/storage', () => ({
+  getAvailableReviews: jest.fn(),
+  getUpcomingReviewsByHour: jest.fn(),
+}));
+jest.mock('../../src/services/notificationService', () => ({
+  checkPermissions: jest.fn(),
+  getNotificationsEnabled: jest.fn(),
+}));
+jest.mock('../../src/services/notificationConfig', () => ({
+  NOTIFICATION_CHANNEL_ID: 'review-reminders',
+  setupNotificationChannel: jest.fn(),
+}));
+
+describe('reviewNotificationScheduler', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Default mocks
+    (checkPermissions as jest.Mock).mockResolvedValue('granted');
+    (getNotificationsEnabled as jest.Mock).mockResolvedValue(true);
+    (getAvailableReviews as jest.Mock).mockResolvedValue([]);
+    (getUpcomingReviewsByHour as jest.Mock).mockResolvedValue([]);
+    (notifee.getNotificationSettings as jest.Mock).mockResolvedValue({
+      authorizationStatus: AuthorizationStatus.AUTHORIZED,
+    });
+  });
+
+  describe('getNextHourTimestamp', () => {
+    it('returns a timestamp for the next top of the hour', () => {
+      const now = new Date();
+      const timestamp = getNextHourTimestamp();
+      const nextHour = new Date(timestamp);
+
+      // Should be in the future
+      expect(timestamp).toBeGreaterThan(now.getTime());
+
+      // Should be at the top of the hour (minutes, seconds, ms = 0)
+      expect(nextHour.getMinutes()).toBe(0);
+      expect(nextHour.getSeconds()).toBe(0);
+      expect(nextHour.getMilliseconds()).toBe(0);
+    });
+
+    it('returns timestamp at most 1 hour in the future', () => {
+      const now = new Date();
+      const timestamp = getNextHourTimestamp();
+      const oneHourFromNow = now.getTime() + 60 * 60 * 1000;
+
+      expect(timestamp).toBeLessThanOrEqual(oneHourFromNow);
+    });
+  });
+
+  describe('isAppInForeground', () => {
+    it('returns true when app state is active', () => {
+      (AppState as any).currentState = 'active';
+      expect(isAppInForeground()).toBe(true);
+    });
+
+    it('returns false when app state is background', () => {
+      (AppState as any).currentState = 'background';
+      expect(isAppInForeground()).toBe(false);
+    });
+
+    it('returns false when app state is inactive', () => {
+      (AppState as any).currentState = 'inactive';
+      expect(isAppInForeground()).toBe(false);
+    });
+  });
+
+  describe('getReviewCountAtHour', () => {
+    it('returns count of current reviews when no upcoming reviews', async () => {
+      (getAvailableReviews as jest.Mock).mockResolvedValue([
+        {id: 1},
+        {id: 2},
+        {id: 3},
+      ]);
+      (getUpcomingReviewsByHour as jest.Mock).mockResolvedValue([]);
+
+      const count = await getReviewCountAtHour(new Date());
+
+      expect(count).toBe(3);
+    });
+
+    it('adds upcoming reviews at target hour to count', async () => {
+      const now = new Date();
+      const targetHour = new Date(now);
+      targetHour.setHours(now.getHours() + 2);
+
+      (getAvailableReviews as jest.Mock).mockResolvedValue([{id: 1}, {id: 2}]);
+      (getUpcomingReviewsByHour as jest.Mock).mockResolvedValue([
+        {hour: new Date(now.getTime() + 3600000), count: 5}, // 1 hour from now
+        {hour: new Date(now.getTime() + 7200000), count: 10}, // 2 hours from now
+      ]);
+
+      const count = await getReviewCountAtHour(targetHour);
+
+      // 2 current + 5 (1st hour) + 10 (2nd hour) = 17
+      expect(count).toBe(17);
+    });
+  });
+
+  describe('getMinReviewsForNotification', () => {
+    it('returns 20', () => {
+      expect(getMinReviewsForNotification()).toBe(20);
+    });
+  });
+
+  describe('performHourlyReviewCheck', () => {
+    beforeEach(() => {
+      (AppState as any).currentState = 'background';
+    });
+
+    it('skips notification if app is in foreground', async () => {
+      (AppState as any).currentState = 'active';
+      (getAvailableReviews as jest.Mock).mockResolvedValue(
+        Array(25).fill({id: 1}),
+      );
+
+      await performHourlyReviewCheck();
+
+      expect(notifee.displayNotification).not.toHaveBeenCalled();
+    });
+
+    it('skips notification if permissions not granted', async () => {
+      (checkPermissions as jest.Mock).mockResolvedValue('denied');
+      (getAvailableReviews as jest.Mock).mockResolvedValue(
+        Array(25).fill({id: 1}),
+      );
+
+      await performHourlyReviewCheck();
+
+      expect(notifee.displayNotification).not.toHaveBeenCalled();
+    });
+
+    it('skips notification if notifications are disabled', async () => {
+      (getNotificationsEnabled as jest.Mock).mockResolvedValue(false);
+      (getAvailableReviews as jest.Mock).mockResolvedValue(
+        Array(25).fill({id: 1}),
+      );
+
+      await performHourlyReviewCheck();
+
+      expect(notifee.displayNotification).not.toHaveBeenCalled();
+    });
+
+    it('skips notification if review count is less than 20', async () => {
+      (getAvailableReviews as jest.Mock).mockResolvedValue(
+        Array(19).fill({id: 1}),
+      );
+
+      await performHourlyReviewCheck();
+
+      expect(notifee.displayNotification).not.toHaveBeenCalled();
+    });
+
+    it('displays notification if review count is 20 or more', async () => {
+      (getAvailableReviews as jest.Mock).mockResolvedValue(
+        Array(20).fill({id: 1}),
+      );
+
+      await performHourlyReviewCheck();
+
+      expect(notifee.displayNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'UnaiNikani',
+          body: '20 reviews ready! Time to level up your Japanese',
+        }),
+      );
+    });
+
+    it('displays correct message with exact review count', async () => {
+      (getAvailableReviews as jest.Mock).mockResolvedValue(
+        Array(47).fill({id: 1}),
+      );
+
+      await performHourlyReviewCheck();
+
+      expect(notifee.displayNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: '47 reviews ready! Time to level up your Japanese',
+        }),
+      );
+    });
+
+    it('schedules next hourly check after performing check', async () => {
+      (getAvailableReviews as jest.Mock).mockResolvedValue([]);
+
+      await performHourlyReviewCheck();
+
+      expect(notifee.cancelTriggerNotifications).toHaveBeenCalled();
+      expect(notifee.createTriggerNotification).toHaveBeenCalled();
+    });
+  });
+
+  describe('scheduleNextHourlyCheck', () => {
+    it('cancels existing scheduled check', async () => {
+      await scheduleNextHourlyCheck();
+
+      expect(notifee.cancelTriggerNotifications).toHaveBeenCalledWith([
+        'hourly-review-check',
+      ]);
+    });
+
+    it('creates a trigger notification for next hour', async () => {
+      const beforeCall = getNextHourTimestamp();
+      await scheduleNextHourlyCheck();
+      const afterCall = getNextHourTimestamp();
+
+      expect(notifee.createTriggerNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'hourly-review-check',
+        }),
+        expect.objectContaining({
+          type: TriggerType.TIMESTAMP,
+          timestamp: expect.any(Number),
+        }),
+      );
+
+      const call = (notifee.createTriggerNotification as jest.Mock).mock
+        .calls[0];
+      const trigger = call[1];
+      expect(trigger.timestamp).toBeGreaterThanOrEqual(beforeCall);
+      expect(trigger.timestamp).toBeLessThanOrEqual(afterCall);
+    });
+  });
+
+  describe('handleNotificationEvent', () => {
+    beforeEach(() => {
+      (AppState as any).currentState = 'background';
+    });
+
+    it('performs check when trigger notification is delivered', async () => {
+      (getAvailableReviews as jest.Mock).mockResolvedValue(
+        Array(25).fill({id: 1}),
+      );
+
+      await handleNotificationEvent(EventType.DELIVERED, 'hourly-review-check');
+
+      expect(notifee.cancelNotification).toHaveBeenCalledWith(
+        'hourly-review-check',
+      );
+      expect(notifee.displayNotification).toHaveBeenCalled();
+    });
+
+    it('performs check when trigger notification is created', async () => {
+      (getAvailableReviews as jest.Mock).mockResolvedValue(
+        Array(25).fill({id: 1}),
+      );
+
+      await handleNotificationEvent(
+        EventType.TRIGGER_NOTIFICATION_CREATED,
+        'hourly-review-check',
+      );
+
+      expect(notifee.cancelNotification).toHaveBeenCalledWith(
+        'hourly-review-check',
+      );
+    });
+
+    it('ignores events for other notifications', async () => {
+      await handleNotificationEvent(
+        EventType.DELIVERED,
+        'some-other-notification',
+      );
+
+      expect(notifee.cancelNotification).not.toHaveBeenCalled();
+    });
+
+    it('ignores events with undefined notification id', async () => {
+      await handleNotificationEvent(EventType.DELIVERED, undefined);
+
+      expect(notifee.cancelNotification).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('initializeReviewNotificationScheduler', () => {
+    it('schedules hourly check when permissions and setting are enabled', async () => {
+      (checkPermissions as jest.Mock).mockResolvedValue('granted');
+      (getNotificationsEnabled as jest.Mock).mockResolvedValue(true);
+
+      await initializeReviewNotificationScheduler();
+
+      expect(notifee.createTriggerNotification).toHaveBeenCalled();
+    });
+
+    it('does not schedule when permissions are not granted', async () => {
+      (checkPermissions as jest.Mock).mockResolvedValue('denied');
+      (getNotificationsEnabled as jest.Mock).mockResolvedValue(true);
+
+      await initializeReviewNotificationScheduler();
+
+      expect(notifee.createTriggerNotification).not.toHaveBeenCalled();
+    });
+
+    it('does not schedule when notifications are disabled', async () => {
+      (checkPermissions as jest.Mock).mockResolvedValue('granted');
+      (getNotificationsEnabled as jest.Mock).mockResolvedValue(false);
+
+      await initializeReviewNotificationScheduler();
+
+      expect(notifee.createTriggerNotification).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('stopReviewNotificationScheduler', () => {
+    it('cancels the hourly check trigger', async () => {
+      await stopReviewNotificationScheduler();
+
+      expect(notifee.cancelTriggerNotifications).toHaveBeenCalledWith([
+        'hourly-review-check',
+      ]);
+    });
+  });
+});
