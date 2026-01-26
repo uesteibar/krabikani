@@ -19,6 +19,11 @@ export const AuthorizationStatus = {
   PROVISIONAL: 2,
 };
 
+export const TriggerType = {
+  TIMESTAMP: 0,
+  INTERVAL: 1,
+};
+
 const mockNotifee = {
   createChannel: jest.fn().mockResolvedValue('review-reminders'),
   displayNotification: jest.fn().mockResolvedValue('notification-id'),

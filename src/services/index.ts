@@ -10,5 +10,8 @@ export {
   checkPermissions,
   setBadgeCount,
   clearBadge,
+  getNextHourTimestamp,
+  scheduleHourlyNotification,
+  cancelAllNotifications,
   type PermissionStatus,
 } from './notificationService';
