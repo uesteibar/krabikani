@@ -371,3 +371,32 @@ Started:
 
 ---
 
+## 2026-01-26 - US-015
+- What was implemented: Add Chart Animations and Interactions
+  - Added staggered bar growth animations with 50ms delay between each bar (left to right)
+  - Used react-native-reanimated with withDelay and withTiming for smooth 60fps animations
+  - Created AnimatedBar component that individually animates each bar's height
+  - Added tooltip on bar tap showing exact count (e.g., "15 reviews at 3pm")
+  - Tooltip toggles on tap, dismisses when tapping same bar again or container
+  - Tooltip shows singular "review" for count of 1, plural "reviews" otherwise
+  - Added empty state when 0 reviews in next 12 hours:
+    - Shows celebration emoji 🎉
+    - "All caught up!" title
+    - "No reviews in the next 12 hours" message
+    - Optional "Next review in X hours/days" when nextReviewAt prop provided
+  - Added reduced motion accessibility support:
+    - Checks AccessibilityInfo.isReduceMotionEnabled() on mount
+    - Listens for reduceMotionChanged events
+    - Skips animations (instant display) when reduced motion is enabled
+  - Updated HomeScreen to pass nextReviewAt prop to UpcomingReviewsChart
+- Files changed:
+  - src/components/UpcomingReviewsChart.tsx (added animations, tooltip, empty state, reduced motion)
+  - src/screens/HomeScreen.tsx (pass nextReviewAt prop to chart)
+  - __tests__/components/UpcomingReviewsChart.test.tsx (added 17 new tests, total 30 tests)
+- **Learnings for future iterations:**
+  - Patterns discovered: Use separate AnimatedBar child component for per-item animations with shared values
+  - Gotchas encountered: Don't include reanimated shared values in useEffect deps when mocked (use eslint-disable comment)
+  - Useful context: formatRelativeTime helper formats dates as "soon", "in X minutes", "in X hours", or "in X days"
+
+---
+
