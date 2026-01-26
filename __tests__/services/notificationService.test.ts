@@ -16,10 +16,10 @@ import {
   setHasAskedForPermissions,
   openNotificationSettings,
 } from '../../src/services/notificationService';
-import {getSetting, setSetting} from '../../src/storage';
+import { getSetting, setSetting } from '../../src/storage';
 
 jest.mock('react-native', () => ({
-  Platform: {OS: 'ios'},
+  Platform: { OS: 'android' },
 }));
 
 jest.mock('@notifee/react-native');
@@ -212,19 +212,6 @@ describe('notificationService', () => {
       // Timestamp should be for the next hour
       expect(trigger.timestamp).toBeGreaterThanOrEqual(beforeCall);
       expect(trigger.timestamp).toBeLessThanOrEqual(afterCall);
-    });
-
-    it('includes correct iOS configuration (no sound)', async () => {
-      await scheduleHourlyNotification(5);
-
-      expect(notifee.createTriggerNotification).toHaveBeenCalledWith(
-        expect.objectContaining({
-          ios: {
-            sound: undefined,
-          },
-        }),
-        expect.anything(),
-      );
     });
 
     it('includes correct Android configuration', async () => {

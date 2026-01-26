@@ -1,5 +1,8 @@
-import notifee, {AndroidImportance, AndroidVisibility} from '@notifee/react-native';
-import {Platform} from 'react-native';
+import notifee, {
+  AndroidImportance,
+  AndroidVisibility,
+} from '@notifee/react-native';
+import { Platform } from 'react-native';
 
 export const NOTIFICATION_CHANNEL_ID = 'review-reminders';
 export const NOTIFICATION_CHANNEL_NAME = 'Review Reminders';
@@ -31,9 +34,6 @@ export async function displayTestNotification(): Promise<string> {
       pressAction: {
         id: 'default',
       },
-    },
-    ios: {
-      sound: undefined, // No sound for iOS
     },
   });
 }

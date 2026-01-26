@@ -1,5 +1,8 @@
-import {Platform} from 'react-native';
-import notifee, {AndroidImportance, AndroidVisibility} from '@notifee/react-native';
+import { Platform } from 'react-native';
+import notifee, {
+  AndroidImportance,
+  AndroidVisibility,
+} from '@notifee/react-native';
 import {
   setupNotificationChannel,
   displayTestNotification,
@@ -29,14 +32,6 @@ describe('notificationConfig', () => {
         sound: undefined,
       });
     });
-
-    it('does not create channel on iOS', async () => {
-      Platform.OS = 'ios';
-
-      await setupNotificationChannel();
-
-      expect(notifee.createChannel).not.toHaveBeenCalled();
-    });
   });
 
   describe('displayTestNotification', () => {
@@ -55,9 +50,6 @@ describe('notificationConfig', () => {
             id: 'default',
           },
         },
-        ios: {
-          sound: undefined,
-        },
       });
     });
 
@@ -67,15 +59,6 @@ describe('notificationConfig', () => {
       await displayTestNotification();
 
       expect(notifee.createChannel).toHaveBeenCalled();
-    });
-
-    it('does not set up channel on iOS', async () => {
-      Platform.OS = 'ios';
-
-      await displayTestNotification();
-
-      expect(notifee.createChannel).not.toHaveBeenCalled();
-      expect(notifee.displayNotification).toHaveBeenCalled();
     });
   });
 

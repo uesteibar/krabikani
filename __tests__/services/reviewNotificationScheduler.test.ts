@@ -3,7 +3,7 @@ import notifee, {
   TriggerType,
   EventType,
 } from '@notifee/react-native';
-import {AppState} from 'react-native';
+import { AppState } from 'react-native';
 import {
   getReviewCountAtHour,
   getNextHourTimestamp,
@@ -15,7 +15,10 @@ import {
   stopReviewNotificationScheduler,
   getMinReviewsForNotification,
 } from '../../src/services/reviewNotificationScheduler';
-import {getAvailableReviews, getUpcomingReviewsByHour} from '../../src/storage';
+import {
+  getAvailableReviews,
+  getUpcomingReviewsByHour,
+} from '../../src/storage';
 import {
   checkPermissions,
   getNotificationsEnabled,
@@ -23,7 +26,7 @@ import {
 } from '../../src/services/notificationService';
 
 jest.mock('react-native', () => ({
-  Platform: {OS: 'ios'},
+  Platform: { OS: 'ios' },
   AppState: {
     currentState: 'active',
   },
@@ -101,9 +104,9 @@ describe('reviewNotificationScheduler', () => {
   describe('getReviewCountAtHour', () => {
     it('returns count of current reviews when no upcoming reviews', async () => {
       (getAvailableReviews as jest.Mock).mockResolvedValue([
-        {id: 1},
-        {id: 2},
-        {id: 3},
+        { id: 1 },
+        { id: 2 },
+        { id: 3 },
       ]);
       (getUpcomingReviewsByHour as jest.Mock).mockResolvedValue([]);
 
@@ -117,10 +120,13 @@ describe('reviewNotificationScheduler', () => {
       const targetHour = new Date(now);
       targetHour.setHours(now.getHours() + 2);
 
-      (getAvailableReviews as jest.Mock).mockResolvedValue([{id: 1}, {id: 2}]);
+      (getAvailableReviews as jest.Mock).mockResolvedValue([
+        { id: 1 },
+        { id: 2 },
+      ]);
       (getUpcomingReviewsByHour as jest.Mock).mockResolvedValue([
-        {hour: new Date(now.getTime() + 3600000), count: 5}, // 1 hour from now
-        {hour: new Date(now.getTime() + 7200000), count: 10}, // 2 hours from now
+        { hour: new Date(now.getTime() + 3600000), count: 5 }, // 1 hour from now
+        { hour: new Date(now.getTime() + 7200000), count: 10 }, // 2 hours from now
       ]);
 
       const count = await getReviewCountAtHour(targetHour);
@@ -144,7 +150,7 @@ describe('reviewNotificationScheduler', () => {
     it('skips notification if app is in foreground', async () => {
       (AppState as any).currentState = 'active';
       (getAvailableReviews as jest.Mock).mockResolvedValue(
-        Array(25).fill({id: 1}),
+        Array(25).fill({ id: 1 }),
       );
 
       await performHourlyReviewCheck();
@@ -155,7 +161,7 @@ describe('reviewNotificationScheduler', () => {
     it('skips notification if permissions not granted', async () => {
       (checkPermissions as jest.Mock).mockResolvedValue('denied');
       (getAvailableReviews as jest.Mock).mockResolvedValue(
-        Array(25).fill({id: 1}),
+        Array(25).fill({ id: 1 }),
       );
 
       await performHourlyReviewCheck();
@@ -166,7 +172,7 @@ describe('reviewNotificationScheduler', () => {
     it('skips notification if notifications are disabled', async () => {
       (getNotificationsEnabled as jest.Mock).mockResolvedValue(false);
       (getAvailableReviews as jest.Mock).mockResolvedValue(
-        Array(25).fill({id: 1}),
+        Array(25).fill({ id: 1 }),
       );
 
       await performHourlyReviewCheck();
@@ -176,7 +182,7 @@ describe('reviewNotificationScheduler', () => {
 
     it('skips notification if review count is less than 20', async () => {
       (getAvailableReviews as jest.Mock).mockResolvedValue(
-        Array(19).fill({id: 1}),
+        Array(19).fill({ id: 1 }),
       );
 
       await performHourlyReviewCheck();
@@ -186,7 +192,7 @@ describe('reviewNotificationScheduler', () => {
 
     it('displays notification if review count is 20 or more', async () => {
       (getAvailableReviews as jest.Mock).mockResolvedValue(
-        Array(20).fill({id: 1}),
+        Array(20).fill({ id: 1 }),
       );
 
       await performHourlyReviewCheck();
@@ -201,7 +207,7 @@ describe('reviewNotificationScheduler', () => {
 
     it('displays correct message with exact review count', async () => {
       (getAvailableReviews as jest.Mock).mockResolvedValue(
-        Array(47).fill({id: 1}),
+        Array(47).fill({ id: 1 }),
       );
 
       await performHourlyReviewCheck();
@@ -224,7 +230,7 @@ describe('reviewNotificationScheduler', () => {
 
     it('updates badge count to current review count', async () => {
       (getAvailableReviews as jest.Mock).mockResolvedValue(
-        Array(47).fill({id: 1}),
+        Array(47).fill({ id: 1 }),
       );
 
       await performHourlyReviewCheck();
@@ -242,7 +248,7 @@ describe('reviewNotificationScheduler', () => {
 
     it('updates badge even when review count is below notification threshold', async () => {
       (getAvailableReviews as jest.Mock).mockResolvedValue(
-        Array(15).fill({id: 1}),
+        Array(15).fill({ id: 1 }),
       );
 
       await performHourlyReviewCheck();
@@ -254,7 +260,7 @@ describe('reviewNotificationScheduler', () => {
     it('does not update badge when app is in foreground', async () => {
       (AppState as any).currentState = 'active';
       (getAvailableReviews as jest.Mock).mockResolvedValue(
-        Array(25).fill({id: 1}),
+        Array(25).fill({ id: 1 }),
       );
 
       await performHourlyReviewCheck();
@@ -265,7 +271,7 @@ describe('reviewNotificationScheduler', () => {
     it('does not update badge when permissions not granted', async () => {
       (checkPermissions as jest.Mock).mockResolvedValue('denied');
       (getAvailableReviews as jest.Mock).mockResolvedValue(
-        Array(25).fill({id: 1}),
+        Array(25).fill({ id: 1 }),
       );
 
       await performHourlyReviewCheck();
@@ -276,7 +282,7 @@ describe('reviewNotificationScheduler', () => {
     it('does not update badge when notifications are disabled', async () => {
       (getNotificationsEnabled as jest.Mock).mockResolvedValue(false);
       (getAvailableReviews as jest.Mock).mockResolvedValue(
-        Array(25).fill({id: 1}),
+        Array(25).fill({ id: 1 }),
       );
 
       await performHourlyReviewCheck();
@@ -324,7 +330,7 @@ describe('reviewNotificationScheduler', () => {
 
     it('performs check when trigger notification is delivered', async () => {
       (getAvailableReviews as jest.Mock).mockResolvedValue(
-        Array(25).fill({id: 1}),
+        Array(25).fill({ id: 1 }),
       );
 
       await handleNotificationEvent(EventType.DELIVERED, 'hourly-review-check');
@@ -335,9 +341,9 @@ describe('reviewNotificationScheduler', () => {
       expect(notifee.displayNotification).toHaveBeenCalled();
     });
 
-    it('performs check when trigger notification is created', async () => {
+    it('ignores TRIGGER_NOTIFICATION_CREATED events (they fire when scheduled, not when triggered)', async () => {
       (getAvailableReviews as jest.Mock).mockResolvedValue(
-        Array(25).fill({id: 1}),
+        Array(25).fill({ id: 1 }),
       );
 
       await handleNotificationEvent(
@@ -345,9 +351,10 @@ describe('reviewNotificationScheduler', () => {
         'hourly-review-check',
       );
 
-      expect(notifee.cancelNotification).toHaveBeenCalledWith(
-        'hourly-review-check',
-      );
+      // Should NOT perform check - TRIGGER_NOTIFICATION_CREATED fires when notification
+      // is scheduled, not when it fires. We only handle DELIVERED.
+      expect(notifee.cancelNotification).not.toHaveBeenCalled();
+      expect(notifee.displayNotification).not.toHaveBeenCalled();
     });
 
     it('ignores events for other notifications', async () => {

@@ -1,10 +1,13 @@
-import notifee, {AuthorizationStatus, TriggerType} from '@notifee/react-native';
-import {Platform} from 'react-native';
+import notifee, {
+  AuthorizationStatus,
+  TriggerType,
+} from '@notifee/react-native';
+import { Platform } from 'react-native';
 import {
   NOTIFICATION_CHANNEL_ID,
   setupNotificationChannel,
 } from './notificationConfig';
-import {getSetting, setSetting} from '../storage';
+import { getSetting, setSetting } from '../storage';
 
 // Settings keys for notification preferences
 const NOTIFICATIONS_ENABLED_KEY = 'notifications_enabled';
@@ -30,7 +33,6 @@ function mapAuthorizationStatus(status: number): PermissionStatus {
 
 /**
  * Requests notification permissions from the OS.
- * On iOS, this shows the system permission dialog.
  * On Android, this requests POST_NOTIFICATIONS permission (Android 13+).
  * @returns The resulting permission status
  */
@@ -50,7 +52,7 @@ export async function checkPermissions(): Promise<PermissionStatus> {
 
 /**
  * Sets the app icon badge count.
- * Works on both iOS and Android (Android 8.0+ with launcher support).
+ * Works on Android 8.0+ with launcher support.
  * @param count - The badge number to display. Use 0 to clear the badge.
  */
 export async function setBadgeCount(count: number): Promise<void> {
@@ -100,9 +102,6 @@ export async function scheduleHourlyNotification(
         pressAction: {
           id: 'default',
         },
-      },
-      ios: {
-        sound: undefined, // No sound for iOS
       },
     },
     {

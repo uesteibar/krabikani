@@ -2,10 +2,10 @@
  * Review notification scheduler.
  * Handles hourly checks for reviews and schedules notifications when appropriate.
  */
-import notifee, {EventType, TriggerType} from '@notifee/react-native';
-import {AppState, Platform} from 'react-native';
+import notifee, { EventType, TriggerType } from '@notifee/react-native';
+import { AppState, Platform } from 'react-native';
 
-import {getAvailableReviews, getUpcomingReviewsByHour} from '../storage';
+import { getAvailableReviews, getUpcomingReviewsByHour } from '../storage';
 import {
   NOTIFICATION_CHANNEL_ID,
   setupNotificationChannel,
@@ -114,9 +114,6 @@ export async function performHourlyReviewCheck(): Promise<void> {
           id: 'default',
         },
       },
-      ios: {
-        sound: undefined, // No sound for iOS
-      },
     });
   }
 
@@ -154,9 +151,6 @@ export async function scheduleNextHourlyCheck(): Promise<void> {
           id: 'default',
         },
       },
-      ios: {
-        sound: undefined,
-      },
     },
     {
       type: TriggerType.TIMESTAMP,
@@ -173,11 +167,10 @@ export async function handleNotificationEvent(
   type: EventType,
   notificationId: string | undefined,
 ): Promise<void> {
-  // Check if this is our hourly check notification trigger
-  if (
-    type === EventType.TRIGGER_NOTIFICATION_CREATED ||
-    type === EventType.DELIVERED
-  ) {
+  // Check if this is our hourly check notification that was delivered
+  // Note: We only handle DELIVERED, not TRIGGER_NOTIFICATION_CREATED.
+  // TRIGGER_NOTIFICATION_CREATED fires when the trigger is *scheduled*, not when it fires.
+  if (type === EventType.DELIVERED) {
     if (notificationId === HOURLY_CHECK_NOTIFICATION_ID) {
       // Cancel the trigger notification immediately (it's just a trigger)
       await notifee.cancelNotification(HOURLY_CHECK_NOTIFICATION_ID);
