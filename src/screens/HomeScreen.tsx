@@ -368,6 +368,7 @@ export function HomeScreen() {
               <UpcomingReviewsChart
                 data={upcomingReviewsData.hourlyBuckets}
                 nextReviewAt={dashboardData.nextReviewAt}
+                currentPendingCount={dashboardData.reviewsCount}
               />
             )}
           </View>

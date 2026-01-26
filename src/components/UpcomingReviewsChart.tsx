@@ -15,6 +15,8 @@ export interface UpcomingReviewsChartProps {
   data: UpcomingReviewsHourBucket[];
   /** Next review time (for empty state display) */
   nextReviewAt?: Date | null;
+  /** Number of reviews currently pending (included in cumulative totals) */
+  currentPendingCount?: number;
 }
 
 /**
@@ -76,10 +78,11 @@ interface RowData {
 export function UpcomingReviewsChart({
   data,
   nextReviewAt,
+  currentPendingCount = 0,
 }: UpcomingReviewsChartProps) {
-  // Calculate rows with cumulative totals
+  // Calculate rows with cumulative totals (starting from current pending reviews)
   const rows: RowData[] = useMemo(() => {
-    let cumulative = 0;
+    let cumulative = currentPendingCount;
     return data.map(bucket => {
       cumulative += bucket.count;
       return {
@@ -90,7 +93,7 @@ export function UpcomingReviewsChart({
         isCurrent: isCurrentHour(bucket.hour),
       };
     });
-  }, [data]);
+  }, [data, currentPendingCount]);
 
   // Find max total for bar scaling
   const maxTotal = useMemo(() => {

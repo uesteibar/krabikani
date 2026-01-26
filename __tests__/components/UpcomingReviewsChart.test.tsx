@@ -106,6 +106,33 @@ describe('UpcomingReviewsChart', () => {
       expect(getByText('+10')).toBeTruthy();
       expect(getByText('(15)')).toBeTruthy();
     });
+
+    it('should include currentPendingCount in cumulative totals', () => {
+      const data = createTestData([5, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+
+      const { getByText } = render(
+        <UpcomingReviewsChart data={data} currentPendingCount={10} />,
+      );
+
+      // With 10 pending, first row: +5 (15) - 10 pending + 5 new = 15
+      expect(getByText('+5')).toBeTruthy();
+      expect(getByText('(15)')).toBeTruthy();
+      // Second row: +10 (25) - 10 pending + 5 + 10 = 25
+      expect(getByText('+10')).toBeTruthy();
+      expect(getByText('(25)')).toBeTruthy();
+    });
+
+    it('should work with zero currentPendingCount (default behavior)', () => {
+      const data = createTestData([5, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+
+      const { getByText } = render(
+        <UpcomingReviewsChart data={data} currentPendingCount={0} />,
+      );
+
+      // Same as without prop - first row: +5 (5)
+      expect(getByText('+5')).toBeTruthy();
+      expect(getByText('(5)')).toBeTruthy();
+    });
   });
 
   describe('current hour highlighting', () => {
