@@ -686,6 +686,40 @@ export async function getNextReviewTime(): Promise<string | null> {
   return row?.next_review ?? null;
 }
 
+/**
+ * Subject types that count as "learned" vocabulary.
+ * WaniKani has both 'vocabulary' and 'kana_vocabulary' types.
+ */
+export type LearnedSubjectType = 'kanji' | 'vocabulary';
+
+/**
+ * Gets the count of "learned" items for a given subject type.
+ * "Learned" means srs_stage >= 5 (Guru or above).
+ * For vocabulary type, includes both 'vocabulary' and 'kana_vocabulary' subjects.
+ */
+export async function getLearnedCount(
+  subjectType: LearnedSubjectType,
+): Promise<number> {
+  // Determine which object types to include
+  const objectTypes =
+    subjectType === 'vocabulary'
+      ? ['vocabulary', 'kana_vocabulary']
+      : [subjectType];
+
+  const placeholders = objectTypes.map(() => '?').join(',');
+
+  const result = await executeSql(
+    `SELECT COUNT(*) as count
+     FROM assignments a
+     JOIN subjects s ON a.subject_id = s.id
+     WHERE a.srs_stage >= 5
+       AND s.object_type IN (${placeholders})`,
+    objectTypes,
+  );
+
+  return (result.rows[0] as { count: number }).count;
+}
+
 // ============================================
 // Pending Review CRUD Operations
 // ============================================

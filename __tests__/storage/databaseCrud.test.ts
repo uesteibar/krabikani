@@ -23,6 +23,7 @@ import {
   deleteAssignment,
   getAssignmentCount,
   getNextReviewTime,
+  getLearnedCount,
   // Pending Review CRUD
   insertPendingReview,
   getPendingReviewById,
@@ -704,6 +705,25 @@ describe('Database CRUD Operations', () => {
         // Note: The mock doesn't fully support MIN() aggregate,
         // so we just verify the function runs without error
         expect(result === null || typeof result === 'string').toBe(true);
+      });
+    });
+
+    describe('getLearnedCount', () => {
+      it('should return count of kanji with srs_stage >= 5', async () => {
+        // Note: The mock doesn't fully support JOINs, so we verify the function runs
+        const count = await getLearnedCount('kanji');
+        expect(typeof count).toBe('number');
+      });
+
+      it('should return count of vocabulary with srs_stage >= 5', async () => {
+        // For vocabulary, it should include both 'vocabulary' and 'kana_vocabulary' types
+        const count = await getLearnedCount('vocabulary');
+        expect(typeof count).toBe('number');
+      });
+
+      it('should return 0 when no assignments exist', async () => {
+        const count = await getLearnedCount('kanji');
+        expect(count).toBe(0);
       });
     });
   });
