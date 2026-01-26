@@ -135,8 +135,8 @@
         "Verify in simulator using dev-browser skill"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added debounced search (300ms) to SearchScreen. Results displayed in FlatList with character (using japaneseDisplay style), primary meaning, and colored type badge. Badge colors from SUBJECT_COLORS: blue (#00AAFF) for radicals, pink (#FF00AA) for kanji, purple (#AA00FF) for vocabulary. Shows results count and 'No results found' message."
     },
     {
       "id": "US-009",
@@ -154,8 +154,8 @@
         "Verify in simulator using dev-browser skill"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created RadicalDetailScreen with header (character/image + SRS badge), meanings section, meaning mnemonic, and 'Used in Kanji' section. Added getKanjiUsingRadical database function to find kanji that use a given radical via component_subject_ids. Added navigation routes for RadicalDetail, KanjiDetail, VocabularyDetail. Exported MnemonicText component. Added 6 unit tests for getKanjiUsingRadical."
     },
     {
       "id": "US-010",

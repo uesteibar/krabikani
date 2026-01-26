@@ -102,3 +102,34 @@ Started:
   - The mock database doesn't fully support complex JOINs, so tests verify function runs without checking result content
 ---
 
+## 2026-01-26 - US-008
+- **What was implemented:** Display search results list with debounced search
+- **Files changed:**
+  - `src/screens/SearchScreen.tsx` - Added debounced search, FlatList for results, result item rendering with character/meaning/badge
+- **Learnings for future iterations:**
+  - Use useRef for debounce timer to avoid recreating on each render
+  - searchSubjects from storage module returns SearchResult[] with meanings as JSON string - need to parse and find primary meaning
+  - SUBJECT_COLORS from theme provides colors for badges: radical (#00AAFF), kanji (#FF00AA), vocabulary (#AA00FF)
+  - FlatList with keyExtractor and memoized renderItem provides good performance for search results
+  - Manual browser/simulator verification needed for visual changes
+---
+
+## 2026-01-26 - US-009
+- **What was implemented:** Created RadicalDetailScreen for viewing radical details from search results
+- **Files changed:**
+  - `src/screens/RadicalDetailScreen.tsx` (new) - Full radical detail screen with header, meanings, mnemonic, SRS badge, and "Used in Kanji" section
+  - `src/storage/database.ts` - Added getKanjiUsingRadical function to find kanji that use a specific radical
+  - `src/storage/index.ts` - Exported getKanjiUsingRadical and KanjiUsingRadical type
+  - `src/navigation/types.ts` - Added RadicalDetail, KanjiDetail, VocabularyDetail routes
+  - `src/navigation/RootNavigator.tsx` - Registered RadicalDetailScreen
+  - `src/components/index.ts` - Exported MnemonicText component
+  - `__tests__/storage/databaseCrud.test.ts` - Added 6 unit tests for getKanjiUsingRadical
+- **Learnings for future iterations:**
+  - To find kanji using a radical, query subjects where component_subject_ids JSON array contains the radical ID using LIKE patterns
+  - MnemonicText style prop accepts TextStyle (not array), so use spread syntax for combined styles
+  - RadicalDetailScreen navigates to KanjiDetail when a kanji in "Used in Kanji" is tapped
+  - SrsLevelBadge component from components index displays the SRS stage name with proper styling
+  - RadicalImage component handles image-only radicals that don't have Unicode characters
+  - Manual browser/simulator verification needed for visual changes
+---
+

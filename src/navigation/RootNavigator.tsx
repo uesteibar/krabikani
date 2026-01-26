@@ -5,6 +5,7 @@ import { HomeScreen } from '../screens/HomeScreen';
 import { ItemDetailScreen } from '../screens/ItemDetailScreen';
 import { LessonsScreen } from '../screens/LessonsScreen';
 import { NotificationPermissionScreen } from '../screens/NotificationPermissionScreen';
+import { RadicalDetailScreen } from '../screens/RadicalDetailScreen';
 import { ReviewsScreen } from '../screens/ReviewsScreen';
 import { SearchScreen } from '../screens/SearchScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
@@ -77,6 +78,11 @@ export function RootNavigator() {
         name="ItemDetail"
         component={ItemDetailScreen}
         options={{ title: 'Item Details' }}
+      />
+      <Stack.Screen
+        name="RadicalDetail"
+        component={RadicalDetailScreen}
+        options={{ title: 'Radical' }}
       />
       <Stack.Screen
         name="NotificationPermission"

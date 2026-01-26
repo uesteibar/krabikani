@@ -5,5 +5,8 @@ export type RootStackParamList = {
   Reviews: undefined;
   Search: undefined;
   ItemDetail: { subjectId: number };
+  RadicalDetail: { subjectId: number };
+  KanjiDetail: { subjectId: number };
+  VocabularyDetail: { subjectId: number };
   NotificationPermission: { isInitialSetup?: boolean } | undefined;
 };

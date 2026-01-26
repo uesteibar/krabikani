@@ -29,6 +29,7 @@ export {
   getSubjectCount,
   // Subject Search
   searchSubjects,
+  getKanjiUsingRadical,
   // Assignment CRUD
   upsertAssignment,
   upsertAssignments,
@@ -94,4 +95,5 @@ export {
   type SettingValue,
   type SubjectType,
   type SearchResult,
+  type KanjiUsingRadical,
 } from './database';

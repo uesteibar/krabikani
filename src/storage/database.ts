@@ -702,6 +702,66 @@ export async function searchSubjects(
   });
 }
 
+/**
+ * Represents a kanji that uses a specific radical.
+ */
+export interface KanjiUsingRadical {
+  id: number;
+  characters: string;
+  meaning: string;
+}
+
+/**
+ * Gets kanji that use a specific radical as a component.
+ * Searches for kanji where component_subject_ids contains the radical ID.
+ *
+ * @param radicalId The ID of the radical to search for
+ * @returns Array of kanji that use this radical
+ */
+export async function getKanjiUsingRadical(
+  radicalId: number,
+): Promise<KanjiUsingRadical[]> {
+  // SQLite doesn't have native JSON array search, so we search for the ID
+  // appearing in the JSON array string. We check for patterns like:
+  // - [123, ... (at the start)
+  // - , 123, ... (in the middle)
+  // - , 123] (at the end)
+  // - [123] (only element)
+  const result = await executeSql(
+    `SELECT id, characters, meanings
+     FROM subjects
+     WHERE object_type = 'kanji'
+       AND component_subject_ids IS NOT NULL
+       AND (
+         component_subject_ids LIKE '[' || ? || ',%'
+         OR component_subject_ids LIKE '%,' || ? || ',%'
+         OR component_subject_ids LIKE '%,' || ? || ']'
+         OR component_subject_ids = '[' || ? || ']'
+       )
+     ORDER BY level, id`,
+    [radicalId, radicalId, radicalId, radicalId],
+  );
+
+  return (result.rows as unknown as Array<{id: number; characters: string | null; meanings: string}>).map(row => {
+    // Parse meanings to get primary meaning
+    let meaning = '';
+    try {
+      const meanings = JSON.parse(row.meanings) as Array<{meaning: string; primary: boolean}>;
+      const primary = meanings.find(m => m.primary);
+      meaning = primary?.meaning ?? meanings[0]?.meaning ?? '';
+    } catch {
+      // Fallback if parsing fails
+      meaning = '';
+    }
+
+    return {
+      id: row.id,
+      characters: row.characters ?? '',
+      meaning,
+    };
+  });
+}
+
 // ============================================
 // Assignment CRUD Operations
 // ============================================

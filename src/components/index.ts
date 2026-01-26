@@ -95,6 +95,8 @@ export {
 
 export { RadicalImage, type RadicalImageProps } from './RadicalImage';
 
+export { MnemonicText, type MnemonicTextProps } from './MnemonicText';
+
 export { LevelIndicator, type LevelIndicatorProps } from './LevelIndicator';
 
 export {
