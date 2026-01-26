@@ -1,265 +1,176 @@
 {
   "project": "UnaiNikani",
-  "branchName": "ralph/review-enhancements-stats",
-  "description": "Review Enhancements and Home Screen Stats - SRS level display with animations, polished review completion screen, expandable item details, synonym support, upcoming reviews chart, and learned item counts",
+  "branchName": "ralph/ux-polish-zen-mode",
+  "description": "UX Polish and Zen Mode - Fix upcoming reviews chart, add item detail navigation, encouragement messages, zen mode, and minimalistic home buttons",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Display SRS Level Badge on Review Screens",
-      "description": "As a user, I want to see the current SRS level of the item I'm reviewing so that I understand where each item stands in my learning journey.",
+      "title": "Fix Upcoming Reviews Chart Cumulative Count",
+      "description": "As a user, I want the cumulative count in the upcoming reviews chart to include reviews I already have pending, so that the total accurately reflects my workload.",
       "acceptanceCriteria": [
-        "SRS level badge displayed on question screen AND answer feedback screen",
-        "Badge shows level name: 'Apprentice', 'Guru', 'Master', 'Enlightened', 'Burned'",
-        "Badge uses WaniKani colors: Apprentice (#DD0093), Guru (#882D9E), Master (#294DDB), Enlightened (#0093DD), Burned (#434343)",
-        "Badge includes appropriate icon (bar/flame style) for each level",
-        "Badge positioned consistently in header area",
+        "The number in parentheses (e.g., '(50)') includes reviews already available (not just future ones)",
+        "The cumulative total = current pending reviews + sum of reviews becoming available through that hour",
+        "The chart receives currentPendingCount as a prop from HomeScreen",
+        "When there are 10 pending reviews and 5 coming in hour 1, the first row shows '+5 (15)'",
+        "Unit tests verify the cumulative calculation includes pending reviews",
         "All tests pass",
         "All quality checks pass"
       ],
       "priority": 1,
-      "passes": true,
+      "passes": false,
       "notes": ""
     },
     {
       "id": "US-002",
-      "title": "Animate SRS Level Up Transitions",
-      "description": "As a user, I want to see an animation when an item levels up after my answer so that I get satisfying feedback on my progress.",
+      "title": "Add Settings Storage Infrastructure",
+      "description": "As a developer, I need a way to store user preferences locally so that features like zen mode can persist across app sessions.",
       "acceptanceCriteria": [
-        "Level-up animation: OLD level shown 200ms, badge scales 1.0→1.15 with glow, cross-fade to new level 300ms, particle burst, scale back 1.15→1.0",
-        "Total duration ~500ms",
-        "Animation only plays when level actually increases",
-        "Level change calculated based on WaniKani SRS rules (correct = +1 stage)",
-        "Use react-native-reanimated for 60fps animations",
+        "Create user_settings table with key-value storage (setting_key TEXT PRIMARY KEY, setting_value TEXT)",
+        "Add database functions: getSetting(key), setSetting(key, value), getAllSettings(), deleteSetting(key)",
+        "Settings are NOT cleared when user clears API key data (separate from synced data)",
+        "Settings support boolean, string, and number values (stored as JSON strings)",
+        "Add migration to create the settings table",
+        "Unit tests for all CRUD operations",
         "All tests pass",
         "All quality checks pass"
       ],
       "priority": 2,
-      "passes": true,
+      "passes": false,
       "notes": ""
     },
     {
       "id": "US-003",
-      "title": "Animate SRS Level Down Transitions",
-      "description": "As a user, I want to see a different animation when an item levels down after an incorrect answer.",
+      "title": "Add Zen Mode Setting Toggle",
+      "description": "As a user, I want to enable 'zen mode' in settings so that I can have a distraction-free review experience.",
       "acceptanceCriteria": [
-        "Level-down animation: OLD level shown 200ms, badge shakes 2-3 times, red tint pulse, cross-fade to new level 250ms",
-        "Total duration ~400ms",
-        "Animation only plays when level actually decreases",
-        "Level change calculated based on WaniKani SRS rules (incorrect drops based on stage)",
-        "Use react-native-reanimated for 60fps animations",
+        "New toggle in Settings screen: 'Zen Mode' with description 'Hide progress bar and stats during reviews'",
+        "Setting persists to database using the new settings infrastructure",
+        "Toggle shows current on/off state",
+        "Default value is OFF (zen mode disabled)",
         "All tests pass",
-        "All quality checks pass"
+        "All quality checks pass",
+        "Verify in simulator using dev-browser skill"
       ],
       "priority": 3,
-      "passes": true,
+      "passes": false,
       "notes": ""
     },
     {
       "id": "US-004",
-      "title": "Create Animated Review Completion Screen Base",
-      "description": "As a user, I want the review completion screen to feel polished so that finishing reviews feels rewarding.",
+      "title": "Apply Zen Mode to Review Session",
+      "description": "As a user with zen mode enabled, I want the review session to hide the progress bar, item count, and SRS level badge so I can focus purely on answering.",
       "acceptanceCriteria": [
-        "Success checkmark icon in colored circle (reviews purple) with scale bounce animation (0→1.1→1.0)",
-        "Checkmark draws itself with stroke animation as it appears",
-        "Total items reviewed in large bold text (64px)",
-        "Incorrect count in secondary text with red tint if any incorrect",
-        "Sync status badge with colored background (green 'Synced' / amber 'Queued')",
-        "Styled 'Return to Dashboard' button",
-        "Layout matches LessonCompletion component patterns",
+        "When zen mode is ON: hide progress bar, hide 'X / Y' count text, hide SRS level badge",
+        "When zen mode is ON: the 'Wrap Up' button remains visible",
+        "When wrap-up mode is activated: show progress bar and count (even in zen mode)",
+        "When zen mode is OFF: normal behavior (all UI visible)",
+        "ReviewSession fetches zen mode setting on mount",
+        "Unit tests verify conditional rendering based on zen mode state",
         "All tests pass",
-        "All quality checks pass"
+        "All quality checks pass",
+        "Verify in simulator using dev-browser skill"
       ],
       "priority": 4,
-      "passes": true,
+      "passes": false,
       "notes": ""
     },
     {
       "id": "US-005",
-      "title": "Add Staggered Entrance Animation to Review Completion",
-      "description": "As a user, I want elements on the completion screen to appear with staggered timing for a polished feel.",
+      "title": "Create Item Detail Screen",
+      "description": "As a developer, I need a standalone screen to display full item details (radical, kanji, or vocabulary) so users can navigate to it from various places in the app.",
       "acceptanceCriteria": [
-        "Elements appear with 100ms staggered delays: checkmark → items count → incorrect count → sync status → button",
-        "Each element fades in and slides up from below",
-        "If 0 incorrect: confetti particles burst from checkmark",
-        "Respects device reduced motion settings",
+        "New screen ItemDetailScreen added to navigation stack",
+        "Screen accepts subjectId: number as route param",
+        "Fetches subject data from database using getSubjectById()",
+        "For kanji: fetches component radicals via component_subject_ids",
+        "For vocabulary: fetches component kanji via component_subject_ids",
+        "Displays all item information: header with character and subject type, meanings, readings (for kanji/vocabulary), meaning mnemonic, reading mnemonic (for kanji/vocabulary)",
+        "Has a back button to return to previous screen",
+        "Shows loading state while fetching data",
+        "Shows error state if subject not found",
+        "Header background color matches subject type (radical blue, kanji pink, vocabulary purple)",
         "All tests pass",
         "All quality checks pass",
-        "Verify in browser/simulator using dev-browser skill"
+        "Verify in simulator using dev-browser skill"
       ],
       "priority": 5,
-      "passes": true,
+      "passes": false,
       "notes": ""
     },
     {
       "id": "US-006",
-      "title": "Add Toggle for Full Item Details on Incorrect Screen",
-      "description": "As a user, when I get an answer wrong, I want the option to see all information about that item.",
+      "title": "Add Components Section to Item Detail Screen",
+      "description": "As a user, I want to see the component radicals/kanji that make up an item on its detail screen.",
       "acceptanceCriteria": [
-        "Toggle button with chevron: 'Show full details' (down) / 'Hide details' (up)",
-        "Chevron rotates 180° smoothly on toggle (200ms ease-out)",
-        "Content reveals with height animation (250ms ease-out-quart)",
-        "Default state is collapsed",
-        "Toggle state resets for each new incorrect answer",
+        "Item detail screen shows 'Made up of' section for kanji and vocabulary items",
+        "For kanji: displays component radicals with their images/characters and meanings",
+        "For vocabulary: displays component kanji with their characters and meanings",
+        "Components displayed using existing ComponentDisplay component pattern",
+        "Section only appears when item has components",
         "All tests pass",
-        "All quality checks pass"
+        "All quality checks pass",
+        "Verify in simulator using dev-browser skill"
       ],
       "priority": 6,
-      "passes": true,
+      "passes": false,
       "notes": ""
     },
     {
       "id": "US-007",
-      "title": "Display Full Item Details Content When Expanded",
-      "description": "As a user, I want to see organized sections with all item information when I expand the details.",
+      "title": "Navigate to Item Detail from Components",
+      "description": "As a user, when I tap on a radical or kanji in the 'made up of' section, I want to see the full details of that item.",
       "acceptanceCriteria": [
-        "Meanings section: all meanings (primary bolded, alternatives regular)",
-        "Readings section: all readings with types (on'yomi, kun'yomi, etc.)",
-        "Meaning Mnemonic section with formatted text",
-        "Reading Mnemonic section (if applicable)",
-        "Components section: radicals (for kanji) or kanji (for vocabulary)",
-        "Sections have subtle dividers and consistent spacing",
+        "Tapping a component radical/kanji navigates to ItemDetailScreen",
+        "Works in LessonCard's 'Made up of' section",
+        "Works in ReviewSession's incorrect answer feedback (inside ExpandableDetails/ItemDetails)",
+        "Works in ItemDetailScreen (for recursive navigation)",
+        "Navigation is a stack push (back button returns to previous screen)",
+        "Visual feedback on tap (opacity change or similar)",
         "All tests pass",
         "All quality checks pass",
-        "Verify in browser/simulator using dev-browser skill"
+        "Verify in simulator using dev-browser skill"
       ],
       "priority": 7,
-      "passes": true,
+      "passes": false,
       "notes": ""
     },
     {
       "id": "US-008",
-      "title": "Create Pending Synonyms Storage",
-      "description": "As a developer, I need to store synonyms locally and track pending syncs so that synonyms work offline.",
+      "title": "Add Encouragement Message to Review Completion",
+      "description": "As a user, I want to see an encouraging message when I finish my reviews so that I feel motivated to continue studying.",
       "acceptanceCriteria": [
-        "Create user_synonyms table (subject_id, synonym, synced_at, created_at)",
-        "Create pending_synonyms table (subject_id, synonym, created_at)",
-        "Add database functions: addUserSynonym(), getPendingSynonyms(), markSynonymSynced()",
-        "Answer validation checks user_synonyms table in addition to API meanings",
+        "Encouraging message displayed below 'Reviews Complete!' title",
+        "Message randomly selected from a pool of 5-10 phrases",
+        "Different message each session (pseudo-random selection)",
+        "Message styled subtly (secondary text color, smaller font)",
+        "Appears after the items reviewed count, before incorrect count",
         "All tests pass",
-        "All quality checks pass"
+        "All quality checks pass",
+        "Verify in simulator using dev-browser skill"
       ],
       "priority": 8,
-      "passes": true,
+      "passes": false,
       "notes": ""
     },
     {
       "id": "US-009",
-      "title": "Add Synonym from Incorrect Answer Screen",
-      "description": "As a user, when my answer is marked incorrect but I believe it should be accepted, I want to add it as a synonym.",
+      "title": "Redesign Home Screen Buttons",
+      "description": "As a user, I want the lessons and reviews buttons on the home screen to be more minimalistic and visually subtle, with the text inside the button.",
       "acceptanceCriteria": [
-        "'Add as Synonym' text link appears on MEANING questions only",
-        "Link is visually de-emphasized: smaller font, below primary actions",
-        "Tap shows 'Adding...' with pulse, then 'Synonym added ✓'",
-        "After 400ms, auto-marks question correct and advances",
-        "Synonym saved to local database",
-        "If offline, synonym queued in pending_synonyms table",
+        "Buttons have outlined style (border instead of solid fill)",
+        "Button background is white (or app background color)",
+        "Border color matches the subject type (pink for lessons, purple for reviews)",
+        "Count number displayed large inside the button",
+        "Label text ('Lessons' / 'Reviews') displayed below the count, INSIDE the button",
+        "When count is 0: more subtle appearance (lighter border, muted text)",
+        "Border width ~2px for visibility",
+        "Maintains touch target size (min 44px)",
         "All tests pass",
-        "All quality checks pass"
+        "All quality checks pass",
+        "Verify in simulator using dev-browser skill"
       ],
       "priority": 9,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-010",
-      "title": "Sync Synonyms to WaniKani",
-      "description": "As a user, I want my custom synonyms to sync to WaniKani so they're available across all my devices.",
-      "acceptanceCriteria": [
-        "Implement WaniKani Study Materials API: GET study materials, POST/PUT meaning_synonyms",
-        "On app startup or manual sync, push pending synonyms",
-        "Handle API errors with retry logic",
-        "Remove from pending_synonyms and update synced_at on success",
-        "All tests pass",
-        "All quality checks pass"
-      ],
-      "priority": 10,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-011",
-      "title": "Query Learned Item Counts",
-      "description": "As a developer, I need database queries to count learned kanji and vocabulary.",
-      "acceptanceCriteria": [
-        "Create getLearnedCount(subjectType: 'kanji' | 'vocabulary'): number",
-        "Query counts assignments where srs_stage >= 5 (Guru or above)",
-        "Vocabulary count includes both 'vocabulary' and 'kana_vocabulary' types",
-        "Query uses appropriate indexes for efficiency",
-        "All tests pass",
-        "All quality checks pass"
-      ],
-      "priority": 11,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-012",
-      "title": "Add Learned Counts to Home Screen",
-      "description": "As a user, I want to see how many kanji and vocabulary items I've learned so I can track my overall progress.",
-      "acceptanceCriteria": [
-        "Display 'Kanji Learned: X' and 'Vocabulary Learned: X' on home screen",
-        "Counts animate from 0 to actual number (500ms, ease-out)",
-        "Stats displayed in visually consistent row/grid with existing elements",
-        "Counts update when returning to home screen after reviews/lessons",
-        "All tests pass",
-        "All quality checks pass",
-        "Verify in browser/simulator using dev-browser skill"
-      ],
-      "priority": 12,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-013",
-      "title": "Query Upcoming Reviews by Hour",
-      "description": "As a developer, I need a database query that groups upcoming reviews by hour for the chart.",
-      "acceptanceCriteria": [
-        "Create getUpcomingReviewsByHour(hours: number): { hour: Date, count: number }[]",
-        "Groups assignments by available_at into hourly buckets",
-        "Only includes assignments where started_at is not null and srs_stage > 0 and < 9",
-        "Returns array of 12 objects with hour timestamp and review count",
-        "Hours with 0 reviews included for chart continuity",
-        "All tests pass",
-        "All quality checks pass"
-      ],
-      "priority": 13,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-014",
-      "title": "Display Upcoming Reviews Bar Chart",
-      "description": "As a user, I want to see a chart showing how many reviews are coming up in the next 12 hours.",
-      "acceptanceCriteria": [
-        "Bar chart displayed on home screen below main stats",
-        "12 bars, one per hour, showing NEW reviews per hour (not cumulative)",
-        "Bars colored reviews purple (#AA00FF) with subtle gradient",
-        "Hour labels below bars (e.g., '2pm', '3pm')",
-        "Current hour highlighted with accent border",
-        "Chart height constrained to ~100-120px",
-        "All tests pass",
-        "All quality checks pass"
-      ],
-      "priority": 14,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-015",
-      "title": "Add Chart Animations and Interactions",
-      "description": "As a user, I want the chart to animate and respond to taps for a polished experience.",
-      "acceptanceCriteria": [
-        "Bars grow from bottom with staggered timing (50ms delay each, left to right)",
-        "On bar tap: show tooltip with exact count ('15 reviews at 3pm')",
-        "If 0 reviews in next 12 hours: show empty state with friendly message",
-        "Empty state shows when next review IS (e.g., 'Next review in 2 days')",
-        "Respects reduced motion settings",
-        "All tests pass",
-        "All quality checks pass",
-        "Verify in browser/simulator using dev-browser skill"
-      ],
-      "priority": 15,
-      "passes": true,
+      "passes": false,
       "notes": ""
     }
   ]
