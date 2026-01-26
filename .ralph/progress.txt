@@ -76,3 +76,14 @@ Started:
   - There is a pre-existing failing test in ReviewSession.test.tsx related to wrap-up mode in incorrect feedback view - not related to new changes
 ---
 
+## 2026-01-26 - US-006
+- What was implemented: Changed the components section title in ItemDetails from "Component Radicals"/"Component Kanji" to "Made up of" for consistency with LessonCard and ReviewSession
+- Files changed:
+  - `src/components/ItemDetails.tsx` - Changed section title from conditional "Component Radicals"/"Component Kanji" to "Made up of"
+  - `__tests__/components/ItemDetails.test.tsx` - Updated tests to expect "Made up of" text instead of "Component Radicals"/"Component Kanji"
+- **Learnings for future iterations:**
+  - The ItemDetails component was already displaying components correctly - the change was only the section title to match the pattern used in LessonCard and ReviewSession
+  - Components section uses ComponentDisplay component for rendering radicals/kanji with their characters and meanings
+  - The section only appears when hasComponents is true (either componentRadicals or componentKanji arrays have items)
+---
+
