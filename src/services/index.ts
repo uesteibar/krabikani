@@ -17,5 +17,6 @@ export {
   setNotificationsEnabled,
   hasAskedForPermissions,
   setHasAskedForPermissions,
+  openNotificationSettings,
   type PermissionStatus,
 } from './notificationService';

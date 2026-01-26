@@ -27,6 +27,9 @@ import { COLORS, SPACING, FONT_SIZES } from '../theme';
 import {
   checkPermissions,
   hasAskedForPermissions,
+  getNotificationsEnabled,
+  setNotificationsEnabled,
+  openNotificationSettings,
 } from '../services/notificationService';
 
 type SettingsScreenNavigationProp = NativeStackNavigationProp<
@@ -50,14 +53,20 @@ export function SettingsScreen() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [zenModeEnabled, setZenModeEnabled] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabledState] = useState(false);
+  const [notificationPermissionGranted, setNotificationPermissionGranted] =
+    useState(false);
 
   const loadStoredKey = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [storedKey, zenModeSetting] = await Promise.all([
-        getApiKey(),
-        getSetting('zenMode'),
-      ]);
+      const [storedKey, zenModeSetting, notificationsSetting, permissionStatus] =
+        await Promise.all([
+          getApiKey(),
+          getSetting('zenMode'),
+          getNotificationsEnabled(),
+          checkPermissions(),
+        ]);
       if (storedKey) {
         setApiKey(storedKey);
         setHasStoredKey(true);
@@ -66,6 +75,8 @@ export function SettingsScreen() {
         setHasStoredKey(false);
       }
       setZenModeEnabled(zenModeSetting === true);
+      setNotificationsEnabledState(notificationsSetting);
+      setNotificationPermissionGranted(permissionStatus === 'granted');
     } finally {
       setIsLoading(false);
     }
@@ -129,6 +140,15 @@ export function SettingsScreen() {
   const handleZenModeToggle = useCallback(async (value: boolean) => {
     setZenModeEnabled(value);
     await setSetting('zenMode', value);
+  }, []);
+
+  const handleNotificationsToggle = useCallback(async (value: boolean) => {
+    setNotificationsEnabledState(value);
+    await setNotificationsEnabled(value);
+  }, []);
+
+  const handleDisabledNotificationsPress = useCallback(() => {
+    openNotificationSettings();
   }, []);
 
   const handleSave = async () => {
@@ -304,6 +324,44 @@ export function SettingsScreen() {
             testID="zen-mode-toggle"
           />
         </View>
+
+        {notificationPermissionGranted ? (
+          <View style={styles.settingRow} testID="notifications-setting">
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingLabel}>Review Notifications</Text>
+              <Text style={styles.settingDescription}>
+                Get notified when you have reviews waiting
+              </Text>
+            </View>
+            <Switch
+              value={notificationsEnabled}
+              onValueChange={handleNotificationsToggle}
+              trackColor={{ false: '#ddd', true: COLORS.subject.vocabulary }}
+              thumbColor="#fff"
+              testID="notifications-toggle"
+            />
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.settingRow}
+            onPress={handleDisabledNotificationsPress}
+            testID="notifications-setting-disabled"
+          >
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingLabel}>Review Notifications</Text>
+              <Text style={styles.settingDescriptionDisabled}>
+                Enable in system settings
+              </Text>
+            </View>
+            <Switch
+              value={false}
+              disabled
+              trackColor={{ false: '#ddd', true: COLORS.subject.vocabulary }}
+              thumbColor="#fff"
+              testID="notifications-toggle-disabled"
+            />
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -425,5 +483,10 @@ const styles = StyleSheet.create({
   settingDescription: {
     fontSize: FONT_SIZES.sm,
     color: COLORS.text.secondary,
+  },
+  settingDescriptionDisabled: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.tertiary,
+    fontStyle: 'italic',
   },
 });

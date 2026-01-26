@@ -154,3 +154,11 @@ export async function hasAskedForPermissions(): Promise<boolean> {
 export async function setHasAskedForPermissions(asked: boolean): Promise<void> {
   await setSetting(NOTIFICATIONS_PERMISSION_ASKED_KEY, asked);
 }
+
+/**
+ * Opens the system notification settings for the app.
+ * This allows users to enable/disable notifications at the OS level.
+ */
+export async function openNotificationSettings(): Promise<void> {
+  await notifee.openNotificationSettings();
+}

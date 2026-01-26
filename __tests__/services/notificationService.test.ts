@@ -14,6 +14,7 @@ import {
   setNotificationsEnabled,
   hasAskedForPermissions,
   setHasAskedForPermissions,
+  openNotificationSettings,
 } from '../../src/services/notificationService';
 import {getSetting, setSetting} from '../../src/storage';
 
@@ -336,6 +337,14 @@ describe('notificationService', () => {
         'notifications_permission_asked',
         false,
       );
+    });
+  });
+
+  describe('openNotificationSettings', () => {
+    it('calls notifee.openNotificationSettings', async () => {
+      await openNotificationSettings();
+
+      expect(notifee.openNotificationSettings).toHaveBeenCalled();
     });
   });
 });

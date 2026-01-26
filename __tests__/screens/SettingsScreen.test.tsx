@@ -1307,4 +1307,209 @@ describe('SettingsScreen', () => {
       });
     });
   });
+
+  describe('Notification Settings Toggle', () => {
+    it('should render enabled notifications toggle when permissions granted', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockNotificationService.checkPermissions.mockResolvedValue('granted');
+      mockNotificationService.getNotificationsEnabled.mockResolvedValue(true);
+
+      const { getByTestId, queryByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('notifications-setting')).toBeTruthy();
+      });
+
+      expect(getByTestId('notifications-toggle')).toBeTruthy();
+      expect(queryByTestId('notifications-setting-disabled')).toBeNull();
+    });
+
+    it('should render disabled notifications toggle when permissions not granted', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockNotificationService.checkPermissions.mockResolvedValue('denied');
+      mockNotificationService.getNotificationsEnabled.mockResolvedValue(false);
+
+      const { getByTestId, queryByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('notifications-setting-disabled')).toBeTruthy();
+      });
+
+      expect(getByTestId('notifications-toggle-disabled')).toBeTruthy();
+      expect(queryByTestId('notifications-setting')).toBeNull();
+    });
+
+    it('should load notifications enabled setting as on when stored as true', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockNotificationService.checkPermissions.mockResolvedValue('granted');
+      mockNotificationService.getNotificationsEnabled.mockResolvedValue(true);
+
+      const { getByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('notifications-toggle')).toBeTruthy();
+      });
+
+      expect(getByTestId('notifications-toggle').props.value).toBe(true);
+    });
+
+    it('should load notifications enabled setting as off when stored as false', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockNotificationService.checkPermissions.mockResolvedValue('granted');
+      mockNotificationService.getNotificationsEnabled.mockResolvedValue(false);
+
+      const { getByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('notifications-toggle')).toBeTruthy();
+      });
+
+      expect(getByTestId('notifications-toggle').props.value).toBe(false);
+    });
+
+    it('should save notification setting when toggled on', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockNotificationService.checkPermissions.mockResolvedValue('granted');
+      mockNotificationService.getNotificationsEnabled.mockResolvedValue(false);
+
+      const { getByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('notifications-toggle')).toBeTruthy();
+      });
+
+      await act(async () => {
+        fireEvent(getByTestId('notifications-toggle'), 'valueChange', true);
+      });
+
+      expect(
+        mockNotificationService.setNotificationsEnabled,
+      ).toHaveBeenCalledWith(true);
+    });
+
+    it('should save notification setting when toggled off', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockNotificationService.checkPermissions.mockResolvedValue('granted');
+      mockNotificationService.getNotificationsEnabled.mockResolvedValue(true);
+
+      const { getByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('notifications-toggle')).toBeTruthy();
+      });
+
+      await act(async () => {
+        fireEvent(getByTestId('notifications-toggle'), 'valueChange', false);
+      });
+
+      expect(
+        mockNotificationService.setNotificationsEnabled,
+      ).toHaveBeenCalledWith(false);
+    });
+
+    it('should update toggle state when toggled', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockNotificationService.checkPermissions.mockResolvedValue('granted');
+      mockNotificationService.getNotificationsEnabled.mockResolvedValue(false);
+
+      const { getByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('notifications-toggle')).toBeTruthy();
+      });
+
+      // Initially off
+      expect(getByTestId('notifications-toggle').props.value).toBe(false);
+
+      // Toggle on
+      await act(async () => {
+        fireEvent(getByTestId('notifications-toggle'), 'valueChange', true);
+      });
+
+      // Should now be on
+      expect(getByTestId('notifications-toggle').props.value).toBe(true);
+    });
+
+    it('should open system notification settings when disabled toggle is pressed', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockNotificationService.checkPermissions.mockResolvedValue('denied');
+      mockNotificationService.getNotificationsEnabled.mockResolvedValue(false);
+
+      const { getByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('notifications-setting-disabled')).toBeTruthy();
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId('notifications-setting-disabled'));
+      });
+
+      expect(
+        mockNotificationService.openNotificationSettings,
+      ).toHaveBeenCalled();
+    });
+
+    it('should check permissions on load', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockNotificationService.checkPermissions.mockResolvedValue('granted');
+      mockNotificationService.getNotificationsEnabled.mockResolvedValue(true);
+
+      renderWithNavigation();
+
+      await waitFor(() => {
+        expect(mockNotificationService.checkPermissions).toHaveBeenCalled();
+      });
+    });
+
+    it('should load notifications enabled setting on mount', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockNotificationService.checkPermissions.mockResolvedValue('granted');
+      mockNotificationService.getNotificationsEnabled.mockResolvedValue(true);
+
+      renderWithNavigation();
+
+      await waitFor(() => {
+        expect(
+          mockNotificationService.getNotificationsEnabled,
+        ).toHaveBeenCalled();
+      });
+    });
+
+    it('should show disabled toggle for not_determined permission status', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockNotificationService.checkPermissions.mockResolvedValue(
+        'not_determined',
+      );
+      mockNotificationService.getNotificationsEnabled.mockResolvedValue(false);
+
+      const { getByTestId, queryByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('notifications-setting-disabled')).toBeTruthy();
+      });
+
+      expect(queryByTestId('notifications-setting')).toBeNull();
+    });
+
+    it('should persist notifications setting across restarts', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockNotificationService.checkPermissions.mockResolvedValue('granted');
+      mockNotificationService.getNotificationsEnabled.mockResolvedValue(true);
+
+      const { getByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('notifications-toggle')).toBeTruthy();
+      });
+
+      // Verify the toggle shows the stored value
+      expect(getByTestId('notifications-toggle').props.value).toBe(true);
+
+      // Verify getNotificationsEnabled was called to load the setting
+      expect(
+        mockNotificationService.getNotificationsEnabled,
+      ).toHaveBeenCalled();
+    });
+  });
 });

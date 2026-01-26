@@ -39,6 +39,7 @@ const mockNotifee = {
   }),
   createTriggerNotification: jest.fn().mockResolvedValue('trigger-notification-id'),
   getTriggerNotifications: jest.fn().mockResolvedValue([]),
+  openNotificationSettings: jest.fn().mockResolvedValue(undefined),
 };
 
 export const __resetMock = () => {
@@ -52,6 +53,7 @@ export const __resetMock = () => {
   mockNotifee.getNotificationSettings.mockClear();
   mockNotifee.createTriggerNotification.mockClear();
   mockNotifee.getTriggerNotifications.mockClear();
+  mockNotifee.openNotificationSettings.mockClear();
 };
 
 export default mockNotifee;
