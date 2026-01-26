@@ -4,7 +4,6 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
   DASHBOARD_COLORS,
   COLORS,
-  SHADOW,
   BORDER_RADIUS,
   SPACING,
   FONT_SIZES,
@@ -18,11 +17,13 @@ export interface DashboardStatsProps {
   onReviewsPress?: () => void;
 }
 
+const BORDER_WIDTH = 2;
+
 /**
  * Displays the lessons and reviews counts prominently on the dashboard.
- * Uses WaniKani-inspired colors:
- * - Pink/magenta for lessons (kanji color - associated with new learning)
- * - Purple for reviews (vocabulary color - associated with practice)
+ * Uses a minimalistic outlined style with WaniKani-inspired border colors:
+ * - Pink/magenta border for lessons (kanji color - associated with new learning)
+ * - Purple border for reviews (vocabulary color - associated with practice)
  */
 export function DashboardStats({
   lessonsCount,
@@ -30,47 +31,64 @@ export function DashboardStats({
   onLessonsPress,
   onReviewsPress,
 }: DashboardStatsProps) {
+  const lessonsEmpty = lessonsCount === 0;
+  const reviewsEmpty = reviewsCount === 0;
+
   return (
     <View style={styles.container} testID="dashboard-stats">
       <TouchableOpacity
-        style={styles.statCard}
+        style={[
+          styles.statBox,
+          styles.lessonsBox,
+          lessonsEmpty && styles.emptyBox,
+        ]}
         onPress={onLessonsPress}
-        disabled={!onLessonsPress || lessonsCount === 0}
-        activeOpacity={lessonsCount > 0 && onLessonsPress ? 0.7 : 1}
+        disabled={!onLessonsPress || lessonsEmpty}
+        activeOpacity={!lessonsEmpty && onLessonsPress ? 0.7 : 1}
         testID="lessons-button"
       >
-        <View
+        <Text
           style={[
-            styles.statBox,
-            styles.lessonsBox,
-            lessonsCount === 0 && styles.emptyBox,
+            styles.countText,
+            styles.lessonsCountText,
+            lessonsEmpty && styles.emptyCountText,
           ]}
+          testID="lessons-count"
         >
-          <Text style={styles.countText} testID="lessons-count">
-            {lessonsCount}
-          </Text>
-        </View>
-        <Text style={styles.labelText}>Lessons</Text>
+          {lessonsCount}
+        </Text>
+        <Text
+          style={[styles.labelText, lessonsEmpty && styles.emptyLabelText]}
+        >
+          Lessons
+        </Text>
       </TouchableOpacity>
       <TouchableOpacity
-        style={styles.statCard}
+        style={[
+          styles.statBox,
+          styles.reviewsBox,
+          reviewsEmpty && styles.emptyBox,
+        ]}
         onPress={onReviewsPress}
-        disabled={!onReviewsPress || reviewsCount === 0}
-        activeOpacity={reviewsCount > 0 && onReviewsPress ? 0.7 : 1}
+        disabled={!onReviewsPress || reviewsEmpty}
+        activeOpacity={!reviewsEmpty && onReviewsPress ? 0.7 : 1}
         testID="reviews-button"
       >
-        <View
+        <Text
           style={[
-            styles.statBox,
-            styles.reviewsBox,
-            reviewsCount === 0 && styles.emptyBox,
+            styles.countText,
+            styles.reviewsCountText,
+            reviewsEmpty && styles.emptyCountText,
           ]}
+          testID="reviews-count"
         >
-          <Text style={styles.countText} testID="reviews-count">
-            {reviewsCount}
-          </Text>
-        </View>
-        <Text style={styles.labelText}>Reviews</Text>
+          {reviewsCount}
+        </Text>
+        <Text
+          style={[styles.labelText, reviewsEmpty && styles.emptyLabelText]}
+        >
+          Reviews
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -86,42 +104,45 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     width: '100%',
   },
-  statCard: {
-    flex: 1,
-    alignItems: 'center',
-  },
   statBox: {
-    width: '100%',
+    flex: 1,
     height: 100,
     minHeight: MIN_TOUCH_TARGET,
     borderRadius: BORDER_RADIUS.lg,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: SPACING.sm,
-    // Shadow for elevation
-    shadowColor: SHADOW.color,
-    shadowOffset: SHADOW.offset,
-    shadowOpacity: SHADOW.opacity,
-    shadowRadius: SHADOW.radius,
-    elevation: SHADOW.elevation,
+    backgroundColor: COLORS.background.primary,
+    borderWidth: BORDER_WIDTH,
   },
   lessonsBox: {
-    backgroundColor: DASHBOARD_COLORS.lessons,
+    borderColor: DASHBOARD_COLORS.lessons,
   },
   reviewsBox: {
-    backgroundColor: DASHBOARD_COLORS.reviews,
+    borderColor: DASHBOARD_COLORS.reviews,
   },
   emptyBox: {
-    opacity: 0.5,
+    borderColor: COLORS.border.medium,
   },
   countText: {
     fontSize: FONT_SIZES.xxxl + 4, // 36px
     fontWeight: 'bold',
-    color: COLORS.text.inverse,
+  },
+  lessonsCountText: {
+    color: DASHBOARD_COLORS.lessons,
+  },
+  reviewsCountText: {
+    color: DASHBOARD_COLORS.reviews,
+  },
+  emptyCountText: {
+    color: COLORS.text.tertiary,
   },
   labelText: {
-    fontSize: FONT_SIZES.base,
+    fontSize: FONT_SIZES.sm,
     fontWeight: '600',
-    color: COLORS.text.primary,
+    color: COLORS.text.secondary,
+    marginTop: SPACING.xs,
+  },
+  emptyLabelText: {
+    color: COLORS.text.tertiary,
   },
 });

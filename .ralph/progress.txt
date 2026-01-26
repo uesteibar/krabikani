@@ -120,3 +120,16 @@ Started:
   - Testing randomness: render multiple times, collect unique values, verify they come from expected pool
 ---
 
+## 2026-01-26 - US-009
+- What was implemented: Redesigned Home Screen Buttons with minimalistic outlined style
+- Files changed:
+  - `src/components/DashboardStats.tsx` - Converted buttons from solid fill to outlined style with borders, moved label text inside the button, added muted styling for empty state
+  - `__tests__/components/DashboardStats.test.tsx` - Added 3 new tests for outlined button styling (border width, minimum touch target size)
+- **Learnings for future iterations:**
+  - DashboardStats uses TouchableOpacity directly as the button (not a separate View inside)
+  - DASHBOARD_COLORS.lessons is pink (#FF00AA) and DASHBOARD_COLORS.reviews is purple (#AA00FF)
+  - COLORS.border.medium is used for the muted empty state border
+  - COLORS.text.tertiary is used for muted text in empty state
+  - Tests can verify style properties by flattening the style array with Object.assign({}, ...buttonStyle)
+---
+
