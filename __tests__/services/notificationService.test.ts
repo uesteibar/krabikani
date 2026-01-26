@@ -10,13 +10,22 @@ import {
   getNextHourTimestamp,
   scheduleHourlyNotification,
   cancelAllNotifications,
+  getNotificationsEnabled,
+  setNotificationsEnabled,
+  hasAskedForPermissions,
+  setHasAskedForPermissions,
 } from '../../src/services/notificationService';
+import {getSetting, setSetting} from '../../src/storage';
 
 jest.mock('react-native', () => ({
   Platform: {OS: 'ios'},
 }));
 
 jest.mock('@notifee/react-native');
+jest.mock('../../src/storage', () => ({
+  getSetting: jest.fn(),
+  setSetting: jest.fn(),
+}));
 
 describe('notificationService', () => {
   beforeEach(() => {
@@ -239,6 +248,94 @@ describe('notificationService', () => {
       await cancelAllNotifications();
 
       expect(notifee.cancelAllNotifications).toHaveBeenCalled();
+    });
+  });
+
+  describe('getNotificationsEnabled', () => {
+    it('returns true when setting is true', async () => {
+      (getSetting as jest.Mock).mockResolvedValue(true);
+
+      const result = await getNotificationsEnabled();
+
+      expect(result).toBe(true);
+      expect(getSetting).toHaveBeenCalledWith('notifications_enabled');
+    });
+
+    it('returns false when setting is false', async () => {
+      (getSetting as jest.Mock).mockResolvedValue(false);
+
+      const result = await getNotificationsEnabled();
+
+      expect(result).toBe(false);
+    });
+
+    it('returns true (default) when setting does not exist', async () => {
+      (getSetting as jest.Mock).mockResolvedValue(null);
+
+      const result = await getNotificationsEnabled();
+
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('setNotificationsEnabled', () => {
+    it('saves true value to storage', async () => {
+      await setNotificationsEnabled(true);
+
+      expect(setSetting).toHaveBeenCalledWith('notifications_enabled', true);
+    });
+
+    it('saves false value to storage', async () => {
+      await setNotificationsEnabled(false);
+
+      expect(setSetting).toHaveBeenCalledWith('notifications_enabled', false);
+    });
+  });
+
+  describe('hasAskedForPermissions', () => {
+    it('returns true when setting is true', async () => {
+      (getSetting as jest.Mock).mockResolvedValue(true);
+
+      const result = await hasAskedForPermissions();
+
+      expect(result).toBe(true);
+      expect(getSetting).toHaveBeenCalledWith('notifications_permission_asked');
+    });
+
+    it('returns false when setting is false', async () => {
+      (getSetting as jest.Mock).mockResolvedValue(false);
+
+      const result = await hasAskedForPermissions();
+
+      expect(result).toBe(false);
+    });
+
+    it('returns false (default) when setting does not exist', async () => {
+      (getSetting as jest.Mock).mockResolvedValue(null);
+
+      const result = await hasAskedForPermissions();
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('setHasAskedForPermissions', () => {
+    it('saves true value to storage', async () => {
+      await setHasAskedForPermissions(true);
+
+      expect(setSetting).toHaveBeenCalledWith(
+        'notifications_permission_asked',
+        true,
+      );
+    });
+
+    it('saves false value to storage', async () => {
+      await setHasAskedForPermissions(false);
+
+      expect(setSetting).toHaveBeenCalledWith(
+        'notifications_permission_asked',
+        false,
+      );
     });
   });
 });

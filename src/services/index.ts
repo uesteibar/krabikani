@@ -13,5 +13,9 @@ export {
   getNextHourTimestamp,
   scheduleHourlyNotification,
   cancelAllNotifications,
+  getNotificationsEnabled,
+  setNotificationsEnabled,
+  hasAskedForPermissions,
+  setHasAskedForPermissions,
   type PermissionStatus,
 } from './notificationService';

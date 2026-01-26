@@ -4,6 +4,11 @@ import {
   NOTIFICATION_CHANNEL_ID,
   setupNotificationChannel,
 } from './notificationConfig';
+import {getSetting, setSetting} from '../storage';
+
+// Settings keys for notification preferences
+const NOTIFICATIONS_ENABLED_KEY = 'notifications_enabled';
+const NOTIFICATIONS_PERMISSION_ASKED_KEY = 'notifications_permission_asked';
 
 export type PermissionStatus = 'granted' | 'denied' | 'not_determined';
 
@@ -112,4 +117,40 @@ export async function scheduleHourlyNotification(
  */
 export async function cancelAllNotifications(): Promise<void> {
   await notifee.cancelAllNotifications();
+}
+
+/**
+ * Gets the notifications enabled setting.
+ * Default is true (notifications enabled by default if permissions granted).
+ * @returns Whether notifications are enabled
+ */
+export async function getNotificationsEnabled(): Promise<boolean> {
+  const value = await getSetting(NOTIFICATIONS_ENABLED_KEY);
+  // Default to true if setting doesn't exist
+  return value === null ? true : value === true;
+}
+
+/**
+ * Sets the notifications enabled setting.
+ * @param enabled - Whether notifications should be enabled
+ */
+export async function setNotificationsEnabled(enabled: boolean): Promise<void> {
+  await setSetting(NOTIFICATIONS_ENABLED_KEY, enabled);
+}
+
+/**
+ * Checks if we have already asked the user for notification permissions.
+ * @returns Whether we have asked for permissions before
+ */
+export async function hasAskedForPermissions(): Promise<boolean> {
+  const value = await getSetting(NOTIFICATIONS_PERMISSION_ASKED_KEY);
+  return value === true;
+}
+
+/**
+ * Sets whether we have asked the user for notification permissions.
+ * @param asked - Whether we have asked for permissions
+ */
+export async function setHasAskedForPermissions(asked: boolean): Promise<void> {
+  await setSetting(NOTIFICATIONS_PERMISSION_ASKED_KEY, asked);
 }
