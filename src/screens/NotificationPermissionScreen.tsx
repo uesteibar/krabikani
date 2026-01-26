@@ -1,5 +1,6 @@
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useNavigation } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -22,11 +23,30 @@ type NotificationPermissionNavigationProp = NativeStackNavigationProp<
   'NotificationPermission'
 >;
 
+type NotificationPermissionRouteProp = RouteProp<
+  RootStackParamList,
+  'NotificationPermission'
+>;
+
 export function NotificationPermissionScreen() {
   const navigation = useNavigation<NotificationPermissionNavigationProp>();
+  const route = useRoute<NotificationPermissionRouteProp>();
+  const isInitialSetup = route.params?.isInitialSetup ?? false;
   const theme = useTheme();
   const { colors, shadow } = theme;
   const [isLoading, setIsLoading] = useState(false);
+
+  const navigateAfterChoice = () => {
+    if (isInitialSetup) {
+      // Navigate to Home after initial setup, replacing the navigation stack
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Home' }],
+      });
+    } else {
+      navigation.goBack();
+    }
+  };
 
   const handleEnableNotifications = async () => {
     setIsLoading(true);
@@ -42,14 +62,14 @@ export function NotificationPermissionScreen() {
       }
     } finally {
       setIsLoading(false);
-      navigation.goBack();
+      navigateAfterChoice();
     }
   };
 
   const handleMaybeLater = async () => {
     await setHasAskedForPermissions(true);
     await setNotificationsEnabled(false);
-    navigation.goBack();
+    navigateAfterChoice();
   };
 
   return (

@@ -9,12 +9,14 @@ import * as wanikaniApi from '../../src/api/wanikaniApi';
 import * as secureStorage from '../../src/storage/secureStorage';
 import * as database from '../../src/storage/database';
 import * as syncService from '../../src/sync/syncService';
+import * as notificationService from '../../src/services/notificationService';
 import type { RootStackParamList } from '../../src/navigation/types';
 
 jest.mock('../../src/storage/secureStorage');
 jest.mock('../../src/storage/database');
 jest.mock('../../src/api/wanikaniApi');
 jest.mock('../../src/sync/syncService');
+jest.mock('../../src/services/notificationService');
 jest.spyOn(Alert, 'alert');
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -28,6 +30,15 @@ function MockHomeScreen() {
   );
 }
 
+// Mock NotificationPermission screen for navigation tests
+function MockNotificationPermissionScreen() {
+  return (
+    <View testID="notification-permission-screen">
+      <Text>Notification Permission Screen</Text>
+    </View>
+  );
+}
+
 // Wrapper for tests that need navigation
 function renderWithNavigation(
   initialRouteName: keyof RootStackParamList = 'Settings',
@@ -37,6 +48,10 @@ function renderWithNavigation(
       <Stack.Navigator initialRouteName={initialRouteName}>
         <Stack.Screen name="Home" component={MockHomeScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen
+          name="NotificationPermission"
+          component={MockNotificationPermissionScreen}
+        />
       </Stack.Navigator>
     </NavigationContainer>,
   );
@@ -46,6 +61,9 @@ const mockSecureStorage = secureStorage as jest.Mocked<typeof secureStorage>;
 const mockDatabase = database as jest.Mocked<typeof database>;
 const mockWanikaniApi = wanikaniApi as jest.Mocked<typeof wanikaniApi>;
 const mockSyncService = syncService as jest.Mocked<typeof syncService>;
+const mockNotificationService = notificationService as jest.Mocked<
+  typeof notificationService
+>;
 
 describe('SettingsScreen', () => {
   beforeEach(() => {
@@ -70,6 +88,9 @@ describe('SettingsScreen', () => {
       success: true,
       syncedCount: 50,
     });
+    // Default mock for notification service - permissions already granted
+    mockNotificationService.checkPermissions.mockResolvedValue('granted');
+    mockNotificationService.hasAskedForPermissions.mockResolvedValue(false);
   });
 
   it('should render loading state initially', async () => {
@@ -1104,6 +1125,185 @@ describe('SettingsScreen', () => {
 
       await waitFor(() => {
         expect(mockDatabase.getSetting).toHaveBeenCalledWith('zenMode');
+      });
+    });
+  });
+
+  describe('Notification Permission Flow', () => {
+    it('should navigate to Home when permissions already granted', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockWanikaniApi.validateApiKey.mockResolvedValue({
+        success: true,
+        user: { id: 1, username: 'testuser', level: 10 },
+      });
+      mockSyncService.getUserLevel.mockResolvedValue(10);
+      mockSyncService.syncSubjects.mockResolvedValue({
+        success: true,
+        syncedCount: 100,
+      });
+      mockSyncService.syncAssignments.mockResolvedValue({
+        success: true,
+        syncedCount: 50,
+      });
+      // Permissions already granted
+      mockNotificationService.checkPermissions.mockResolvedValue('granted');
+      mockNotificationService.hasAskedForPermissions.mockResolvedValue(false);
+
+      const { getByTestId } = renderWithNavigation('Settings');
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('api-key-input'), 'valid-api-key');
+      fireEvent.press(getByTestId('save-button'));
+
+      // Should navigate directly to Home since permissions already granted
+      await waitFor(() => {
+        expect(getByTestId('home-screen')).toBeTruthy();
+      });
+    });
+
+    it('should navigate to NotificationPermission when permissions not granted and not asked before', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockWanikaniApi.validateApiKey.mockResolvedValue({
+        success: true,
+        user: { id: 1, username: 'testuser', level: 10 },
+      });
+      mockSyncService.getUserLevel.mockResolvedValue(10);
+      mockSyncService.syncSubjects.mockResolvedValue({
+        success: true,
+        syncedCount: 100,
+      });
+      mockSyncService.syncAssignments.mockResolvedValue({
+        success: true,
+        syncedCount: 50,
+      });
+      // Permissions not granted and not asked
+      mockNotificationService.checkPermissions.mockResolvedValue(
+        'not_determined',
+      );
+      mockNotificationService.hasAskedForPermissions.mockResolvedValue(false);
+
+      const { getByTestId, queryByTestId } = renderWithNavigation('Settings');
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('api-key-input'), 'valid-api-key');
+      fireEvent.press(getByTestId('save-button'));
+
+      // Should navigate to NotificationPermission screen
+      await waitFor(() => {
+        expect(getByTestId('notification-permission-screen')).toBeTruthy();
+      });
+
+      // Home should not be visible yet
+      expect(queryByTestId('home-screen')).toBeNull();
+    });
+
+    it('should navigate to Home when already asked for permissions', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockWanikaniApi.validateApiKey.mockResolvedValue({
+        success: true,
+        user: { id: 1, username: 'testuser', level: 10 },
+      });
+      mockSyncService.getUserLevel.mockResolvedValue(10);
+      mockSyncService.syncSubjects.mockResolvedValue({
+        success: true,
+        syncedCount: 100,
+      });
+      mockSyncService.syncAssignments.mockResolvedValue({
+        success: true,
+        syncedCount: 50,
+      });
+      // Permissions denied but already asked before
+      mockNotificationService.checkPermissions.mockResolvedValue('denied');
+      mockNotificationService.hasAskedForPermissions.mockResolvedValue(true);
+
+      const { getByTestId } = renderWithNavigation('Settings');
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('api-key-input'), 'valid-api-key');
+      fireEvent.press(getByTestId('save-button'));
+
+      // Should navigate directly to Home since we already asked
+      await waitFor(() => {
+        expect(getByTestId('home-screen')).toBeTruthy();
+      });
+    });
+
+    it('should check permissions after successful sync', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockWanikaniApi.validateApiKey.mockResolvedValue({
+        success: true,
+        user: { id: 1, username: 'testuser', level: 10 },
+      });
+      mockSyncService.getUserLevel.mockResolvedValue(10);
+      mockSyncService.syncSubjects.mockResolvedValue({
+        success: true,
+        syncedCount: 100,
+      });
+      mockSyncService.syncAssignments.mockResolvedValue({
+        success: true,
+        syncedCount: 50,
+      });
+
+      const { getByTestId } = renderWithNavigation('Settings');
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('api-key-input'), 'valid-api-key');
+      fireEvent.press(getByTestId('save-button'));
+
+      await waitFor(() => {
+        expect(mockNotificationService.checkPermissions).toHaveBeenCalled();
+      });
+
+      await waitFor(() => {
+        expect(
+          mockNotificationService.hasAskedForPermissions,
+        ).toHaveBeenCalled();
+      });
+    });
+
+    it('should navigate to NotificationPermission when permissions denied and not asked before', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockWanikaniApi.validateApiKey.mockResolvedValue({
+        success: true,
+        user: { id: 1, username: 'testuser', level: 10 },
+      });
+      mockSyncService.getUserLevel.mockResolvedValue(10);
+      mockSyncService.syncSubjects.mockResolvedValue({
+        success: true,
+        syncedCount: 100,
+      });
+      mockSyncService.syncAssignments.mockResolvedValue({
+        success: true,
+        syncedCount: 50,
+      });
+      // Permissions denied and never asked
+      mockNotificationService.checkPermissions.mockResolvedValue('denied');
+      mockNotificationService.hasAskedForPermissions.mockResolvedValue(false);
+
+      const { getByTestId } = renderWithNavigation('Settings');
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('api-key-input'), 'valid-api-key');
+      fireEvent.press(getByTestId('save-button'));
+
+      // Should navigate to NotificationPermission screen
+      await waitFor(() => {
+        expect(getByTestId('notification-permission-screen')).toBeTruthy();
       });
     });
   });

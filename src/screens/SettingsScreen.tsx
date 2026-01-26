@@ -24,6 +24,10 @@ import {
 } from '../storage';
 import { getUserLevel, syncSubjects, syncAssignments } from '../sync';
 import { COLORS, SPACING, FONT_SIZES } from '../theme';
+import {
+  checkPermissions,
+  hasAskedForPermissions,
+} from '../services/notificationService';
 
 type SettingsScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -86,11 +90,27 @@ export function SettingsScreen() {
           syncAssignments(client),
         ]);
 
-        // Navigate to Home screen after successful sync
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Home' }],
-        });
+        // Check if we should show the notification permission screen
+        const [permissionStatus, alreadyAsked] = await Promise.all([
+          checkPermissions(),
+          hasAskedForPermissions(),
+        ]);
+
+        // Show permission screen if:
+        // - We haven't asked before AND
+        // - Permissions are not already granted
+        if (!alreadyAsked && permissionStatus !== 'granted') {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'NotificationPermission', params: { isInitialSetup: true } }],
+          });
+        } else {
+          // Navigate to Home screen after successful sync
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Home' }],
+          });
+        }
       } catch (error) {
         setIsSyncing(false);
         const errorMessage =
