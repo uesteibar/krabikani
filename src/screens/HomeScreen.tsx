@@ -365,7 +365,10 @@ export function HomeScreen() {
               vocabularyCount={learnedData.vocabularyLearned}
             />
             {upcomingReviewsData.hourlyBuckets.length > 0 && (
-              <UpcomingReviewsChart data={upcomingReviewsData.hourlyBuckets} />
+              <UpcomingReviewsChart
+                data={upcomingReviewsData.hourlyBuckets}
+                nextReviewAt={dashboardData.nextReviewAt}
+              />
             )}
           </View>
           <LastSyncedIndicator lastSyncedAt={syncStatus.lastSyncedAt} />
