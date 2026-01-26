@@ -299,3 +299,26 @@ Started:
   - Changes should take effect immediately when toggle is changed (no batching/debouncing needed)
 ---
 
+## 2026-01-26 - US-013
+- What was implemented:
+  - Added app state change listener in SettingsScreen to detect when app returns to foreground
+  - When app comes to foreground from background/inactive, permission status is checked via `checkPermissions()`
+  - If permissions were granted externally via system settings, toggle updates to enabled state
+  - If permissions were revoked externally via system settings, toggle updates to disabled state
+  - Uses `addAppStateChangeListener` from existing appStateSync utility
+  - Listener is properly cleaned up on component unmount
+  - Only `checkPermissions()` is called (not `requestPermissions()`), avoiding duplicate permission prompts
+  - Added 9 unit tests covering all permission change handling scenarios
+
+- Files changed:
+  - src/screens/SettingsScreen.tsx (added app state change listener useEffect, imported addAppStateChangeListener)
+  - __tests__/screens/SettingsScreen.test.tsx (added appStateSync mock, added 9 tests for permission change handling)
+
+- **Learnings for future iterations:**
+  - The appStateSync module provides `addAppStateChangeListener` for listening to foreground/background transitions
+  - Listener returns an unsubscribe function that should be called in cleanup
+  - To detect "coming to foreground", check if previousState is 'background' or 'inactive' AND nextState is 'active'
+  - When testing with captured listeners, use `AppStateChangeListener` type from appStateSync for proper typing
+  - The checkPermissions function reads current status without prompting, while requestPermissions shows the OS dialog
+---
+
