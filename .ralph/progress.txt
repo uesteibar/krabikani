@@ -117,3 +117,29 @@ Started:
   - Default values should be handled in the getter functions (return true/false when setting is null)
 ---
 
+## 2026-01-26 - US-006
+- What was implemented:
+  - Created `src/screens/NotificationPermissionScreen.tsx` with pre-permission explanation UI
+  - Title: "Stay on Top of Your Reviews"
+  - Description: "Get reminded when you have reviews waiting so you never miss a study session"
+  - "Enable Notifications" button that requests OS permissions via notificationService
+  - "Maybe Later" button that skips permission request and stores preference
+  - Both buttons call setHasAskedForPermissions(true) and navigate back
+  - Loading state while permission request is in progress
+  - Full theme support (dark/light mode via useTheme hook)
+  - Added screen to RootNavigator with navigation type in types.ts
+  - Added 14 unit tests covering all button behaviors and states
+
+- Files changed:
+  - src/screens/NotificationPermissionScreen.tsx (new)
+  - src/navigation/types.ts (added NotificationPermission route type)
+  - src/navigation/RootNavigator.tsx (added screen to navigator)
+  - __tests__/screens/NotificationPermissionScreen.test.tsx (new - 14 tests)
+
+- **Learnings for future iterations:**
+  - Screen tests must wrap components in ThemeProvider (use `forcedColorScheme="light"` for consistency)
+  - When testing navigation with goBack(), the screen cannot be the initial route (will log development warnings)
+  - Theme colors should use `colors.subject.vocabulary` for primary action buttons (matches app branding)
+  - Use `useTheme()` hook to access colors and shadow properties for dark mode support
+---
+
