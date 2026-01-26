@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { render } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 
 import { ItemDetails } from '../../src/components/ItemDetails';
 import type { Meaning, Reading, KanjiReading } from '../../src/api/types';
@@ -523,6 +523,95 @@ describe('ItemDetails', () => {
       expect(getByTestId('item-details')).toBeTruthy();
       expect(getByTestId('item-details-meanings')).toBeTruthy();
       expect(getByTestId('item-details-meaning-mnemonic')).toBeTruthy();
+    });
+  });
+
+  describe('onComponentPress callback', () => {
+    it('does not make components tappable when onComponentPress is not provided', () => {
+      const { getByTestId } = render(
+        <ItemDetails
+          subjectType="kanji"
+          meanings={[createMeaning('Big', true)]}
+          readings={[createKanjiReading('だい', 'onyomi', true)]}
+          meaningMnemonic="Test mnemonic"
+          readingMnemonic="Test reading mnemonic"
+          componentRadicals={[
+            createComponentRadical(1, '一', 'One'),
+          ]}
+          testID="test"
+        />
+      );
+
+      const component = getByTestId('test-component-1');
+      // Without onComponentPress, the component should not have onPress
+      expect(component.props.onPress).toBeUndefined();
+    });
+
+    it('calls onComponentPress with radical id when component radical is pressed', () => {
+      const mockOnComponentPress = jest.fn();
+      const { getByTestId } = render(
+        <ItemDetails
+          subjectType="kanji"
+          meanings={[createMeaning('Big', true)]}
+          readings={[createKanjiReading('だい', 'onyomi', true)]}
+          meaningMnemonic="Test mnemonic"
+          readingMnemonic="Test reading mnemonic"
+          componentRadicals={[
+            createComponentRadical(1, '一', 'One'),
+            createComponentRadical(2, '人', 'Person'),
+          ]}
+          onComponentPress={mockOnComponentPress}
+          testID="test"
+        />
+      );
+
+      fireEvent.press(getByTestId('test-component-1'));
+      expect(mockOnComponentPress).toHaveBeenCalledWith(1);
+
+      fireEvent.press(getByTestId('test-component-2'));
+      expect(mockOnComponentPress).toHaveBeenCalledWith(2);
+    });
+
+    it('calls onComponentPress with kanji id when component kanji is pressed', () => {
+      const mockOnComponentPress = jest.fn();
+      const { getByTestId } = render(
+        <ItemDetails
+          subjectType="vocabulary"
+          meanings={[createMeaning('Big', true)]}
+          readings={[createReading('おおきい', true)]}
+          meaningMnemonic="Test mnemonic"
+          readingMnemonic="Test reading mnemonic"
+          componentKanji={[
+            createComponentKanji(100, '大', 'Big', 'だい'),
+          ]}
+          onComponentPress={mockOnComponentPress}
+          testID="test"
+        />
+      );
+
+      fireEvent.press(getByTestId('test-component-100'));
+      expect(mockOnComponentPress).toHaveBeenCalledWith(100);
+    });
+
+    it('does not call onComponentPress until component is actually pressed', () => {
+      const mockOnComponentPress = jest.fn();
+      render(
+        <ItemDetails
+          subjectType="kanji"
+          meanings={[createMeaning('Big', true)]}
+          readings={[createKanjiReading('だい', 'onyomi', true)]}
+          meaningMnemonic="Test mnemonic"
+          readingMnemonic="Test reading mnemonic"
+          componentRadicals={[
+            createComponentRadical(1, '一', 'One'),
+          ]}
+          onComponentPress={mockOnComponentPress}
+          testID="test"
+        />
+      );
+
+      // Just rendering should not trigger the callback
+      expect(mockOnComponentPress).not.toHaveBeenCalled();
     });
   });
 });

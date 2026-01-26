@@ -40,6 +40,8 @@ export interface LessonBatchProps {
   componentRadicals?: Map<number, ComponentRadical>;
   /** Callback when the batch learning phase is complete (all items viewed) */
   onBatchComplete: () => void;
+  /** Callback when a component radical is pressed (for navigation to item detail) */
+  onComponentPress?: (subjectId: number) => void;
 }
 
 /** Default batch size for lessons */
@@ -72,6 +74,7 @@ export function LessonBatch({
   items,
   componentRadicals,
   onBatchComplete,
+  onComponentPress,
 }: LessonBatchProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -198,6 +201,7 @@ export function LessonBatch({
           componentRadicals={currentComponentRadicals}
           onNext={handleNext}
           onBack={isFirstItem ? undefined : handleBack}
+          onComponentPress={onComponentPress}
         />
       </View>
     </View>

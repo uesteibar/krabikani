@@ -137,6 +137,8 @@ export interface LessonQuizProps {
   onQuizComplete?: (results: AnswerResult[]) => void;
   /** Auto-advance delay in ms for correct answers (default: 500) */
   autoAdvanceDelay?: number;
+  /** Callback when a component is pressed (for navigation to item detail) */
+  onComponentPress?: (subjectId: number) => void;
 }
 
 /**
@@ -220,6 +222,7 @@ export function LessonQuiz({
   onAnswer,
   onQuizComplete,
   autoAdvanceDelay = 500,
+  onComponentPress,
 }: LessonQuizProps) {
   // Generate initial questions once when items change
   const initialQuestions = useMemo(() => generateQuizQuestions(items), [items]);
@@ -674,6 +677,7 @@ export function LessonQuiz({
                         characters={radical.characters}
                         meaning={radical.meaning}
                         characterImages={radical.characterImages}
+                        onPress={onComponentPress ? () => onComponentPress(radical.id) : undefined}
                         testID={`lesson-quiz-component-${radical.id}`}
                       />
                     ),
@@ -704,6 +708,7 @@ export function LessonQuiz({
                           ? kanji.reading
                           : undefined
                       }
+                      onPress={onComponentPress ? () => onComponentPress(kanji.id) : undefined}
                       testID={`lesson-quiz-component-kanji-${kanji.id}`}
                     />
                   ))}

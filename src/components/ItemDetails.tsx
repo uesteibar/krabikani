@@ -27,6 +27,8 @@ export interface ItemDetailsProps {
   componentRadicals?: ReviewComponentRadical[];
   /** Component kanji for vocabulary items (optional) */
   componentKanji?: ReviewComponentKanji[];
+  /** Callback when a component is pressed (for navigation to item detail) */
+  onComponentPress?: (subjectId: number) => void;
   /** Test ID for the component */
   testID?: string;
 }
@@ -79,6 +81,7 @@ export function ItemDetails({
   readingMnemonic,
   componentRadicals,
   componentKanji,
+  onComponentPress,
   testID,
 }: ItemDetailsProps) {
   const hasReadings = readings && readings.length > 0;
@@ -181,6 +184,7 @@ export function ItemDetails({
                   characters={radical.characters}
                   meaning={radical.meaning}
                   characterImages={radical.characterImages}
+                  onPress={onComponentPress ? () => onComponentPress(radical.id) : undefined}
                   testID={testID ? `${testID}-component-${radical.id}` : `item-details-component-${radical.id}`}
                 />
               ))}
@@ -190,6 +194,7 @@ export function ItemDetails({
                   subjectType="kanji"
                   characters={kanji.characters}
                   meaning={kanji.meaning}
+                  onPress={onComponentPress ? () => onComponentPress(kanji.id) : undefined}
                   testID={testID ? `${testID}-component-${kanji.id}` : `item-details-component-${kanji.id}`}
                 />
               ))}

@@ -374,6 +374,11 @@ export function LessonsScreen() {
     navigation.goBack();
   }, [navigation]);
 
+  // Handle component press (navigate to item detail)
+  const handleComponentPress = useCallback((subjectId: number) => {
+    navigation.push('ItemDetail', { subjectId });
+  }, [navigation]);
+
   // Handle continue to next batch
   const handleContinueLessons = useCallback(() => {
     if (!session) return;
@@ -434,6 +439,7 @@ export function LessonsScreen() {
           items={currentBatch.items}
           componentRadicals={componentRadicals}
           onBatchComplete={handleBatchComplete}
+          onComponentPress={handleComponentPress}
         />
       </View>
     );
@@ -447,7 +453,7 @@ export function LessonsScreen() {
 
     return (
       <View style={styles.container} testID="lessons-screen">
-        <LessonQuiz items={quizItems} onQuizComplete={handleQuizComplete} />
+        <LessonQuiz items={quizItems} onQuizComplete={handleQuizComplete} onComponentPress={handleComponentPress} />
       </View>
     );
   }

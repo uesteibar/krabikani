@@ -54,6 +54,8 @@ export interface LessonCardProps {
   onNext: () => void;
   /** Optional callback when Back button is pressed (hides button if not provided) */
   onBack?: () => void;
+  /** Callback when a component radical is pressed (for navigation to item detail) */
+  onComponentPress?: (subjectId: number) => void;
 }
 
 /**
@@ -107,6 +109,7 @@ export function LessonCard({
   componentRadicals,
   onNext,
   onBack,
+  onComponentPress,
 }: LessonCardProps) {
   const backgroundColor = getSubjectColor(subjectType);
   const primaryMeaning = getPrimaryMeaning(meanings);
@@ -150,27 +153,49 @@ export function LessonCard({
         >
           <Text style={styles.componentsTitle}>Made up of:</Text>
           <View style={styles.componentsRow}>
-            {componentRadicals.map(radical => (
-              <View
-                key={radical.id}
-                style={styles.componentItem}
-                testID={`lesson-card-component-${radical.id}`}
-              >
-                {radical.characters === null ? (
-                  <RadicalImage
-                    characterImages={radical.characterImages ?? null}
-                    fallbackText={radical.meaning}
-                    size={FONT_SIZES.xxl}
-                    testID={`lesson-card-component-${radical.id}-image`}
-                  />
-                ) : (
-                  <Text style={styles.componentCharacter}>
-                    {radical.characters}
-                  </Text>
-                )}
-                <Text style={styles.componentMeaning}>{radical.meaning}</Text>
-              </View>
-            ))}
+            {componentRadicals.map(radical => {
+              const componentContent = (
+                <>
+                  {radical.characters === null ? (
+                    <RadicalImage
+                      characterImages={radical.characterImages ?? null}
+                      fallbackText={radical.meaning}
+                      size={FONT_SIZES.xxl}
+                      testID={`lesson-card-component-${radical.id}-image`}
+                    />
+                  ) : (
+                    <Text style={styles.componentCharacter}>
+                      {radical.characters}
+                    </Text>
+                  )}
+                  <Text style={styles.componentMeaning}>{radical.meaning}</Text>
+                </>
+              );
+
+              if (onComponentPress) {
+                return (
+                  <TouchableOpacity
+                    key={radical.id}
+                    style={styles.componentItem}
+                    testID={`lesson-card-component-${radical.id}`}
+                    onPress={() => onComponentPress(radical.id)}
+                    activeOpacity={0.7}
+                  >
+                    {componentContent}
+                  </TouchableOpacity>
+                );
+              }
+
+              return (
+                <View
+                  key={radical.id}
+                  style={styles.componentItem}
+                  testID={`lesson-card-component-${radical.id}`}
+                >
+                  {componentContent}
+                </View>
+              );
+            })}
           </View>
         </View>
       )}

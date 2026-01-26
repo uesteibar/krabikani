@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import { Image } from 'react-native';
 
 import { ComponentDisplay } from '../../src/components/ComponentDisplay';
@@ -186,6 +186,70 @@ describe('ComponentDisplay', () => {
       expect(container.props.style).toEqual(
         expect.arrayContaining([expect.objectContaining(customStyle)]),
       );
+    });
+  });
+
+  describe('onPress interaction', () => {
+    it('does not call any callback when pressed without onPress prop', () => {
+      const { getByTestId } = render(
+        <ComponentDisplay
+          subjectType="radical"
+          characters="一"
+          meaning="ground"
+          testID="component"
+        />,
+      );
+
+      // Should not throw when pressing - it's just a View
+      expect(() => fireEvent.press(getByTestId('component'))).not.toThrow();
+    });
+
+    it('calls onPress when component is pressed', () => {
+      const mockOnPress = jest.fn();
+      const { getByTestId } = render(
+        <ComponentDisplay
+          subjectType="radical"
+          characters="一"
+          meaning="ground"
+          onPress={mockOnPress}
+          testID="component"
+        />,
+      );
+
+      fireEvent.press(getByTestId('component'));
+      expect(mockOnPress).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onPress for kanji component when pressed', () => {
+      const mockOnPress = jest.fn();
+      const { getByTestId } = render(
+        <ComponentDisplay
+          subjectType="kanji"
+          characters="大"
+          meaning="big"
+          onPress={mockOnPress}
+          testID="component"
+        />,
+      );
+
+      fireEvent.press(getByTestId('component'));
+      expect(mockOnPress).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not call onPress when not pressed', () => {
+      const mockOnPress = jest.fn();
+      render(
+        <ComponentDisplay
+          subjectType="radical"
+          characters="一"
+          meaning="ground"
+          onPress={mockOnPress}
+          testID="component"
+        />,
+      );
+
+      // Just rendering shouldn't call onPress
+      expect(mockOnPress).not.toHaveBeenCalled();
     });
   });
 });

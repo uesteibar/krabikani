@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, type ViewStyle } from 'react-native';
 
 import { RadicalImage } from './RadicalImage';
 import {
@@ -21,6 +21,8 @@ export interface ComponentDisplayProps {
   characterImages?: string | null;
   /** Additional text to display instead of meaning (e.g., reading for vocabulary components) */
   displayText?: string;
+  /** Callback when the component is pressed */
+  onPress?: () => void;
   /** Test ID for testing */
   testID?: string;
   /** Additional style for the container */
@@ -38,6 +40,7 @@ export function ComponentDisplay({
   meaning,
   characterImages,
   displayText,
+  onPress,
   testID,
   style,
 }: ComponentDisplayProps) {
@@ -48,11 +51,8 @@ export function ComponentDisplay({
   // When characters is null, always use RadicalImage which gracefully falls back to meaning text
   const shouldShowImage = characters === null;
 
-  return (
-    <View
-      style={[styles.container, { backgroundColor }, style]}
-      testID={testID}
-    >
+  const content = (
+    <>
       {shouldShowImage ? (
         <RadicalImage
           characterImages={characterImages ?? null}
@@ -75,6 +75,29 @@ export function ComponentDisplay({
       >
         {textToDisplay}
       </Text>
+    </>
+  );
+
+  // If onPress is provided, wrap in TouchableOpacity for tappable navigation
+  if (onPress) {
+    return (
+      <TouchableOpacity
+        style={[styles.container, { backgroundColor }, style]}
+        testID={testID}
+        onPress={onPress}
+        activeOpacity={0.7}
+      >
+        {content}
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <View
+      style={[styles.container, { backgroundColor }, style]}
+      testID={testID}
+    >
+      {content}
     </View>
   );
 }

@@ -166,6 +166,8 @@ export interface ReviewSessionProps {
   onReturnToDashboard?: () => void;
   /** Whether the reviews were synced online or queued offline (for completion screen) */
   syncedOnline?: boolean;
+  /** Callback when a component is pressed (for navigation to item detail) */
+  onComponentPress?: (subjectId: number) => void;
 }
 
 /**
@@ -276,6 +278,7 @@ export function ReviewSession({
   onWrapUpToggle,
   onReturnToDashboard,
   syncedOnline = false,
+  onComponentPress,
 }: ReviewSessionProps) {
   // Generate initial questions once when items change
   const initialQuestions = useMemo(
@@ -1230,6 +1233,7 @@ export function ReviewSession({
                         characters={radical.characters}
                         meaning={radical.meaning}
                         characterImages={radical.characterImages}
+                        onPress={onComponentPress ? () => onComponentPress(radical.id) : undefined}
                         testID={`review-session-component-${radical.id}`}
                       />
                     ),
@@ -1260,6 +1264,7 @@ export function ReviewSession({
                           ? kanji.reading
                           : undefined
                       }
+                      onPress={onComponentPress ? () => onComponentPress(kanji.id) : undefined}
                       testID={`review-session-component-kanji-${kanji.id}`}
                     />
                   ))}
@@ -1280,6 +1285,7 @@ export function ReviewSession({
               readingMnemonic={incorrectFeedback.question.item.readingMnemonic}
               componentRadicals={incorrectFeedback.question.item.componentRadicals}
               componentKanji={incorrectFeedback.question.item.componentKanji}
+              onComponentPress={onComponentPress}
               testID="review-session-item-details"
             />
           </ExpandableDetails>

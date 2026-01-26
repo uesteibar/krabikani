@@ -166,6 +166,10 @@ export function ItemDetailScreen() {
     navigation.goBack();
   };
 
+  const handleComponentPress = (componentSubjectId: number) => {
+    navigation.push('ItemDetail', { subjectId: componentSubjectId });
+  };
+
   // Loading state
   if (phase === 'loading') {
     return (
@@ -227,6 +231,7 @@ export function ItemDetailScreen() {
           readingMnemonic={subject.reading_mnemonic}
           componentRadicals={componentRadicals}
           componentKanji={componentKanji}
+          onComponentPress={handleComponentPress}
           testID="item-detail-details"
         />
       </View>

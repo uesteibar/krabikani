@@ -351,6 +351,11 @@ export function ReviewsScreen() {
     navigation.goBack();
   }, [navigation]);
 
+  // Handle component press (navigate to item detail)
+  const handleComponentPress = useCallback((subjectId: number) => {
+    navigation.push('ItemDetail', { subjectId });
+  }, [navigation]);
+
   // Render loading state
   if (phase === 'loading') {
     return (
@@ -395,6 +400,7 @@ export function ReviewsScreen() {
           onSessionComplete={handleSessionComplete}
           onReturnToDashboard={handleReturnToDashboard}
           syncedOnline={syncResult?.wasOnline ?? false}
+          onComponentPress={handleComponentPress}
         />
       </View>
     );
