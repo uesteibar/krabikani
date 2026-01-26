@@ -5,7 +5,10 @@ import {
   TextInput,
   View,
   FlatList,
+  TouchableOpacity,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import {
   COLORS,
@@ -18,6 +21,7 @@ import {
 } from '../theme';
 import { searchSubjects, type SearchResult, type SubjectType } from '../storage';
 import { romajiToHiragana } from '../utils/romajiToHiragana';
+import type { RootStackParamList } from '../navigation/types';
 
 interface Meaning {
   meaning: string;
@@ -49,8 +53,11 @@ function getSubjectTypeLabel(type: SubjectType): string {
   }
 }
 
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
 export function SearchScreen() {
   const theme = useTheme();
+  const navigation = useNavigation<NavigationProp>();
   const inputRef = useRef<TextInput>(null);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -133,13 +140,33 @@ export function SearchScreen() {
     [theme],
   );
 
+  const handleResultPress = useCallback((item: SearchResult) => {
+    switch (item.object_type) {
+      case 'radical':
+        navigation.navigate('RadicalDetail', { subjectId: item.id });
+        break;
+      case 'kanji':
+        navigation.navigate('KanjiDetail', { subjectId: item.id });
+        break;
+      case 'vocabulary':
+      case 'kana_vocabulary':
+        navigation.navigate('VocabularyDetail', { subjectId: item.id });
+        break;
+    }
+  }, [navigation]);
+
   const renderResultItem = useCallback(({ item }: { item: SearchResult }) => {
     const primaryMeaning = getPrimaryMeaning(item.meanings);
     const typeLabel = getSubjectTypeLabel(item.object_type);
     const badgeColor = SUBJECT_COLORS[item.object_type];
 
     return (
-      <View style={[styles.resultItem, dynamicStyles.resultItemBorder]} testID={`search-result-${item.id}`}>
+      <TouchableOpacity
+        style={[styles.resultItem, dynamicStyles.resultItemBorder]}
+        testID={`search-result-${item.id}`}
+        onPress={() => handleResultPress(item)}
+        activeOpacity={0.7}
+      >
         <Text style={[styles.resultCharacter, TEXT_STYLES.japaneseDisplay]}>
           {item.characters ?? '?'}
         </Text>
@@ -151,9 +178,9 @@ export function SearchScreen() {
             <Text style={styles.typeBadgeText}>{typeLabel}</Text>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
-  }, [dynamicStyles]);
+  }, [dynamicStyles, handleResultPress]);
 
   const keyExtractor = useCallback((item: SearchResult) => item.id.toString(), []);
 
