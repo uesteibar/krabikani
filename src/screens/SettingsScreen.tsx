@@ -34,6 +34,7 @@ import {
   clearBadge,
 } from '../services/notificationService';
 import { scheduleNextHourlyCheck } from '../services/reviewNotificationScheduler';
+import { addAppStateChangeListener } from '../utils/appStateSync';
 
 type SettingsScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -88,6 +89,26 @@ export function SettingsScreen() {
   useEffect(() => {
     loadStoredKey();
   }, [loadStoredKey]);
+
+  // Listen for app state changes to refresh permission status when returning from system settings
+  useEffect(() => {
+    const unsubscribe = addAppStateChangeListener(async (nextState, previousState) => {
+      // Check if coming to foreground from background/inactive
+      const isComingToForeground =
+        (previousState === 'background' || previousState === 'inactive') &&
+        nextState === 'active';
+
+      if (isComingToForeground) {
+        // Refresh permission status when returning to the app
+        const permissionStatus = await checkPermissions();
+        setNotificationPermissionGranted(permissionStatus === 'granted');
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   const performSync = useCallback(
     async (keyToUse: string) => {

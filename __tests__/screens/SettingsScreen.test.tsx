@@ -11,6 +11,8 @@ import * as database from '../../src/storage/database';
 import * as syncService from '../../src/sync/syncService';
 import * as notificationService from '../../src/services/notificationService';
 import * as reviewNotificationScheduler from '../../src/services/reviewNotificationScheduler';
+import * as appStateSync from '../../src/utils/appStateSync';
+import type { AppStateChangeListener } from '../../src/utils/appStateSync';
 import type { RootStackParamList } from '../../src/navigation/types';
 
 jest.mock('../../src/storage/secureStorage');
@@ -19,6 +21,7 @@ jest.mock('../../src/api/wanikaniApi');
 jest.mock('../../src/sync/syncService');
 jest.mock('../../src/services/notificationService');
 jest.mock('../../src/services/reviewNotificationScheduler');
+jest.mock('../../src/utils/appStateSync');
 jest.spyOn(Alert, 'alert');
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -68,6 +71,7 @@ const mockNotificationService = notificationService as jest.Mocked<
 >;
 const mockReviewNotificationScheduler =
   reviewNotificationScheduler as jest.Mocked<typeof reviewNotificationScheduler>;
+const mockAppStateSync = appStateSync as jest.Mocked<typeof appStateSync>;
 
 describe('SettingsScreen', () => {
   beforeEach(() => {
@@ -95,6 +99,8 @@ describe('SettingsScreen', () => {
     // Default mock for notification service - permissions already granted
     mockNotificationService.checkPermissions.mockResolvedValue('granted');
     mockNotificationService.hasAskedForPermissions.mockResolvedValue(false);
+    // Default mock for app state sync - returns unsubscribe function
+    mockAppStateSync.addAppStateChangeListener.mockReturnValue(() => {});
   });
 
   it('should render loading state initially', async () => {
@@ -1641,6 +1647,258 @@ describe('SettingsScreen', () => {
         mockNotificationService.cancelAllNotifications,
       ).toHaveBeenCalled();
       expect(mockNotificationService.clearBadge).toHaveBeenCalled();
+    });
+  });
+
+  describe('Permission Change Handling from System Settings', () => {
+    it('should register app state change listener on mount', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockNotificationService.checkPermissions.mockResolvedValue('granted');
+      mockNotificationService.getNotificationsEnabled.mockResolvedValue(true);
+
+      renderWithNavigation();
+
+      await waitFor(() => {
+        expect(mockAppStateSync.addAppStateChangeListener).toHaveBeenCalled();
+      });
+    });
+
+    it('should unsubscribe from app state changes on unmount', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockNotificationService.checkPermissions.mockResolvedValue('granted');
+      mockNotificationService.getNotificationsEnabled.mockResolvedValue(true);
+
+      const mockUnsubscribe = jest.fn();
+      mockAppStateSync.addAppStateChangeListener.mockReturnValue(mockUnsubscribe);
+
+      const { unmount } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(mockAppStateSync.addAppStateChangeListener).toHaveBeenCalled();
+      });
+
+      unmount();
+
+      expect(mockUnsubscribe).toHaveBeenCalled();
+    });
+
+    it('should check permissions when app returns to foreground from background', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockNotificationService.checkPermissions.mockResolvedValue('denied');
+      mockNotificationService.getNotificationsEnabled.mockResolvedValue(false);
+
+      let capturedListener: AppStateChangeListener | undefined;
+      mockAppStateSync.addAppStateChangeListener.mockImplementation(listener => {
+        capturedListener = listener;
+        return () => {};
+      });
+
+      const { getByTestId } = renderWithNavigation();
+
+      // Initially shows disabled toggle
+      await waitFor(() => {
+        expect(getByTestId('notifications-setting-disabled')).toBeTruthy();
+      });
+
+      // Clear the initial checkPermissions call
+      mockNotificationService.checkPermissions.mockClear();
+
+      // Simulate returning to foreground from background
+      await act(async () => {
+        capturedListener?.('active', 'background');
+      });
+
+      // Should have checked permissions again
+      expect(mockNotificationService.checkPermissions).toHaveBeenCalled();
+    });
+
+    it('should check permissions when app returns to foreground from inactive', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockNotificationService.checkPermissions.mockResolvedValue('denied');
+      mockNotificationService.getNotificationsEnabled.mockResolvedValue(false);
+
+      let capturedListener: AppStateChangeListener | undefined;
+      mockAppStateSync.addAppStateChangeListener.mockImplementation(listener => {
+        capturedListener = listener;
+        return () => {};
+      });
+
+      renderWithNavigation();
+
+      await waitFor(() => {
+        expect(mockAppStateSync.addAppStateChangeListener).toHaveBeenCalled();
+      });
+
+      // Clear the initial checkPermissions call
+      mockNotificationService.checkPermissions.mockClear();
+
+      // Simulate returning to foreground from inactive
+      await act(async () => {
+        capturedListener?.('active', 'inactive');
+      });
+
+      // Should have checked permissions again
+      expect(mockNotificationService.checkPermissions).toHaveBeenCalled();
+    });
+
+    it('should update toggle to enabled when permissions granted externally', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      // Initially permissions denied
+      mockNotificationService.checkPermissions.mockResolvedValue('denied');
+      mockNotificationService.getNotificationsEnabled.mockResolvedValue(false);
+
+      let capturedListener: AppStateChangeListener | undefined;
+      mockAppStateSync.addAppStateChangeListener.mockImplementation(listener => {
+        capturedListener = listener;
+        return () => {};
+      });
+
+      const { getByTestId, queryByTestId } = renderWithNavigation();
+
+      // Initially shows disabled toggle
+      await waitFor(() => {
+        expect(getByTestId('notifications-setting-disabled')).toBeTruthy();
+      });
+      expect(queryByTestId('notifications-setting')).toBeNull();
+
+      // Permissions granted externally via system settings
+      mockNotificationService.checkPermissions.mockResolvedValue('granted');
+      mockNotificationService.getNotificationsEnabled.mockResolvedValue(true);
+
+      // Simulate returning to foreground
+      await act(async () => {
+        capturedListener?.('active', 'background');
+      });
+
+      // Should now show enabled toggle
+      await waitFor(() => {
+        expect(getByTestId('notifications-setting')).toBeTruthy();
+      });
+      expect(queryByTestId('notifications-setting-disabled')).toBeNull();
+    });
+
+    it('should update toggle to disabled when permissions revoked externally', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      // Initially permissions granted
+      mockNotificationService.checkPermissions.mockResolvedValue('granted');
+      mockNotificationService.getNotificationsEnabled.mockResolvedValue(true);
+
+      let capturedListener: AppStateChangeListener | undefined;
+      mockAppStateSync.addAppStateChangeListener.mockImplementation(listener => {
+        capturedListener = listener;
+        return () => {};
+      });
+
+      const { getByTestId, queryByTestId } = renderWithNavigation();
+
+      // Initially shows enabled toggle
+      await waitFor(() => {
+        expect(getByTestId('notifications-setting')).toBeTruthy();
+      });
+      expect(queryByTestId('notifications-setting-disabled')).toBeNull();
+
+      // Permissions revoked externally via system settings
+      mockNotificationService.checkPermissions.mockResolvedValue('denied');
+
+      // Simulate returning to foreground
+      await act(async () => {
+        capturedListener?.('active', 'background');
+      });
+
+      // Should now show disabled toggle
+      await waitFor(() => {
+        expect(getByTestId('notifications-setting-disabled')).toBeTruthy();
+      });
+      expect(queryByTestId('notifications-setting')).toBeNull();
+    });
+
+    it('should not check permissions when app goes to background', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockNotificationService.checkPermissions.mockResolvedValue('granted');
+      mockNotificationService.getNotificationsEnabled.mockResolvedValue(true);
+
+      let capturedListener: AppStateChangeListener | undefined;
+      mockAppStateSync.addAppStateChangeListener.mockImplementation(listener => {
+        capturedListener = listener;
+        return () => {};
+      });
+
+      renderWithNavigation();
+
+      await waitFor(() => {
+        expect(mockAppStateSync.addAppStateChangeListener).toHaveBeenCalled();
+      });
+
+      // Clear the initial checkPermissions call
+      mockNotificationService.checkPermissions.mockClear();
+
+      // Simulate going to background (should not trigger permission check)
+      await act(async () => {
+        capturedListener?.('background', 'active');
+      });
+
+      // Should NOT have checked permissions
+      expect(mockNotificationService.checkPermissions).not.toHaveBeenCalled();
+    });
+
+    it('should not check permissions when transitioning between background states', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockNotificationService.checkPermissions.mockResolvedValue('granted');
+      mockNotificationService.getNotificationsEnabled.mockResolvedValue(true);
+
+      let capturedListener: AppStateChangeListener | undefined;
+      mockAppStateSync.addAppStateChangeListener.mockImplementation(listener => {
+        capturedListener = listener;
+        return () => {};
+      });
+
+      renderWithNavigation();
+
+      await waitFor(() => {
+        expect(mockAppStateSync.addAppStateChangeListener).toHaveBeenCalled();
+      });
+
+      // Clear the initial checkPermissions call
+      mockNotificationService.checkPermissions.mockClear();
+
+      // Simulate going from active to inactive (should not trigger permission check)
+      await act(async () => {
+        capturedListener?.('inactive', 'active');
+      });
+
+      // Should NOT have checked permissions
+      expect(mockNotificationService.checkPermissions).not.toHaveBeenCalled();
+    });
+
+    it('should not trigger duplicate permission requests after initial ask', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockNotificationService.checkPermissions.mockResolvedValue('granted');
+      mockNotificationService.getNotificationsEnabled.mockResolvedValue(true);
+      mockNotificationService.hasAskedForPermissions.mockResolvedValue(true);
+
+      let capturedListener: AppStateChangeListener | undefined;
+      mockAppStateSync.addAppStateChangeListener.mockImplementation(listener => {
+        capturedListener = listener;
+        return () => {};
+      });
+
+      renderWithNavigation();
+
+      await waitFor(() => {
+        expect(mockAppStateSync.addAppStateChangeListener).toHaveBeenCalled();
+      });
+
+      // Clear the initial checkPermissions call
+      mockNotificationService.checkPermissions.mockClear();
+
+      // Simulate returning to foreground
+      await act(async () => {
+        capturedListener?.('active', 'background');
+      });
+
+      // Should only call checkPermissions (not requestPermissions)
+      expect(mockNotificationService.checkPermissions).toHaveBeenCalled();
+      expect(mockNotificationService.requestPermissions).not.toHaveBeenCalled();
     });
   });
 });
