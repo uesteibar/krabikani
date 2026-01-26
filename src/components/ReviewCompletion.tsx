@@ -44,6 +44,18 @@ const CONFETTI_COLORS = [
   '#98D8C8', // Mint
 ];
 
+// Encouragement messages shown after completing reviews
+const ENCOURAGEMENT_MESSAGES = [
+  'Great work! Keep up the momentum.',
+  'Every review brings you closer to mastery.',
+  'Consistency is the key to learning.',
+  'Your dedication is paying off!',
+  'One step closer to fluency.',
+  'Well done! Progress takes practice.',
+  'Keep showing up, and the rest follows.',
+  'Nice session! Small steps lead to big gains.',
+];
+
 export interface ReviewCompletionProps {
   /** Number of items reviewed in this session */
   itemsReviewed: number;
@@ -155,6 +167,10 @@ export function ReviewCompletion({
   const titleTranslateY = useSharedValue(reduceMotion ? 0 : SLIDE_DISTANCE);
   const countOpacity = useSharedValue(reduceMotion ? 1 : 0);
   const countTranslateY = useSharedValue(reduceMotion ? 0 : SLIDE_DISTANCE);
+  const encouragementOpacity = useSharedValue(reduceMotion ? 1 : 0);
+  const encouragementTranslateY = useSharedValue(
+    reduceMotion ? 0 : SLIDE_DISTANCE,
+  );
   const incorrectOpacity = useSharedValue(reduceMotion ? 1 : 0);
   const incorrectTranslateY = useSharedValue(reduceMotion ? 0 : SLIDE_DISTANCE);
   const syncOpacity = useSharedValue(reduceMotion ? 1 : 0);
@@ -178,6 +194,12 @@ export function ReviewCompletion({
     [showConfetti],
   );
 
+  // Select a random encouragement message on mount
+  const encouragementMessage = useMemo(() => {
+    const index = Math.floor(Math.random() * ENCOURAGEMENT_MESSAGES.length);
+    return ENCOURAGEMENT_MESSAGES[index];
+  }, []);
+
   // Start animations on mount
   useEffect(() => {
     if (reduceMotion) {
@@ -188,6 +210,8 @@ export function ReviewCompletion({
       titleTranslateY.value = 0;
       countOpacity.value = 1;
       countTranslateY.value = 0;
+      encouragementOpacity.value = 1;
+      encouragementTranslateY.value = 0;
       incorrectOpacity.value = 1;
       incorrectTranslateY.value = 0;
       syncOpacity.value = 1;
@@ -249,48 +273,64 @@ export function ReviewCompletion({
       }),
     );
 
-    // Element 4: Incorrect count (delay 300ms)
-    incorrectOpacity.value = withDelay(
+    // Element 4: Encouragement message (delay 300ms)
+    encouragementOpacity.value = withDelay(
       STAGGER_DELAY * 3,
+      withTiming(1, {
+        duration: FADE_DURATION,
+        easing: Easing.out(Easing.ease),
+      }),
+    );
+    encouragementTranslateY.value = withDelay(
+      STAGGER_DELAY * 3,
+      withTiming(0, {
+        duration: FADE_DURATION,
+        easing: Easing.out(Easing.ease),
+      }),
+    );
+
+    // Element 5: Incorrect count (delay 400ms)
+    incorrectOpacity.value = withDelay(
+      STAGGER_DELAY * 4,
       withTiming(1, {
         duration: FADE_DURATION,
         easing: Easing.out(Easing.ease),
       }),
     );
     incorrectTranslateY.value = withDelay(
-      STAGGER_DELAY * 3,
+      STAGGER_DELAY * 4,
       withTiming(0, {
         duration: FADE_DURATION,
         easing: Easing.out(Easing.ease),
       }),
     );
 
-    // Element 5: Sync status (delay 400ms)
+    // Element 6: Sync status (delay 500ms)
     syncOpacity.value = withDelay(
-      STAGGER_DELAY * 4,
+      STAGGER_DELAY * 5,
       withTiming(1, {
         duration: FADE_DURATION,
         easing: Easing.out(Easing.ease),
       }),
     );
     syncTranslateY.value = withDelay(
-      STAGGER_DELAY * 4,
+      STAGGER_DELAY * 5,
       withTiming(0, {
         duration: FADE_DURATION,
         easing: Easing.out(Easing.ease),
       }),
     );
 
-    // Element 6: Button (delay 500ms)
+    // Element 7: Button (delay 600ms)
     buttonOpacity.value = withDelay(
-      STAGGER_DELAY * 5,
+      STAGGER_DELAY * 6,
       withTiming(1, {
         duration: FADE_DURATION,
         easing: Easing.out(Easing.ease),
       }),
     );
     buttonTranslateY.value = withDelay(
-      STAGGER_DELAY * 5,
+      STAGGER_DELAY * 6,
       withTiming(0, {
         duration: FADE_DURATION,
         easing: Easing.out(Easing.ease),
@@ -306,6 +346,8 @@ export function ReviewCompletion({
     titleTranslateY,
     countOpacity,
     countTranslateY,
+    encouragementOpacity,
+    encouragementTranslateY,
     incorrectOpacity,
     incorrectTranslateY,
     syncOpacity,
@@ -333,6 +375,11 @@ export function ReviewCompletion({
   const countAnimatedStyle = useAnimatedStyle(() => ({
     opacity: countOpacity.value,
     transform: [{ translateY: countTranslateY.value }],
+  }));
+
+  const encouragementAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: encouragementOpacity.value,
+    transform: [{ translateY: encouragementTranslateY.value }],
   }));
 
   const incorrectAnimatedStyle = useAnimatedStyle(() => ({
@@ -393,6 +440,14 @@ export function ReviewCompletion({
           {itemsReviewed === 1 ? 'item reviewed' : 'items reviewed'}
         </Text>
       </Animated.View>
+
+      {/* Encouragement message */}
+      <Animated.Text
+        style={[styles.encouragementText, encouragementAnimatedStyle]}
+        testID="review-completion-encouragement"
+      >
+        {encouragementMessage}
+      </Animated.Text>
 
       {/* Incorrect count - only show if > 0, with red tint */}
       {hasIncorrect && (
@@ -491,6 +546,13 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.lg,
     color: COLORS.text.secondary,
     marginTop: SPACING.xs,
+  },
+  encouragementText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
+    textAlign: 'center',
+    marginBottom: SPACING.lg,
+    fontStyle: 'italic',
   },
   incorrectContainer: {
     alignItems: 'center',

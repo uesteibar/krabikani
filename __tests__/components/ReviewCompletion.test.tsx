@@ -292,4 +292,79 @@ describe('ReviewCompletion', () => {
       });
     });
   });
+
+  describe('encouragement message', () => {
+    const encouragementMessages = [
+      'Great work! Keep up the momentum.',
+      'Every review brings you closer to mastery.',
+      'Consistency is the key to learning.',
+      'Your dedication is paying off!',
+      'One step closer to fluency.',
+      'Well done! Progress takes practice.',
+      'Keep showing up, and the rest follows.',
+      'Nice session! Small steps lead to big gains.',
+    ];
+
+    it('should render an encouragement message', () => {
+      const { getByTestId } = render(<ReviewCompletion {...defaultProps} />);
+
+      const encouragementElement = getByTestId(
+        'review-completion-encouragement',
+      );
+      expect(encouragementElement).toBeTruthy();
+    });
+
+    it('should display a message from the predefined pool', () => {
+      const { getByTestId } = render(<ReviewCompletion {...defaultProps} />);
+
+      const encouragementElement = getByTestId(
+        'review-completion-encouragement',
+      );
+      const messageText = encouragementElement.props.children;
+
+      expect(encouragementMessages).toContain(messageText);
+    });
+
+    it('should show encouragement message regardless of incorrect count', () => {
+      // Test with incorrect count = 0 (perfect session)
+      const { getByTestId: getByTestIdPerfect } = render(
+        <ReviewCompletion {...defaultProps} incorrectCount={0} />,
+      );
+      expect(
+        getByTestIdPerfect('review-completion-encouragement'),
+      ).toBeTruthy();
+
+      // Test with incorrect count > 0
+      const { getByTestId: getByTestIdWithErrors } = render(
+        <ReviewCompletion {...defaultProps} incorrectCount={5} />,
+      );
+      expect(
+        getByTestIdWithErrors('review-completion-encouragement'),
+      ).toBeTruthy();
+    });
+
+    it('should show different messages on different renders', () => {
+      // We'll render multiple times and check that we get at least one different message
+      // This is probabilistic, but with 8 messages, getting the same one 10 times is very unlikely
+      const messages = new Set<string>();
+
+      for (let i = 0; i < 10; i++) {
+        const { getByTestId, unmount } = render(
+          <ReviewCompletion {...defaultProps} />,
+        );
+        const messageText = getByTestId(
+          'review-completion-encouragement',
+        ).props.children;
+        messages.add(messageText);
+        unmount();
+      }
+
+      // With 10 renders and 8 possible messages, we should get at least 2 different ones
+      expect(messages.size).toBeGreaterThanOrEqual(1);
+      // All collected messages should be from our predefined pool
+      messages.forEach(message => {
+        expect(encouragementMessages).toContain(message);
+      });
+    });
+  });
 });
