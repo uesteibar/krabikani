@@ -7,6 +7,7 @@ Started:
 - Dashboard data is loaded via loadDashboardData() which uses Promise.all to fetch multiple data sources
 - Component props follow pattern of optional values with sensible defaults (e.g., `currentPendingCount = 0`)
 - Tests use @testing-library/react-native with patterns like createTestData() helpers
+- User settings use getSetting/setSetting from storage - values stored as JSON strings, support boolean/string/number types
 
 ---
 
@@ -21,5 +22,18 @@ Started:
   - The upcomingReviewsData.hourlyBuckets contains future reviews only (from getUpcomingReviewsByHour())
   - There are pre-existing type errors in the codebase related to react-native-reanimated module declarations
   - There are pre-existing lint errors in ReviewsScreen.test.tsx and ReviewsScreen.tsx
+---
+
+## 2026-01-26 - US-002
+- What was implemented: Added Settings Storage Infrastructure for storing user preferences locally
+- Files changed:
+  - `src/storage/database.ts` - Added user_settings table schema, migration (version 5), and CRUD functions (getSetting, setSetting, getAllSettings, deleteSetting, deleteAllSettings)
+  - `src/storage/index.ts` - Exported new settings functions and types (DatabaseUserSetting, SettingValue)
+  - `__tests__/storage/databaseCrud.test.ts` - Added 12 new tests for User Settings CRUD operations
+- **Learnings for future iterations:**
+  - Settings are stored as JSON strings to support boolean, string, and number types
+  - Settings are intentionally NOT cleared by clearAllData() - they persist when user clears API key
+  - The MIGRATIONS array is used for database schema migrations - add new migrations with incrementing version numbers
+  - Use __insertRow and __getTableRows from the mock database for testing CRUD operations
 ---
 
