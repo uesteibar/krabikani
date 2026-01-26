@@ -2,3 +2,24 @@
 Started:
 ---
 
+## Codebase Patterns
+- The UpcomingReviewsChart component displays cumulative totals in format "+X (Y)" where X is new reviews in that hour and Y is cumulative total
+- Dashboard data is loaded via loadDashboardData() which uses Promise.all to fetch multiple data sources
+- Component props follow pattern of optional values with sensible defaults (e.g., `currentPendingCount = 0`)
+- Tests use @testing-library/react-native with patterns like createTestData() helpers
+
+---
+
+## 2026-01-26 - US-001
+- What was implemented: Fixed the cumulative count in the upcoming reviews chart to include reviews that are already available (currentPendingCount)
+- Files changed:
+  - `src/components/UpcomingReviewsChart.tsx` - Added `currentPendingCount` prop, changed cumulative calculation to start from this value
+  - `src/screens/HomeScreen.tsx` - Passed `dashboardData.reviewsCount` as `currentPendingCount` to the chart
+  - `__tests__/components/UpcomingReviewsChart.test.tsx` - Added two new tests verifying cumulative calculation with pending reviews
+- **Learnings for future iterations:**
+  - The reviewsCount in dashboardData represents currently available reviews (from getAvailableReviews())
+  - The upcomingReviewsData.hourlyBuckets contains future reviews only (from getUpcomingReviewsByHour())
+  - There are pre-existing type errors in the codebase related to react-native-reanimated module declarations
+  - There are pre-existing lint errors in ReviewsScreen.test.tsx and ReviewsScreen.tsx
+---
+
