@@ -172,3 +172,31 @@ Started:
   - SettingsScreen now imports from notificationService for permission checks
 ---
 
+## 2026-01-26 - US-008
+- What was implemented:
+  - Added 'Review Notifications' toggle to Settings screen
+  - Toggle shows current on/off state from stored `notifications_enabled` setting
+  - Toggle is disabled (grayed out) when notification permissions are not granted
+  - Disabled state shows helper text 'Enable in system settings' in italic tertiary color
+  - Tapping the disabled toggle row opens system notification settings via `openNotificationSettings()`
+  - Setting persists across app restarts (loaded on component mount)
+  - Added `openNotificationSettings()` function to notificationService
+  - Added 12 unit tests covering enabled/disabled toggle states, persistence, and system settings navigation
+  - Added 1 unit test for `openNotificationSettings` in notificationService tests
+
+- Files changed:
+  - src/screens/SettingsScreen.tsx (added notification toggle UI and state management)
+  - src/services/notificationService.ts (added openNotificationSettings function)
+  - src/services/index.ts (added openNotificationSettings export)
+  - __mocks__/@notifee/react-native.ts (added openNotificationSettings mock)
+  - __tests__/screens/SettingsScreen.test.tsx (added 12 notification toggle tests)
+  - __tests__/services/notificationService.test.ts (added openNotificationSettings test)
+
+- **Learnings for future iterations:**
+  - notifee provides `openNotificationSettings()` to open the app's notification settings in the OS
+  - Use conditional rendering for enabled vs disabled toggle states (different components for each)
+  - TouchableOpacity wrapper allows tap-to-navigate even when the Switch itself is disabled
+  - Load notification permission status on mount to determine which UI to show
+  - Use `COLORS.text.tertiary` with `fontStyle: 'italic'` for helper text on disabled controls
+---
+
