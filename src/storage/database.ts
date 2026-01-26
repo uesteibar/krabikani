@@ -2,7 +2,10 @@ import { open, type DB, type QueryResult } from '@op-engineering/op-sqlite';
 
 // Database name
 const DATABASE_NAME = 'wanikani.db';
-const DATABASE_VERSION = 1;
+// DATABASE_VERSION should match the latest migration version.
+// Fresh databases are created with all schema changes included, so they
+// start at this version and skip migrations that are already in the schema.
+const DATABASE_VERSION = 5;
 
 // Current database instance
 let db: DB | null = null;
@@ -26,6 +29,7 @@ const CREATE_SUBJECTS_TABLE = `
     reading_mnemonic TEXT,
     level INTEGER NOT NULL,
     component_subject_ids TEXT,
+    character_images TEXT,
     data_updated_at TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   )
@@ -799,7 +803,9 @@ export async function getUpcomingReviewsByHour(
 
   // Count reviews per hour bucket
   for (const row of result.rows) {
-    const availableAt = new Date((row as { available_at: string }).available_at);
+    const availableAt = new Date(
+      (row as { available_at: string }).available_at,
+    );
     // Find which bucket this review falls into
     const hourDiff = Math.floor(
       (availableAt.getTime() - currentHour.getTime()) / (1000 * 60 * 60),
@@ -1035,7 +1041,9 @@ export interface UserSynonymInput {
  * Uses INSERT OR REPLACE to handle duplicates.
  * Returns the ID of the inserted/updated row.
  */
-export async function addUserSynonym(synonym: UserSynonymInput): Promise<number> {
+export async function addUserSynonym(
+  synonym: UserSynonymInput,
+): Promise<number> {
   const result = await executeSql(
     `INSERT OR REPLACE INTO user_synonyms (subject_id, synonym, synced_at)
      VALUES (?, ?, ?)`,
@@ -1050,10 +1058,9 @@ export async function addUserSynonym(synonym: UserSynonymInput): Promise<number>
 export async function getUserSynonymById(
   id: number,
 ): Promise<DatabaseUserSynonym | null> {
-  const result = await executeSql(
-    'SELECT * FROM user_synonyms WHERE id = ?',
-    [id],
-  );
+  const result = await executeSql('SELECT * FROM user_synonyms WHERE id = ?', [
+    id,
+  ]);
   if (result.rows.length === 0) {
     return null;
   }
@@ -1111,7 +1118,9 @@ export async function deleteUserSynonym(id: number): Promise<void> {
 export async function deleteUserSynonymsBySubjectId(
   subjectId: number,
 ): Promise<void> {
-  await executeSql('DELETE FROM user_synonyms WHERE subject_id = ?', [subjectId]);
+  await executeSql('DELETE FROM user_synonyms WHERE subject_id = ?', [
+    subjectId,
+  ]);
 }
 
 /**
@@ -1545,6 +1554,49 @@ export async function runMigrations(): Promise<{
 }
 
 /**
+ * Checks if a column exists in a table.
+ */
+async function columnExists(
+  tableName: string,
+  columnName: string,
+): Promise<boolean> {
+  try {
+    const result = await executeSql(`PRAGMA table_info(${tableName})`, []);
+    const columns = result.rows as Array<{ name: string }>;
+    return columns.some(col => col.name === columnName);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Ensures all required columns exist in the schema.
+ * This handles cases where the schema version was incorrectly set
+ * but the actual columns are missing.
+ */
+async function ensureSchemaIntegrity(): Promise<void> {
+  // Check and add character_images column to subjects table
+  const hasCharacterImages = await columnExists('subjects', 'character_images');
+  if (!hasCharacterImages) {
+    console.log('[Database] Adding missing character_images column');
+    await executeSql(
+      'ALTER TABLE subjects ADD COLUMN character_images TEXT',
+      [],
+    );
+  }
+
+  // Check and add user_level column to sync_status table
+  const hasUserLevel = await columnExists('sync_status', 'user_level');
+  if (!hasUserLevel) {
+    console.log('[Database] Adding missing user_level column');
+    await executeSql(
+      'ALTER TABLE sync_status ADD COLUMN user_level INTEGER',
+      [],
+    );
+  }
+}
+
+/**
  * Initializes the database with schema and runs any pending migrations.
  * This is the main entry point for database setup.
  */
@@ -1556,6 +1608,8 @@ export async function initializeDatabaseWithMigrations(): Promise<boolean> {
 
   try {
     await runMigrations();
+    // Ensure schema integrity for databases that may have incorrect version
+    await ensureSchemaIntegrity();
     return true;
   } catch (error) {
     console.error('Failed to run migrations:', error);
