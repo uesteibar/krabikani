@@ -8,5 +8,7 @@ export {
 export {
   requestPermissions,
   checkPermissions,
+  setBadgeCount,
+  clearBadge,
   type PermissionStatus,
 } from './notificationService';

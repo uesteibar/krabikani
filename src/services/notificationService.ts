@@ -37,3 +37,19 @@ export async function checkPermissions(): Promise<PermissionStatus> {
   const settings = await notifee.getNotificationSettings();
   return mapAuthorizationStatus(settings.authorizationStatus);
 }
+
+/**
+ * Sets the app icon badge count.
+ * Works on both iOS and Android (Android 8.0+ with launcher support).
+ * @param count - The badge number to display. Use 0 to clear the badge.
+ */
+export async function setBadgeCount(count: number): Promise<void> {
+  await notifee.setBadgeCount(count);
+}
+
+/**
+ * Clears the app icon badge by setting count to 0.
+ */
+export async function clearBadge(): Promise<void> {
+  await notifee.setBadgeCount(0);
+}

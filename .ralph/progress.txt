@@ -54,3 +54,22 @@ Started:
   - Tests should verify that `checkPermissions` does NOT call `requestPermission` (ensures no accidental permission prompts)
 ---
 
+## 2026-01-26 - US-003
+- What was implemented:
+  - Added `setBadgeCount(count: number)` function to notificationService
+  - Added `clearBadge()` function that sets badge count to 0
+  - Both functions use notifee.setBadgeCount() which works on iOS and Android (Android 8.0+ with launcher support)
+  - Added exports to `src/services/index.ts`
+  - Added 4 unit tests for badge functions
+
+- Files changed:
+  - src/services/notificationService.ts (added setBadgeCount and clearBadge functions)
+  - src/services/index.ts (added exports for new functions)
+  - __tests__/services/notificationService.test.ts (added 4 tests for badge functions)
+
+- **Learnings for future iterations:**
+  - The notifee mock already had `setBadgeCount` and `getBadgeCount` methods prepared, so no mock updates were needed
+  - Setting badge count to 0 clears the badge entirely from the app icon (this is standard behavior on both platforms)
+  - notifee handles the cross-platform differences internally - same API works for iOS and Android
+---
+

@@ -2,6 +2,8 @@ import notifee, {AuthorizationStatus} from '@notifee/react-native';
 import {
   requestPermissions,
   checkPermissions,
+  setBadgeCount,
+  clearBadge,
 } from '../../src/services/notificationService';
 
 jest.mock('@notifee/react-native');
@@ -100,6 +102,34 @@ describe('notificationService', () => {
       await checkPermissions();
 
       expect(notifee.requestPermission).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('setBadgeCount', () => {
+    it('sets the badge count to the specified number', async () => {
+      await setBadgeCount(47);
+
+      expect(notifee.setBadgeCount).toHaveBeenCalledWith(47);
+    });
+
+    it('sets the badge count to 0', async () => {
+      await setBadgeCount(0);
+
+      expect(notifee.setBadgeCount).toHaveBeenCalledWith(0);
+    });
+
+    it('handles large badge counts', async () => {
+      await setBadgeCount(999);
+
+      expect(notifee.setBadgeCount).toHaveBeenCalledWith(999);
+    });
+  });
+
+  describe('clearBadge', () => {
+    it('clears the badge by setting count to 0', async () => {
+      await clearBadge();
+
+      expect(notifee.setBadgeCount).toHaveBeenCalledWith(0);
     });
   });
 });
