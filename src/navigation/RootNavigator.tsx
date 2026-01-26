@@ -6,6 +6,7 @@ import { ItemDetailScreen } from '../screens/ItemDetailScreen';
 import { LessonsScreen } from '../screens/LessonsScreen';
 import { NotificationPermissionScreen } from '../screens/NotificationPermissionScreen';
 import { ReviewsScreen } from '../screens/ReviewsScreen';
+import { SearchScreen } from '../screens/SearchScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { useTheme } from '../theme';
 import type { RootStackParamList } from './types';
@@ -61,6 +62,11 @@ export function RootNavigator() {
         name="Reviews"
         component={ReviewsScreen}
         options={{ title: 'Reviews' }}
+      />
+      <Stack.Screen
+        name="Search"
+        component={SearchScreen}
+        options={{ title: 'Search' }}
       />
       <Stack.Screen
         name="Settings"
