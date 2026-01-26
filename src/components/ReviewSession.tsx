@@ -1711,6 +1711,7 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.lg,
     paddingHorizontal: SPACING.lg,
     fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
     textAlign: 'center',
     backgroundColor: COLORS.background.input,
   },
