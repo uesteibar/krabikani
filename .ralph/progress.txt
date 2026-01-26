@@ -347,3 +347,27 @@ Started:
 
 ---
 
+## 2026-01-26 - US-014
+- What was implemented: Display Upcoming Reviews Bar Chart
+  - Created UpcomingReviewsChart component showing 12 hourly bars
+  - Bars scaled proportionally to count with max bar at 100px height
+  - Used reviews purple (#AA00FF) as main color with subtle gradient effect via overlay
+  - Hour labels formatted as '2pm', '12am' format below each bar
+  - Current hour bar highlighted with white border and shadow glow
+  - Empty hours show minimal 2px gray baseline
+  - Chart constrained to ~100px height with 24px for labels
+  - Integrated into HomeScreen dashboard container below LearnedCounts
+  - Added upcomingReviewsData state and fetch in loadDashboardData
+  - Chart only renders when data has length > 0
+- Files changed:
+  - src/components/UpcomingReviewsChart.tsx (new - bar chart component)
+  - src/components/index.ts (exported UpcomingReviewsChart and UpcomingReviewsChartProps)
+  - src/screens/HomeScreen.tsx (added import, state, fetching, and rendering)
+  - __tests__/components/UpcomingReviewsChart.test.tsx (new - 13 tests)
+- **Learnings for future iterations:**
+  - Patterns discovered: Avoid external gradient dependencies by using overlay views with partial opacity
+  - Gotchas encountered: expo-linear-gradient wasn't installed; use simple View overlays instead
+  - Useful context: getUpcomingReviewsByHour(12) returns array of UpcomingReviewsHourBucket with hour Date and count
+
+---
+

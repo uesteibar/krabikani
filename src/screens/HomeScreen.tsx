@@ -27,6 +27,7 @@ import {
   SyncingIndicator,
   LevelIndicator,
   LearnedCounts,
+  UpcomingReviewsChart,
 } from '../components';
 import {
   COLORS,
@@ -49,6 +50,8 @@ import {
   getPendingLessonCount,
   getCachedUserLevel,
   getLearnedCount,
+  getUpcomingReviewsByHour,
+  type UpcomingReviewsHourBucket,
 } from '../storage';
 import {
   syncSubjects,
@@ -84,6 +87,10 @@ export interface LearnedData {
   vocabularyLearned: number;
 }
 
+export interface UpcomingReviewsData {
+  hourlyBuckets: UpcomingReviewsHourBucket[];
+}
+
 export function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const theme = useTheme();
@@ -107,6 +114,10 @@ export function HomeScreen() {
     kanjiLearned: 0,
     vocabularyLearned: 0,
   });
+  const [upcomingReviewsData, setUpcomingReviewsData] =
+    useState<UpcomingReviewsData>({
+      hourlyBuckets: [],
+    });
   const isSyncingPending = useRef(false);
 
   const loadDashboardData = useCallback(async () => {
@@ -122,6 +133,7 @@ export function HomeScreen() {
         cachedLevel,
         kanjiLearned,
         vocabularyLearned,
+        upcomingReviews,
       ] = await Promise.all([
         getSyncStatus(),
         getSubjectCount(),
@@ -133,6 +145,7 @@ export function HomeScreen() {
         getCachedUserLevel(),
         getLearnedCount('kanji'),
         getLearnedCount('vocabulary'),
+        getUpcomingReviewsByHour(12),
       ]);
 
       const lastSync =
@@ -154,6 +167,9 @@ export function HomeScreen() {
       setLearnedData({
         kanjiLearned,
         vocabularyLearned,
+      });
+      setUpcomingReviewsData({
+        hourlyBuckets: upcomingReviews,
       });
 
       // Check if we're offline with no cached data
@@ -348,6 +364,9 @@ export function HomeScreen() {
               kanjiCount={learnedData.kanjiLearned}
               vocabularyCount={learnedData.vocabularyLearned}
             />
+            {upcomingReviewsData.hourlyBuckets.length > 0 && (
+              <UpcomingReviewsChart data={upcomingReviewsData.hourlyBuckets} />
+            )}
           </View>
           <LastSyncedIndicator lastSyncedAt={syncStatus.lastSyncedAt} />
           <SyncingIndicator isSyncing={refreshing} />

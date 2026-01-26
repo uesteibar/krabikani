@@ -128,3 +128,8 @@ export {
   LearnedCounts,
   type LearnedCountsProps,
 } from './LearnedCounts';
+
+export {
+  UpcomingReviewsChart,
+  type UpcomingReviewsChartProps,
+} from './UpcomingReviewsChart';
