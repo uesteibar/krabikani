@@ -143,3 +143,32 @@ Started:
   - Use `useTheme()` hook to access colors and shadow properties for dark mode support
 ---
 
+## 2026-01-26 - US-007
+- What was implemented:
+  - Added first launch permission screen navigation flow
+  - After successful API key setup + sync, check if permission screen should be shown
+  - Navigate to NotificationPermissionScreen with `isInitialSetup: true` param if:
+    - Permissions not yet granted AND
+    - We haven't asked the user before (hasAskedForPermissions is false)
+  - Skip permission screen and go directly to Home if permissions already granted
+  - Skip permission screen if hasAskedForPermissions is true (user already responded)
+  - Updated NotificationPermissionScreen to handle `isInitialSetup` route param
+  - When `isInitialSetup=true`, navigate to Home (reset stack) instead of goBack()
+  - Added 5 tests for first launch navigation in SettingsScreen tests
+  - Added 4 tests for initial setup navigation in NotificationPermissionScreen tests
+
+- Files changed:
+  - src/navigation/types.ts (updated NotificationPermission route params)
+  - src/screens/NotificationPermissionScreen.tsx (added isInitialSetup handling)
+  - src/screens/SettingsScreen.tsx (added permission check after sync)
+  - __tests__/screens/NotificationPermissionScreen.test.tsx (added initial setup tests)
+  - __tests__/screens/SettingsScreen.test.tsx (added notification permission flow tests)
+
+- **Learnings for future iterations:**
+  - Use `navigation.reset()` to replace navigation stack when completing a setup flow
+  - Route params can be made optional by using `{ param?: type } | undefined` in RootStackParamList
+  - Use `route.params?.param ?? defaultValue` to safely access optional route params
+  - When testing navigation flows, mock both `checkPermissions` and `hasAskedForPermissions` to control the flow
+  - SettingsScreen now imports from notificationService for permission checks
+---
+
