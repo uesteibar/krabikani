@@ -34,7 +34,7 @@ import {
   validateMeaningAnswer,
   validateReadingAnswer,
 } from '../utils/answerValidation';
-import { addUserSynonym, insertPendingSynonym } from '../storage/database';
+import { addUserSynonym, insertPendingSynonym, getSetting } from '../storage/database';
 import {
   getSubjectColor,
   COLORS,
@@ -334,6 +334,8 @@ export function ReviewSession({
   const [introducedItemIds, setIntroducedItemIds] = useState<Set<number>>(
     new Set(),
   );
+  // Zen mode state (hide progress bar, count, and SRS badge during reviews)
+  const [zenModeEnabled, setZenModeEnabled] = useState(false);
 
   // Track completed questions for session progress
   const [completedItemCount, setCompletedItemCount] = useState(0);
@@ -347,6 +349,15 @@ export function ReviewSession({
 
   // Shake animation for invalid reading submission
   const shakeAnimation = useRef(new Animated.Value(0)).current;
+
+  // Fetch zen mode setting on mount
+  useEffect(() => {
+    const loadZenModeSetting = async () => {
+      const zenModeSetting = await getSetting('zenMode');
+      setZenModeEnabled(zenModeSetting === true);
+    };
+    loadZenModeSetting();
+  }, []);
 
   // Reset state when items change
   useEffect(() => {
@@ -1055,6 +1066,9 @@ export function ReviewSession({
 
   const { item, type } = currentQuestion;
 
+  // Show progress stats when zen mode is OFF, or when wrap-up mode is active (even if zen mode is ON)
+  const showProgressStats = !zenModeEnabled || isWrappingUp;
+
   // If showing incorrect feedback, render the feedback view
   if (incorrectFeedback) {
     // Calculate progress: In wrap-up mode, use introduced items count
@@ -1074,63 +1088,68 @@ export function ReviewSession({
 
     return (
       <View style={styles.container} testID="review-session-incorrect-feedback">
-        {/* Progress indicator */}
-        <View style={styles.progressContainer} testID="review-session-progress">
-          <View style={styles.progressTextRow}>
-            <Text
-              style={styles.progressText}
-              testID="review-session-progress-text"
-            >
-              {displayCompletedCount} / {displayTotalCount}
-            </Text>
-            {isWrappingUp ? (
+        {/* Progress indicator - hidden in zen mode unless wrap-up is active */}
+        {showProgressStats && (
+          <View style={styles.progressContainer} testID="review-session-progress">
+            <View style={styles.progressTextRow}>
               <Text
-                style={styles.wrapUpText}
-                testID="review-session-wrapping-up-text"
+                style={styles.progressText}
+                testID="review-session-progress-text"
               >
-                Wrapping up: {wrapUpRemainingCount} remaining
+                {displayCompletedCount} / {displayTotalCount}
               </Text>
-            ) : (
-              <Text
-                style={styles.remainingText}
-                testID="review-session-remaining-text"
-              >
-                {remainingCount} remaining
-              </Text>
-            )}
+              {isWrappingUp ? (
+                <Text
+                  style={styles.wrapUpText}
+                  testID="review-session-wrapping-up-text"
+                >
+                  Wrapping up: {wrapUpRemainingCount} remaining
+                </Text>
+              ) : (
+                <Text
+                  style={styles.remainingText}
+                  testID="review-session-remaining-text"
+                >
+                  {remainingCount} remaining
+                </Text>
+              )}
+            </View>
+            <View style={styles.progressBar}>
+              <View
+                style={[
+                  styles.progressFill,
+                  isWrappingUp && styles.wrapUpProgressFill,
+                  { width: `${progressPercentage}%` },
+                ]}
+                testID="review-session-progress-fill"
+              />
+            </View>
           </View>
-          <View style={styles.progressBar}>
-            <View
-              style={[
-                styles.progressFill,
-                isWrappingUp && styles.wrapUpProgressFill,
-                { width: `${progressPercentage}%` },
-              ]}
-              testID="review-session-progress-fill"
-            />
-          </View>
-        </View>
+        )}
 
         {/* Character display with red tint for incorrect */}
         <View
           style={[styles.characterContainer, styles.incorrectHeader]}
           testID="review-session-character-container"
         >
-          <View style={styles.srsLevelBadgeContainer}>
-            {levelDownAnimation ? (
-              <AnimatedSrsLevelBadge
-                stage={levelDownAnimation.toStage}
-                fromStage={levelDownAnimation.fromStage}
-                animateLevelDown={true}
-                testID="review-session-srs-badge"
-              />
-            ) : (
-              <SrsLevelBadge
-                stage={incorrectFeedback.question.item.srsStage}
-                testID="review-session-srs-badge"
-              />
-            )}
-          </View>
+          {/* SRS badge - hidden in zen mode unless wrap-up is active */}
+          {showProgressStats && (
+            <View style={styles.srsLevelBadgeContainer}>
+              {levelDownAnimation ? (
+                <AnimatedSrsLevelBadge
+                  stage={levelDownAnimation.toStage}
+                  fromStage={levelDownAnimation.fromStage}
+                  animateLevelDown={true}
+                  testID="review-session-srs-badge"
+                />
+              ) : (
+                <SrsLevelBadge
+                  stage={incorrectFeedback.question.item.srsStage}
+                  testID="review-session-srs-badge"
+                />
+              )}
+            </View>
+          )}
           <Text style={styles.characters} testID="review-session-characters">
             {incorrectFeedback.question.item.characters ?? '?'}
           </Text>
@@ -1341,42 +1360,44 @@ export function ReviewSession({
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       testID="review-session"
     >
-      {/* Progress indicator */}
-      <View style={styles.progressContainer} testID="review-session-progress">
-        <View style={styles.progressTextRow}>
-          <Text
-            style={styles.progressText}
-            testID="review-session-progress-text"
-          >
-            {displayCompletedCount} / {displayTotalCount}
-          </Text>
-          {isWrappingUp ? (
+      {/* Progress indicator - hidden in zen mode unless wrap-up is active */}
+      {showProgressStats && (
+        <View style={styles.progressContainer} testID="review-session-progress">
+          <View style={styles.progressTextRow}>
             <Text
-              style={styles.wrapUpText}
-              testID="review-session-wrapping-up-text"
+              style={styles.progressText}
+              testID="review-session-progress-text"
             >
-              Wrapping up: {wrapUpRemainingCount} remaining
+              {displayCompletedCount} / {displayTotalCount}
             </Text>
-          ) : (
-            <Text
-              style={styles.remainingText}
-              testID="review-session-remaining-text"
-            >
-              {remainingCount} remaining
-            </Text>
-          )}
+            {isWrappingUp ? (
+              <Text
+                style={styles.wrapUpText}
+                testID="review-session-wrapping-up-text"
+              >
+                Wrapping up: {wrapUpRemainingCount} remaining
+              </Text>
+            ) : (
+              <Text
+                style={styles.remainingText}
+                testID="review-session-remaining-text"
+              >
+                {remainingCount} remaining
+              </Text>
+            )}
+          </View>
+          <View style={styles.progressBar}>
+            <View
+              style={[
+                styles.progressFill,
+                isWrappingUp && styles.wrapUpProgressFill,
+                { width: `${progressPercentage}%` },
+              ]}
+              testID="review-session-progress-fill"
+            />
+          </View>
         </View>
-        <View style={styles.progressBar}>
-          <View
-            style={[
-              styles.progressFill,
-              isWrappingUp && styles.wrapUpProgressFill,
-              { width: `${progressPercentage}%` },
-            ]}
-            testID="review-session-progress-fill"
-          />
-        </View>
-      </View>
+      )}
 
       {/* Character display - with green/yellow tint if showing correct feedback */}
       <View
@@ -1390,18 +1411,21 @@ export function ReviewSession({
         ]}
         testID="review-session-character-container"
       >
-        <View style={styles.srsLevelBadgeContainer}>
-          {showCorrectFeedback && levelUpAnimation ? (
-            <AnimatedSrsLevelBadge
-              stage={levelUpAnimation.toStage}
-              fromStage={levelUpAnimation.fromStage}
-              animateLevelUp={true}
-              testID="review-session-srs-badge"
-            />
-          ) : (
-            <SrsLevelBadge stage={item.srsStage} testID="review-session-srs-badge" />
-          )}
-        </View>
+        {/* SRS badge - hidden in zen mode unless wrap-up is active */}
+        {showProgressStats && (
+          <View style={styles.srsLevelBadgeContainer}>
+            {showCorrectFeedback && levelUpAnimation ? (
+              <AnimatedSrsLevelBadge
+                stage={levelUpAnimation.toStage}
+                fromStage={levelUpAnimation.fromStage}
+                animateLevelUp={true}
+                testID="review-session-srs-badge"
+              />
+            ) : (
+              <SrsLevelBadge stage={item.srsStage} testID="review-session-srs-badge" />
+            )}
+          </View>
+        )}
         <Text style={styles.characters} testID="review-session-characters">
           {item.characters ?? '?'}
         </Text>

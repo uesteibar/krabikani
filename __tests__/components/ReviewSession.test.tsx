@@ -16,6 +16,7 @@ import * as database from '../../src/storage/database';
 jest.mock('../../src/storage/database', () => ({
   addUserSynonym: jest.fn().mockResolvedValue(1),
   insertPendingSynonym: jest.fn().mockResolvedValue(1),
+  getSetting: jest.fn().mockResolvedValue(null),
 }));
 
 // Helper to create test meanings
@@ -3114,6 +3115,178 @@ describe('ReviewSession', () => {
       }
 
       jest.useRealTimers();
+    });
+  });
+
+  describe('Zen Mode', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('should show progress bar and count text when zen mode is disabled', async () => {
+      (database.getSetting as jest.Mock).mockResolvedValue(false);
+
+      const { getByTestId } = render(
+        <ReviewSession items={[sampleRadical]} />,
+      );
+
+      // Wait for zen mode setting to load
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(getByTestId('review-session-progress')).toBeTruthy();
+      expect(getByTestId('review-session-progress-text')).toBeTruthy();
+    });
+
+    it('should show SRS badge when zen mode is disabled', async () => {
+      (database.getSetting as jest.Mock).mockResolvedValue(false);
+
+      const { getByTestId } = render(
+        <ReviewSession items={[sampleRadical]} />,
+      );
+
+      // Wait for zen mode setting to load
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(getByTestId('review-session-srs-badge')).toBeTruthy();
+    });
+
+    it('should hide progress bar and count text when zen mode is enabled', async () => {
+      (database.getSetting as jest.Mock).mockResolvedValue(true);
+
+      const { queryByTestId } = render(
+        <ReviewSession items={[sampleRadical]} />,
+      );
+
+      // Wait for zen mode setting to load and state to update
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(queryByTestId('review-session-progress')).toBeNull();
+      expect(queryByTestId('review-session-progress-text')).toBeNull();
+    });
+
+    it('should hide SRS badge when zen mode is enabled', async () => {
+      (database.getSetting as jest.Mock).mockResolvedValue(true);
+
+      const { queryByTestId } = render(
+        <ReviewSession items={[sampleRadical]} />,
+      );
+
+      // Wait for zen mode setting to load and state to update
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(queryByTestId('review-session-srs-badge')).toBeNull();
+    });
+
+    it('should still show wrap-up button when zen mode is enabled', async () => {
+      (database.getSetting as jest.Mock).mockResolvedValue(true);
+
+      const { getByTestId } = render(
+        <ReviewSession items={[sampleRadical]} />,
+      );
+
+      // Wait for zen mode setting to load
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(getByTestId('review-session-wrap-up')).toBeTruthy();
+    });
+
+    it('should show progress bar when wrap-up mode is activated even in zen mode', async () => {
+      (database.getSetting as jest.Mock).mockResolvedValue(true);
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={fiveItems} />,
+      );
+
+      // Wait for zen mode setting to load
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Initially zen mode hides progress
+      expect(queryByTestId('review-session-progress')).toBeNull();
+
+      // Activate wrap-up mode
+      fireEvent.press(getByTestId('review-session-wrap-up'));
+
+      // Progress should now be visible
+      expect(getByTestId('review-session-progress')).toBeTruthy();
+      expect(getByTestId('review-session-srs-badge')).toBeTruthy();
+    });
+
+    it('should hide progress bar and SRS badge in incorrect feedback view when zen mode is enabled', async () => {
+      (database.getSetting as jest.Mock).mockResolvedValue(true);
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[sampleRadical]} />,
+      );
+
+      // Wait for zen mode setting to load
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(queryByTestId('review-session-progress')).toBeNull();
+
+      // Submit wrong answer to get to incorrect feedback view
+      const input = getByTestId('review-session-input');
+      fireEvent.changeText(input, 'Wrong');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Should be in incorrect feedback view but still no progress/badge
+      expect(getByTestId('review-session-incorrect-feedback')).toBeTruthy();
+      expect(queryByTestId('review-session-progress')).toBeNull();
+      expect(queryByTestId('review-session-srs-badge')).toBeNull();
+    });
+
+    it('should show progress bar and SRS badge in incorrect feedback view when wrap-up mode is active even in zen mode', async () => {
+      (database.getSetting as jest.Mock).mockResolvedValue(true);
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={fiveItems} />,
+      );
+
+      // Wait for zen mode setting to load
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(queryByTestId('review-session-progress')).toBeNull();
+
+      // Activate wrap-up mode
+      fireEvent.press(getByTestId('review-session-wrap-up'));
+
+      // Submit wrong answer to get to incorrect feedback view
+      const input = getByTestId('review-session-input');
+      fireEvent.changeText(input, 'Wrong');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Should show progress and badge in incorrect feedback view with wrap-up active
+      expect(getByTestId('review-session-incorrect-feedback')).toBeTruthy();
+      expect(getByTestId('review-session-progress')).toBeTruthy();
+      expect(getByTestId('review-session-srs-badge')).toBeTruthy();
+    });
+
+    it('should fetch zen mode setting on mount', async () => {
+      (database.getSetting as jest.Mock).mockResolvedValue(false);
+
+      render(<ReviewSession items={[sampleRadical]} />);
+
+      // Wait for effect to run
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(database.getSetting).toHaveBeenCalledWith('zenMode');
     });
   });
 });
