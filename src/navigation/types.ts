@@ -4,4 +4,5 @@ export type RootStackParamList = {
   Lessons: undefined;
   Reviews: undefined;
   ItemDetail: { subjectId: number };
+  NotificationPermission: undefined;
 };

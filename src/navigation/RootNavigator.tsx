@@ -4,6 +4,7 @@ import React from 'react';
 import { HomeScreen } from '../screens/HomeScreen';
 import { ItemDetailScreen } from '../screens/ItemDetailScreen';
 import { LessonsScreen } from '../screens/LessonsScreen';
+import { NotificationPermissionScreen } from '../screens/NotificationPermissionScreen';
 import { ReviewsScreen } from '../screens/ReviewsScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { useTheme } from '../theme';
@@ -70,6 +71,11 @@ export function RootNavigator() {
         name="ItemDetail"
         component={ItemDetailScreen}
         options={{ title: 'Item Details' }}
+      />
+      <Stack.Screen
+        name="NotificationPermission"
+        component={NotificationPermissionScreen}
+        options={{ title: 'Notifications', headerBackVisible: false }}
       />
     </Stack.Navigator>
   );
