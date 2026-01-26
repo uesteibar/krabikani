@@ -10,6 +10,7 @@ import { RadicalDetailScreen } from '../screens/RadicalDetailScreen';
 import { ReviewsScreen } from '../screens/ReviewsScreen';
 import { SearchScreen } from '../screens/SearchScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { VocabularyDetailScreen } from '../screens/VocabularyDetailScreen';
 import { useTheme } from '../theme';
 import type { RootStackParamList } from './types';
 
@@ -89,6 +90,11 @@ export function RootNavigator() {
         name="KanjiDetail"
         component={KanjiDetailScreen}
         options={{ title: 'Kanji' }}
+      />
+      <Stack.Screen
+        name="VocabularyDetail"
+        component={VocabularyDetailScreen}
+        options={{ title: 'Vocabulary' }}
       />
       <Stack.Screen
         name="NotificationPermission"

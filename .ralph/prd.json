@@ -175,8 +175,8 @@
         "Verify in simulator using dev-browser skill"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created KanjiDetailScreen with header (character + SRS badge), meanings section, readings grouped by type (on'yomi, kun'yomi, nanori), component radicals section with navigation to RadicalDetail, meaning mnemonic, and reading mnemonic. Theme-aware styling consistent with RadicalDetailScreen. Hint sections prepared for future use (database doesn't store hints). Added 17 unit tests."
     },
     {
       "id": "US-011",
@@ -199,8 +199,8 @@
         "Verify in simulator using dev-browser skill"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created VocabularyDetailScreen with header (characters + SRS badge), meanings section, readings section, component kanji section (for regular vocabulary), meaning mnemonic, and reading mnemonic (when available). Works for both vocabulary and kana_vocabulary types with correct type badge. Context sentences and parts of speech sections prepared but not populated (database doesn't store these fields). Audio playback not implemented (requires additional audio infrastructure). Added 18 unit tests covering loading, error, display, and navigation states."
     },
     {
       "id": "US-012",

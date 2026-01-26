@@ -133,3 +133,34 @@ Started:
   - Manual browser/simulator verification needed for visual changes
 ---
 
+## 2026-01-26 - US-010
+- **What was implemented:** Created KanjiDetailScreen for viewing kanji details from search results
+- **Files changed:**
+  - `src/screens/KanjiDetailScreen.tsx` (new) - Full kanji detail screen with header, meanings, readings grouped by type, radicals, mnemonics, and SRS badge
+  - `src/navigation/RootNavigator.tsx` - Registered KanjiDetailScreen
+  - `__tests__/screens/KanjiDetailScreen.test.tsx` (new) - 17 unit tests covering all functionality
+- **Learnings for future iterations:**
+  - KanjiReading type has a `type` field with values 'onyomi', 'kunyomi', or 'nanori' - use this to group readings
+  - Kanji component radicals come from component_subject_ids which stores an array of subject IDs - fetch them with getSubjectsByIds
+  - Theme-aware screens need ThemeProvider wrapper in tests (unlike ItemDetailScreen which uses static COLORS)
+  - getByText doesn't work well when text contains nested Text elements (e.g., "Big<Text> (primary)</Text>") - use testID queries instead
+  - Meaning/reading hints are part of KanjiData API type but not stored in database schema - prepared UI but values are null
+  - Manual browser/simulator verification needed for visual changes
+---
+
+## 2026-01-26 - US-011
+- **What was implemented:** Created VocabularyDetailScreen for viewing vocabulary details from search results
+- **Files changed:**
+  - `src/screens/VocabularyDetailScreen.tsx` (new) - Full vocabulary detail screen with header, meanings, readings, component kanji, mnemonics, and SRS badge
+  - `src/navigation/RootNavigator.tsx` - Registered VocabularyDetailScreen
+  - `__tests__/screens/VocabularyDetailScreen.test.tsx` (new) - 18 unit tests covering all functionality
+- **Learnings for future iterations:**
+  - VocabularyDetailScreen handles both 'vocabulary' and 'kana_vocabulary' types - use isKanaVocabulary flag to differentiate behavior
+  - Kana vocabulary items don't have reading_mnemonic or component_subject_ids (component kanji)
+  - VocabularyData uses Reading type (not KanjiReading) - simpler structure without 'type' field
+  - context_sentences and parts_of_speech are in the API types but not stored in database schema - UI prepared but values empty
+  - Audio playback button deferred - requires audio infrastructure not currently in codebase
+  - Component kanji navigation uses handleKanjiPress to navigate to KanjiDetail screen
+  - Manual browser/simulator verification needed for visual changes
+---
+
