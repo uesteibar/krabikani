@@ -87,3 +87,24 @@ Started:
   - The section only appears when hasComponents is true (either componentRadicals or componentKanji arrays have items)
 ---
 
+## 2026-01-26 - US-007
+- What was implemented: Made component radicals/kanji tappable to navigate to ItemDetailScreen
+- Files changed:
+  - `src/components/ComponentDisplay.tsx` - Added onPress prop that wraps content in TouchableOpacity when provided, with activeOpacity={0.7} for visual feedback
+  - `src/components/ItemDetails.tsx` - Added onComponentPress prop that passes press handler with subject ID to ComponentDisplay
+  - `src/components/LessonCard.tsx` - Added onComponentPress prop, made component radicals tappable via TouchableOpacity
+  - `src/components/LessonBatch.tsx` - Added onComponentPress prop to pass through to LessonCard
+  - `src/components/LessonQuiz.tsx` - Added onComponentPress prop to pass through to ComponentDisplay in incorrect feedback
+  - `src/components/ReviewSession.tsx` - Added onComponentPress prop, passed to both inline ComponentDisplay components and ItemDetails
+  - `src/screens/ItemDetailScreen.tsx` - Added handleComponentPress to navigate to component's detail screen using navigation.push
+  - `src/screens/LessonsScreen.tsx` - Added handleComponentPress callback, passed to LessonBatch and LessonQuiz
+  - `src/screens/ReviewsScreen.tsx` - Added handleComponentPress callback, passed to ReviewSession
+  - `__tests__/components/ComponentDisplay.test.tsx` - Added tests for onPress interaction
+  - `__tests__/components/ItemDetails.test.tsx` - Added tests for onComponentPress callback
+- **Learnings for future iterations:**
+  - Use navigation.push instead of navigate to allow recursive navigation in the stack (back button returns correctly)
+  - TouchableOpacity with activeOpacity={0.7} provides good visual feedback for tappable elements
+  - Prop drilling pattern (onComponentPress) allows parent screens to handle navigation while keeping components reusable
+  - In React Native testing with @testing-library/react-native, fireEvent.press works but direct props.onPress check may be undefined - test behavior instead of implementation
+---
+
