@@ -47,8 +47,8 @@
         "Verify in simulator using dev-browser skill"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added fontWeight: '600' to the input style in both ReviewSession.tsx and LessonQuiz.tsx StyleSheets."
     },
     {
       "id": "US-004",
@@ -63,8 +63,8 @@
         "Verify in simulator using dev-browser skill"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Changed Settings button from solid purple to full-width outline style with theme-aware border (text.tertiary) and text (text.primary) colors. Added activeOpacity={0.6} for press feedback. Created reusable bottomButtons and outlineButton styles for upcoming Search button."
     },
     {
       "id": "US-005",
@@ -79,8 +79,8 @@
         "Verify in simulator using dev-browser skill"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added Search button above Settings button using same outlineButton and bottomButtons styles. Spacing handled by gap: SPACING.md in bottomButtons. Added Search route to navigation types for TypeScript support."
     },
     {
       "id": "US-006",

@@ -41,3 +41,37 @@ Started:
   - Manual browser/simulator verification is not available in this environment - note in progress when visual verification is needed
 ---
 
+## 2026-01-26 - US-003
+- **What was implemented:** Increased answer input font weight to semi-bold (600)
+- **Files changed:**
+  - `src/components/ReviewSession.tsx` - Added `fontWeight: '600'` to the input style
+  - `src/components/LessonQuiz.tsx` - Added `fontWeight: '600'` to the input style
+- **Learnings for future iterations:**
+  - Both ReviewSession and LessonQuiz share similar styling patterns for their input fields
+  - One flaky test exists in ReviewSession.test.tsx for "wrap-up mode + zen mode" that fails intermittently due to question order randomization (test submits "Wrong" which doesn't work for reading questions)
+  - Manual browser/simulator verification needed for font weight visibility
+---
+
+## 2026-01-26 - US-004
+- **What was implemented:** Redesigned Settings button to outline style
+- **Files changed:**
+  - `src/screens/HomeScreen.tsx` - Changed Settings button from solid purple to full-width outline style
+- **Learnings for future iterations:**
+  - Use theme.colors.text.tertiary (~#888) for subtle borders that work in both light and dark modes
+  - bottomButtons and outlineButton styles are reusable for similar secondary action buttons
+  - activeOpacity={0.6} provides good press feedback for outline-style buttons
+  - Manual browser/simulator verification needed for visual changes
+---
+
+## 2026-01-26 - US-005
+- **What was implemented:** Added Search button to home screen
+- **Files changed:**
+  - `src/screens/HomeScreen.tsx` - Added Search button above Settings button using same outline style
+  - `src/navigation/types.ts` - Added Search route to RootStackParamList
+- **Learnings for future iterations:**
+  - The bottomButtons container already has `gap: SPACING.md` for spacing between buttons, so adding new buttons is straightforward
+  - When adding a button that navigates to a screen not yet created, add the route to navigation types to avoid TypeScript errors
+  - The Search screen (US-006) will need to be created and registered in the navigator for the button to work
+  - Manual browser/simulator verification needed for visual changes
+---
+

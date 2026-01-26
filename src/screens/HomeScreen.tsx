@@ -383,6 +383,24 @@ export function HomeScreen() {
                 styles.outlineButton,
                 { borderColor: theme.colors.text.tertiary },
               ]}
+              onPress={() => navigation.navigate('Search')}
+              activeOpacity={0.6}
+              testID="search-button"
+            >
+              <Text
+                style={[
+                  styles.outlineButtonText,
+                  { color: theme.colors.text.primary },
+                ]}
+              >
+                Search
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.outlineButton,
+                { borderColor: theme.colors.text.tertiary },
+              ]}
               onPress={() => navigation.navigate('Settings')}
               activeOpacity={0.6}
               testID="settings-button"
