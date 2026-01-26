@@ -4,3 +4,9 @@ export {
   setupNotificationChannel,
   displayTestNotification,
 } from './notificationConfig';
+
+export {
+  requestPermissions,
+  checkPermissions,
+  type PermissionStatus,
+} from './notificationService';
