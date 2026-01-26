@@ -255,7 +255,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    justifyContent: 'center',
   },
   syncingContainer: {
     flex: 1,
@@ -290,6 +289,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
+    paddingTop: 40,
   },
   label: {
     fontSize: 18,

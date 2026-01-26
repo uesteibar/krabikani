@@ -47,22 +47,22 @@ export function formatTimeUntil(date: Date): string {
 
 /**
  * Displays when the next review will be available.
- * Shows countdown if no reviews are currently available,
- * or "Reviews available now" if there are pending reviews.
+ * Only shows countdown if no reviews are currently available.
+ * Returns null when reviews are available (the count is shown elsewhere).
  */
 export function NextReviewIndicator({
   nextReviewAt,
   reviewsAvailable = 0,
 }: NextReviewIndicatorProps) {
-  let displayText: string;
-
+  // Don't show anything when reviews are available now
   if (reviewsAvailable > 0) {
-    displayText = 'Reviews available now';
-  } else if (nextReviewAt === null) {
-    displayText = 'No upcoming reviews';
-  } else {
-    displayText = `Next review ${formatTimeUntil(nextReviewAt)}`;
+    return null;
   }
+
+  const displayText =
+    nextReviewAt === null
+      ? 'No upcoming reviews'
+      : `Next review ${formatTimeUntil(nextReviewAt)}`;
 
   return (
     <View style={styles.container} testID="next-review-indicator">

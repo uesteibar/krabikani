@@ -25,20 +25,10 @@ describe('AnimatedSrsLevelBadge', () => {
     });
   });
 
-  describe('renders correct icons', () => {
-    const iconCases = [
-      { stage: 1, expectedIcon: '▁' }, // Apprentice
-      { stage: 5, expectedIcon: '▃' }, // Guru
-      { stage: 7, expectedIcon: '▅' }, // Master
-      { stage: 8, expectedIcon: '▇' }, // Enlightened
-      { stage: 9, expectedIcon: '🔥' }, // Burned
-    ];
-
-    iconCases.forEach(({ stage, expectedIcon }) => {
-      it(`renders correct icon for stage ${stage}`, () => {
-        const { getByTestId } = render(<AnimatedSrsLevelBadge stage={stage} />);
-        expect(getByTestId('srs-level-icon').props.children).toBe(expectedIcon);
-      });
+  describe('does not render icons (text-only badge)', () => {
+    it('does not render icon element', () => {
+      const { queryByTestId } = render(<AnimatedSrsLevelBadge stage={5} />);
+      expect(queryByTestId('srs-level-icon')).toBeNull();
     });
   });
 
@@ -47,7 +37,9 @@ describe('AnimatedSrsLevelBadge', () => {
 
     invalidCases.forEach(stage => {
       it(`renders nothing for stage ${stage}`, () => {
-        const { queryByTestId } = render(<AnimatedSrsLevelBadge stage={stage} />);
+        const { queryByTestId } = render(
+          <AnimatedSrsLevelBadge stage={stage} />,
+        );
         expect(queryByTestId('animated-srs-level-badge')).toBeNull();
       });
     });
@@ -69,7 +61,11 @@ describe('AnimatedSrsLevelBadge', () => {
   describe('level-up animation', () => {
     it('does not animate when animateLevelUp is false', () => {
       const { queryByTestId } = render(
-        <AnimatedSrsLevelBadge stage={5} fromStage={4} animateLevelUp={false} />,
+        <AnimatedSrsLevelBadge
+          stage={5}
+          fromStage={4}
+          animateLevelUp={false}
+        />,
       );
       // Should show current level only, no old level
       expect(queryByTestId('srs-level-name-old')).toBeNull();
@@ -90,7 +86,9 @@ describe('AnimatedSrsLevelBadge', () => {
         <AnimatedSrsLevelBadge stage={5} fromStage={4} animateLevelUp={true} />,
       );
       // Should show both old and new level during animation
-      expect(getByTestId('srs-level-name-old').props.children).toBe('Apprentice');
+      expect(getByTestId('srs-level-name-old').props.children).toBe(
+        'Apprentice',
+      );
       expect(getByTestId('srs-level-name').props.children).toBe('Guru');
     });
 
@@ -117,7 +115,9 @@ describe('AnimatedSrsLevelBadge', () => {
       const { getByTestId } = render(
         <AnimatedSrsLevelBadge stage={9} fromStage={8} animateLevelUp={true} />,
       );
-      expect(getByTestId('srs-level-name-old').props.children).toBe('Enlightened');
+      expect(getByTestId('srs-level-name-old').props.children).toBe(
+        'Enlightened',
+      );
       expect(getByTestId('srs-level-name').props.children).toBe('Burned');
     });
 
@@ -129,7 +129,11 @@ describe('AnimatedSrsLevelBadge', () => {
   describe('level-down animation', () => {
     it('does not animate when animateLevelDown is false', () => {
       const { queryByTestId } = render(
-        <AnimatedSrsLevelBadge stage={4} fromStage={5} animateLevelDown={false} />,
+        <AnimatedSrsLevelBadge
+          stage={4}
+          fromStage={5}
+          animateLevelDown={false}
+        />,
       );
       // Should show current level only, no old level
       expect(queryByTestId('srs-level-name-old')).toBeNull();
@@ -140,7 +144,11 @@ describe('AnimatedSrsLevelBadge', () => {
     it('does not animate when level stays the same', () => {
       // Stage 2 -> 1 is still Apprentice, no level change
       const { queryByTestId } = render(
-        <AnimatedSrsLevelBadge stage={1} fromStage={2} animateLevelDown={true} />,
+        <AnimatedSrsLevelBadge
+          stage={1}
+          fromStage={2}
+          animateLevelDown={true}
+        />,
       );
       // Should not show old level since level didn't actually change
       expect(queryByTestId('srs-level-name-old')).toBeNull();
@@ -151,7 +159,11 @@ describe('AnimatedSrsLevelBadge', () => {
     it('shows old level and red tint when animating level-down (Guru -> Apprentice)', () => {
       // Stage 5 -> 4 is Guru -> Apprentice level change
       const { getByTestId, queryByTestId } = render(
-        <AnimatedSrsLevelBadge stage={4} fromStage={5} animateLevelDown={true} />,
+        <AnimatedSrsLevelBadge
+          stage={4}
+          fromStage={5}
+          animateLevelDown={true}
+        />,
       );
       // Should show both old and new level during animation
       expect(getByTestId('srs-level-name-old').props.children).toBe('Guru');
@@ -163,7 +175,11 @@ describe('AnimatedSrsLevelBadge', () => {
     it('shows old level and red tint when animating level-down (Master -> Guru)', () => {
       // Stage 7 -> 5 is Master -> Guru level change
       const { getByTestId, queryByTestId } = render(
-        <AnimatedSrsLevelBadge stage={5} fromStage={7} animateLevelDown={true} />,
+        <AnimatedSrsLevelBadge
+          stage={5}
+          fromStage={7}
+          animateLevelDown={true}
+        />,
       );
       expect(getByTestId('srs-level-name-old').props.children).toBe('Master');
       expect(getByTestId('srs-level-name').props.children).toBe('Guru');
@@ -173,9 +189,15 @@ describe('AnimatedSrsLevelBadge', () => {
     it('shows old level and red tint when animating level-down (Enlightened -> Guru)', () => {
       // Stage 8 -> 5 is Enlightened -> Guru level change
       const { getByTestId, queryByTestId } = render(
-        <AnimatedSrsLevelBadge stage={5} fromStage={8} animateLevelDown={true} />,
+        <AnimatedSrsLevelBadge
+          stage={5}
+          fromStage={8}
+          animateLevelDown={true}
+        />,
       );
-      expect(getByTestId('srs-level-name-old').props.children).toBe('Enlightened');
+      expect(getByTestId('srs-level-name-old').props.children).toBe(
+        'Enlightened',
+      );
       expect(getByTestId('srs-level-name').props.children).toBe('Guru');
       expect(queryByTestId('srs-level-red-tint')).toBeTruthy();
     });

@@ -14,7 +14,6 @@ import Animated, {
 
 import {
   getSrsLevelInfo,
-  SrsLevelKey,
   SRS_LEVELS,
   COLORS,
   SPACING,
@@ -35,17 +34,6 @@ export interface AnimatedSrsLevelBadgeProps {
   onAnimationComplete?: () => void;
   testID?: string;
 }
-
-/**
- * Icons for each SRS level - bar style progression with flame for burned.
- */
-const LEVEL_ICONS: Record<SrsLevelKey, string> = {
-  apprentice: '▁',
-  guru: '▃',
-  master: '▅',
-  enlightened: '▇',
-  burned: '🔥',
-};
 
 // Default fallback color for invalid stages
 const DEFAULT_COLOR = SRS_LEVELS.apprentice.color;
@@ -100,11 +88,7 @@ function Particle({ index, visible, startX, startY, color }: ParticleProps) {
 
   return (
     <Animated.View
-      style={[
-        styles.particle,
-        { backgroundColor: color },
-        animatedStyle,
-      ]}
+      style={[styles.particle, { backgroundColor: color }, animatedStyle]}
     />
   );
 }
@@ -162,10 +146,7 @@ export function AnimatedSrsLevelBadge({
 
   // Animated styles - must be called unconditionally before any early returns
   const containerAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scale: scale.value },
-      { translateX: shakeOffset.value },
-    ],
+    transform: [{ scale: scale.value }, { translateX: shakeOffset.value }],
   }));
 
   const glowAnimatedStyle = useAnimatedStyle(() => ({
@@ -205,13 +186,14 @@ export function AnimatedSrsLevelBadge({
   });
 
   // Generate particles for burst effect (only for level-up, must be before early return)
-  const particles = useMemo(() =>
-    shouldAnimateLevelUp
-      ? Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
-          id: i,
-          color: PARTICLE_COLORS[i % PARTICLE_COLORS.length],
-        }))
-      : [],
+  const particles = useMemo(
+    () =>
+      shouldAnimateLevelUp
+        ? Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
+            id: i,
+            color: PARTICLE_COLORS[i % PARTICLE_COLORS.length],
+          }))
+        : [],
     [shouldAnimateLevelUp],
   );
 
@@ -276,14 +258,18 @@ export function AnimatedSrsLevelBadge({
     // 4. Particle burst
     particleProgress.value = withDelay(
       INITIAL_DISPLAY_DURATION + SCALE_UP_DURATION,
-      withTiming(1, {
-        duration: CROSSFADE_DURATION,
-        easing: Easing.out(Easing.cubic),
-      }, (finished) => {
-        if (finished) {
-          runOnJS(handleAnimationComplete)();
-        }
-      }),
+      withTiming(
+        1,
+        {
+          duration: CROSSFADE_DURATION,
+          easing: Easing.out(Easing.cubic),
+        },
+        finished => {
+          if (finished) {
+            runOnJS(handleAnimationComplete)();
+          }
+        },
+      ),
     );
   }, [
     shouldAnimateLevelUp,
@@ -308,7 +294,8 @@ export function AnimatedSrsLevelBadge({
     particleProgress.value = 0;
 
     // Total shake duration
-    const totalShakeDuration = LEVEL_DOWN_SHAKE_DURATION * LEVEL_DOWN_SHAKE_COUNT * 2;
+    const totalShakeDuration =
+      LEVEL_DOWN_SHAKE_DURATION * LEVEL_DOWN_SHAKE_COUNT * 2;
 
     // 1. Show old level for initial display period, then shake
     // Shake: oscillate left-right 3 times (each cycle = left + right)
@@ -316,14 +303,32 @@ export function AnimatedSrsLevelBadge({
       LEVEL_DOWN_INITIAL_DISPLAY,
       withSequence(
         // Shake cycle 1
-        withTiming(8, { duration: LEVEL_DOWN_SHAKE_DURATION, easing: Easing.linear }),
-        withTiming(-8, { duration: LEVEL_DOWN_SHAKE_DURATION, easing: Easing.linear }),
+        withTiming(8, {
+          duration: LEVEL_DOWN_SHAKE_DURATION,
+          easing: Easing.linear,
+        }),
+        withTiming(-8, {
+          duration: LEVEL_DOWN_SHAKE_DURATION,
+          easing: Easing.linear,
+        }),
         // Shake cycle 2
-        withTiming(8, { duration: LEVEL_DOWN_SHAKE_DURATION, easing: Easing.linear }),
-        withTiming(-8, { duration: LEVEL_DOWN_SHAKE_DURATION, easing: Easing.linear }),
+        withTiming(8, {
+          duration: LEVEL_DOWN_SHAKE_DURATION,
+          easing: Easing.linear,
+        }),
+        withTiming(-8, {
+          duration: LEVEL_DOWN_SHAKE_DURATION,
+          easing: Easing.linear,
+        }),
         // Shake cycle 3
-        withTiming(6, { duration: LEVEL_DOWN_SHAKE_DURATION, easing: Easing.linear }),
-        withTiming(0, { duration: LEVEL_DOWN_SHAKE_DURATION, easing: Easing.out(Easing.cubic) }),
+        withTiming(6, {
+          duration: LEVEL_DOWN_SHAKE_DURATION,
+          easing: Easing.linear,
+        }),
+        withTiming(0, {
+          duration: LEVEL_DOWN_SHAKE_DURATION,
+          easing: Easing.out(Easing.cubic),
+        }),
       ),
     );
 
@@ -345,14 +350,18 @@ export function AnimatedSrsLevelBadge({
     // 3. Cross-fade to new level after shake completes
     crossfadeProgress.value = withDelay(
       LEVEL_DOWN_INITIAL_DISPLAY + totalShakeDuration,
-      withTiming(1, {
-        duration: LEVEL_DOWN_CROSSFADE_DURATION,
-        easing: Easing.out(Easing.poly(4)),
-      }, (finished) => {
-        if (finished) {
-          runOnJS(handleAnimationComplete)();
-        }
-      }),
+      withTiming(
+        1,
+        {
+          duration: LEVEL_DOWN_CROSSFADE_DURATION,
+          easing: Easing.out(Easing.poly(4)),
+        },
+        finished => {
+          if (finished) {
+            runOnJS(handleAnimationComplete)();
+          }
+        },
+      ),
     );
   }, [
     shouldAnimateLevelDown,
@@ -375,15 +384,20 @@ export function AnimatedSrsLevelBadge({
       shakeOffset.value = 0;
       redTintOpacity.value = 0;
     }
-  }, [shouldAnimate, scale, crossfadeProgress, glowOpacity, particleProgress, shakeOffset, redTintOpacity]);
+  }, [
+    shouldAnimate,
+    scale,
+    crossfadeProgress,
+    glowOpacity,
+    particleProgress,
+    shakeOffset,
+    redTintOpacity,
+  ]);
 
   // Don't render for invalid stages (after all hooks are called)
   if (!currentLevelInfo) {
     return null;
   }
-
-  const currentIcon = LEVEL_ICONS[currentLevelInfo.key];
-  const previousIcon = previousLevelInfo ? LEVEL_ICONS[previousLevelInfo.key] : currentIcon;
 
   return (
     <View style={styles.wrapper}>
@@ -425,9 +439,6 @@ export function AnimatedSrsLevelBadge({
           {/* Old level content (fades out) */}
           {shouldAnimate && previousLevelInfo && (
             <Animated.View style={[styles.levelContent, oldLevelAnimatedStyle]}>
-              <Text style={styles.icon} testID="srs-level-icon-old">
-                {previousIcon}
-              </Text>
               <Text style={styles.name} testID="srs-level-name-old">
                 {previousLevelInfo.name}
               </Text>
@@ -438,12 +449,11 @@ export function AnimatedSrsLevelBadge({
           <Animated.View
             style={[
               styles.levelContent,
-              shouldAnimate ? [styles.levelContentAbsolute, newLevelAnimatedStyle] : null,
+              shouldAnimate
+                ? [styles.levelContentAbsolute, newLevelAnimatedStyle]
+                : null,
             ]}
           >
-            <Text style={styles.icon} testID="srs-level-icon">
-              {currentIcon}
-            </Text>
             <Text style={styles.name} testID="srs-level-name">
               {currentLevelInfo.name}
             </Text>
@@ -498,10 +508,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: COLORS.feedback.incorrect,
     borderRadius: BORDER_RADIUS.md,
-  },
-  icon: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.text.inverse,
   },
   name: {
     fontSize: FONT_SIZES.xs,

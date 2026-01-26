@@ -37,8 +37,15 @@ export function DashboardStats({
         onPress={onLessonsPress}
         disabled={!onLessonsPress || lessonsCount === 0}
         activeOpacity={lessonsCount > 0 && onLessonsPress ? 0.7 : 1}
-        testID="lessons-button">
-        <View style={[styles.statBox, styles.lessonsBox, lessonsCount === 0 && styles.emptyBox]}>
+        testID="lessons-button"
+      >
+        <View
+          style={[
+            styles.statBox,
+            styles.lessonsBox,
+            lessonsCount === 0 && styles.emptyBox,
+          ]}
+        >
           <Text style={styles.countText} testID="lessons-count">
             {lessonsCount}
           </Text>
@@ -50,8 +57,15 @@ export function DashboardStats({
         onPress={onReviewsPress}
         disabled={!onReviewsPress || reviewsCount === 0}
         activeOpacity={reviewsCount > 0 && onReviewsPress ? 0.7 : 1}
-        testID="reviews-button">
-        <View style={[styles.statBox, styles.reviewsBox, reviewsCount === 0 && styles.emptyBox]}>
+        testID="reviews-button"
+      >
+        <View
+          style={[
+            styles.statBox,
+            styles.reviewsBox,
+            reviewsCount === 0 && styles.emptyBox,
+          ]}
+        >
           <Text style={styles.countText} testID="reviews-count">
             {reviewsCount}
           </Text>
@@ -65,18 +79,20 @@ export function DashboardStats({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: SPACING.xxl,
+    gap: SPACING.md,
     paddingVertical: SPACING.lg,
+    paddingHorizontal: SPACING.lg,
+    width: '100%',
   },
   statCard: {
+    flex: 1,
     alignItems: 'center',
   },
   statBox: {
-    width: 100,
+    width: '100%',
     height: 100,
-    minWidth: MIN_TOUCH_TARGET,
     minHeight: MIN_TOUCH_TARGET,
     borderRadius: BORDER_RADIUS.lg,
     justifyContent: 'center',

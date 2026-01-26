@@ -3,7 +3,6 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import {
   getSrsLevelInfo,
-  SrsLevelKey,
   COLORS,
   SPACING,
   FONT_SIZES,
@@ -16,18 +15,7 @@ export interface SrsLevelBadgeProps {
 }
 
 /**
- * Icons for each SRS level - bar style progression with flame for burned.
- */
-const LEVEL_ICONS: Record<SrsLevelKey, string> = {
-  apprentice: '▁',
-  guru: '▃',
-  master: '▅',
-  enlightened: '▇',
-  burned: '🔥',
-};
-
-/**
- * Displays an SRS level badge showing the current level name with an icon.
+ * Displays an SRS level badge showing the current level name.
  * Uses WaniKani official colors for each level:
  * - Apprentice (#DD0093) - Pink
  * - Guru (#882D9E) - Purple
@@ -43,15 +31,11 @@ export function SrsLevelBadge({ stage, testID }: SrsLevelBadgeProps) {
     return null;
   }
 
-  const icon = LEVEL_ICONS[levelInfo.key];
-
   return (
     <View
       style={[styles.container, { backgroundColor: levelInfo.color }]}
-      testID={testID ?? 'srs-level-badge'}>
-      <Text style={styles.icon} testID="srs-level-icon">
-        {icon}
-      </Text>
+      testID={testID ?? 'srs-level-badge'}
+    >
       <Text style={styles.name} testID="srs-level-name">
         {levelInfo.name}
       </Text>
@@ -66,11 +50,6 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xs,
     paddingHorizontal: SPACING.sm,
     borderRadius: BORDER_RADIUS.md,
-    gap: SPACING.xs,
-  },
-  icon: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.text.inverse,
   },
   name: {
     fontSize: FONT_SIZES.xs,

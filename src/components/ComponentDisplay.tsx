@@ -45,7 +45,8 @@ export function ComponentDisplay({
   const textToDisplay = displayText ?? meaning;
 
   // Use RadicalImage for radicals without Unicode characters
-  const shouldShowImage = characters === null && characterImages;
+  // When characters is null, always use RadicalImage which gracefully falls back to meaning text
+  const shouldShowImage = characters === null;
 
   return (
     <View
@@ -54,7 +55,7 @@ export function ComponentDisplay({
     >
       {shouldShowImage ? (
         <RadicalImage
-          characterImages={characterImages}
+          characterImages={characterImages ?? null}
           fallbackText={meaning}
           size={FONT_SIZES.xxl}
           testID={testID ? `${testID}-image` : undefined}
@@ -64,7 +65,7 @@ export function ComponentDisplay({
           style={styles.character}
           testID={testID ? `${testID}-character` : undefined}
         >
-          {characters ?? '?'}
+          {characters}
         </Text>
       )}
       <Text

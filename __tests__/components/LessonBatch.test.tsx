@@ -54,7 +54,11 @@ function createKanjiReadings(
 }
 
 // Create sample lesson items
-function createRadicalItem(id: number, character: string, meaning: string): LessonItem {
+function createRadicalItem(
+  id: number,
+  character: string,
+  meaning: string,
+): LessonItem {
   return {
     id,
     subjectType: 'radical',
@@ -78,7 +82,9 @@ function createKanjiItem(
     subjectType: 'kanji',
     characters: character,
     meanings: createMeanings([{ meaning, primary: true }]),
-    readings: createKanjiReadings([{ reading, primary: true, type: 'kunyomi' }]),
+    readings: createKanjiReadings([
+      { reading, primary: true, type: 'kunyomi' },
+    ]),
     meaningMnemonic: `Meaning mnemonic for ${meaning}`,
     readingMnemonic: `Reading mnemonic for ${reading}`,
     componentSubjectIds,
@@ -184,7 +190,9 @@ describe('LessonBatch', () => {
       // First dot should be colored (blue for radical)
       const dot0 = getByTestId('lesson-batch-dot-0');
       expect(dot0.props.style).toEqual(
-        expect.arrayContaining([expect.objectContaining({ backgroundColor: SUBJECT_COLORS.radical })]),
+        expect.arrayContaining([
+          expect.objectContaining({ backgroundColor: SUBJECT_COLORS.radical }),
+        ]),
       );
     });
 
@@ -193,7 +201,9 @@ describe('LessonBatch', () => {
       // Second dot should be gray (not visited yet)
       const dot1 = getByTestId('lesson-batch-dot-1');
       expect(dot1.props.style).toEqual(
-        expect.arrayContaining([expect.objectContaining({ backgroundColor: COLORS.neutral.gray300 })]),
+        expect.arrayContaining([
+          expect.objectContaining({ backgroundColor: COLORS.neutral.gray300 }),
+        ]),
       );
     });
 
@@ -219,7 +229,9 @@ describe('LessonBatch', () => {
       // Dot 1 (kanji) should now be pink since we visited it
       const dot1 = getByTestId('lesson-batch-dot-1');
       expect(dot1.props.style).toEqual(
-        expect.arrayContaining([expect.objectContaining({ backgroundColor: SUBJECT_COLORS.kanji })]),
+        expect.arrayContaining([
+          expect.objectContaining({ backgroundColor: SUBJECT_COLORS.kanji }),
+        ]),
       );
     });
   });
@@ -257,11 +269,9 @@ describe('LessonBatch', () => {
       const { getByTestId } = render(<LessonBatch {...defaultProps} />);
 
       for (let i = 1; i <= 5; i++) {
-        expect(getByTestId('lesson-batch-progress-text').props.children).toEqual([
-          i,
-          ' / ',
-          5,
-        ]);
+        expect(
+          getByTestId('lesson-batch-progress-text').props.children,
+        ).toEqual([i, ' / ', 5]);
         if (i < 5) {
           fireEvent.press(getByTestId('lesson-card-next-button'));
         }
@@ -303,7 +313,9 @@ describe('LessonBatch', () => {
     });
 
     it('hides back button after going back to first item', () => {
-      const { getByTestId, queryByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { getByTestId, queryByTestId } = render(
+        <LessonBatch {...defaultProps} />,
+      );
 
       // Advance to second item
       fireEvent.press(getByTestId('lesson-card-next-button'));
@@ -347,16 +359,22 @@ describe('LessonBatch', () => {
       // Navigate forward to item 3
       fireEvent.press(getByTestId('lesson-card-next-button'));
       fireEvent.press(getByTestId('lesson-card-next-button'));
-      expect(getByTestId('lesson-card-characters').props.children).toBe(expectedCharacters[2]);
+      expect(getByTestId('lesson-card-characters').props.children).toBe(
+        expectedCharacters[2],
+      );
 
       // Go back twice
       fireEvent.press(getByTestId('lesson-card-back-button'));
       fireEvent.press(getByTestId('lesson-card-back-button'));
-      expect(getByTestId('lesson-card-characters').props.children).toBe(expectedCharacters[0]);
+      expect(getByTestId('lesson-card-characters').props.children).toBe(
+        expectedCharacters[0],
+      );
 
       // Go forward again
       fireEvent.press(getByTestId('lesson-card-next-button'));
-      expect(getByTestId('lesson-card-characters').props.children).toBe(expectedCharacters[1]);
+      expect(getByTestId('lesson-card-characters').props.children).toBe(
+        expectedCharacters[1],
+      );
     });
 
     it('shows back button on the last item', () => {
@@ -439,7 +457,9 @@ describe('LessonBatch', () => {
 
   describe('component radicals display', () => {
     it('shows component radicals section for kanji items', () => {
-      const { getByTestId, queryByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { getByTestId, queryByTestId } = render(
+        <LessonBatch {...defaultProps} />,
+      );
 
       // First item is radical - no components
       expect(queryByTestId('lesson-card-components')).toBeNull();
@@ -463,7 +483,9 @@ describe('LessonBatch', () => {
     });
 
     it('displays component radical characters', () => {
-      const { getByTestId, getByText } = render(<LessonBatch {...defaultProps} />);
+      const { getByTestId, getByText } = render(
+        <LessonBatch {...defaultProps} />,
+      );
 
       // Navigate to kanji item
       fireEvent.press(getByTestId('lesson-card-next-button'));
@@ -476,7 +498,9 @@ describe('LessonBatch', () => {
     });
 
     it('does not show components for vocabulary items', () => {
-      const { getByTestId, queryByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { getByTestId, queryByTestId } = render(
+        <LessonBatch {...defaultProps} />,
+      );
 
       // Navigate to vocabulary item (index 2)
       fireEvent.press(getByTestId('lesson-card-next-button')); // kanji
@@ -508,10 +532,7 @@ describe('LessonBatch', () => {
     it('does not show components when componentRadicals map is not provided', () => {
       const items = [createKanjiItem(10, '本', 'Book', 'ほん', [1, 2])];
       const { queryByTestId } = render(
-        <LessonBatch
-          items={items}
-          onBatchComplete={jest.fn()}
-        />,
+        <LessonBatch items={items} onBatchComplete={jest.fn()} />,
       );
 
       expect(queryByTestId('lesson-card-components')).toBeNull();
@@ -625,7 +646,9 @@ describe('LessonBatch', () => {
 
       const dot = getByTestId('lesson-batch-dot-0');
       expect(dot.props.style).toEqual(
-        expect.arrayContaining([expect.objectContaining({ backgroundColor: SUBJECT_COLORS.radical })]),
+        expect.arrayContaining([
+          expect.objectContaining({ backgroundColor: SUBJECT_COLORS.radical }),
+        ]),
       );
     });
 
@@ -641,7 +664,9 @@ describe('LessonBatch', () => {
 
       const dot = getByTestId('lesson-batch-dot-0');
       expect(dot.props.style).toEqual(
-        expect.arrayContaining([expect.objectContaining({ backgroundColor: SUBJECT_COLORS.kanji })]),
+        expect.arrayContaining([
+          expect.objectContaining({ backgroundColor: SUBJECT_COLORS.kanji }),
+        ]),
       );
     });
 
@@ -657,7 +682,11 @@ describe('LessonBatch', () => {
 
       const dot = getByTestId('lesson-batch-dot-0');
       expect(dot.props.style).toEqual(
-        expect.arrayContaining([expect.objectContaining({ backgroundColor: SUBJECT_COLORS.vocabulary })]),
+        expect.arrayContaining([
+          expect.objectContaining({
+            backgroundColor: SUBJECT_COLORS.vocabulary,
+          }),
+        ]),
       );
     });
 
@@ -681,18 +710,22 @@ describe('LessonBatch', () => {
 
       const dot = getByTestId('lesson-batch-dot-0');
       expect(dot.props.style).toEqual(
-        expect.arrayContaining([expect.objectContaining({ backgroundColor: SUBJECT_COLORS.kana_vocabulary })]),
+        expect.arrayContaining([
+          expect.objectContaining({
+            backgroundColor: SUBJECT_COLORS.kana_vocabulary,
+          }),
+        ]),
       );
     });
   });
 
   describe('component radicals with null characters', () => {
-    it('displays ? for radicals with null characters', () => {
+    it('displays meaning fallback for radicals with null characters and no images', () => {
       const items = [createKanjiItem(10, '本', 'Book', 'ほん', [50])];
       const radicalsWithNull = new Map<number, ComponentRadical>([
         [50, { id: 50, characters: null, meaning: 'Image Radical' }],
       ]);
-      const { getByTestId, getByText } = render(
+      const { getByTestId, getAllByText } = render(
         <LessonBatch
           items={items}
           componentRadicals={radicalsWithNull}
@@ -701,13 +734,16 @@ describe('LessonBatch', () => {
       );
 
       expect(getByTestId('lesson-card-component-50')).toBeTruthy();
-      expect(getByText('?')).toBeTruthy();
+      // RadicalImage falls back to meaning text when no characterImages
+      expect(getAllByText('Image Radical').length).toBeGreaterThan(0);
     });
   });
 
   describe('card content display', () => {
     it('displays radical card content correctly', () => {
-      const { getByTestId, queryByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { getByTestId, queryByTestId } = render(
+        <LessonBatch {...defaultProps} />,
+      );
 
       // First item is radical
       expect(getByTestId('lesson-card-characters').props.children).toBe('一');
@@ -733,7 +769,9 @@ describe('LessonBatch', () => {
       fireEvent.press(getByTestId('lesson-card-next-button'));
       fireEvent.press(getByTestId('lesson-card-next-button'));
 
-      expect(getByTestId('lesson-card-characters').props.children).toBe('大きい');
+      expect(getByTestId('lesson-card-characters').props.children).toBe(
+        '大きい',
+      );
       expect(getByTestId('lesson-card-type').props.children).toBe('vocabulary');
       expect(getByTestId('lesson-card-reading-section')).toBeTruthy();
     });
@@ -795,7 +833,9 @@ describe('LessonBatch', () => {
         // Navigate to third item
         fireEvent.press(getByTestId('lesson-card-next-button'));
         fireEvent.press(getByTestId('lesson-card-next-button'));
-        expect(getByTestId('lesson-card-characters').props.children).toBe('大きい');
+        expect(getByTestId('lesson-card-characters').props.children).toBe(
+          '大きい',
+        );
 
         // Use button to go back
         fireEvent.press(getByTestId('lesson-card-back-button'));
@@ -816,11 +856,9 @@ describe('LessonBatch', () => {
         }
 
         // Verify we're on the last item
-        expect(getByTestId('lesson-batch-progress-text').props.children).toEqual([
-          5,
-          ' / ',
-          5,
-        ]);
+        expect(
+          getByTestId('lesson-batch-progress-text').props.children,
+        ).toEqual([5, ' / ', 5]);
 
         // Press next on last item
         fireEvent.press(getByTestId('lesson-card-next-button'));

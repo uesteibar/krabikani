@@ -397,6 +397,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    paddingTop: MIN_TOUCH_TARGET + SPACING.lg, // Large top margin for safe area
+    paddingBottom: MIN_TOUCH_TARGET + SPACING.lg, // Large bottom margin
   },
   content: {
     flex: 1,
@@ -406,21 +408,26 @@ const styles = StyleSheet.create({
   logo: {
     width: 240,
     height: 240,
+    marginTop: SPACING.xxl,
     marginBottom: SPACING.md,
   },
   dashboardContainer: {
     marginTop: SPACING.xxl,
     marginBottom: SPACING.lg,
     alignItems: 'center',
+    width: '100%',
   },
   settingsButton: {
-    marginTop: SPACING.lg,
+    marginTop: MIN_TOUCH_TARGET, // At least button-sized margin above
+    marginBottom: SPACING.xxl, // Extra bottom margin
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.xxl,
     minHeight: MIN_TOUCH_TARGET,
+    minWidth: MIN_TOUCH_TARGET * 3, // Wider touch target
     backgroundColor: DASHBOARD_COLORS.reviews,
     borderRadius: BORDER_RADIUS.md,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   settingsButtonText: {
     color: COLORS.text.inverse,

@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  ActivityIndicator,
-} from 'react-native';
+import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../navigation/types';
-import type { Meaning, Reading, KanjiReading, AuxiliaryMeaning } from '../api/types';
+import type {
+  Meaning,
+  Reading,
+  KanjiReading,
+  AuxiliaryMeaning,
+} from '../api/types';
 import {
   LessonBatch,
   LessonQuiz,
@@ -36,12 +36,22 @@ type LessonsScreenNavigationProp = NativeStackNavigationProp<
   'Lessons'
 >;
 
-type LessonPhase = 'loading' | 'learning' | 'quiz' | 'syncing' | 'complete' | 'error';
+type LessonPhase =
+  | 'loading'
+  | 'learning'
+  | 'quiz'
+  | 'syncing'
+  | 'complete'
+  | 'error';
 
 interface LessonSession {
   assignments: DatabaseAssignment[];
   subjects: DatabaseSubject[];
   currentBatchIndex: number;
+  /** Pre-fetched component radicals for all kanji in the session */
+  componentRadicalsMap: Map<number, ComponentRadical>;
+  /** Pre-fetched component kanji for all vocabulary in the session */
+  componentKanjiMap: Map<number, QuizComponentKanji>;
 }
 
 /**
@@ -55,9 +65,10 @@ function subjectToLessonItem(
   const readings: Reading[] | KanjiReading[] | null = subject.readings
     ? JSON.parse(subject.readings)
     : null;
-  const componentSubjectIds: number[] | undefined = subject.component_subject_ids
-    ? JSON.parse(subject.component_subject_ids)
-    : undefined;
+  const componentSubjectIds: number[] | undefined =
+    subject.component_subject_ids
+      ? JSON.parse(subject.component_subject_ids)
+      : undefined;
 
   return {
     id: subject.id,
@@ -91,7 +102,8 @@ function lessonItemToQuizItem(
 
   // Include component kanji for vocabulary items
   const itemComponentKanji =
-    (item.subjectType === 'vocabulary' || item.subjectType === 'kana_vocabulary') &&
+    (item.subjectType === 'vocabulary' ||
+      item.subjectType === 'kana_vocabulary') &&
     item.componentSubjectIds
       ? item.componentSubjectIds
           .map(id => componentKanjiMap.get(id))
@@ -149,8 +161,12 @@ export function LessonsScreen() {
       const subjectMap = new Map(subjects.map(s => [s.id, s]));
 
       // Filter assignments to only those with matching subjects
-      const validAssignments = assignments.filter(a => subjectMap.has(a.subject_id));
-      const validSubjects = validAssignments.map(a => subjectMap.get(a.subject_id)!);
+      const validAssignments = assignments.filter(a =>
+        subjectMap.has(a.subject_id),
+      );
+      const validSubjects = validAssignments.map(
+        a => subjectMap.get(a.subject_id)!,
+      );
 
       if (validAssignments.length === 0) {
         setErrorMessage('No valid lessons found');
@@ -158,10 +174,91 @@ export function LessonsScreen() {
         return;
       }
 
+      // Collect all component subject IDs from kanji (for radicals)
+      const radicalComponentIds = new Set<number>();
+      for (const subject of validSubjects) {
+        if (subject.object_type === 'kanji' && subject.component_subject_ids) {
+          const ids: number[] = JSON.parse(subject.component_subject_ids);
+          ids.forEach(id => radicalComponentIds.add(id));
+        }
+      }
+
+      // Collect all component subject IDs from vocabulary (for kanji)
+      const kanjiComponentIds = new Set<number>();
+      for (const subject of validSubjects) {
+        if (
+          (subject.object_type === 'vocabulary' ||
+            subject.object_type === 'kana_vocabulary') &&
+          subject.component_subject_ids
+        ) {
+          const ids: number[] = JSON.parse(subject.component_subject_ids);
+          ids.forEach(id => kanjiComponentIds.add(id));
+        }
+      }
+
+      // Fetch all component subjects from database
+      const allComponentIds = new Set([
+        ...radicalComponentIds,
+        ...kanjiComponentIds,
+      ]);
+
+      const componentRadicalsMap = new Map<number, ComponentRadical>();
+      const componentKanjiMap = new Map<number, QuizComponentKanji>();
+
+      if (allComponentIds.size > 0) {
+        const componentSubjects = await getSubjectsByIds(
+          Array.from(allComponentIds),
+        );
+
+        for (const compSubject of componentSubjects) {
+          if (
+            compSubject.object_type === 'radical' &&
+            radicalComponentIds.has(compSubject.id)
+          ) {
+            const meanings: Meaning[] = JSON.parse(compSubject.meanings);
+            const primaryMeaning =
+              meanings.find(m => m.primary)?.meaning ??
+              meanings[0]?.meaning ??
+              '';
+            componentRadicalsMap.set(compSubject.id, {
+              id: compSubject.id,
+              characters: compSubject.characters,
+              meaning: primaryMeaning,
+              characterImages: compSubject.character_images,
+            });
+          }
+          if (
+            compSubject.object_type === 'kanji' &&
+            kanjiComponentIds.has(compSubject.id)
+          ) {
+            const meanings: Meaning[] = JSON.parse(compSubject.meanings);
+            const readings: KanjiReading[] = compSubject.readings
+              ? JSON.parse(compSubject.readings)
+              : [];
+            const primaryMeaning =
+              meanings.find(m => m.primary)?.meaning ??
+              meanings[0]?.meaning ??
+              '';
+            const primaryReading =
+              readings.find(r => r.primary)?.reading ??
+              readings[0]?.reading ??
+              '';
+            componentKanjiMap.set(compSubject.id, {
+              id: compSubject.id,
+              characters: compSubject.characters ?? '?',
+              meaning: primaryMeaning,
+              reading: primaryReading,
+            });
+          }
+        }
+      }
+
       setSession({
         assignments: validAssignments,
         subjects: validSubjects,
         currentBatchIndex: 0,
+        componentRadicalsMap,
+        componentKanjiMap,
       });
       setPhase('learning');
     } catch (error) {
@@ -203,86 +300,17 @@ export function LessonsScreen() {
     return { items, assignments: batchAssignments };
   }, [session]);
 
-  // Get component radicals for kanji items
+  // Get component radicals for kanji items (pre-fetched during session load)
   const componentRadicals = useMemo(() => {
     if (!session) return new Map<number, ComponentRadical>();
+    return session.componentRadicalsMap;
+  }, [session]);
 
-    // Collect all component subject IDs from the current batch
-    const componentIds = new Set<number>();
-    for (const item of currentBatch.items) {
-      if (item.subjectType === 'kanji' && item.componentSubjectIds) {
-        item.componentSubjectIds.forEach(id => componentIds.add(id));
-      }
-    }
-
-    // Find radicals in the session subjects
-    const radicalMap = new Map<number, ComponentRadical>();
-    for (const subject of session.subjects) {
-      if (componentIds.has(subject.id) && subject.object_type === 'radical') {
-        const meanings: Meaning[] = JSON.parse(subject.meanings);
-        const primaryMeaning =
-          meanings.find(m => m.primary)?.meaning ?? meanings[0]?.meaning ?? '';
-        radicalMap.set(subject.id, {
-          id: subject.id,
-          characters: subject.characters,
-          meaning: primaryMeaning,
-          characterImages: subject.character_images,
-        });
-      }
-    }
-
-    // If some radicals weren't in session, we'd need to fetch them
-    // For simplicity, we'll use placeholder for missing ones
-    for (const id of componentIds) {
-      if (!radicalMap.has(id)) {
-        radicalMap.set(id, {
-          id,
-          characters: null,
-          meaning: 'Radical',
-          characterImages: null,
-        });
-      }
-    }
-
-    return radicalMap;
-  }, [session, currentBatch.items]);
-
-  // Get component kanji for vocabulary items
+  // Get component kanji for vocabulary items (pre-fetched during session load)
   const componentKanji = useMemo(() => {
     if (!session) return new Map<number, QuizComponentKanji>();
-
-    // Collect all component subject IDs from vocabulary items in the current batch
-    const componentIds = new Set<number>();
-    for (const item of currentBatch.items) {
-      if ((item.subjectType === 'vocabulary' || item.subjectType === 'kana_vocabulary') &&
-          item.componentSubjectIds) {
-        item.componentSubjectIds.forEach(id => componentIds.add(id));
-      }
-    }
-
-    // Find kanji in the session subjects
-    const kanjiMap = new Map<number, QuizComponentKanji>();
-    for (const subject of session.subjects) {
-      if (componentIds.has(subject.id) && subject.object_type === 'kanji') {
-        const meanings: Meaning[] = JSON.parse(subject.meanings);
-        const readings: KanjiReading[] = subject.readings
-          ? JSON.parse(subject.readings)
-          : [];
-        const primaryMeaning =
-          meanings.find(m => m.primary)?.meaning ?? meanings[0]?.meaning ?? '';
-        const primaryReading =
-          readings.find(r => r.primary)?.reading ?? readings[0]?.reading ?? '';
-        kanjiMap.set(subject.id, {
-          id: subject.id,
-          characters: subject.characters ?? '?',
-          meaning: primaryMeaning,
-          reading: primaryReading,
-        });
-      }
-    }
-
-    return kanjiMap;
-  }, [session, currentBatch.items]);
+    return session.componentKanjiMap;
+  }, [session]);
 
   // Calculate remaining lessons after current batch
   const moreLessonsAvailable = useMemo(() => {
@@ -304,12 +332,11 @@ export function LessonsScreen() {
 
     try {
       // Prepare lessons to complete
-      const lessonsToComplete: LessonToComplete[] = currentBatch.assignments.map(
-        assignment => ({
+      const lessonsToComplete: LessonToComplete[] =
+        currentBatch.assignments.map(assignment => ({
           assignmentId: assignment.id,
           subjectId: assignment.subject_id,
-        }),
-      );
+        }));
 
       // Get API key and check if online
       const apiKey = await getApiKey();
@@ -322,7 +349,11 @@ export function LessonsScreen() {
       // Complete the lessons
       const result = await completeLessons(client, lessonsToComplete);
 
-      if (!result.success && result.completedCount === 0 && result.queuedCount === 0) {
+      if (
+        !result.success &&
+        result.completedCount === 0 &&
+        result.queuedCount === 0
+      ) {
         setErrorMessage(result.error ?? 'Failed to complete lessons');
         setPhase('error');
         return;
@@ -371,7 +402,9 @@ export function LessonsScreen() {
   if (phase === 'error') {
     return (
       <View style={styles.centerContainer} testID="lessons-screen-error">
-        <Text style={styles.errorText}>{errorMessage ?? 'An error occurred'}</Text>
+        <Text style={styles.errorText}>
+          {errorMessage ?? 'An error occurred'}
+        </Text>
         <Text
           style={styles.backLink}
           onPress={handleReturnToDashboard}
@@ -414,10 +447,7 @@ export function LessonsScreen() {
 
     return (
       <View style={styles.container} testID="lessons-screen">
-        <LessonQuiz
-          items={quizItems}
-          onQuizComplete={handleQuizComplete}
-        />
+        <LessonQuiz items={quizItems} onQuizComplete={handleQuizComplete} />
       </View>
     );
   }
@@ -431,7 +461,9 @@ export function LessonsScreen() {
           syncedOnline={syncedOnline}
           moreLessonsAvailable={moreLessonsAvailable}
           onReturnToDashboard={handleReturnToDashboard}
-          onContinueLessons={moreLessonsAvailable > 0 ? handleContinueLessons : undefined}
+          onContinueLessons={
+            moreLessonsAvailable > 0 ? handleContinueLessons : undefined
+          }
         />
       </View>
     );

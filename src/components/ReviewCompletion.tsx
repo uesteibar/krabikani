@@ -27,9 +27,9 @@ import {
 } from '../theme';
 
 // Animation timing constants
-const STAGGER_DELAY = 100; // 100ms between each element
-const FADE_DURATION = 300;
-const SLIDE_DISTANCE = 20; // pixels to slide up
+const STAGGER_DELAY = 600; // 600ms between each element (tripled from 200)
+const FADE_DURATION = 1500; // 1500ms for each fade (tripled from 500)
+const SLIDE_DISTANCE = 30; // pixels to slide up
 
 // Confetti configuration
 const CONFETTI_COUNT = 12;
@@ -105,7 +105,11 @@ function ConfettiParticle({
 
   return (
     <Animated.View
-      style={[styles.confettiParticle, { backgroundColor: color }, animatedStyle]}
+      style={[
+        styles.confettiParticle,
+        { backgroundColor: color },
+        animatedStyle,
+      ]}
       testID={`confetti-particle-${index}`}
     />
   );
@@ -216,51 +220,81 @@ export function ReviewCompletion({
     // Element 2: Title (delay 100ms)
     titleOpacity.value = withDelay(
       STAGGER_DELAY,
-      withTiming(1, { duration: FADE_DURATION, easing: Easing.out(Easing.ease) }),
+      withTiming(1, {
+        duration: FADE_DURATION,
+        easing: Easing.out(Easing.ease),
+      }),
     );
     titleTranslateY.value = withDelay(
       STAGGER_DELAY,
-      withTiming(0, { duration: FADE_DURATION, easing: Easing.out(Easing.ease) }),
+      withTiming(0, {
+        duration: FADE_DURATION,
+        easing: Easing.out(Easing.ease),
+      }),
     );
 
     // Element 3: Items count (delay 200ms)
     countOpacity.value = withDelay(
       STAGGER_DELAY * 2,
-      withTiming(1, { duration: FADE_DURATION, easing: Easing.out(Easing.ease) }),
+      withTiming(1, {
+        duration: FADE_DURATION,
+        easing: Easing.out(Easing.ease),
+      }),
     );
     countTranslateY.value = withDelay(
       STAGGER_DELAY * 2,
-      withTiming(0, { duration: FADE_DURATION, easing: Easing.out(Easing.ease) }),
+      withTiming(0, {
+        duration: FADE_DURATION,
+        easing: Easing.out(Easing.ease),
+      }),
     );
 
     // Element 4: Incorrect count (delay 300ms)
     incorrectOpacity.value = withDelay(
       STAGGER_DELAY * 3,
-      withTiming(1, { duration: FADE_DURATION, easing: Easing.out(Easing.ease) }),
+      withTiming(1, {
+        duration: FADE_DURATION,
+        easing: Easing.out(Easing.ease),
+      }),
     );
     incorrectTranslateY.value = withDelay(
       STAGGER_DELAY * 3,
-      withTiming(0, { duration: FADE_DURATION, easing: Easing.out(Easing.ease) }),
+      withTiming(0, {
+        duration: FADE_DURATION,
+        easing: Easing.out(Easing.ease),
+      }),
     );
 
     // Element 5: Sync status (delay 400ms)
     syncOpacity.value = withDelay(
       STAGGER_DELAY * 4,
-      withTiming(1, { duration: FADE_DURATION, easing: Easing.out(Easing.ease) }),
+      withTiming(1, {
+        duration: FADE_DURATION,
+        easing: Easing.out(Easing.ease),
+      }),
     );
     syncTranslateY.value = withDelay(
       STAGGER_DELAY * 4,
-      withTiming(0, { duration: FADE_DURATION, easing: Easing.out(Easing.ease) }),
+      withTiming(0, {
+        duration: FADE_DURATION,
+        easing: Easing.out(Easing.ease),
+      }),
     );
 
     // Element 6: Button (delay 500ms)
     buttonOpacity.value = withDelay(
       STAGGER_DELAY * 5,
-      withTiming(1, { duration: FADE_DURATION, easing: Easing.out(Easing.ease) }),
+      withTiming(1, {
+        duration: FADE_DURATION,
+        easing: Easing.out(Easing.ease),
+      }),
     );
     buttonTranslateY.value = withDelay(
       STAGGER_DELAY * 5,
-      withTiming(0, { duration: FADE_DURATION, easing: Easing.out(Easing.ease) }),
+      withTiming(0, {
+        duration: FADE_DURATION,
+        easing: Easing.out(Easing.ease),
+      }),
     );
   }, [
     reduceMotion,

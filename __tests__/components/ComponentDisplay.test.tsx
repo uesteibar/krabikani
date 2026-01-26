@@ -84,8 +84,8 @@ describe('ComponentDisplay', () => {
       expect(getByTestId('component-text').props.children).toBe('stick');
     });
 
-    it('renders fallback "?" when no characters and no images', () => {
-      const { getByTestId } = render(
+    it('renders meaning as fallback when no characters and no images', () => {
+      const { getByTestId, queryByTestId } = render(
         <ComponentDisplay
           subjectType="radical"
           characters={null}
@@ -95,8 +95,12 @@ describe('ComponentDisplay', () => {
         />,
       );
 
-      // Without characterImages, shows text "?" as fallback
-      expect(getByTestId('component-character').props.children).toBe('?');
+      // Without characterImages, uses RadicalImage which falls back to meaning text
+      expect(queryByTestId('component-character')).toBeNull();
+      expect(getByTestId('component-image')).toBeTruthy();
+      expect(getByTestId('component-image-fallback').props.children).toBe(
+        'mystery',
+      );
       expect(getByTestId('component-text').props.children).toBe('mystery');
     });
   });

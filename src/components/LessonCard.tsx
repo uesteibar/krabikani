@@ -121,7 +121,10 @@ export function LessonCard({
   return (
     <View style={styles.container} testID="lesson-card">
       {/* Header with characters */}
-      <View style={[styles.header, { backgroundColor }]} testID="lesson-card-header">
+      <View
+        style={[styles.header, { backgroundColor }]}
+        testID="lesson-card-header"
+      >
         {shouldShowImage ? (
           <RadicalImage
             characterImages={characterImages}
@@ -143,24 +146,26 @@ export function LessonCard({
       {componentRadicals && componentRadicals.length > 0 && (
         <View
           style={styles.componentsContainer}
-          testID="lesson-card-components">
+          testID="lesson-card-components"
+        >
           <Text style={styles.componentsTitle}>Made up of:</Text>
           <View style={styles.componentsRow}>
             {componentRadicals.map(radical => (
               <View
                 key={radical.id}
                 style={styles.componentItem}
-                testID={`lesson-card-component-${radical.id}`}>
-                {radical.characters === null && radical.characterImages ? (
+                testID={`lesson-card-component-${radical.id}`}
+              >
+                {radical.characters === null ? (
                   <RadicalImage
-                    characterImages={radical.characterImages}
+                    characterImages={radical.characterImages ?? null}
                     fallbackText={radical.meaning}
                     size={FONT_SIZES.xxl}
                     testID={`lesson-card-component-${radical.id}-image`}
                   />
                 ) : (
                   <Text style={styles.componentCharacter}>
-                    {radical.characters ?? '?'}
+                    {radical.characters}
                   </Text>
                 )}
                 <Text style={styles.componentMeaning}>{radical.meaning}</Text>
@@ -172,7 +177,8 @@ export function LessonCard({
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={styles.contentContainer}>
+        contentContainerStyle={styles.contentContainer}
+      >
         {/* Meaning section */}
         <View style={styles.section} testID="lesson-card-meaning-section">
           <Text style={styles.sectionTitle}>Meaning</Text>
@@ -180,8 +186,12 @@ export function LessonCard({
             {primaryMeaning}
           </Text>
           {acceptedMeanings.length > 1 && (
-            <Text style={styles.secondaryText} testID="lesson-card-other-meanings">
-              Also: {acceptedMeanings.filter(m => m !== primaryMeaning).join(', ')}
+            <Text
+              style={styles.secondaryText}
+              testID="lesson-card-other-meanings"
+            >
+              Also:{' '}
+              {acceptedMeanings.filter(m => m !== primaryMeaning).join(', ')}
             </Text>
           )}
         </View>
@@ -190,19 +200,29 @@ export function LessonCard({
         {hasReading && (
           <View style={styles.section} testID="lesson-card-reading-section">
             <Text style={styles.sectionTitle}>Reading</Text>
-            <Text style={styles.primaryText} testID="lesson-card-primary-reading">
+            <Text
+              style={styles.primaryText}
+              testID="lesson-card-primary-reading"
+            >
               {primaryReading}
             </Text>
             {acceptedReadings.length > 1 && (
-              <Text style={styles.secondaryText} testID="lesson-card-other-readings">
-                Also: {acceptedReadings.filter(r => r !== primaryReading).join(', ')}
+              <Text
+                style={styles.secondaryText}
+                testID="lesson-card-other-readings"
+              >
+                Also:{' '}
+                {acceptedReadings.filter(r => r !== primaryReading).join(', ')}
               </Text>
             )}
           </View>
         )}
 
         {/* Meaning mnemonic section */}
-        <View style={styles.section} testID="lesson-card-meaning-mnemonic-section">
+        <View
+          style={styles.section}
+          testID="lesson-card-meaning-mnemonic-section"
+        >
           <Text style={styles.sectionTitle}>Meaning Mnemonic</Text>
           <MnemonicText
             text={meaningMnemonic}
@@ -213,7 +233,10 @@ export function LessonCard({
 
         {/* Reading mnemonic section (only for kanji and vocabulary) */}
         {hasReading && readingMnemonic && (
-          <View style={styles.section} testID="lesson-card-reading-mnemonic-section">
+          <View
+            style={styles.section}
+            testID="lesson-card-reading-mnemonic-section"
+          >
             <Text style={styles.sectionTitle}>Reading Mnemonic</Text>
             <MnemonicText
               text={readingMnemonic}
@@ -231,8 +254,11 @@ export function LessonCard({
             style={[styles.backButton, { borderColor: backgroundColor }]}
             onPress={onBack}
             activeOpacity={0.8}
-            testID="lesson-card-back-button">
-            <Text style={[styles.backButtonText, { color: backgroundColor }]}>Back</Text>
+            testID="lesson-card-back-button"
+          >
+            <Text style={[styles.backButtonText, { color: backgroundColor }]}>
+              Back
+            </Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.buttonSpacer} />
@@ -241,7 +267,8 @@ export function LessonCard({
           style={[styles.nextButton, { backgroundColor }]}
           onPress={onNext}
           activeOpacity={0.8}
-          testID="lesson-card-next-button">
+          testID="lesson-card-next-button"
+        >
           <Text style={styles.nextButtonText}>Next</Text>
         </TouchableOpacity>
       </View>

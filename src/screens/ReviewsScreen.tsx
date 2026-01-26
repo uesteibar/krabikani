@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  ActivityIndicator,
-} from 'react-native';
+import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../navigation/types';
-import type { Meaning, Reading, KanjiReading, AuxiliaryMeaning } from '../api/types';
+import type {
+  Meaning,
+  Reading,
+  KanjiReading,
+  AuxiliaryMeaning,
+} from '../api/types';
 import { WaniKaniClient } from '../api/wanikaniApi';
 import {
   ReviewSession,
@@ -63,9 +63,10 @@ function subjectToReviewItem(
     : null;
 
   // Parse component_subject_ids and get component radicals for kanji items
-  const componentSubjectIds: number[] | undefined = subject.component_subject_ids
-    ? JSON.parse(subject.component_subject_ids)
-    : undefined;
+  const componentSubjectIds: number[] | undefined =
+    subject.component_subject_ids
+      ? JSON.parse(subject.component_subject_ids)
+      : undefined;
 
   const componentRadicals =
     subject.object_type === 'kanji' && componentSubjectIds
@@ -76,7 +77,8 @@ function subjectToReviewItem(
 
   // Get component kanji for vocabulary items
   const componentKanji =
-    (subject.object_type === 'vocabulary' || subject.object_type === 'kana_vocabulary') &&
+    (subject.object_type === 'vocabulary' ||
+      subject.object_type === 'kana_vocabulary') &&
     componentSubjectIds
       ? componentSubjectIds
           .map(id => componentKanjiMap.get(id))
@@ -109,9 +111,14 @@ export function ReviewsScreen() {
   const navigation = useNavigation<ReviewsScreenNavigationProp>();
 
   const [phase, setPhase] = useState<ReviewPhase>('loading');
-  const [sessionData, setSessionData] = useState<ReviewSessionData | null>(null);
+  const [sessionData, setSessionData] = useState<ReviewSessionData | null>(
+    null,
+  );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [sessionResults, setSessionResults] = useState<Map<number, ItemProgress> | null>(null);
+  const [sessionResults, setSessionResults] = useState<Map<
+    number,
+    ItemProgress
+  > | null>(null);
   const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
 
   const loadReviews = useCallback(async () => {
@@ -136,8 +143,12 @@ export function ReviewsScreen() {
       const subjectMap = new Map(subjects.map(s => [s.id, s]));
 
       // Filter assignments to only those with matching subjects
-      const validAssignments = assignments.filter(a => subjectMap.has(a.subject_id));
-      const validSubjects = validAssignments.map(a => subjectMap.get(a.subject_id)!);
+      const validAssignments = assignments.filter(a =>
+        subjectMap.has(a.subject_id),
+      );
+      const validSubjects = validAssignments.map(
+        a => subjectMap.get(a.subject_id)!,
+      );
 
       if (validAssignments.length === 0) {
         setErrorMessage('No valid reviews found');
@@ -157,26 +168,40 @@ export function ReviewsScreen() {
       // Collect all component subject IDs from vocabulary items (for kanji)
       const kanjiComponentIds = new Set<number>();
       for (const subject of validSubjects) {
-        if ((subject.object_type === 'vocabulary' || subject.object_type === 'kana_vocabulary') &&
-            subject.component_subject_ids) {
+        if (
+          (subject.object_type === 'vocabulary' ||
+            subject.object_type === 'kana_vocabulary') &&
+          subject.component_subject_ids
+        ) {
           const ids: number[] = JSON.parse(subject.component_subject_ids);
           ids.forEach(id => kanjiComponentIds.add(id));
         }
       }
 
       // Combine all component IDs for a single fetch
-      const allComponentIds = new Set([...radicalComponentIds, ...kanjiComponentIds]);
+      const allComponentIds = new Set([
+        ...radicalComponentIds,
+        ...kanjiComponentIds,
+      ]);
 
       // Fetch all component subjects
       let componentRadicals = new Map<number, ReviewComponentRadical>();
       let componentKanji = new Map<number, ReviewComponentKanji>();
       if (allComponentIds.size > 0) {
-        const componentSubjects = await getSubjectsByIds(Array.from(allComponentIds));
+        const componentSubjects = await getSubjectsByIds(
+          Array.from(allComponentIds),
+        );
+
         for (const subject of componentSubjects) {
-          if (subject.object_type === 'radical' && radicalComponentIds.has(subject.id)) {
+          if (
+            subject.object_type === 'radical' &&
+            radicalComponentIds.has(subject.id)
+          ) {
             const meanings: Meaning[] = JSON.parse(subject.meanings);
             const primaryMeaning =
-              meanings.find(m => m.primary)?.meaning ?? meanings[0]?.meaning ?? '';
+              meanings.find(m => m.primary)?.meaning ??
+              meanings[0]?.meaning ??
+              '';
             componentRadicals.set(subject.id, {
               id: subject.id,
               characters: subject.characters,
@@ -184,15 +209,22 @@ export function ReviewsScreen() {
               characterImages: subject.character_images,
             });
           }
-          if (subject.object_type === 'kanji' && kanjiComponentIds.has(subject.id)) {
+          if (
+            subject.object_type === 'kanji' &&
+            kanjiComponentIds.has(subject.id)
+          ) {
             const meanings: Meaning[] = JSON.parse(subject.meanings);
             const readings: KanjiReading[] = subject.readings
               ? JSON.parse(subject.readings)
               : [];
             const primaryMeaning =
-              meanings.find(m => m.primary)?.meaning ?? meanings[0]?.meaning ?? '';
+              meanings.find(m => m.primary)?.meaning ??
+              meanings[0]?.meaning ??
+              '';
             const primaryReading =
-              readings.find(r => r.primary)?.reading ?? readings[0]?.reading ?? '';
+              readings.find(r => r.primary)?.reading ??
+              readings[0]?.reading ??
+              '';
             componentKanji.set(subject.id, {
               id: subject.id,
               characters: subject.characters ?? '?',
@@ -244,72 +276,75 @@ export function ReviewsScreen() {
   }, [sessionData]);
 
   // Handle session completion - submit reviews to WaniKani API
-  const handleSessionComplete = useCallback(async (itemProgress: Map<number, ItemProgress>) => {
-    setSessionResults(itemProgress);
-    setPhase('syncing');
+  const handleSessionComplete = useCallback(
+    async (itemProgress: Map<number, ItemProgress>) => {
+      setSessionResults(itemProgress);
+      setPhase('syncing');
 
-    // Build reviews to submit from the item progress
-    const reviewsToSubmit: ReviewToSubmit[] = [];
-    if (sessionData) {
-      for (const [subjectId, progress] of itemProgress) {
-        // Find the assignment for this subject
-        const assignment = sessionData.assignments.find(
-          a => a.subject_id === subjectId,
-        );
-        if (assignment) {
-          reviewsToSubmit.push({
-            assignmentId: assignment.id,
-            subjectId,
-            incorrectMeaningAnswers: progress.incorrectMeaningAnswers,
-            incorrectReadingAnswers: progress.incorrectReadingAnswers,
-          });
+      // Build reviews to submit from the item progress
+      const reviewsToSubmit: ReviewToSubmit[] = [];
+      if (sessionData) {
+        for (const [subjectId, progress] of itemProgress) {
+          // Find the assignment for this subject
+          const assignment = sessionData.assignments.find(
+            a => a.subject_id === subjectId,
+          );
+          if (assignment) {
+            reviewsToSubmit.push({
+              assignmentId: assignment.id,
+              subjectId,
+              incorrectMeaningAnswers: progress.incorrectMeaningAnswers,
+              incorrectReadingAnswers: progress.incorrectReadingAnswers,
+            });
+          }
         }
       }
-    }
 
-    try {
-      // Check if online and get API key
-      const online = await isOnline();
-      const apiKey = await getApiKey();
-
-      // Create client if online with valid API key
-      const client = online && apiKey ? new WaniKaniClient(apiKey) : null;
-
-      // Submit reviews (will queue if offline)
-      const result = await submitReviews(client, reviewsToSubmit);
-
-      if (result.success) {
-        setSyncResult({
-          submittedCount: result.submittedCount,
-          queuedCount: result.queuedCount,
-          wasOnline: client !== null,
-        });
-        setPhase('complete');
-      } else {
-        // Submission failed but we still show completion (reviews may be partially submitted)
-        setSyncResult({
-          submittedCount: result.submittedCount,
-          queuedCount: result.queuedCount,
-          wasOnline: client !== null,
-        });
-        setPhase('complete');
-      }
-    } catch {
-      // Even on error, try to queue reviews for later
       try {
-        const queueResult = await submitReviews(null, reviewsToSubmit);
-        setSyncResult({
-          submittedCount: 0,
-          queuedCount: queueResult.queuedCount,
-          wasOnline: false,
-        });
+        // Check if online and get API key
+        const online = await isOnline();
+        const apiKey = await getApiKey();
+
+        // Create client if online with valid API key
+        const client = online && apiKey ? new WaniKaniClient(apiKey) : null;
+
+        // Submit reviews (will queue if offline)
+        const result = await submitReviews(client, reviewsToSubmit);
+
+        if (result.success) {
+          setSyncResult({
+            submittedCount: result.submittedCount,
+            queuedCount: result.queuedCount,
+            wasOnline: client !== null,
+          });
+          setPhase('complete');
+        } else {
+          // Submission failed but we still show completion (reviews may be partially submitted)
+          setSyncResult({
+            submittedCount: result.submittedCount,
+            queuedCount: result.queuedCount,
+            wasOnline: client !== null,
+          });
+          setPhase('complete');
+        }
       } catch {
-        // Complete without sync result
-        setSyncResult(null);
+        // Even on error, try to queue reviews for later
+        try {
+          const queueResult = await submitReviews(null, reviewsToSubmit);
+          setSyncResult({
+            submittedCount: 0,
+            queuedCount: queueResult.queuedCount,
+            wasOnline: false,
+          });
+        } catch {
+          // Complete without sync result
+          setSyncResult(null);
+        }
+        setPhase('complete');
       }
-      setPhase('complete');
-    }
-  }, [sessionData]);
+    },
+    [sessionData],
+  );
 
   // Handle return to dashboard
   const handleReturnToDashboard = useCallback(() => {
@@ -326,21 +361,16 @@ export function ReviewsScreen() {
     );
   }
 
-  // Render syncing state
-  if (phase === 'syncing') {
-    return (
-      <View style={styles.centerContainer} testID="reviews-screen-syncing">
-        <ActivityIndicator size="large" color="#8f5bc4" />
-        <Text style={styles.loadingText}>Submitting reviews...</Text>
-      </View>
-    );
-  }
+  // Note: syncing state is handled by ReviewSession showing completion screen
+  // while sync happens in background
 
   // Render error state
   if (phase === 'error') {
     return (
       <View style={styles.centerContainer} testID="reviews-screen-error">
-        <Text style={styles.errorText}>{errorMessage ?? 'An error occurred'}</Text>
+        <Text style={styles.errorText}>
+          {errorMessage ?? 'An error occurred'}
+        </Text>
         <Text
           style={styles.backLink}
           onPress={handleReturnToDashboard}
@@ -352,58 +382,19 @@ export function ReviewsScreen() {
     );
   }
 
-  // Render completion state
-  if (phase === 'complete') {
-    const totalItems = sessionResults?.size ?? 0;
-    let totalIncorrect = 0;
-    sessionResults?.forEach(progress => {
-      totalIncorrect += progress.incorrectMeaningAnswers + progress.incorrectReadingAnswers;
-    });
-
-    // Determine sync status message
-    let syncStatusMessage: string | null = null;
-    if (syncResult) {
-      if (syncResult.wasOnline && syncResult.submittedCount > 0) {
-        syncStatusMessage = 'Synced with WaniKani';
-      } else if (!syncResult.wasOnline && syncResult.queuedCount > 0) {
-        syncStatusMessage = 'Queued for sync when online';
-      }
-    }
-
-    return (
-      <View style={styles.centerContainer} testID="reviews-screen-complete">
-        <Text style={styles.completeTitle}>Session Complete!</Text>
-        <Text style={styles.completeStats}>
-          {totalItems} {totalItems === 1 ? 'item' : 'items'} reviewed
-        </Text>
-        {totalIncorrect > 0 && (
-          <Text style={styles.incorrectStats}>
-            {totalIncorrect} incorrect {totalIncorrect === 1 ? 'answer' : 'answers'}
-          </Text>
-        )}
-        {syncStatusMessage && (
-          <Text style={styles.syncStatus} testID="reviews-screen-sync-status">
-            {syncStatusMessage}
-          </Text>
-        )}
-        <Text
-          style={styles.backLink}
-          onPress={handleReturnToDashboard}
-          testID="reviews-screen-back"
-        >
-          Return to Dashboard
-        </Text>
-      </View>
-    );
-  }
-
-  // Render review session
-  if (phase === 'reviewing' && sessionData) {
+  // Render review session (includes completion screen)
+  // Keep ReviewSession mounted during syncing so completion animation can play
+  if (
+    (phase === 'reviewing' || phase === 'syncing' || phase === 'complete') &&
+    sessionData
+  ) {
     return (
       <View style={styles.container} testID="reviews-screen">
         <ReviewSession
           items={reviewItems}
           onSessionComplete={handleSessionComplete}
+          onReturnToDashboard={handleReturnToDashboard}
+          syncedOnline={syncResult?.wasOnline ?? false}
         />
       </View>
     );
@@ -445,25 +436,5 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     textDecorationLine: 'underline',
     marginTop: 16,
-  },
-  completeTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
-  },
-  completeStats: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 4,
-  },
-  incorrectStats: {
-    fontSize: 16,
-    color: '#f44336',
-  },
-  syncStatus: {
-    fontSize: 14,
-    color: '#4caf50',
-    marginTop: 8,
   },
 });

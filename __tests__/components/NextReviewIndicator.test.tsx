@@ -59,19 +59,19 @@ describe('formatTimeUntil', () => {
 });
 
 describe('NextReviewIndicator', () => {
-  it('displays "Reviews available now" when reviewsAvailable > 0', () => {
-    const { getByText } = render(
+  it('returns null when reviewsAvailable > 0', () => {
+    const { queryByTestId } = render(
       <NextReviewIndicator nextReviewAt={null} reviewsAvailable={5} />,
     );
-    expect(getByText('Reviews available now')).toBeTruthy();
+    expect(queryByTestId('next-review-indicator')).toBeNull();
   });
 
-  it('displays "Reviews available now" even with nextReviewAt when reviews are available', () => {
+  it('returns null even with nextReviewAt when reviews are available', () => {
     const futureDate = new Date(Date.now() + 2 * 60 * 60 * 1000);
-    const { getByText } = render(
+    const { queryByTestId } = render(
       <NextReviewIndicator nextReviewAt={futureDate} reviewsAvailable={3} />,
     );
-    expect(getByText('Reviews available now')).toBeTruthy();
+    expect(queryByTestId('next-review-indicator')).toBeNull();
   });
 
   it('displays "No upcoming reviews" when nextReviewAt is null and no reviews available', () => {
@@ -84,22 +84,21 @@ describe('NextReviewIndicator', () => {
   it('displays countdown when nextReviewAt is set and no reviews available', () => {
     const twoHoursFromNow = new Date(Date.now() + 2 * 60 * 60 * 1000 + 500);
     const { getByText } = render(
-      <NextReviewIndicator nextReviewAt={twoHoursFromNow} reviewsAvailable={0} />,
+      <NextReviewIndicator
+        nextReviewAt={twoHoursFromNow}
+        reviewsAvailable={0}
+      />,
     );
     expect(getByText('Next review in 2 hours')).toBeTruthy();
   });
 
   it('defaults reviewsAvailable to 0', () => {
-    const { getByText } = render(
-      <NextReviewIndicator nextReviewAt={null} />,
-    );
+    const { getByText } = render(<NextReviewIndicator nextReviewAt={null} />);
     expect(getByText('No upcoming reviews')).toBeTruthy();
   });
 
   it('has next-review-indicator testID', () => {
-    const { getByTestId } = render(
-      <NextReviewIndicator nextReviewAt={null} />,
-    );
+    const { getByTestId } = render(<NextReviewIndicator nextReviewAt={null} />);
     expect(getByTestId('next-review-indicator')).toBeTruthy();
   });
 
