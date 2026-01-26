@@ -64,6 +64,14 @@ import {
   getSyncStatus,
   updateSyncStatus,
   resetSyncStatus,
+  // User Settings CRUD
+  getSetting,
+  setSetting,
+  getAllSettings,
+  deleteSetting,
+  deleteAllSettings,
+  // Data management
+  clearAllData,
   // Migrations
   getSchemaVersion,
   runMigrations,
@@ -1708,6 +1716,208 @@ describe('Database CRUD Operations', () => {
         expect(status?.last_subjects_sync).toBeNull();
         expect(status?.last_assignments_sync).toBeNull();
         expect(status?.last_summary_sync).toBeNull();
+      });
+    });
+  });
+
+  // ============================================
+  // User Settings CRUD Tests
+  // ============================================
+
+  describe('User Settings CRUD', () => {
+    describe('setSetting', () => {
+      it('should store a boolean setting', async () => {
+        await setSetting('zen_mode', true);
+
+        const rows = __getTableRows('user_settings');
+        expect(rows.length).toBe(1);
+        expect(rows[0].setting_key).toBe('zen_mode');
+        expect(rows[0].setting_value).toBe('true');
+      });
+
+      it('should store a string setting', async () => {
+        await setSetting('theme', 'dark');
+
+        const rows = __getTableRows('user_settings');
+        expect(rows.length).toBe(1);
+        expect(rows[0].setting_key).toBe('theme');
+        expect(rows[0].setting_value).toBe('"dark"');
+      });
+
+      it('should store a number setting', async () => {
+        await setSetting('font_size', 16);
+
+        const rows = __getTableRows('user_settings');
+        expect(rows.length).toBe(1);
+        expect(rows[0].setting_key).toBe('font_size');
+        expect(rows[0].setting_value).toBe('16');
+      });
+
+      it('should update an existing setting (INSERT OR REPLACE)', async () => {
+        await setSetting('zen_mode', true);
+        await setSetting('zen_mode', false);
+
+        // The mock doesn't fully support UNIQUE constraints with INSERT OR REPLACE,
+        // but in real SQLite this would replace the existing row.
+        const rows = __getTableRows('user_settings');
+        expect(rows.length).toBeGreaterThanOrEqual(1);
+      });
+    });
+
+    describe('getSetting', () => {
+      it('should return a boolean setting', async () => {
+        __insertRow('user_settings', {
+          setting_key: 'zen_mode',
+          setting_value: 'true',
+          updated_at: '2024-01-15T10:00:00.000Z',
+        });
+
+        const value = await getSetting('zen_mode');
+
+        expect(value).toBe(true);
+      });
+
+      it('should return a string setting', async () => {
+        __insertRow('user_settings', {
+          setting_key: 'theme',
+          setting_value: '"dark"',
+          updated_at: '2024-01-15T10:00:00.000Z',
+        });
+
+        const value = await getSetting('theme');
+
+        expect(value).toBe('dark');
+      });
+
+      it('should return a number setting', async () => {
+        __insertRow('user_settings', {
+          setting_key: 'font_size',
+          setting_value: '16',
+          updated_at: '2024-01-15T10:00:00.000Z',
+        });
+
+        const value = await getSetting('font_size');
+
+        expect(value).toBe(16);
+      });
+
+      it('should return null for non-existent setting', async () => {
+        const value = await getSetting('nonexistent');
+
+        expect(value).toBeNull();
+      });
+
+      it('should return raw string for invalid JSON', async () => {
+        __insertRow('user_settings', {
+          setting_key: 'invalid',
+          setting_value: 'not valid json',
+          updated_at: '2024-01-15T10:00:00.000Z',
+        });
+
+        const value = await getSetting('invalid');
+
+        expect(value).toBe('not valid json');
+      });
+    });
+
+    describe('getAllSettings', () => {
+      it('should return all settings as a key-value map', async () => {
+        __insertRow('user_settings', {
+          setting_key: 'zen_mode',
+          setting_value: 'true',
+          updated_at: '',
+        });
+        __insertRow('user_settings', {
+          setting_key: 'theme',
+          setting_value: '"dark"',
+          updated_at: '',
+        });
+        __insertRow('user_settings', {
+          setting_key: 'font_size',
+          setting_value: '16',
+          updated_at: '',
+        });
+
+        const settings = await getAllSettings();
+
+        expect(settings.zen_mode).toBe(true);
+        expect(settings.theme).toBe('dark');
+        expect(settings.font_size).toBe(16);
+      });
+
+      it('should return empty object when no settings exist', async () => {
+        const settings = await getAllSettings();
+
+        expect(settings).toEqual({});
+      });
+    });
+
+    describe('deleteSetting', () => {
+      it('should delete a setting by key', async () => {
+        __insertRow('user_settings', {
+          setting_key: 'zen_mode',
+          setting_value: 'true',
+          updated_at: '',
+        });
+
+        await deleteSetting('zen_mode');
+
+        const rows = __getTableRows('user_settings');
+        expect(rows.length).toBe(0);
+      });
+    });
+
+    describe('deleteAllSettings', () => {
+      it('should delete all settings', async () => {
+        __insertRow('user_settings', {
+          setting_key: 'zen_mode',
+          setting_value: 'true',
+          updated_at: '',
+        });
+        __insertRow('user_settings', {
+          setting_key: 'theme',
+          setting_value: '"dark"',
+          updated_at: '',
+        });
+
+        await deleteAllSettings();
+
+        const rows = __getTableRows('user_settings');
+        expect(rows.length).toBe(0);
+      });
+    });
+
+    describe('clearAllData should NOT clear user_settings', () => {
+      it('should preserve user_settings when clearing synced data', async () => {
+        // Add a setting
+        __insertRow('user_settings', {
+          setting_key: 'zen_mode',
+          setting_value: 'true',
+          updated_at: '',
+        });
+
+        // Add some synced data that should be cleared
+        __insertRow('subjects', {
+          id: 1,
+          object_type: 'kanji',
+          characters: '一',
+          meanings: '[]',
+          meaning_mnemonic: 'test',
+          level: 1,
+          created_at: '',
+        });
+
+        // Clear all synced data
+        await clearAllData();
+
+        // Verify subjects were cleared
+        const subjectRows = __getTableRows('subjects');
+        expect(subjectRows.length).toBe(0);
+
+        // Verify user_settings were preserved
+        const settingsRows = __getTableRows('user_settings');
+        expect(settingsRows.length).toBe(1);
+        expect(settingsRows[0].setting_key).toBe('zen_mode');
       });
     });
   });

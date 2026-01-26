@@ -136,6 +136,19 @@ const CREATE_PENDING_SYNONYMS_SUBJECT_INDEX = `
 `;
 
 /**
+ * User settings table stores local preferences (e.g., zen mode).
+ * Settings are NOT cleared when user clears API key data.
+ * Values are stored as JSON strings to support boolean, string, and number types.
+ */
+const CREATE_USER_SETTINGS_TABLE = `
+  CREATE TABLE IF NOT EXISTS user_settings (
+    setting_key TEXT PRIMARY KEY,
+    setting_value TEXT NOT NULL,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`;
+
+/**
  * Index on assignments for fast lookup by subject_id and available_at.
  */
 const CREATE_ASSIGNMENTS_SUBJECT_INDEX = `
@@ -166,6 +179,7 @@ const SCHEMA_STATEMENTS = [
   CREATE_SYNC_STATUS_TABLE,
   CREATE_USER_SYNONYMS_TABLE,
   CREATE_PENDING_SYNONYMS_TABLE,
+  CREATE_USER_SETTINGS_TABLE,
   CREATE_ASSIGNMENTS_SUBJECT_INDEX,
   CREATE_ASSIGNMENTS_AVAILABLE_INDEX,
   CREATE_SUBJECTS_LEVEL_INDEX,
@@ -245,6 +259,17 @@ export interface DatabasePendingSynonym {
   synonym: string;
   created_at: string;
 }
+
+export interface DatabaseUserSetting {
+  setting_key: string;
+  setting_value: string;
+  updated_at: string;
+}
+
+/**
+ * Type for setting values - supports boolean, string, and number.
+ */
+export type SettingValue = boolean | string | number;
 
 // ============================================
 // Database Operations
@@ -345,6 +370,7 @@ export const SCHEMA = {
   CREATE_SYNC_STATUS_TABLE,
   CREATE_USER_SYNONYMS_TABLE,
   CREATE_PENDING_SYNONYMS_TABLE,
+  CREATE_USER_SETTINGS_TABLE,
   CREATE_ASSIGNMENTS_SUBJECT_INDEX,
   CREATE_ASSIGNMENTS_AVAILABLE_INDEX,
   CREATE_SUBJECTS_LEVEL_INDEX,
@@ -1293,6 +1319,89 @@ export async function resetSyncStatus(): Promise<void> {
   );
 }
 
+// ============================================
+// User Settings CRUD Operations
+// ============================================
+
+/**
+ * Gets a setting value by key.
+ * Returns null if the setting doesn't exist.
+ * The value is parsed from JSON to return the original type (boolean, string, or number).
+ */
+export async function getSetting(key: string): Promise<SettingValue | null> {
+  const result = await executeSql(
+    'SELECT setting_value FROM user_settings WHERE setting_key = ?',
+    [key],
+  );
+  if (result.rows.length === 0) {
+    return null;
+  }
+  const row = result.rows[0] as { setting_value: string };
+  try {
+    return JSON.parse(row.setting_value) as SettingValue;
+  } catch {
+    // If parsing fails, return the raw string value
+    return row.setting_value;
+  }
+}
+
+/**
+ * Sets a setting value by key.
+ * Values are stored as JSON strings to preserve their type.
+ * Uses INSERT OR REPLACE for upsert behavior.
+ */
+export async function setSetting(
+  key: string,
+  value: SettingValue,
+): Promise<void> {
+  const jsonValue = JSON.stringify(value);
+  await executeSql(
+    `INSERT OR REPLACE INTO user_settings (setting_key, setting_value, updated_at)
+     VALUES (?, ?, CURRENT_TIMESTAMP)`,
+    [key, jsonValue],
+  );
+}
+
+/**
+ * Gets all settings as a key-value map.
+ * Values are parsed from JSON to return their original types.
+ */
+export async function getAllSettings(): Promise<Record<string, SettingValue>> {
+  const result = await executeSql(
+    'SELECT setting_key, setting_value FROM user_settings ORDER BY setting_key',
+    [],
+  );
+  const settings: Record<string, SettingValue> = {};
+  for (const row of result.rows) {
+    const { setting_key, setting_value } = row as {
+      setting_key: string;
+      setting_value: string;
+    };
+    try {
+      settings[setting_key] = JSON.parse(setting_value) as SettingValue;
+    } catch {
+      settings[setting_key] = setting_value;
+    }
+  }
+  return settings;
+}
+
+/**
+ * Deletes a setting by key.
+ */
+export async function deleteSetting(key: string): Promise<void> {
+  await executeSql('DELETE FROM user_settings WHERE setting_key = ?', [key]);
+}
+
+/**
+ * Deletes all settings.
+ * Note: This is separate from clearAllData() - settings are NOT cleared
+ * when the user clears their API key/synced data.
+ */
+export async function deleteAllSettings(): Promise<void> {
+  await executeSql('DELETE FROM user_settings', []);
+}
+
 /**
  * Clears all user data from the database.
  * This removes all subjects, assignments, pending reviews, pending lessons,
@@ -1351,6 +1460,11 @@ const MIGRATIONS: Migration[] = [
       CREATE_USER_SYNONYMS_SUBJECT_INDEX,
       CREATE_PENDING_SYNONYMS_SUBJECT_INDEX,
     ],
+  },
+  {
+    version: 5,
+    description: 'Add user_settings table for local preferences',
+    up: [CREATE_USER_SETTINGS_TABLE],
   },
 ];
 

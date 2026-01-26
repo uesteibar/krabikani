@@ -61,6 +61,12 @@ export {
   resetSyncStatus,
   getCachedUserLevel,
   saveCachedUserLevel,
+  // User Settings CRUD
+  getSetting,
+  setSetting,
+  getAllSettings,
+  deleteSetting,
+  deleteAllSettings,
   // Learned counts
   getLearnedCount,
   // Upcoming reviews
@@ -82,4 +88,6 @@ export {
   type PendingLessonInput,
   type SyncStatusUpdate,
   type UpcomingReviewsHourBucket,
+  type DatabaseUserSetting,
+  type SettingValue,
 } from './database';
