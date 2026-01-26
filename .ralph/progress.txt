@@ -281,3 +281,21 @@ Started:
   - The outer beforeEach with jest.clearAllMocks() clears all mock implementations, so nested test suites need to re-setup storage mocks
 ---
 
+## 2026-01-26 - US-012
+- What was implemented:
+  - Updated notification toggle in SettingsScreen to handle ON/OFF changes immediately
+  - When toggled OFF: calls `cancelAllNotifications()` and `clearBadge()` from notificationService
+  - When toggled ON: calls `scheduleNextHourlyCheck()` from reviewNotificationScheduler
+  - Added 6 unit tests covering toggle behavior (cancel/clear on OFF, schedule on ON, negative cases)
+
+- Files changed:
+  - src/screens/SettingsScreen.tsx (added imports for cancelAllNotifications, clearBadge, scheduleNextHourlyCheck; updated handleNotificationsToggle callback)
+  - __tests__/screens/SettingsScreen.test.tsx (added reviewNotificationScheduler mock, added 6 toggle change behavior tests)
+
+- **Learnings for future iterations:**
+  - The toggle change handler needs to call multiple async functions - use await for each to ensure proper ordering
+  - When testing toggle behavior, need to mock both notificationService and reviewNotificationScheduler
+  - Use mockClear() in tests to verify specific functions are NOT called in certain scenarios
+  - Changes should take effect immediately when toggle is changed (no batching/debouncing needed)
+---
+
