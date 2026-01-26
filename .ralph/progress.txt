@@ -96,3 +96,24 @@ Started:
   - The getNextHourTimestamp function is exported and can be reused for testing and other scheduling needs
 ---
 
+## 2026-01-26 - US-005
+- What was implemented:
+  - Added notification settings storage using the existing SQLite settings infrastructure
+  - Setting keys: 'notifications_enabled' (default: true) and 'notifications_permission_asked' (default: false)
+  - Created 4 helper functions: `getNotificationsEnabled()`, `setNotificationsEnabled(boolean)`, `hasAskedForPermissions()`, `setHasAskedForPermissions(boolean)`
+  - All functions are thin wrappers around `getSetting`/`setSetting` from src/storage
+  - Added exports to `src/services/index.ts`
+  - Added 10 unit tests covering all helper functions (including default value behavior)
+
+- Files changed:
+  - src/services/notificationService.ts (added settings functions and imports)
+  - src/services/index.ts (added exports for new functions)
+  - __tests__/services/notificationService.test.ts (added 10 tests for settings functions, mocked storage module)
+
+- **Learnings for future iterations:**
+  - Settings are stored in SQLite via `getSetting`/`setSetting` in src/storage
+  - Values are JSON-encoded, so booleans round-trip correctly
+  - For unit tests, mock the storage module directly with `jest.mock('../../src/storage')` rather than using the full database mock
+  - Default values should be handled in the getter functions (return true/false when setting is null)
+---
+
