@@ -31,7 +31,6 @@ import {
 } from '../components';
 import {
   COLORS,
-  DASHBOARD_COLORS,
   SPACING,
   FONT_SIZES,
   BORDER_RADIUS,
@@ -378,13 +377,26 @@ export function HomeScreen() {
             pendingLessonsCount={pendingData.pendingLessonsCount}
             pendingReviewsCount={pendingData.pendingReviewsCount}
           />
-          <TouchableOpacity
-            style={styles.settingsButton}
-            onPress={() => navigation.navigate('Settings')}
-            testID="settings-button"
-          >
-            <Text style={styles.settingsButtonText}>Settings</Text>
-          </TouchableOpacity>
+          <View style={styles.bottomButtons}>
+            <TouchableOpacity
+              style={[
+                styles.outlineButton,
+                { borderColor: theme.colors.text.tertiary },
+              ]}
+              onPress={() => navigation.navigate('Settings')}
+              activeOpacity={0.6}
+              testID="settings-button"
+            >
+              <Text
+                style={[
+                  styles.outlineButtonText,
+                  { color: theme.colors.text.primary },
+                ]}
+              >
+                Settings
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -418,20 +430,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
   },
-  settingsButton: {
-    marginTop: MIN_TOUCH_TARGET, // At least button-sized margin above
-    marginBottom: SPACING.xxl, // Extra bottom margin
-    paddingVertical: SPACING.md,
+  bottomButtons: {
+    marginTop: MIN_TOUCH_TARGET,
+    marginBottom: SPACING.xxl,
+    width: '100%',
     paddingHorizontal: SPACING.xxl,
+    gap: SPACING.md,
+  },
+  outlineButton: {
+    width: '100%',
+    paddingVertical: SPACING.md,
     minHeight: MIN_TOUCH_TARGET,
-    minWidth: MIN_TOUCH_TARGET * 3, // Wider touch target
-    backgroundColor: DASHBOARD_COLORS.reviews,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
     borderRadius: BORDER_RADIUS.md,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  settingsButtonText: {
-    color: COLORS.text.inverse,
+  outlineButtonText: {
     fontSize: FONT_SIZES.base,
     fontWeight: '600',
   },
