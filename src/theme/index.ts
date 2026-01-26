@@ -32,3 +32,9 @@ export type {
   Theme,
   ThemeProviderProps,
 } from './ThemeContext';
+
+export {
+  FONT_FAMILY_JAPANESE_DISPLAY,
+  FONT_WEIGHTS,
+  TEXT_STYLES,
+} from './typography';

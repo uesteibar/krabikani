@@ -3251,7 +3251,7 @@ describe('ReviewSession', () => {
     it('should show progress bar and SRS badge in incorrect feedback view when wrap-up mode is active even in zen mode', async () => {
       (database.getSetting as jest.Mock).mockResolvedValue(true);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId, findByTestId } = render(
         <ReviewSession items={fiveItems} />,
       );
 
@@ -3269,6 +3269,9 @@ describe('ReviewSession', () => {
       const input = getByTestId('review-session-input');
       fireEvent.changeText(input, 'Wrong');
       fireEvent.press(getByTestId('review-session-submit'));
+
+      // Wait for incorrect feedback view to appear
+      await findByTestId('review-session-incorrect-feedback');
 
       // Should show progress and badge in incorrect feedback view with wrap-up active
       expect(getByTestId('review-session-incorrect-feedback')).toBeTruthy();

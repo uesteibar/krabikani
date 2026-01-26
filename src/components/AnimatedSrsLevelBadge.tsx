@@ -28,6 +28,7 @@ export interface AnimatedSrsLevelBadgeProps {
 }
 
 // Default fallback color for invalid stages
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const DEFAULT_COLOR = SRS_LEVELS.apprentice.color;
 
 // Animation timing constants - Level Up
