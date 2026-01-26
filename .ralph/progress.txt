@@ -61,3 +61,18 @@ Started:
   - Existing tests may produce console.error warnings about act() wrapping when new async effects are added - these are warnings not failures
 ---
 
+## 2026-01-26 - US-005
+- What was implemented: Created Item Detail Screen to display full details for radicals, kanji, or vocabulary items
+- Files changed:
+  - `src/screens/ItemDetailScreen.tsx` - New screen with header (character/image + subject type badge), uses ItemDetails component for meanings, readings, mnemonics, and components
+  - `src/navigation/types.ts` - Added ItemDetail route with subjectId param to RootStackParamList
+  - `src/navigation/RootNavigator.tsx` - Imported and registered ItemDetailScreen in the navigator
+  - `__tests__/screens/ItemDetailScreen.test.tsx` - Added 14 new tests for loading state, error state, kanji/radical/vocabulary display, component fetching
+- **Learnings for future iterations:**
+  - Navigation route params are typed via NativeStackScreenProps<RootStackParamList, 'ItemDetail'>['route']
+  - For screens that load data, use a phase state pattern ('loading' | 'loaded' | 'error') with corresponding UI
+  - RadicalImage component handles radicals without characters (uses character_images JSON)
+  - getSubjectColor(subjectType) returns the correct color for subject type backgrounds
+  - There is a pre-existing failing test in ReviewSession.test.tsx related to wrap-up mode in incorrect feedback view - not related to new changes
+---
+
