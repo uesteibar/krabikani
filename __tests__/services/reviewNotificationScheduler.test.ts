@@ -19,6 +19,7 @@ import {getAvailableReviews, getUpcomingReviewsByHour} from '../../src/storage';
 import {
   checkPermissions,
   getNotificationsEnabled,
+  setBadgeCount,
 } from '../../src/services/notificationService';
 
 jest.mock('react-native', () => ({
@@ -36,6 +37,7 @@ jest.mock('../../src/storage', () => ({
 jest.mock('../../src/services/notificationService', () => ({
   checkPermissions: jest.fn(),
   getNotificationsEnabled: jest.fn(),
+  setBadgeCount: jest.fn(),
 }));
 jest.mock('../../src/services/notificationConfig', () => ({
   NOTIFICATION_CHANNEL_ID: 'review-reminders',
@@ -218,6 +220,68 @@ describe('reviewNotificationScheduler', () => {
 
       expect(notifee.cancelTriggerNotifications).toHaveBeenCalled();
       expect(notifee.createTriggerNotification).toHaveBeenCalled();
+    });
+
+    it('updates badge count to current review count', async () => {
+      (getAvailableReviews as jest.Mock).mockResolvedValue(
+        Array(47).fill({id: 1}),
+      );
+
+      await performHourlyReviewCheck();
+
+      expect(setBadgeCount).toHaveBeenCalledWith(47);
+    });
+
+    it('sets badge count to 0 when no reviews (clears badge)', async () => {
+      (getAvailableReviews as jest.Mock).mockResolvedValue([]);
+
+      await performHourlyReviewCheck();
+
+      expect(setBadgeCount).toHaveBeenCalledWith(0);
+    });
+
+    it('updates badge even when review count is below notification threshold', async () => {
+      (getAvailableReviews as jest.Mock).mockResolvedValue(
+        Array(15).fill({id: 1}),
+      );
+
+      await performHourlyReviewCheck();
+
+      expect(setBadgeCount).toHaveBeenCalledWith(15);
+      expect(notifee.displayNotification).not.toHaveBeenCalled();
+    });
+
+    it('does not update badge when app is in foreground', async () => {
+      (AppState as any).currentState = 'active';
+      (getAvailableReviews as jest.Mock).mockResolvedValue(
+        Array(25).fill({id: 1}),
+      );
+
+      await performHourlyReviewCheck();
+
+      expect(setBadgeCount).not.toHaveBeenCalled();
+    });
+
+    it('does not update badge when permissions not granted', async () => {
+      (checkPermissions as jest.Mock).mockResolvedValue('denied');
+      (getAvailableReviews as jest.Mock).mockResolvedValue(
+        Array(25).fill({id: 1}),
+      );
+
+      await performHourlyReviewCheck();
+
+      expect(setBadgeCount).not.toHaveBeenCalled();
+    });
+
+    it('does not update badge when notifications are disabled', async () => {
+      (getNotificationsEnabled as jest.Mock).mockResolvedValue(false);
+      (getAvailableReviews as jest.Mock).mockResolvedValue(
+        Array(25).fill({id: 1}),
+      );
+
+      await performHourlyReviewCheck();
+
+      expect(setBadgeCount).not.toHaveBeenCalled();
     });
   });
 

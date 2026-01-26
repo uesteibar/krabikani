@@ -13,6 +13,7 @@ import {
 import {
   checkPermissions,
   getNotificationsEnabled,
+  setBadgeCount,
 } from './notificationService';
 
 // Notification ID for the hourly review check trigger
@@ -92,6 +93,9 @@ export async function performHourlyReviewCheck(): Promise<void> {
   // Get current review count
   const currentReviews = await getAvailableReviews();
   const reviewCount = currentReviews.length;
+
+  // Update app badge to current review count (0 clears the badge)
+  await setBadgeCount(reviewCount);
 
   // Only show notification if count >= 20
   if (reviewCount >= MIN_REVIEWS_FOR_NOTIFICATION) {
