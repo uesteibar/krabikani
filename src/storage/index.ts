@@ -61,6 +61,8 @@ export {
   resetSyncStatus,
   getCachedUserLevel,
   saveCachedUserLevel,
+  // Learned counts
+  getLearnedCount,
   // Data management
   clearAllData,
   // Migrations

@@ -26,6 +26,7 @@ import {
   PendingSyncIndicator,
   SyncingIndicator,
   LevelIndicator,
+  LearnedCounts,
 } from '../components';
 import {
   COLORS,
@@ -47,6 +48,7 @@ import {
   getPendingReviewCount,
   getPendingLessonCount,
   getCachedUserLevel,
+  getLearnedCount,
 } from '../storage';
 import {
   syncSubjects,
@@ -77,6 +79,11 @@ export interface PendingData {
   pendingReviewsCount: number;
 }
 
+export interface LearnedData {
+  kanjiLearned: number;
+  vocabularyLearned: number;
+}
+
 export function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const theme = useTheme();
@@ -96,6 +103,10 @@ export function HomeScreen() {
     pendingReviewsCount: 0,
   });
   const [userLevel, setUserLevel] = useState<number | null>(null);
+  const [learnedData, setLearnedData] = useState<LearnedData>({
+    kanjiLearned: 0,
+    vocabularyLearned: 0,
+  });
   const isSyncingPending = useRef(false);
 
   const loadDashboardData = useCallback(async () => {
@@ -109,6 +120,8 @@ export function HomeScreen() {
         pendingLessonsCount,
         pendingReviewsCount,
         cachedLevel,
+        kanjiLearned,
+        vocabularyLearned,
       ] = await Promise.all([
         getSyncStatus(),
         getSubjectCount(),
@@ -118,6 +131,8 @@ export function HomeScreen() {
         getPendingLessonCount(),
         getPendingReviewCount(),
         getCachedUserLevel(),
+        getLearnedCount('kanji'),
+        getLearnedCount('vocabulary'),
       ]);
 
       const lastSync =
@@ -136,6 +151,10 @@ export function HomeScreen() {
         pendingReviewsCount,
       });
       setUserLevel(cachedLevel);
+      setLearnedData({
+        kanjiLearned,
+        vocabularyLearned,
+      });
 
       // Check if we're offline with no cached data
       const online = isOnline();
@@ -324,6 +343,10 @@ export function HomeScreen() {
             <NextReviewIndicator
               nextReviewAt={dashboardData.nextReviewAt}
               reviewsAvailable={dashboardData.reviewsCount}
+            />
+            <LearnedCounts
+              kanjiCount={learnedData.kanjiLearned}
+              vocabularyCount={learnedData.vocabularyLearned}
             />
           </View>
           <LastSyncedIndicator lastSyncedAt={syncStatus.lastSyncedAt} />

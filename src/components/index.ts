@@ -123,3 +123,8 @@ export {
   ItemDetails,
   type ItemDetailsProps,
 } from './ItemDetails';
+
+export {
+  LearnedCounts,
+  type LearnedCountsProps,
+} from './LearnedCounts';
