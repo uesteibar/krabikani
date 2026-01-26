@@ -260,3 +260,24 @@ Started:
   - The notifee mock needed onForegroundEvent and onBackgroundEvent to fix App.test.tsx failure from US-009
 ---
 
+## 2026-01-26 - US-011
+- What was implemented:
+  - Added badge update when review session completes in ReviewsScreen
+  - Badge is updated to the new available review count after completing a session
+  - Badge is cleared (set to 0) when no reviews remain
+  - Badge update only occurs when notification permissions are granted AND notifications are enabled in settings
+  - Added useEffect in ReviewsScreen that triggers on phase='complete' to recalculate and update badge
+  - Added 4 unit tests covering badge update scenarios (remaining reviews, no reviews, permissions denied, notifications disabled)
+
+- Files changed:
+  - src/screens/ReviewsScreen.tsx (added imports for notification services, added useEffect for badge update)
+  - __tests__/screens/ReviewsScreen.test.tsx (added notification service mock, added 4 badge update tests)
+
+- **Learnings for future iterations:**
+  - Badge update on review completion happens in ReviewsScreen, not in the ReviewCompletion component (which is presentational only)
+  - The phase state machine in ReviewsScreen transitions: loading -> reviewing -> syncing -> complete
+  - Badge update should happen when phase transitions to 'complete', after reviews have been synced/queued
+  - When testing with jest mocks that use mockResolvedValueOnce, use mockReset() in beforeEach to clear previous implementations
+  - The outer beforeEach with jest.clearAllMocks() clears all mock implementations, so nested test suites need to re-setup storage mocks
+---
+

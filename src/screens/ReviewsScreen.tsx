@@ -27,6 +27,12 @@ import {
 } from '../storage';
 import { submitReviews, type ReviewToSubmit } from '../sync';
 import { isOnline, startSession, endSession } from '../utils';
+import {
+  setBadgeCount,
+  clearBadge,
+  checkPermissions,
+  getNotificationsEnabled,
+} from '../services';
 
 type ReviewsScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -115,7 +121,7 @@ export function ReviewsScreen() {
     null,
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [sessionResults, setSessionResults] = useState<Map<
+  const [_sessionResults, setSessionResults] = useState<Map<
     number,
     ItemProgress
   > | null>(null);
@@ -260,6 +266,33 @@ export function ReviewsScreen() {
       endSession();
     };
   }, [loadReviews]);
+
+  // Update badge when session completes
+  useEffect(() => {
+    if (phase !== 'complete') return;
+
+    const updateBadge = async () => {
+      // Check if notifications are enabled
+      const permissionStatus = await checkPermissions();
+      if (permissionStatus !== 'granted') return;
+
+      const notificationsEnabled = await getNotificationsEnabled();
+      if (!notificationsEnabled) return;
+
+      // Get the updated available reviews count
+      const availableReviews = await getAvailableReviews();
+      const reviewCount = availableReviews.length;
+
+      // Update the badge (0 clears the badge)
+      if (reviewCount === 0) {
+        await clearBadge();
+      } else {
+        await setBadgeCount(reviewCount);
+      }
+    };
+
+    updateBadge();
+  }, [phase]);
 
   // Convert session data to review items
   const reviewItems = useMemo(() => {

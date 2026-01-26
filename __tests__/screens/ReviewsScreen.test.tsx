@@ -11,6 +11,17 @@ jest.mock('../../src/storage', () => ({
   getSubjectsByIds: jest.fn(),
 }));
 
+// Mock notification services
+jest.mock('../../src/services', () => ({
+  setBadgeCount: jest.fn().mockResolvedValue(undefined),
+  clearBadge: jest.fn().mockResolvedValue(undefined),
+  checkPermissions: jest.fn().mockResolvedValue('granted'),
+  getNotificationsEnabled: jest.fn().mockResolvedValue(true),
+}));
+
+// Import the mocked services for test access
+import * as notificationServices from '../../src/services';
+
 // Mock navigation
 const mockGoBack = jest.fn();
 jest.mock('@react-navigation/native', () => {
@@ -271,7 +282,7 @@ describe('ReviewsScreen', () => {
         sampleRadicalSubject,
       ]);
 
-      const { getByTestId, getByText } = renderWithNavigation(
+      const { getByTestId } = renderWithNavigation(
         <ReviewsScreen />,
       );
 
@@ -309,7 +320,7 @@ describe('ReviewsScreen', () => {
         sampleRadicalSubject,
       ]);
 
-      const { getByTestId, getByText } = renderWithNavigation(
+      const { getByTestId } = renderWithNavigation(
         <ReviewsScreen />,
       );
 
@@ -401,6 +412,154 @@ describe('ReviewsScreen', () => {
 
       // Remaining should show 2
       expect(getByText('2 remaining')).toBeTruthy();
+    });
+  });
+
+  describe('badge update on session completion', () => {
+    beforeEach(() => {
+      // Reset notification mocks and set defaults
+      (notificationServices.setBadgeCount as jest.Mock).mockReset().mockResolvedValue(undefined);
+      (notificationServices.clearBadge as jest.Mock).mockReset().mockResolvedValue(undefined);
+      (notificationServices.checkPermissions as jest.Mock).mockReset().mockResolvedValue('granted');
+      (notificationServices.getNotificationsEnabled as jest.Mock).mockReset().mockResolvedValue(true);
+      // Reset storage mocks (they'll be set up per-test)
+      (storage.getAvailableReviews as jest.Mock).mockReset();
+      (storage.getSubjectsByIds as jest.Mock).mockReset();
+    });
+
+    it('should update badge to remaining review count after session completion', async () => {
+      // First call returns initial reviews, second call returns remaining reviews
+      (storage.getAvailableReviews as jest.Mock)
+        .mockResolvedValueOnce([sampleAssignments[0]])
+        .mockResolvedValueOnce([{ id: 999, subject_id: 99 }]); // 1 review remaining
+
+      (storage.getSubjectsByIds as jest.Mock).mockResolvedValue([
+        sampleRadicalSubject,
+      ]);
+
+      const { getByTestId } = renderWithNavigation(<ReviewsScreen />);
+
+      // Wait for reviews to load
+      await waitFor(() => {
+        expect(getByTestId('review-session')).toBeTruthy();
+      });
+
+      // Answer correctly
+      fireEvent.changeText(getByTestId('review-session-input'), 'Ground');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Wait for completion
+      await waitFor(() => {
+        expect(getByTestId('review-completion')).toBeTruthy();
+      });
+
+      // Badge should be updated with remaining count
+      await waitFor(() => {
+        expect(notificationServices.setBadgeCount).toHaveBeenCalledWith(1);
+      });
+    });
+
+    it('should clear badge when no reviews remain after session completion', async () => {
+      // First call returns initial reviews, second call returns empty (no more reviews)
+      (storage.getAvailableReviews as jest.Mock)
+        .mockResolvedValueOnce([sampleAssignments[0]])
+        .mockResolvedValueOnce([]); // No reviews remaining
+
+      (storage.getSubjectsByIds as jest.Mock).mockResolvedValue([
+        sampleRadicalSubject,
+      ]);
+
+      const { getByTestId } = renderWithNavigation(<ReviewsScreen />);
+
+      // Wait for reviews to load
+      await waitFor(() => {
+        expect(getByTestId('review-session')).toBeTruthy();
+      });
+
+      // Answer correctly
+      fireEvent.changeText(getByTestId('review-session-input'), 'Ground');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Wait for completion
+      await waitFor(() => {
+        expect(getByTestId('review-completion')).toBeTruthy();
+      });
+
+      // Badge should be cleared
+      await waitFor(() => {
+        expect(notificationServices.clearBadge).toHaveBeenCalled();
+      });
+    });
+
+    it('should not update badge when notification permissions are not granted', async () => {
+      (notificationServices.checkPermissions as jest.Mock).mockResolvedValue('denied');
+
+      (storage.getAvailableReviews as jest.Mock)
+        .mockResolvedValueOnce([sampleAssignments[0]])
+        .mockResolvedValueOnce([{ id: 999, subject_id: 99 }]);
+
+      (storage.getSubjectsByIds as jest.Mock).mockResolvedValue([
+        sampleRadicalSubject,
+      ]);
+
+      const { getByTestId } = renderWithNavigation(<ReviewsScreen />);
+
+      // Wait for reviews to load
+      await waitFor(() => {
+        expect(getByTestId('review-session')).toBeTruthy();
+      });
+
+      // Answer correctly
+      fireEvent.changeText(getByTestId('review-session-input'), 'Ground');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Wait for completion
+      await waitFor(() => {
+        expect(getByTestId('review-completion')).toBeTruthy();
+      });
+
+      // Wait a bit and verify badge was NOT updated
+      await waitFor(() => {
+        expect(notificationServices.checkPermissions).toHaveBeenCalled();
+      });
+      expect(notificationServices.setBadgeCount).not.toHaveBeenCalled();
+      expect(notificationServices.clearBadge).not.toHaveBeenCalled();
+    });
+
+    it('should not update badge when notifications are disabled in settings', async () => {
+      (notificationServices.checkPermissions as jest.Mock).mockResolvedValue('granted');
+      (notificationServices.getNotificationsEnabled as jest.Mock).mockResolvedValue(false);
+
+      (storage.getAvailableReviews as jest.Mock)
+        .mockResolvedValueOnce([sampleAssignments[0]])
+        .mockResolvedValueOnce([{ id: 999, subject_id: 99 }]);
+
+      (storage.getSubjectsByIds as jest.Mock).mockResolvedValue([
+        sampleRadicalSubject,
+      ]);
+
+      const { getByTestId } = renderWithNavigation(<ReviewsScreen />);
+
+      // Wait for reviews to load
+      await waitFor(() => {
+        expect(getByTestId('review-session')).toBeTruthy();
+      });
+
+      // Answer correctly
+      fireEvent.changeText(getByTestId('review-session-input'), 'Ground');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Wait for completion
+      await waitFor(() => {
+        expect(getByTestId('review-completion')).toBeTruthy();
+      });
+
+      // Wait a bit and verify badge was NOT updated
+      await waitFor(() => {
+        expect(notificationServices.getNotificationsEnabled).toHaveBeenCalled();
+      });
+      expect(notificationServices.setBadgeCount).not.toHaveBeenCalled();
+      expect(notificationServices.clearBadge).not.toHaveBeenCalled();
     });
   });
 });
