@@ -30,7 +30,10 @@ import {
   getNotificationsEnabled,
   setNotificationsEnabled,
   openNotificationSettings,
+  cancelAllNotifications,
+  clearBadge,
 } from '../services/notificationService';
+import { scheduleNextHourlyCheck } from '../services/reviewNotificationScheduler';
 
 type SettingsScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -145,6 +148,15 @@ export function SettingsScreen() {
   const handleNotificationsToggle = useCallback(async (value: boolean) => {
     setNotificationsEnabledState(value);
     await setNotificationsEnabled(value);
+
+    if (value) {
+      // When toggled ON: schedule next hourly notification check
+      await scheduleNextHourlyCheck();
+    } else {
+      // When toggled OFF: cancel all scheduled notifications and clear badge
+      await cancelAllNotifications();
+      await clearBadge();
+    }
   }, []);
 
   const handleDisabledNotificationsPress = useCallback(() => {

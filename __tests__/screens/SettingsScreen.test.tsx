@@ -10,6 +10,7 @@ import * as secureStorage from '../../src/storage/secureStorage';
 import * as database from '../../src/storage/database';
 import * as syncService from '../../src/sync/syncService';
 import * as notificationService from '../../src/services/notificationService';
+import * as reviewNotificationScheduler from '../../src/services/reviewNotificationScheduler';
 import type { RootStackParamList } from '../../src/navigation/types';
 
 jest.mock('../../src/storage/secureStorage');
@@ -17,6 +18,7 @@ jest.mock('../../src/storage/database');
 jest.mock('../../src/api/wanikaniApi');
 jest.mock('../../src/sync/syncService');
 jest.mock('../../src/services/notificationService');
+jest.mock('../../src/services/reviewNotificationScheduler');
 jest.spyOn(Alert, 'alert');
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -64,6 +66,8 @@ const mockSyncService = syncService as jest.Mocked<typeof syncService>;
 const mockNotificationService = notificationService as jest.Mocked<
   typeof notificationService
 >;
+const mockReviewNotificationScheduler =
+  reviewNotificationScheduler as jest.Mocked<typeof reviewNotificationScheduler>;
 
 describe('SettingsScreen', () => {
   beforeEach(() => {
@@ -1510,6 +1514,133 @@ describe('SettingsScreen', () => {
       expect(
         mockNotificationService.getNotificationsEnabled,
       ).toHaveBeenCalled();
+    });
+
+    it('should cancel notifications and clear badge when toggled off', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockNotificationService.checkPermissions.mockResolvedValue('granted');
+      mockNotificationService.getNotificationsEnabled.mockResolvedValue(true);
+
+      const { getByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('notifications-toggle')).toBeTruthy();
+      });
+
+      // Toggle notifications off
+      await act(async () => {
+        fireEvent(getByTestId('notifications-toggle'), 'valueChange', false);
+      });
+
+      // Should cancel all notifications
+      expect(
+        mockNotificationService.cancelAllNotifications,
+      ).toHaveBeenCalled();
+
+      // Should clear the badge
+      expect(mockNotificationService.clearBadge).toHaveBeenCalled();
+    });
+
+    it('should schedule next hourly check when toggled on', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockNotificationService.checkPermissions.mockResolvedValue('granted');
+      mockNotificationService.getNotificationsEnabled.mockResolvedValue(false);
+
+      const { getByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('notifications-toggle')).toBeTruthy();
+      });
+
+      // Toggle notifications on
+      await act(async () => {
+        fireEvent(getByTestId('notifications-toggle'), 'valueChange', true);
+      });
+
+      // Should schedule next hourly check
+      expect(
+        mockReviewNotificationScheduler.scheduleNextHourlyCheck,
+      ).toHaveBeenCalled();
+    });
+
+    it('should not cancel notifications when toggled on', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockNotificationService.checkPermissions.mockResolvedValue('granted');
+      mockNotificationService.getNotificationsEnabled.mockResolvedValue(false);
+
+      const { getByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('notifications-toggle')).toBeTruthy();
+      });
+
+      // Clear any previous calls
+      mockNotificationService.cancelAllNotifications.mockClear();
+      mockNotificationService.clearBadge.mockClear();
+
+      // Toggle notifications on
+      await act(async () => {
+        fireEvent(getByTestId('notifications-toggle'), 'valueChange', true);
+      });
+
+      // Should NOT cancel notifications when turning on
+      expect(
+        mockNotificationService.cancelAllNotifications,
+      ).not.toHaveBeenCalled();
+
+      // Should NOT clear badge when turning on
+      expect(mockNotificationService.clearBadge).not.toHaveBeenCalled();
+    });
+
+    it('should not schedule hourly check when toggled off', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockNotificationService.checkPermissions.mockResolvedValue('granted');
+      mockNotificationService.getNotificationsEnabled.mockResolvedValue(true);
+
+      const { getByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('notifications-toggle')).toBeTruthy();
+      });
+
+      // Clear any previous calls
+      mockReviewNotificationScheduler.scheduleNextHourlyCheck.mockClear();
+
+      // Toggle notifications off
+      await act(async () => {
+        fireEvent(getByTestId('notifications-toggle'), 'valueChange', false);
+      });
+
+      // Should NOT schedule hourly check when turning off
+      expect(
+        mockReviewNotificationScheduler.scheduleNextHourlyCheck,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should handle toggle changes immediately', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockNotificationService.checkPermissions.mockResolvedValue('granted');
+      mockNotificationService.getNotificationsEnabled.mockResolvedValue(true);
+
+      const { getByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('notifications-toggle')).toBeTruthy();
+      });
+
+      // Toggle off
+      await act(async () => {
+        fireEvent(getByTestId('notifications-toggle'), 'valueChange', false);
+      });
+
+      // Changes should take effect immediately (not batched or delayed)
+      expect(
+        mockNotificationService.setNotificationsEnabled,
+      ).toHaveBeenCalledWith(false);
+      expect(
+        mockNotificationService.cancelAllNotifications,
+      ).toHaveBeenCalled();
+      expect(mockNotificationService.clearBadge).toHaveBeenCalled();
     });
   });
 });
