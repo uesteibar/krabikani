@@ -237,3 +237,26 @@ Started:
   - Minimum review threshold (20) is a constant that can be adjusted easily
 ---
 
+## 2026-01-26 - US-010
+- What was implemented:
+  - Updated `performHourlyReviewCheck()` in reviewNotificationScheduler to update app badge
+  - Badge is set to current available review count when hourly check runs
+  - Badge shows exact number (e.g., '47' not '40+')
+  - Badge count of 0 clears the badge entirely (handled by notifee.setBadgeCount)
+  - Badge updates even when review count is below notification threshold (badge shows all reviews)
+  - Badge is NOT updated when app is in foreground, permissions not granted, or notifications disabled
+  - Added `onForegroundEvent` and `onBackgroundEvent` mocks to notifee mock (fixed pre-existing App.test.tsx failure)
+  - Added 7 unit tests for badge update behavior during hourly check
+
+- Files changed:
+  - src/services/reviewNotificationScheduler.ts (added setBadgeCount import and call in performHourlyReviewCheck)
+  - __tests__/services/reviewNotificationScheduler.test.ts (added 7 badge-related tests, added setBadgeCount mock)
+  - __mocks__/@notifee/react-native.ts (added onForegroundEvent and onBackgroundEvent mocks)
+
+- **Learnings for future iterations:**
+  - Badge update and notification display are independent - badge always shows current count, notification only fires when >= 20
+  - The setBadgeCount function from notificationService already handles cross-platform compatibility via notifee
+  - Setting badge count to 0 automatically clears the badge on both iOS and Android
+  - The notifee mock needed onForegroundEvent and onBackgroundEvent to fix App.test.tsx failure from US-009
+---
+
