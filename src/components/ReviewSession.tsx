@@ -34,7 +34,11 @@ import {
   validateMeaningAnswer,
   validateReadingAnswer,
 } from '../utils/answerValidation';
-import { addUserSynonym, insertPendingSynonym, getSetting } from '../storage/database';
+import {
+  addUserSynonym,
+  insertPendingSynonym,
+  getSetting,
+} from '../storage/database';
 import {
   getSubjectColor,
   COLORS,
@@ -590,7 +594,8 @@ export function ReviewSession({
 
     // Update item progress - mark as correct and decrement incorrect count
     const currentProgress = _itemProgress.get(item.id)!;
-    const wasComplete = currentProgress.meaningCorrect && currentProgress.readingCorrect;
+    const wasComplete =
+      currentProgress.meaningCorrect && currentProgress.readingCorrect;
 
     setItemProgress(prev => {
       const newProgress = new Map(prev);
@@ -634,7 +639,10 @@ export function ReviewSession({
           for (const itemId of introducedItemIds) {
             if (itemId === item.id) continue;
             const progress = _itemProgress.get(itemId);
-            if (!progress || !(progress.meaningCorrect && progress.readingCorrect)) {
+            if (
+              !progress ||
+              !(progress.meaningCorrect && progress.readingCorrect)
+            ) {
               return false;
             }
           }
@@ -647,7 +655,9 @@ export function ReviewSession({
       if (sessionComplete) {
         // Build the final progress map for the callback
         const finalProgress = new Map<number, ItemProgress>();
-        const itemsToInclude = isWrappingUp ? introducedItemIds : new Set(_itemProgress.keys());
+        const itemsToInclude = isWrappingUp
+          ? introducedItemIds
+          : new Set(_itemProgress.keys());
         for (const itemId of itemsToInclude) {
           const progress = _itemProgress.get(itemId)!;
           if (itemId === item.id) {
@@ -1093,7 +1103,10 @@ export function ReviewSession({
       <View style={styles.container} testID="review-session-incorrect-feedback">
         {/* Progress indicator - hidden in zen mode unless wrap-up is active */}
         {showProgressStats && (
-          <View style={styles.progressContainer} testID="review-session-progress">
+          <View
+            style={styles.progressContainer}
+            testID="review-session-progress"
+          >
             <View style={styles.progressTextRow}>
               <Text
                 style={styles.progressText}
@@ -1233,7 +1246,11 @@ export function ReviewSession({
                         characters={radical.characters}
                         meaning={radical.meaning}
                         characterImages={radical.characterImages}
-                        onPress={onComponentPress ? () => onComponentPress(radical.id) : undefined}
+                        onPress={
+                          onComponentPress
+                            ? () => onComponentPress(radical.id)
+                            : undefined
+                        }
                         testID={`review-session-component-${radical.id}`}
                       />
                     ),
@@ -1244,7 +1261,8 @@ export function ReviewSession({
 
           {/* Component kanji for vocabulary items */}
           {(incorrectFeedback.question.item.subjectType === 'vocabulary' ||
-            incorrectFeedback.question.item.subjectType === 'kana_vocabulary') &&
+            incorrectFeedback.question.item.subjectType ===
+              'kana_vocabulary') &&
             incorrectFeedback.question.item.componentKanji &&
             incorrectFeedback.question.item.componentKanji.length > 0 && (
               <View
@@ -1264,7 +1282,11 @@ export function ReviewSession({
                           ? kanji.reading
                           : undefined
                       }
-                      onPress={onComponentPress ? () => onComponentPress(kanji.id) : undefined}
+                      onPress={
+                        onComponentPress
+                          ? () => onComponentPress(kanji.id)
+                          : undefined
+                      }
                       testID={`review-session-component-kanji-${kanji.id}`}
                     />
                   ))}
@@ -1283,7 +1305,9 @@ export function ReviewSession({
               readings={incorrectFeedback.question.item.readings}
               meaningMnemonic={incorrectFeedback.question.item.meaningMnemonic}
               readingMnemonic={incorrectFeedback.question.item.readingMnemonic}
-              componentRadicals={incorrectFeedback.question.item.componentRadicals}
+              componentRadicals={
+                incorrectFeedback.question.item.componentRadicals
+              }
               componentKanji={incorrectFeedback.question.item.componentKanji}
               onComponentPress={onComponentPress}
               testID="review-session-item-details"
@@ -1302,7 +1326,11 @@ export function ReviewSession({
             <Text style={styles.markCorrectButtonText}>Mark as Correct</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.submitButton, styles.continueButton, styles.continueButtonFlex]}
+            style={[
+              styles.submitButton,
+              styles.continueButton,
+              styles.continueButtonFlex,
+            ]}
             onPress={handleContinue}
             activeOpacity={0.8}
             testID="review-session-continue"
@@ -1428,7 +1456,10 @@ export function ReviewSession({
                 testID="review-session-srs-badge"
               />
             ) : (
-              <SrsLevelBadge stage={item.srsStage} testID="review-session-srs-badge" />
+              <SrsLevelBadge
+                stage={item.srsStage}
+                testID="review-session-srs-badge"
+              />
             )}
           </View>
         )}
@@ -1609,7 +1640,7 @@ const styles = StyleSheet.create({
   srsLevelBadgeContainer: {
     position: 'absolute',
     top: SPACING.md,
-    right: SPACING.md,
+    right: SPACING.lg,
   },
   characters: {
     fontSize: FONT_SIZES.display,

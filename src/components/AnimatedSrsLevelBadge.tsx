@@ -8,18 +8,10 @@ import Animated, {
   withDelay,
   runOnJS,
   Easing,
-  interpolateColor,
   SharedValue,
 } from 'react-native-reanimated';
 
-import {
-  getSrsLevelInfo,
-  SRS_LEVELS,
-  COLORS,
-  SPACING,
-  FONT_SIZES,
-  BORDER_RADIUS,
-} from '../theme';
+import { getSrsLevelInfo, SRS_LEVELS, FONT_SIZES } from '../theme';
 
 export interface AnimatedSrsLevelBadgeProps {
   /** Current SRS stage (1-9) */
@@ -49,7 +41,6 @@ const LEVEL_DOWN_INITIAL_DISPLAY = 200;
 const LEVEL_DOWN_SHAKE_DURATION = 50; // Duration per shake oscillation
 const LEVEL_DOWN_SHAKE_COUNT = 3; // Number of full shake cycles
 const LEVEL_DOWN_CROSSFADE_DURATION = 250;
-const LEVEL_DOWN_RED_PULSE_DURATION = 150;
 
 // Particle configuration
 const PARTICLE_COUNT = 8;
@@ -123,21 +114,15 @@ export function AnimatedSrsLevelBadge({
   const shouldAnimateLevelUp = animateLevelUp && levelActuallyChanged;
   const shouldAnimateLevelDown = animateLevelDown && levelActuallyChanged;
 
-  // Get colors for animation (use defaults for invalid stages to satisfy hooks)
-  const currentColor = currentLevelInfo?.color ?? DEFAULT_COLOR;
-  const previousColor = previousLevelInfo?.color ?? currentColor;
-
   // Determine if any animation should play
   const shouldAnimate = shouldAnimateLevelUp || shouldAnimateLevelDown;
 
   // Shared values for animation
   const scale = useSharedValue(1);
   const crossfadeProgress = useSharedValue(shouldAnimate ? 0 : 1);
-  const glowOpacity = useSharedValue(0);
   const particleProgress = useSharedValue(0);
   // Level-down specific shared values
   const shakeOffset = useSharedValue(0);
-  const redTintOpacity = useSharedValue(0);
 
   // Animation complete callback
   const handleAnimationComplete = useCallback(() => {
@@ -149,41 +134,13 @@ export function AnimatedSrsLevelBadge({
     transform: [{ scale: scale.value }, { translateX: shakeOffset.value }],
   }));
 
-  const glowAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: glowOpacity.value,
-    shadowOpacity: glowOpacity.value,
-  }));
-
-  const redTintAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: redTintOpacity.value,
-  }));
-
   const oldLevelAnimatedStyle = useAnimatedStyle(() => ({
     opacity: 1 - crossfadeProgress.value,
   }));
 
-  const newLevelAnimatedStyle = useAnimatedStyle(() => {
-    const backgroundColor = interpolateColor(
-      crossfadeProgress.value,
-      [0, 1],
-      [previousColor, currentColor],
-    );
-
-    return {
-      opacity: crossfadeProgress.value,
-      backgroundColor,
-    };
-  });
-
-  const backgroundAnimatedStyle = useAnimatedStyle(() => {
-    const backgroundColor = interpolateColor(
-      crossfadeProgress.value,
-      [0, 1],
-      [previousColor, currentColor],
-    );
-
-    return { backgroundColor };
-  });
+  const newLevelAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: crossfadeProgress.value,
+  }));
 
   // Generate particles for burst effect (only for level-up, must be before early return)
   const particles = useMemo(
@@ -205,11 +162,10 @@ export function AnimatedSrsLevelBadge({
 
     // Reset level-down values
     shakeOffset.value = 0;
-    redTintOpacity.value = 0;
 
     // Animation sequence
     // 1. Show old level for 200ms (already showing at crossfadeProgress = 0)
-    // 2. Scale up to 1.15 with glow
+    // 2. Scale up to 1.15
     scale.value = withDelay(
       INITIAL_DISPLAY_DURATION,
       withSequence(
@@ -221,24 +177,6 @@ export function AnimatedSrsLevelBadge({
         withDelay(
           CROSSFADE_DURATION,
           withTiming(1, {
-            duration: SCALE_DOWN_DURATION,
-            easing: Easing.out(Easing.cubic),
-          }),
-        ),
-      ),
-    );
-
-    // Glow effect
-    glowOpacity.value = withDelay(
-      INITIAL_DISPLAY_DURATION,
-      withSequence(
-        withTiming(0.6, {
-          duration: SCALE_UP_DURATION,
-          easing: Easing.out(Easing.cubic),
-        }),
-        withDelay(
-          CROSSFADE_DURATION,
-          withTiming(0, {
             duration: SCALE_DOWN_DURATION,
             easing: Easing.out(Easing.cubic),
           }),
@@ -275,10 +213,8 @@ export function AnimatedSrsLevelBadge({
     shouldAnimateLevelUp,
     scale,
     crossfadeProgress,
-    glowOpacity,
     particleProgress,
     shakeOffset,
-    redTintOpacity,
     handleAnimationComplete,
   ]);
 
@@ -290,7 +226,6 @@ export function AnimatedSrsLevelBadge({
 
     // Reset level-up values
     scale.value = 1;
-    glowOpacity.value = 0;
     particleProgress.value = 0;
 
     // Total shake duration
@@ -332,22 +267,7 @@ export function AnimatedSrsLevelBadge({
       ),
     );
 
-    // 2. Red tint pulse during shake
-    redTintOpacity.value = withDelay(
-      LEVEL_DOWN_INITIAL_DISPLAY,
-      withSequence(
-        withTiming(0.4, {
-          duration: LEVEL_DOWN_RED_PULSE_DURATION,
-          easing: Easing.out(Easing.cubic),
-        }),
-        withTiming(0, {
-          duration: totalShakeDuration - LEVEL_DOWN_RED_PULSE_DURATION,
-          easing: Easing.in(Easing.cubic),
-        }),
-      ),
-    );
-
-    // 3. Cross-fade to new level after shake completes
+    // 2. Cross-fade to new level after shake completes
     crossfadeProgress.value = withDelay(
       LEVEL_DOWN_INITIAL_DISPLAY + totalShakeDuration,
       withTiming(
@@ -366,10 +286,8 @@ export function AnimatedSrsLevelBadge({
   }, [
     shouldAnimateLevelDown,
     shakeOffset,
-    redTintOpacity,
     crossfadeProgress,
     scale,
-    glowOpacity,
     particleProgress,
     handleAnimationComplete,
   ]);
@@ -379,20 +297,10 @@ export function AnimatedSrsLevelBadge({
     if (!shouldAnimate) {
       scale.value = 1;
       crossfadeProgress.value = 1;
-      glowOpacity.value = 0;
       particleProgress.value = 0;
       shakeOffset.value = 0;
-      redTintOpacity.value = 0;
     }
-  }, [
-    shouldAnimate,
-    scale,
-    crossfadeProgress,
-    glowOpacity,
-    particleProgress,
-    shakeOffset,
-    redTintOpacity,
-  ]);
+  }, [shouldAnimate, scale, crossfadeProgress, particleProgress, shakeOffset]);
 
   // Don't render for invalid stages (after all hooks are called)
   if (!currentLevelInfo) {
@@ -414,51 +322,32 @@ export function AnimatedSrsLevelBadge({
       ))}
 
       <Animated.View
-        style={[containerAnimatedStyle]}
+        style={[styles.container, containerAnimatedStyle]}
         testID={testID ?? 'animated-srs-level-badge'}
       >
-        {/* Glow effect layer */}
-        <Animated.View
-          style={[
-            styles.glowLayer,
-            glowAnimatedStyle,
-            { backgroundColor: currentLevelInfo.color },
-          ]}
-        />
-
-        {/* Main badge container with animated background */}
-        <Animated.View style={[styles.container, backgroundAnimatedStyle]}>
-          {/* Red tint overlay for level-down animation */}
-          {shouldAnimateLevelDown && (
-            <Animated.View
-              style={[styles.redTintOverlay, redTintAnimatedStyle]}
-              testID="srs-level-red-tint"
-            />
-          )}
-
-          {/* Old level content (fades out) */}
-          {shouldAnimate && previousLevelInfo && (
-            <Animated.View style={[styles.levelContent, oldLevelAnimatedStyle]}>
-              <Text style={styles.name} testID="srs-level-name-old">
-                {previousLevelInfo.name}
-              </Text>
-            </Animated.View>
-          )}
-
-          {/* New level content (fades in or always visible) */}
-          <Animated.View
-            style={[
-              styles.levelContent,
-              shouldAnimate
-                ? [styles.levelContentAbsolute, newLevelAnimatedStyle]
-                : null,
-            ]}
-          >
-            <Text style={styles.name} testID="srs-level-name">
+        {/* During animation, render both texts right-aligned with crossfade */}
+        {shouldAnimate && previousLevelInfo ? (
+          <View style={styles.animationContainer}>
+            {/* Old level content (fades out) */}
+            <Animated.Text
+              style={[styles.name, oldLevelAnimatedStyle]}
+              testID="srs-level-name-old"
+            >
+              {previousLevelInfo.name}
+            </Animated.Text>
+            {/* New level content (fades in) - positioned absolutely, right-aligned */}
+            <Animated.Text
+              style={[styles.name, styles.nameAbsolute, newLevelAnimatedStyle]}
+              testID="srs-level-name"
+            >
               {currentLevelInfo.name}
-            </Text>
-          </Animated.View>
-        </Animated.View>
+            </Animated.Text>
+          </View>
+        ) : (
+          <Text style={styles.name} testID="srs-level-name">
+            {currentLevelInfo.name}
+          </Text>
+        )}
       </Animated.View>
     </View>
   );
@@ -469,52 +358,26 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: SPACING.xs,
-    paddingHorizontal: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
-    gap: SPACING.xs,
+    alignItems: 'flex-end',
+  },
+  animationContainer: {
     position: 'relative',
-    overflow: 'hidden',
-  },
-  levelContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
-  },
-  levelContentAbsolute: {
-    position: 'absolute',
-    left: SPACING.sm,
-    right: SPACING.sm,
-  },
-  glowLayer: {
-    position: 'absolute',
-    top: -4,
-    left: -4,
-    right: -4,
-    bottom: -4,
-    borderRadius: BORDER_RADIUS.md + 4,
-    shadowColor: '#FFD700',
-    shadowOffset: { width: 0, height: 0 },
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  redTintOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: COLORS.feedback.incorrect,
-    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'flex-end',
+    // Min width to fit "ENLIGHTENED" (longest level name) without wrapping
+    minWidth: 80,
   },
   name: {
     fontSize: FONT_SIZES.xs,
     fontWeight: '600',
-    color: COLORS.text.inverse,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    color: 'rgba(255, 255, 255, 0.6)',
+    textAlign: 'right',
+  },
+  nameAbsolute: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
   },
   particle: {
     position: 'absolute',

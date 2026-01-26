@@ -20,7 +20,9 @@ describe('SrsLevelBadge', () => {
     levelCases.forEach(({ stage, expectedName }) => {
       it(`renders "${expectedName}" for stage ${stage}`, () => {
         const { getByTestId } = render(<SrsLevelBadge stage={stage} />);
-        expect(getByTestId('srs-level-name').props.children).toBe(expectedName);
+        expect(getByTestId('srs-level-badge').props.children).toBe(
+          expectedName,
+        );
       });
     });
   });
@@ -49,8 +51,8 @@ describe('SrsLevelBadge', () => {
     expect(queryByTestId('srs-level-badge')).toBeNull();
   });
 
-  it('has name element', () => {
+  it('renders the level name as text', () => {
     const { getByTestId } = render(<SrsLevelBadge stage={5} />);
-    expect(getByTestId('srs-level-name')).toBeTruthy();
+    expect(getByTestId('srs-level-badge').props.children).toBe('Guru');
   });
 });
