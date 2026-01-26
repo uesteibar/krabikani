@@ -49,3 +49,15 @@ Started:
   - No browser testing tools available for this React Native project - manual verification in simulator needed
 ---
 
+## 2026-01-26 - US-004
+- What was implemented: Applied Zen Mode to Review Session - hides progress bar, count text, and SRS badge when zen mode is enabled
+- Files changed:
+  - `src/components/ReviewSession.tsx` - Added getSetting import, zenModeEnabled state, useEffect to fetch zen mode setting on mount, showProgressStats computed value, conditional rendering for progress container and SRS badge in both normal view and incorrect feedback view
+  - `__tests__/components/ReviewSession.test.tsx` - Added getSetting to database mock, added 9 new tests for Zen Mode behavior (show/hide progress, show/hide SRS badge, wrap-up override, fetch on mount)
+- **Learnings for future iterations:**
+  - The ReviewSession component has two render blocks: one for incorrect feedback view and one for normal view - both need zen mode logic
+  - Wrap-up mode overrides zen mode to show progress (using showProgressStats = !zenModeEnabled || isWrappingUp)
+  - The async getSetting call in useEffect requires `act(async () => await Promise.resolve())` pattern in tests to properly wait for state updates
+  - Existing tests may produce console.error warnings about act() wrapping when new async effects are added - these are warnings not failures
+---
+
