@@ -24,6 +24,7 @@ import {
   getAssignmentCount,
   getNextReviewTime,
   getLearnedCount,
+  getUpcomingReviewsByHour,
   // Pending Review CRUD
   insertPendingReview,
   getPendingReviewById,
@@ -724,6 +725,52 @@ describe('Database CRUD Operations', () => {
       it('should return 0 when no assignments exist', async () => {
         const count = await getLearnedCount('kanji');
         expect(count).toBe(0);
+      });
+    });
+
+    describe('getUpcomingReviewsByHour', () => {
+      it('should return 12 hourly buckets by default', async () => {
+        const buckets = await getUpcomingReviewsByHour();
+
+        expect(buckets.length).toBe(12);
+        buckets.forEach(bucket => {
+          expect(bucket.hour).toBeInstanceOf(Date);
+          expect(typeof bucket.count).toBe('number');
+        });
+      });
+
+      it('should return specified number of hourly buckets', async () => {
+        const buckets = await getUpcomingReviewsByHour(6);
+
+        expect(buckets.length).toBe(6);
+      });
+
+      it('should return 0 counts when no assignments exist', async () => {
+        const buckets = await getUpcomingReviewsByHour();
+
+        buckets.forEach(bucket => {
+          expect(bucket.count).toBe(0);
+        });
+      });
+
+      it('should return hourly buckets with consecutive hours', async () => {
+        const buckets = await getUpcomingReviewsByHour(4);
+
+        for (let i = 1; i < buckets.length; i++) {
+          const hourDiff =
+            (buckets[i].hour.getTime() - buckets[i - 1].hour.getTime()) /
+            (1000 * 60 * 60);
+          expect(hourDiff).toBe(1);
+        }
+      });
+
+      it('should round down to current hour for first bucket', async () => {
+        const buckets = await getUpcomingReviewsByHour(1);
+        const firstBucket = buckets[0];
+
+        expect(firstBucket.hour.getMinutes()).toBe(0);
+        expect(firstBucket.hour.getSeconds()).toBe(0);
+        expect(firstBucket.hour.getMilliseconds()).toBe(0);
       });
     });
   });

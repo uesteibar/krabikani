@@ -693,6 +693,14 @@ export async function getNextReviewTime(): Promise<string | null> {
 export type LearnedSubjectType = 'kanji' | 'vocabulary';
 
 /**
+ * Represents an hourly bucket of upcoming reviews.
+ */
+export interface UpcomingReviewsHourBucket {
+  hour: Date;
+  count: number;
+}
+
+/**
  * Gets the count of "learned" items for a given subject type.
  * "Learned" means srs_stage >= 5 (Guru or above).
  * For vocabulary type, includes both 'vocabulary' and 'kana_vocabulary' subjects.
@@ -718,6 +726,64 @@ export async function getLearnedCount(
   );
 
   return (result.rows[0] as { count: number }).count;
+}
+
+/**
+ * Gets upcoming reviews grouped by hour for the next N hours.
+ * Returns an array of hourly buckets with the count of reviews available in each hour.
+ * Only includes assignments where started_at is not null, srs_stage > 0, and srs_stage < 9.
+ * Hours with 0 reviews are included for chart continuity.
+ *
+ * @param hours The number of hours to look ahead (default 12)
+ * @returns Array of hourly buckets with hour timestamp and review count
+ */
+export async function getUpcomingReviewsByHour(
+  hours: number = 12,
+): Promise<UpcomingReviewsHourBucket[]> {
+  const now = new Date();
+  // Round down to current hour for consistent bucketing
+  const currentHour = new Date(now);
+  currentHour.setMinutes(0, 0, 0);
+
+  // Initialize all hour buckets with 0 counts
+  const buckets: UpcomingReviewsHourBucket[] = [];
+  for (let i = 0; i < hours; i++) {
+    const hourDate = new Date(currentHour);
+    hourDate.setHours(currentHour.getHours() + i);
+    buckets.push({ hour: hourDate, count: 0 });
+  }
+
+  // Calculate the end time (exclusive)
+  const endTime = new Date(currentHour);
+  endTime.setHours(currentHour.getHours() + hours);
+
+  // Query assignments that become available within the time range
+  // Only include started assignments (not lessons) with active SRS stages (1-8)
+  const result = await executeSql(
+    `SELECT available_at
+     FROM assignments
+     WHERE available_at IS NOT NULL
+       AND available_at >= ?
+       AND available_at < ?
+       AND started_at IS NOT NULL
+       AND srs_stage > 0
+       AND srs_stage < 9`,
+    [currentHour.toISOString(), endTime.toISOString()],
+  );
+
+  // Count reviews per hour bucket
+  for (const row of result.rows) {
+    const availableAt = new Date((row as { available_at: string }).available_at);
+    // Find which bucket this review falls into
+    const hourDiff = Math.floor(
+      (availableAt.getTime() - currentHour.getTime()) / (1000 * 60 * 60),
+    );
+    if (hourDiff >= 0 && hourDiff < hours) {
+      buckets[hourDiff].count++;
+    }
+  }
+
+  return buckets;
 }
 
 // ============================================

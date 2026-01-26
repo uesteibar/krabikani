@@ -281,3 +281,69 @@ Started:
 
 ---
 
+## 2026-01-26 - US-011
+- What was implemented: Query Learned Item Counts
+  - Added getLearnedCount(subjectType: 'kanji' | 'vocabulary'): Promise<number> function
+  - Counts assignments where srs_stage >= 5 (Guru or above)
+  - For vocabulary type, includes both 'vocabulary' and 'kana_vocabulary' subject types
+  - Uses JOIN with subjects table to filter by object_type
+  - Added LearnedSubjectType type alias for parameter type safety
+  - Added 3 tests for the new function
+- Files changed:
+  - src/storage/database.ts (added getLearnedCount function and LearnedSubjectType type)
+  - __tests__/storage/databaseCrud.test.ts (added tests for getLearnedCount)
+- **Learnings for future iterations:**
+  - Patterns discovered: JOIN queries between assignments and subjects use idx_assignments_subject_id index
+  - Gotchas encountered: Mock database doesn't fully support JOINs, tests verify function runs without error
+  - Useful context: WaniKani vocabulary includes both 'vocabulary' and 'kana_vocabulary' types in the subjects table
+
+---
+
+## 2026-01-26 - US-012
+- What was implemented: Add Learned Counts to Home Screen
+  - Created LearnedCounts component with animated counter display:
+    - Displays "Kanji Learned: X" and "Vocabulary Learned: X" in a horizontal row
+    - Counts animate from 0 to actual number using interval-based updates
+    - Animation duration 500ms with ease-out timing via react-native-reanimated
+    - Each counter has a colored dot matching WaniKani subject colors (pink kanji, purple vocabulary)
+  - Integrated LearnedCounts into HomeScreen dashboard container below NextReviewIndicator
+  - Added learnedData state with kanjiLearned and vocabularyLearned
+  - Fetch counts via getLearnedCount('kanji') and getLearnedCount('vocabulary') in loadDashboardData
+  - Counts update when returning to home screen (useFocusEffect triggers loadDashboardData)
+  - Respects reduced motion accessibility settings (skips animation, shows instant values)
+  - Exported getLearnedCount from storage/index.ts
+- Files changed:
+  - src/components/LearnedCounts.tsx (new - animated learned counts component)
+  - src/components/index.ts (exported LearnedCounts and LearnedCountsProps)
+  - src/screens/HomeScreen.tsx (added state, fetching, and rendering of LearnedCounts)
+  - src/storage/index.ts (exported getLearnedCount)
+  - __tests__/components/LearnedCounts.test.tsx (new - 12 tests for component)
+- **Learnings for future iterations:**
+  - Patterns discovered: runOnJS is needed to call setState from within reanimated animation callbacks
+  - Gotchas encountered: Interval-based animation updates are more reliable than trying to read sharedValue directly during animation
+  - Useful context: LearnedData interface added alongside existing DashboardData and PendingData interfaces
+
+---
+
+## 2026-01-26 - US-013
+- What was implemented: Query Upcoming Reviews by Hour
+  - Created getUpcomingReviewsByHour(hours: number) database function:
+    - Returns array of UpcomingReviewsHourBucket objects with { hour: Date, count: number }
+    - Defaults to 12 hourly buckets when hours parameter not specified
+    - Groups assignments by available_at into hourly buckets starting from current hour (rounded down)
+    - Only includes assignments where started_at IS NOT NULL, srs_stage > 0, and srs_stage < 9
+    - Hours with 0 reviews are included for chart continuity
+  - Added UpcomingReviewsHourBucket interface type
+  - Exported getUpcomingReviewsByHour and UpcomingReviewsHourBucket from storage/index.ts
+  - Uses efficient SQL query with time range filtering
+- Files changed:
+  - src/storage/database.ts (added UpcomingReviewsHourBucket interface and getUpcomingReviewsByHour function)
+  - src/storage/index.ts (exported getUpcomingReviewsByHour and UpcomingReviewsHourBucket type)
+  - __tests__/storage/databaseCrud.test.ts (added 5 tests for getUpcomingReviewsByHour)
+- **Learnings for future iterations:**
+  - Patterns discovered: Round current time down to hour boundary for consistent bucketing
+  - Gotchas encountered: Mock database doesn't support complex WHERE clauses, so tests verify structure and function execution
+  - Useful context: Query filters srs_stage < 9 to exclude burned items (which are no longer reviewable)
+
+---
+

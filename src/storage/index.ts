@@ -63,6 +63,8 @@ export {
   saveCachedUserLevel,
   // Learned counts
   getLearnedCount,
+  // Upcoming reviews
+  getUpcomingReviewsByHour,
   // Data management
   clearAllData,
   // Migrations
@@ -79,4 +81,5 @@ export {
   type PendingReviewInput,
   type PendingLessonInput,
   type SyncStatusUpdate,
+  type UpcomingReviewsHourBucket,
 } from './database';
