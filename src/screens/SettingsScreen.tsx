@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Alert,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -13,7 +14,14 @@ import {
 
 import { validateApiKey, WaniKaniClient } from '../api';
 import type { RootStackParamList } from '../navigation/types';
-import { clearApiKey, getApiKey, saveApiKey, clearAllData } from '../storage';
+import {
+  clearApiKey,
+  getApiKey,
+  saveApiKey,
+  clearAllData,
+  getSetting,
+  setSetting,
+} from '../storage';
 import { getUserLevel, syncSubjects, syncAssignments } from '../sync';
 import { COLORS, SPACING, FONT_SIZES } from '../theme';
 
@@ -37,11 +45,15 @@ export function SettingsScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [zenModeEnabled, setZenModeEnabled] = useState(false);
 
   const loadStoredKey = useCallback(async () => {
     setIsLoading(true);
     try {
-      const storedKey = await getApiKey();
+      const [storedKey, zenModeSetting] = await Promise.all([
+        getApiKey(),
+        getSetting('zenMode'),
+      ]);
       if (storedKey) {
         setApiKey(storedKey);
         setHasStoredKey(true);
@@ -49,6 +61,7 @@ export function SettingsScreen() {
         setApiKey('');
         setHasStoredKey(false);
       }
+      setZenModeEnabled(zenModeSetting === true);
     } finally {
       setIsLoading(false);
     }
@@ -92,6 +105,11 @@ export function SettingsScreen() {
     const trimmedKey = apiKey.trim();
     performSync(trimmedKey);
   }, [apiKey, performSync]);
+
+  const handleZenModeToggle = useCallback(async (value: boolean) => {
+    setZenModeEnabled(value);
+    await setSetting('zenMode', value);
+  }, []);
 
   const handleSave = async () => {
     const trimmedKey = apiKey.trim();
@@ -246,6 +264,26 @@ export function SettingsScreen() {
             </Text>
           </TouchableOpacity>
         )}
+
+        <View style={styles.sectionDivider} />
+
+        <Text style={styles.sectionTitle}>Review Settings</Text>
+
+        <View style={styles.settingRow} testID="zen-mode-setting">
+          <View style={styles.settingInfo}>
+            <Text style={styles.settingLabel}>Zen Mode</Text>
+            <Text style={styles.settingDescription}>
+              Hide progress bar and stats during reviews
+            </Text>
+          </View>
+          <Switch
+            value={zenModeEnabled}
+            onValueChange={handleZenModeToggle}
+            trackColor={{ false: '#ddd', true: COLORS.subject.vocabulary }}
+            thumbColor="#fff"
+            testID="zen-mode-toggle"
+          />
+        </View>
       </View>
     </View>
   );
@@ -336,5 +374,36 @@ const styles = StyleSheet.create({
   },
   clearButtonText: {
     color: '#e74c3c',
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: '#eee',
+    marginVertical: SPACING.lg,
+  },
+  sectionTitle: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: SPACING.md,
+  },
+  settingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
+  },
+  settingInfo: {
+    flex: 1,
+    marginRight: SPACING.md,
+  },
+  settingLabel: {
+    fontSize: FONT_SIZES.base,
+    fontWeight: '500',
+    color: COLORS.text.primary,
+    marginBottom: 4,
+  },
+  settingDescription: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
   },
 });

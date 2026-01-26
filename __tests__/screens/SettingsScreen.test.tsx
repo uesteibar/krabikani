@@ -7,10 +7,12 @@ import { Alert, View, Text } from 'react-native';
 import { SettingsScreen } from '../../src/screens/SettingsScreen';
 import * as wanikaniApi from '../../src/api/wanikaniApi';
 import * as secureStorage from '../../src/storage/secureStorage';
+import * as database from '../../src/storage/database';
 import * as syncService from '../../src/sync/syncService';
 import type { RootStackParamList } from '../../src/navigation/types';
 
 jest.mock('../../src/storage/secureStorage');
+jest.mock('../../src/storage/database');
 jest.mock('../../src/api/wanikaniApi');
 jest.mock('../../src/sync/syncService');
 jest.spyOn(Alert, 'alert');
@@ -41,6 +43,7 @@ function renderWithNavigation(
 }
 
 const mockSecureStorage = secureStorage as jest.Mocked<typeof secureStorage>;
+const mockDatabase = database as jest.Mocked<typeof database>;
 const mockWanikaniApi = wanikaniApi as jest.Mocked<typeof wanikaniApi>;
 const mockSyncService = syncService as jest.Mocked<typeof syncService>;
 
@@ -54,6 +57,9 @@ describe('SettingsScreen', () => {
       success: true,
       user: { id: 1, username: 'testuser', level: 10 },
     });
+    // Default mock for database settings
+    mockDatabase.getSetting.mockResolvedValue(null);
+    mockDatabase.setSetting.mockResolvedValue(undefined);
     // Default mock for sync service
     mockSyncService.getUserLevel.mockResolvedValue(10);
     mockSyncService.syncSubjects.mockResolvedValue({
@@ -989,6 +995,116 @@ describe('SettingsScreen', () => {
       expect(queryByTestId('skip-button')).toBeNull();
       // Only retry button should be available
       expect(getByTestId('retry-button')).toBeTruthy();
+    });
+  });
+
+  describe('Zen Mode Settings', () => {
+    it('should render zen mode toggle', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+
+      const { getByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('zen-mode-setting')).toBeTruthy();
+      });
+
+      expect(getByTestId('zen-mode-toggle')).toBeTruthy();
+    });
+
+    it('should load zen mode setting as off by default', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockDatabase.getSetting.mockResolvedValue(null);
+
+      const { getByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('zen-mode-toggle')).toBeTruthy();
+      });
+
+      // Switch should be off
+      expect(getByTestId('zen-mode-toggle').props.value).toBe(false);
+    });
+
+    it('should load zen mode setting as on when stored as true', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockDatabase.getSetting.mockResolvedValue(true);
+
+      const { getByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('zen-mode-toggle')).toBeTruthy();
+      });
+
+      // Switch should be on
+      expect(getByTestId('zen-mode-toggle').props.value).toBe(true);
+    });
+
+    it('should save zen mode setting when toggled on', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockDatabase.getSetting.mockResolvedValue(false);
+
+      const { getByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('zen-mode-toggle')).toBeTruthy();
+      });
+
+      // Toggle zen mode on
+      await act(async () => {
+        fireEvent(getByTestId('zen-mode-toggle'), 'valueChange', true);
+      });
+
+      expect(mockDatabase.setSetting).toHaveBeenCalledWith('zenMode', true);
+    });
+
+    it('should save zen mode setting when toggled off', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockDatabase.getSetting.mockResolvedValue(true);
+
+      const { getByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('zen-mode-toggle')).toBeTruthy();
+      });
+
+      // Toggle zen mode off
+      await act(async () => {
+        fireEvent(getByTestId('zen-mode-toggle'), 'valueChange', false);
+      });
+
+      expect(mockDatabase.setSetting).toHaveBeenCalledWith('zenMode', false);
+    });
+
+    it('should update toggle state when toggled', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockDatabase.getSetting.mockResolvedValue(false);
+
+      const { getByTestId } = renderWithNavigation();
+
+      await waitFor(() => {
+        expect(getByTestId('zen-mode-toggle')).toBeTruthy();
+      });
+
+      // Initially off
+      expect(getByTestId('zen-mode-toggle').props.value).toBe(false);
+
+      // Toggle on
+      await act(async () => {
+        fireEvent(getByTestId('zen-mode-toggle'), 'valueChange', true);
+      });
+
+      // Should now be on
+      expect(getByTestId('zen-mode-toggle').props.value).toBe(true);
+    });
+
+    it('should load zen mode setting with getSetting call', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+
+      renderWithNavigation();
+
+      await waitFor(() => {
+        expect(mockDatabase.getSetting).toHaveBeenCalledWith('zenMode');
+      });
     });
   });
 });
