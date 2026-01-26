@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@notifee/react-native": "^9.1.8",
     "@op-engineering/op-sqlite": "^15.2.3",
     "@react-native-community/netinfo": "^11.4.1",
     "@react-native/new-app-screen": "0.83.1",
