@@ -3,6 +3,7 @@ import React from 'react';
 
 import { HomeScreen } from '../screens/HomeScreen';
 import { ItemDetailScreen } from '../screens/ItemDetailScreen';
+import { KanjiDetailScreen } from '../screens/KanjiDetailScreen';
 import { LessonsScreen } from '../screens/LessonsScreen';
 import { NotificationPermissionScreen } from '../screens/NotificationPermissionScreen';
 import { RadicalDetailScreen } from '../screens/RadicalDetailScreen';
@@ -83,6 +84,11 @@ export function RootNavigator() {
         name="RadicalDetail"
         component={RadicalDetailScreen}
         options={{ title: 'Radical' }}
+      />
+      <Stack.Screen
+        name="KanjiDetail"
+        component={KanjiDetailScreen}
+        options={{ title: 'Kanji' }}
       />
       <Stack.Screen
         name="NotificationPermission"
