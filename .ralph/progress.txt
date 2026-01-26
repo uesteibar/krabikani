@@ -164,3 +164,17 @@ Started:
   - Manual browser/simulator verification needed for visual changes
 ---
 
+## 2026-01-26 - US-012
+- **What was implemented:** Navigation from search results to detail screens
+- **Files changed:**
+  - `src/screens/SearchScreen.tsx` - Added useNavigation hook, TouchableOpacity for result items, handleResultPress callback for type-based navigation
+  - `__tests__/screens/SearchScreen.test.tsx` (new) - 9 unit tests covering navigation to RadicalDetail, KanjiDetail, VocabularyDetail, and basic search functionality
+- **Learnings for future iterations:**
+  - Use TouchableOpacity with activeOpacity={0.7} for tappable list items
+  - handleResultPress pattern with switch on object_type routes to appropriate detail screens
+  - SearchResult type requires all fields (readings, meaning_mnemonic, etc.) - use complete mock objects in tests
+  - React Navigation preserves search query automatically when navigating back from detail screens
+  - Mock useNavigation hook in tests with jest.mock to verify navigation calls
+  - Manual browser/simulator verification needed for visual changes
+---
+
