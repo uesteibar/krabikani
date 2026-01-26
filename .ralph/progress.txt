@@ -108,3 +108,15 @@ Started:
   - In React Native testing with @testing-library/react-native, fireEvent.press works but direct props.onPress check may be undefined - test behavior instead of implementation
 ---
 
+## 2026-01-26 - US-008
+- What was implemented: Added encouragement message to review completion screen
+- Files changed:
+  - `src/components/ReviewCompletion.tsx` - Added ENCOURAGEMENT_MESSAGES array with 8 phrases, random selection via useMemo, new animated text element with staggered animation, styled with secondary text color and italic font
+  - `__tests__/components/ReviewCompletion.test.tsx` - Added 4 new tests verifying encouragement message rendering, pool membership, presence regardless of incorrect count, and randomness across renders
+- **Learnings for future iterations:**
+  - ReviewCompletion uses staggered animations with STAGGER_DELAY multipliers - when adding new elements, shift subsequent delays
+  - useMemo with empty dependency array ensures random selection happens once on mount (different message each session)
+  - The component has a well-structured animation system with reduceMotion support - new animated elements need both shared values and animated styles
+  - Testing randomness: render multiple times, collect unique values, verify they come from expected pool
+---
+
