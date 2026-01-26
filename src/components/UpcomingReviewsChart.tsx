@@ -95,10 +95,10 @@ export function UpcomingReviewsChart({
     });
   }, [data, currentPendingCount]);
 
-  // Find max total for bar scaling
-  const maxTotal = useMemo(() => {
+  // Find max new count for bar scaling (bars represent new reviews per hour, not cumulative)
+  const maxNew = useMemo(() => {
     if (rows.length === 0) return 1;
-    const max = Math.max(...rows.map(r => r.totalCount));
+    const max = Math.max(...rows.map(r => r.newCount));
     return max > 0 ? max : 1;
   }, [rows]);
 
@@ -133,8 +133,9 @@ export function UpcomingReviewsChart({
       <Text style={styles.title}>Upcoming Reviews</Text>
       <View style={styles.gridContainer}>
         {rows.map((row, index) => {
+          // Bar width is based on new reviews per hour (not cumulative total)
           const barWidthPercent =
-            row.totalCount > 0 ? (row.totalCount / maxTotal) * 100 : 0;
+            row.newCount > 0 ? (row.newCount / maxNew) * 100 : 0;
 
           return (
             <View
