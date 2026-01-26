@@ -385,7 +385,7 @@ describe('ItemDetails', () => {
       );
 
       expect(getByTestId('test-components')).toBeTruthy();
-      expect(getByText('Component Radicals')).toBeTruthy();
+      expect(getByText('Made up of')).toBeTruthy();
       expect(getByTestId('test-component-1')).toBeTruthy();
       expect(getByTestId('test-component-2')).toBeTruthy();
     });
@@ -406,7 +406,7 @@ describe('ItemDetails', () => {
       );
 
       expect(getByTestId('test-components')).toBeTruthy();
-      expect(getByText('Component Kanji')).toBeTruthy();
+      expect(getByText('Made up of')).toBeTruthy();
       expect(getByTestId('test-component-1')).toBeTruthy();
     });
 
@@ -423,8 +423,7 @@ describe('ItemDetails', () => {
       );
 
       expect(queryByTestId('test-components')).toBeNull();
-      expect(queryByText('Component Radicals')).toBeNull();
-      expect(queryByText('Component Kanji')).toBeNull();
+      expect(queryByText('Made up of')).toBeNull();
     });
 
     it('does not render components section with empty arrays', () => {

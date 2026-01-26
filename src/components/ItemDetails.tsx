@@ -172,9 +172,7 @@ export function ItemDetails({
         <>
           <View style={styles.divider} />
           <View style={styles.section} testID={testID ? `${testID}-components` : 'item-details-components'}>
-            <Text style={styles.sectionTitle}>
-              {subjectType === 'kanji' ? 'Component Radicals' : 'Component Kanji'}
-            </Text>
+            <Text style={styles.sectionTitle}>Made up of</Text>
             <View style={styles.componentsRow}>
               {componentRadicals?.map(radical => (
                 <ComponentDisplay
