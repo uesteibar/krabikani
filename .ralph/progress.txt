@@ -2,7 +2,42 @@
 
 ## Codebase Patterns
 
+- Custom fonts go in `assets/fonts/` and are linked via `react-native.config.js`
+- Theme exports are centralized in `src/theme/index.ts`
+- Use Platform.select() for platform-specific font family names (iOS uses font family name, Android uses file name without extension)
+- DATABASE_VERSION in database.ts must match the expected version in tests
+- Tests with state transitions after fireEvent.press() may need `findByTestId` with async await
 
 Started:
+---
+
+## 2026-01-26 - US-001
+- **What was implemented:** Added Noto Sans JP Light font to the project
+- **Files changed:**
+  - `assets/fonts/NotoSansJP-VF.otf` (new) - Japanese variable font supporting light weight
+  - `react-native.config.js` (new) - React Native font linking configuration
+  - `src/theme/typography.ts` (new) - Typography constants and font family definitions
+  - `src/theme/index.ts` - Added typography exports
+  - `src/components/AnimatedSrsLevelBadge.tsx` - Fixed lint warning
+  - `__tests__/storage/database.test.ts` - Fixed database version expectation
+  - `__tests__/storage/databaseCrud.test.ts` - Fixed database version expectation
+  - `__tests__/components/ReviewSession.test.tsx` - Fixed flaky test with async waiting
+- **Learnings for future iterations:**
+  - Variable fonts (NotoSansJP-VF.otf) work in React Native and support multiple weights via fontWeight property
+  - iOS uses the font family name ("Noto Sans JP"), Android uses the filename without extension ("NotoSansJP-VF")
+  - The codebase had DATABASE_VERSION updated to 5 but some tests still expected 1 - always keep tests in sync
+  - ReviewSession tests with incorrect answer flow need proper async waiting (use findByTestId instead of getByTestId for state transitions)
+---
+
+## 2026-01-26 - US-002
+- **What was implemented:** Applied lighter font (Noto Sans JP Light) to Japanese character displays
+- **Files changed:**
+  - `src/components/ReviewSession.tsx` - Added TEXT_STYLES import, applied japaneseDisplay style to characters
+  - `src/components/LessonCard.tsx` - Added TEXT_STYLES import, applied japaneseDisplay style to characters
+- **Learnings for future iterations:**
+  - ReviewSession.tsx uses a single `characters` style for both the main review display and the incorrect answer feedback screen
+  - Use spread operator (`...TEXT_STYLES.japaneseDisplay`) to apply preset text styles to StyleSheet definitions
+  - TEXT_STYLES.japaneseDisplay includes both fontFamily (Noto Sans JP) and fontWeight (300/light)
+  - Manual browser/simulator verification is not available in this environment - note in progress when visual verification is needed
 ---
 

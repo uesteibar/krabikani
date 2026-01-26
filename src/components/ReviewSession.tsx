@@ -48,6 +48,7 @@ import {
   FONT_SIZES,
   PROGRESS_COLORS,
   MIN_TOUCH_TARGET,
+  TEXT_STYLES,
 } from '../theme';
 import { MnemonicText } from './MnemonicText';
 import { ComponentDisplay } from './ComponentDisplay';
@@ -1644,7 +1645,7 @@ const styles = StyleSheet.create({
   },
   characters: {
     fontSize: FONT_SIZES.display,
-    fontWeight: 'bold',
+    ...TEXT_STYLES.japaneseDisplay,
     color: COLORS.text.inverse,
     textAlign: 'center',
   },

@@ -15,8 +15,8 @@
         "All quality checks pass"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added NotoSansJP-VF.otf variable font. Created react-native.config.js for font linking. Created typography.ts with FONT_FAMILY_JAPANESE_DISPLAY constant and font weight helpers."
     },
     {
       "id": "US-002",
@@ -32,8 +32,8 @@
         "Verify in simulator using dev-browser skill"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Applied TEXT_STYLES.japaneseDisplay (Noto Sans JP Light 300) to character display in ReviewSession.tsx and LessonCard.tsx. Both review and incorrect answer screens share the same characters style."
     },
     {
       "id": "US-003",

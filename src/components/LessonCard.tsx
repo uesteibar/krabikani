@@ -19,6 +19,7 @@ import {
   SPACING,
   FONT_SIZES,
   MIN_TOUCH_TARGET,
+  TEXT_STYLES,
 } from '../theme';
 
 /** Data for a component radical */
@@ -314,7 +315,7 @@ const styles = StyleSheet.create({
   },
   characters: {
     fontSize: FONT_SIZES.display,
-    fontWeight: 'bold',
+    ...TEXT_STYLES.japaneseDisplay,
     color: COLORS.text.inverse,
     textAlign: 'center',
   },
