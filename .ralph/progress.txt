@@ -1,4 +1,56 @@
 # Ralph Progress Log
+
+## Codebase Patterns
+- Services live in `src/services/` directory with an index.ts for exports
+- Mocks for external libraries go in `__mocks__/<package-path>/` directory (e.g., `__mocks__/@notifee/react-native.ts`)
+- Tests mirror source structure in `__tests__/` directory
+- @notifee/react-native is used for local notifications on both iOS and Android
+- Android notification channels should be created before displaying notifications
+
 Started:
+---
+
+## 2026-01-26 - US-001
+- What was implemented:
+  - Installed @notifee/react-native package for notification support
+  - Created `src/services/notificationConfig.ts` with Android channel configuration
+  - Android channel 'Review Reminders' configured with vibration only (no sound)
+  - Added `displayTestNotification()` function for testing notification display
+  - Created Jest mock for @notifee/react-native at `__mocks__/@notifee/react-native.ts`
+  - Added unit tests for notification configuration functions
+
+- Files changed:
+  - package.json, package-lock.json (added @notifee/react-native)
+  - src/services/notificationConfig.ts (new)
+  - src/services/index.ts (new)
+  - __mocks__/@notifee/react-native.ts (new)
+  - __tests__/services/notificationConfig.test.ts (new)
+
+- **Learnings for future iterations:**
+  - iOS does not require Info.plist changes for @notifee local notifications - permissions are requested at runtime
+  - The notifee mock needs to export enums (AndroidImportance, AndroidVisibility, etc.) matching the real package
+  - Pre-existing test failures in database.test.ts and databaseCrud.test.ts (DATABASE_VERSION mismatch) are not related to this work
+  - Pre-existing lint errors in ReviewsScreen.tsx are not related to this work
+---
+
+## 2026-01-26 - US-002
+- What was implemented:
+  - Created `src/services/notificationService.ts` with permission management functions
+  - Implemented `requestPermissions()` function that requests notification permissions from OS using notifee
+  - Implemented `checkPermissions()` function that returns current permission status without prompting
+  - Created `PermissionStatus` type with values: 'granted', 'denied', 'not_determined'
+  - Both functions handle iOS and Android through notifee's cross-platform API
+  - Added exports to `src/services/index.ts`
+  - Added comprehensive unit tests (9 tests covering all permission status scenarios)
+
+- Files changed:
+  - src/services/notificationService.ts (new)
+  - src/services/index.ts (updated exports)
+  - __tests__/services/notificationService.test.ts (new)
+
+- **Learnings for future iterations:**
+  - notifee's `AuthorizationStatus.PROVISIONAL` (iOS quiet notifications) should be treated as 'granted' for our purposes
+  - The mock already includes `requestPermission` and `getNotificationSettings` methods, so permission testing works out of the box
+  - Tests should verify that `checkPermissions` does NOT call `requestPermission` (ensures no accidental permission prompts)
 ---
 
