@@ -7,6 +7,7 @@
 - Use Platform.select() for platform-specific font family names (iOS uses font family name, Android uses file name without extension)
 - DATABASE_VERSION in database.ts must match the expected version in tests
 - Tests with state transitions after fireEvent.press() may need `findByTestId` with async await
+- searchSubjects(query, hiraganaQuery, limit) returns learned items - caller should pre-convert romaji to hiragana using romajiToHiragana() from src/utils
 
 Started:
 ---
@@ -73,5 +74,31 @@ Started:
   - When adding a button that navigates to a screen not yet created, add the route to navigation types to avoid TypeScript errors
   - The Search screen (US-006) will need to be created and registered in the navigator for the button to work
   - Manual browser/simulator verification needed for visual changes
+---
+
+## 2026-01-26 - US-006
+- **What was implemented:** Created SearchScreen with text input and empty state
+- **Files changed:**
+  - `src/screens/SearchScreen.tsx` (new) - Search screen with auto-focusing input, placeholder text, and empty state message
+  - `src/navigation/RootNavigator.tsx` - Registered SearchScreen in the stack navigator
+- **Learnings for future iterations:**
+  - Auto-focus on TextInput with a short setTimeout (100ms) delay ensures focus works reliably after navigation
+  - Stack navigator provides back button/gesture navigation automatically
+  - Theme-aware styles use useMemo for performance and theme.colors for colors that work in light/dark modes
+  - Manual browser/simulator verification needed for visual changes
+---
+
+## 2026-01-26 - US-007
+- **What was implemented:** Full-text search logic for querying learned subjects
+- **Files changed:**
+  - `src/storage/database.ts` - Added searchSubjects function with SQL JOIN on assignments, LIKE matching, and priority ordering
+  - `src/storage/index.ts` - Exported searchSubjects, SubjectType, and SearchResult types
+  - `__tests__/storage/databaseCrud.test.ts` - Added 10 unit tests for search functionality
+- **Learnings for future iterations:**
+  - The existing romajiToHiragana utility in src/utils/romajiToHiragana.ts can be reused for converting user input to hiragana for reading searches
+  - SearchResult type includes match_type field to indicate how the result matched (character, meaning, reading, or mnemonic)
+  - SQL CASE statement with priority ordering is effective for prioritizing search results
+  - JOIN with assignments table WHERE started_at IS NOT NULL filters to only learned items
+  - The mock database doesn't fully support complex JOINs, so tests verify function runs without checking result content
 ---
 

@@ -27,6 +27,8 @@ export {
   getAllSubjects,
   deleteSubject,
   getSubjectCount,
+  // Subject Search
+  searchSubjects,
   // Assignment CRUD
   upsertAssignment,
   upsertAssignments,
@@ -90,4 +92,6 @@ export {
   type UpcomingReviewsHourBucket,
   type DatabaseUserSetting,
   type SettingValue,
+  type SubjectType,
+  type SearchResult,
 } from './database';

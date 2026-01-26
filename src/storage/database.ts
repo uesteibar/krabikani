@@ -541,6 +541,168 @@ export async function getSubjectCount(): Promise<number> {
 }
 
 // ============================================
+// Subject Search Operations
+// ============================================
+
+/**
+ * Subject type as stored in the database
+ */
+export type SubjectType = 'radical' | 'kanji' | 'vocabulary' | 'kana_vocabulary';
+
+/**
+ * Represents a search result with subject data and SRS info
+ */
+export interface SearchResult {
+  id: number;
+  object_type: SubjectType;
+  characters: string | null;
+  meanings: string; // JSON string of Meaning[]
+  readings: string | null; // JSON string of Reading[]
+  meaning_mnemonic: string;
+  reading_mnemonic: string | null;
+  level: number;
+  srs_stage: number;
+  match_type: 'character' | 'meaning' | 'reading' | 'mnemonic';
+}
+
+/**
+ * Searches learned subjects (started_at IS NOT NULL) by query string.
+ *
+ * Search behavior:
+ * - Matches against: characters, meanings (all in array), readings (all in array),
+ *   meaning_mnemonic, reading_mnemonic
+ * - Romaji input is converted to hiragana for reading matches
+ * - Case-insensitive for English text
+ * - Results prioritized: character matches first, then meaning, then reading, then mnemonic
+ *
+ * @param query The search query string
+ * @param hiraganaQuery Pre-converted hiragana version of query (for reading matching)
+ * @param limit Maximum number of results to return (default 100)
+ * @returns Array of search results with subject data and match type
+ */
+export async function searchSubjects(
+  query: string,
+  hiraganaQuery: string,
+  limit: number = 100,
+): Promise<SearchResult[]> {
+  if (query.trim().length === 0) {
+    return [];
+  }
+
+  const lowerQuery = query.toLowerCase().trim();
+  const searchPattern = `%${lowerQuery}%`;
+  const hiraganaPattern = hiraganaQuery ? `%${hiraganaQuery}%` : null;
+
+  // Query subjects that have been learned (started_at IS NOT NULL in assignments)
+  // Using a single query with CASE for priority ordering
+  const sql = `
+    SELECT DISTINCT
+      s.id,
+      s.object_type,
+      s.characters,
+      s.meanings,
+      s.readings,
+      s.meaning_mnemonic,
+      s.reading_mnemonic,
+      s.level,
+      a.srs_stage,
+      CASE
+        WHEN s.characters IS NOT NULL AND s.characters LIKE ? THEN 1
+        WHEN LOWER(s.meanings) LIKE ? THEN 2
+        WHEN s.readings IS NOT NULL AND (
+          LOWER(s.readings) LIKE ?
+          ${hiraganaPattern ? 'OR LOWER(s.readings) LIKE ?' : ''}
+        ) THEN 3
+        WHEN LOWER(s.meaning_mnemonic) LIKE ? THEN 4
+        WHEN s.reading_mnemonic IS NOT NULL AND LOWER(s.reading_mnemonic) LIKE ? THEN 5
+        ELSE 6
+      END as match_priority
+    FROM subjects s
+    JOIN assignments a ON s.id = a.subject_id
+    WHERE a.started_at IS NOT NULL
+      AND (
+        (s.characters IS NOT NULL AND s.characters LIKE ?)
+        OR LOWER(s.meanings) LIKE ?
+        OR (s.readings IS NOT NULL AND (
+          LOWER(s.readings) LIKE ?
+          ${hiraganaPattern ? 'OR LOWER(s.readings) LIKE ?' : ''}
+        ))
+        OR LOWER(s.meaning_mnemonic) LIKE ?
+        OR (s.reading_mnemonic IS NOT NULL AND LOWER(s.reading_mnemonic) LIKE ?)
+      )
+    ORDER BY match_priority, s.level, s.id
+    LIMIT ?
+  `;
+
+  // Build params array based on whether we have a hiragana query
+  const params: (string | number)[] = hiraganaPattern
+    ? [
+        // CASE params
+        searchPattern, // characters
+        searchPattern, // meanings
+        searchPattern, // readings (romaji)
+        hiraganaPattern, // readings (hiragana)
+        searchPattern, // meaning_mnemonic
+        searchPattern, // reading_mnemonic
+        // WHERE params
+        searchPattern, // characters
+        searchPattern, // meanings
+        searchPattern, // readings (romaji)
+        hiraganaPattern, // readings (hiragana)
+        searchPattern, // meaning_mnemonic
+        searchPattern, // reading_mnemonic
+        limit,
+      ]
+    : [
+        // CASE params
+        searchPattern, // characters
+        searchPattern, // meanings
+        searchPattern, // readings
+        searchPattern, // meaning_mnemonic
+        searchPattern, // reading_mnemonic
+        // WHERE params
+        searchPattern, // characters
+        searchPattern, // meanings
+        searchPattern, // readings
+        searchPattern, // meaning_mnemonic
+        searchPattern, // reading_mnemonic
+        limit,
+      ];
+
+  const result = await executeSql(sql, params);
+
+  // Map results and determine match_type based on priority
+  return (result.rows as unknown as Array<SearchResult & { match_priority: number }>).map(row => {
+    let match_type: SearchResult['match_type'];
+    switch (row.match_priority) {
+      case 1:
+        match_type = 'character';
+        break;
+      case 2:
+        match_type = 'meaning';
+        break;
+      case 3:
+        match_type = 'reading';
+        break;
+      default:
+        match_type = 'mnemonic';
+    }
+    return {
+      id: row.id,
+      object_type: row.object_type as SubjectType,
+      characters: row.characters,
+      meanings: row.meanings,
+      readings: row.readings,
+      meaning_mnemonic: row.meaning_mnemonic,
+      reading_mnemonic: row.reading_mnemonic,
+      level: row.level,
+      srs_stage: row.srs_stage,
+      match_type,
+    };
+  });
+}
+
+// ============================================
 // Assignment CRUD Operations
 // ============================================
 

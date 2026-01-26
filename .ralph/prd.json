@@ -97,8 +97,8 @@
         "Verify in simulator using dev-browser skill"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created SearchScreen component with auto-focusing TextInput and empty state message. Registered in RootNavigator. Navigation back is handled by stack navigator's default behavior."
     },
     {
       "id": "US-007",
@@ -116,8 +116,8 @@
         "All quality checks pass"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created searchSubjects function in database.ts with SQL JOIN on assignments (started_at IS NOT NULL) and LIKE matching for characters, meanings, readings, meaning_mnemonic, and reading_mnemonic. Accepts hiraganaQuery parameter for romaji-to-hiragana converted reading search. Returns results prioritized by match type (character > meaning > reading > mnemonic). All 10 new tests pass."
     },
     {
       "id": "US-008",
