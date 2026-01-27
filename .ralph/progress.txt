@@ -14,6 +14,7 @@
 - Use React `key` prop to force component remount when scroll position needs resetting (e.g., `key={item.id}` on cards with ScrollView content)
 - Completion screens (LessonCompletion, ReviewCompletion) share the same animated pattern: animated checkmark, staggered fade-in (200ms delay, 500ms duration), confetti for perfect sessions, encouragement messages, and "Synced"/"Queued" badge
 - Components using `useTheme()` require `<ThemeProvider forcedColorScheme="light">` wrapper in tests (see LevelIndicator, HomeScreen tests)
+- The react-native-reanimated mock in jest.setup.js must export any Animated.* components used (View, Text, Image) — add new ones as needed
 
 Started:
 ---
@@ -141,5 +142,21 @@ Started:
   - `getUpcomingReviewsByHour` now uses `startHour` (currentHour + 1) — the current hour's reviews are already captured in the pending count passed via `currentPendingCount` prop
   - The cumulative total in the chart still correctly starts from `currentPendingCount` (existing pending reviews) as the base
   - Pre-existing failing test in ReviewSession.test.tsx (wrap-up mode incorrect feedback) is unrelated
+---
+
+## 2026-01-27 - US-021
+- Implemented animated crab tap interaction on the home screen
+- Tapping the crab triggers a rock/tilt animation using react-native-reanimated (left-right rocking with diminishing amplitude)
+- Animation is ~600ms total (5 steps × 120ms each): -12° → +12° → -6° → +6° → 0°
+- Crab image wrapped in Pressable; uses Animated.Image with useAnimatedStyle for rotation transform
+- Files changed:
+  - `src/screens/HomeScreen.tsx` - Replaced plain Image with Pressable + Animated.Image, added rock animation via withSequence/withTiming
+  - `__tests__/screens/HomeScreen.test.tsx` - Added 2 tests: pressable wrapper exists, withSequence called on tap
+  - `jest.setup.js` - Added Image to react-native-reanimated mock (for Animated.Image support)
+- **Learnings for future iterations:**
+  - `Animated.Image` requires `Image` in the reanimated mock's default export (jest.setup.js) — was previously only View and Text
+  - The rock animation uses `withSequence` of `withTiming` calls with diminishing angles for a natural dampened oscillation effect
+  - Pressable is preferred over TouchableOpacity for the crab since no opacity feedback is desired (the animation itself is the feedback)
+  - Animation total duration is 5 × ROCK_DURATION (120ms) = 600ms, well under the 1-second requirement
 ---
 

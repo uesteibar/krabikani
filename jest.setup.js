@@ -9,15 +9,18 @@ jest.mock('react-native-worklets', () => ({
 jest.mock('react-native-reanimated', () => {
   const View = require('react-native').View;
   const Text = require('react-native').Text;
+  const Image = require('react-native').Image;
 
   return {
     default: {
       View,
       Text,
+      Image,
       call: jest.fn(),
     },
     View,
     Text,
+    Image,
     useSharedValue: jest.fn((init) => ({ value: init })),
     useAnimatedStyle: jest.fn(() => ({})),
     withTiming: jest.fn((toValue) => toValue),

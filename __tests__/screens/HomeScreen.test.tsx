@@ -507,6 +507,33 @@ describe('HomeScreen', () => {
     });
   });
 
+  describe('animated crab', () => {
+    it('wraps the logo in a pressable element', async () => {
+      const { getByTestId } = renderWithNavigation(<HomeScreen />);
+
+      await waitFor(() => {
+        expect(getByTestId('home-logo-pressable')).toBeTruthy();
+        expect(getByTestId('home-logo')).toBeTruthy();
+      });
+    });
+
+    it('triggers animation when crab is tapped', async () => {
+      const { withSequence } = jest.requireMock('react-native-reanimated');
+
+      const { getByTestId } = renderWithNavigation(<HomeScreen />);
+
+      await waitFor(() => {
+        expect(getByTestId('home-logo-pressable')).toBeTruthy();
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId('home-logo-pressable'));
+      });
+
+      expect(withSequence).toHaveBeenCalled();
+    });
+  });
+
   describe('pull-to-refresh', () => {
     beforeEach(async () => {
       __resetKeychainMock();

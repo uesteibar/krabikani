@@ -14,8 +14,15 @@ import {
   View,
   ScrollView,
   RefreshControl,
-  Image,
+  Pressable,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSequence,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 
 import { WaniKaniClient } from '../api/wanikaniApi';
 import {
@@ -90,9 +97,42 @@ export interface UpcomingReviewsData {
   hourlyBuckets: UpcomingReviewsHourBucket[];
 }
 
+const ROCK_ANGLE = 12;
+const ROCK_DURATION = 120;
+
 export function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const theme = useTheme();
+  const crabRotation = useSharedValue(0);
+
+  const handleCrabPress = useCallback(() => {
+    crabRotation.value = withSequence(
+      withTiming(-ROCK_ANGLE, {
+        duration: ROCK_DURATION,
+        easing: Easing.inOut(Easing.ease),
+      }),
+      withTiming(ROCK_ANGLE, {
+        duration: ROCK_DURATION,
+        easing: Easing.inOut(Easing.ease),
+      }),
+      withTiming(-ROCK_ANGLE / 2, {
+        duration: ROCK_DURATION,
+        easing: Easing.inOut(Easing.ease),
+      }),
+      withTiming(ROCK_ANGLE / 2, {
+        duration: ROCK_DURATION,
+        easing: Easing.inOut(Easing.ease),
+      }),
+      withTiming(0, {
+        duration: ROCK_DURATION,
+        easing: Easing.inOut(Easing.ease),
+      }),
+    );
+  }, [crabRotation]);
+
+  const crabAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${crabRotation.value}deg` }],
+  }));
   const [syncStatus, setSyncStatus] = useState<SyncStatusData>({
     lastSyncedAt: null,
     hasCachedData: false,
@@ -342,11 +382,13 @@ export function HomeScreen() {
         testID="home-scroll-view"
       >
         <View style={styles.content}>
-          <Image
-            source={require('../../assets/cabrigator-icon.png')}
-            style={styles.logo}
-            testID="home-logo"
-          />
+          <Pressable onPress={handleCrabPress} testID="home-logo-pressable">
+            <Animated.Image
+              source={require('../../assets/cabrigator-icon.png')}
+              style={[styles.logo, crabAnimatedStyle]}
+              testID="home-logo"
+            />
+          </Pressable>
           <View style={styles.dashboardContainer}>
             <LevelIndicator level={userLevel} />
             <DashboardStats
