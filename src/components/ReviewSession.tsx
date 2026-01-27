@@ -113,6 +113,8 @@ export interface ReviewItem {
   componentRadicals?: ReviewComponentRadical[];
   /** Component kanji for vocabulary items (optional) */
   componentKanji?: ReviewComponentKanji[];
+  /** User-defined synonyms for meaning validation */
+  userSynonyms?: string[];
 }
 
 /** Type of question being asked */
@@ -821,6 +823,7 @@ export function ReviewSession({
         answer,
         item.meanings,
         item.auxiliaryMeanings ?? [],
+        item.userSynonyms ?? [],
       );
       isCorrect = validationResult.isCorrect;
       fuzzyMatch = validationResult.isFuzzyMatch ?? false;

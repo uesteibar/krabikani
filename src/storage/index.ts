@@ -74,6 +74,9 @@ export {
   getLearnedCount,
   // Upcoming reviews
   getUpcomingReviewsByHour,
+  // User Synonyms
+  getUserSynonymsBySubjectId,
+  getAllUserSynonyms,
   // Data management
   clearAllData,
   // Migrations
@@ -96,4 +99,5 @@ export {
   type SubjectType,
   type SearchResult,
   type KanjiUsingRadical,
+  type DatabaseUserSynonym,
 } from './database';

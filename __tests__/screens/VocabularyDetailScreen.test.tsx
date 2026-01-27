@@ -131,6 +131,7 @@ function createMockAssignment(
 describe('VocabularyDetailScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockDatabase.getUserSynonymsBySubjectId.mockResolvedValue([]);
   });
 
   describe('Loading State', () => {

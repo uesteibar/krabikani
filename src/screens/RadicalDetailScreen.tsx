@@ -20,6 +20,7 @@ import {
   getSubjectById,
   getAssignmentBySubjectId,
   getKanjiUsingRadical,
+  getUserSynonymsBySubjectId,
   type DatabaseSubject,
   type DatabaseAssignment,
   type KanjiUsingRadical,
@@ -50,6 +51,7 @@ interface RadicalDetailData {
   subject: DatabaseSubject;
   assignment: DatabaseAssignment | null;
   meanings: Meaning[];
+  userSynonyms: string[];
   kanjiUsingRadical: KanjiUsingRadical[];
 }
 
@@ -99,6 +101,10 @@ export function RadicalDetailScreen() {
       // Parse meanings
       const meanings: Meaning[] = JSON.parse(subject.meanings);
 
+      // Fetch user synonyms
+      const synonymRecords = await getUserSynonymsBySubjectId(subjectId);
+      const userSynonyms = synonymRecords.map(s => s.synonym);
+
       // Fetch kanji that use this radical
       const kanjiUsingRadical = await getKanjiUsingRadical(subjectId);
 
@@ -106,6 +112,7 @@ export function RadicalDetailScreen() {
         subject,
         assignment,
         meanings,
+        userSynonyms,
         kanjiUsingRadical,
       });
       setPhase('loaded');
@@ -197,7 +204,8 @@ export function RadicalDetailScreen() {
     );
   }
 
-  const { subject, assignment, meanings, kanjiUsingRadical } = data;
+  const { subject, assignment, meanings, userSynonyms, kanjiUsingRadical } =
+    data;
   const primaryMeaning =
     meanings.find(m => m.primary)?.meaning ?? meanings[0]?.meaning ?? '';
 
@@ -239,17 +247,50 @@ export function RadicalDetailScreen() {
           </Text>
           <View style={styles.meaningsList}>
             {meanings.map((meaning, index) => (
-              <Text
-                key={index}
-                style={[
-                  styles.meaningText,
-                  dynamicStyles.meaningTextColor,
-                  meaning.primary && styles.primaryMeaning,
-                ]}
-                testID={`radical-detail-meaning-${index}`}
-              >
-                {meaning.meaning}
-              </Text>
+              <React.Fragment key={index}>
+                {index > 0 && (
+                  <Text
+                    style={[
+                      styles.meaningSeparator,
+                      dynamicStyles.sectionTitleColor,
+                    ]}
+                  >
+                    ·
+                  </Text>
+                )}
+                <Text
+                  style={[
+                    styles.meaningText,
+                    dynamicStyles.meaningTextColor,
+                    meaning.primary && styles.primaryMeaning,
+                  ]}
+                  testID={`radical-detail-meaning-${index}`}
+                >
+                  {meaning.meaning}
+                </Text>
+              </React.Fragment>
+            ))}
+            {userSynonyms.map((synonym, index) => (
+              <React.Fragment key={`synonym-${index}`}>
+                <Text
+                  style={[
+                    styles.meaningSeparator,
+                    dynamicStyles.sectionTitleColor,
+                  ]}
+                >
+                  ·
+                </Text>
+                <Text
+                  style={[
+                    styles.meaningText,
+                    dynamicStyles.meaningTextColor,
+                    styles.synonymText,
+                  ]}
+                  testID={`radical-detail-synonym-${index}`}
+                >
+                  {synonym}
+                </Text>
+              </React.Fragment>
             ))}
           </View>
         </View>
@@ -379,7 +420,13 @@ const styles = StyleSheet.create({
     marginVertical: SPACING.xs,
   },
   meaningsList: {
-    gap: SPACING.xs,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  meaningSeparator: {
+    fontSize: FONT_SIZES.base,
   },
   meaningText: {
     fontSize: FONT_SIZES.base,
@@ -387,6 +434,9 @@ const styles = StyleSheet.create({
   },
   primaryMeaning: {
     fontWeight: 'bold',
+  },
+  synonymText: {
+    fontStyle: 'italic',
   },
   mnemonicText: {
     fontSize: FONT_SIZES.base,

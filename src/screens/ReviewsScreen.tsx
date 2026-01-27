@@ -22,6 +22,7 @@ import {
   getAvailableReviews,
   getSubjectsByIds,
   getApiKey,
+  getUserSynonymsBySubjectId,
   type DatabaseAssignment,
   type DatabaseSubject,
 } from '../storage';
@@ -46,6 +47,7 @@ interface ReviewSessionData {
   subjects: DatabaseSubject[];
   componentRadicals: Map<number, ReviewComponentRadical>;
   componentKanji: Map<number, ReviewComponentKanji>;
+  synonymsMap: Map<number, string[]>;
 }
 
 interface SyncResult {
@@ -62,6 +64,7 @@ function subjectToReviewItem(
   assignment: DatabaseAssignment,
   componentRadicalsMap: Map<number, ReviewComponentRadical>,
   componentKanjiMap: Map<number, ReviewComponentKanji>,
+  synonymsMap: Map<number, string[]>,
 ): ReviewItem {
   const meanings: Meaning[] = JSON.parse(subject.meanings);
   const readings: Reading[] | KanjiReading[] | null = subject.readings
@@ -104,6 +107,7 @@ function subjectToReviewItem(
     auxiliaryMeanings: [] as AuxiliaryMeaning[],
     componentRadicals,
     componentKanji,
+    userSynonyms: synonymsMap.get(subject.id) ?? [],
   };
 }
 
@@ -241,11 +245,24 @@ export function ReviewsScreen() {
         }
       }
 
+      // Load user synonyms for all subjects
+      const synonymsMap = new Map<number, string[]>();
+      for (const subject of validSubjects) {
+        const synonyms = await getUserSynonymsBySubjectId(subject.id);
+        if (synonyms.length > 0) {
+          synonymsMap.set(
+            subject.id,
+            synonyms.map(s => s.synonym),
+          );
+        }
+      }
+
       setSessionData({
         assignments: validAssignments,
         subjects: validSubjects,
         componentRadicals,
         componentKanji,
+        synonymsMap,
       });
       setPhase('reviewing');
     } catch (error) {
@@ -304,6 +321,7 @@ export function ReviewsScreen() {
         sessionData.assignments[index],
         sessionData.componentRadicals,
         sessionData.componentKanji,
+        sessionData.synonymsMap,
       ),
     );
   }, [sessionData]);
@@ -385,9 +403,12 @@ export function ReviewsScreen() {
   }, [navigation]);
 
   // Handle component press (navigate to item detail)
-  const handleComponentPress = useCallback((subjectId: number) => {
-    navigation.push('ItemDetail', { subjectId });
-  }, [navigation]);
+  const handleComponentPress = useCallback(
+    (subjectId: number) => {
+      navigation.push('ItemDetail', { subjectId });
+    },
+    [navigation],
+  );
 
   // Render loading state
   if (phase === 'loading') {

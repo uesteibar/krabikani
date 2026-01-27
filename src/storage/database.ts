@@ -547,7 +547,11 @@ export async function getSubjectCount(): Promise<number> {
 /**
  * Subject type as stored in the database
  */
-export type SubjectType = 'radical' | 'kanji' | 'vocabulary' | 'kana_vocabulary';
+export type SubjectType =
+  | 'radical'
+  | 'kanji'
+  | 'vocabulary'
+  | 'kana_vocabulary';
 
 /**
  * Represents a search result with subject data and SRS info
@@ -595,6 +599,7 @@ export async function searchSubjects(
 
   // Query subjects that have been learned (started_at IS NOT NULL in assignments)
   // Using a single query with CASE for priority ordering
+  // LEFT JOIN user_synonyms so user-defined synonyms are searchable
   const sql = `
     SELECT DISTINCT
       s.id,
@@ -609,6 +614,7 @@ export async function searchSubjects(
       CASE
         WHEN s.characters IS NOT NULL AND s.characters LIKE ? THEN 1
         WHEN LOWER(s.meanings) LIKE ? THEN 2
+        WHEN LOWER(us.synonym) LIKE ? THEN 2
         WHEN s.readings IS NOT NULL AND (
           LOWER(s.readings) LIKE ?
           ${hiraganaPattern ? 'OR LOWER(s.readings) LIKE ?' : ''}
@@ -619,10 +625,12 @@ export async function searchSubjects(
       END as match_priority
     FROM subjects s
     JOIN assignments a ON s.id = a.subject_id
+    LEFT JOIN user_synonyms us ON s.id = us.subject_id
     WHERE a.started_at IS NOT NULL
       AND (
         (s.characters IS NOT NULL AND s.characters LIKE ?)
         OR LOWER(s.meanings) LIKE ?
+        OR LOWER(us.synonym) LIKE ?
         OR (s.readings IS NOT NULL AND (
           LOWER(s.readings) LIKE ?
           ${hiraganaPattern ? 'OR LOWER(s.readings) LIKE ?' : ''}
@@ -640,6 +648,7 @@ export async function searchSubjects(
         // CASE params
         searchPattern, // characters
         searchPattern, // meanings
+        searchPattern, // user_synonyms
         searchPattern, // readings (romaji)
         hiraganaPattern, // readings (hiragana)
         searchPattern, // meaning_mnemonic
@@ -647,6 +656,7 @@ export async function searchSubjects(
         // WHERE params
         searchPattern, // characters
         searchPattern, // meanings
+        searchPattern, // user_synonyms
         searchPattern, // readings (romaji)
         hiraganaPattern, // readings (hiragana)
         searchPattern, // meaning_mnemonic
@@ -657,12 +667,14 @@ export async function searchSubjects(
         // CASE params
         searchPattern, // characters
         searchPattern, // meanings
+        searchPattern, // user_synonyms
         searchPattern, // readings
         searchPattern, // meaning_mnemonic
         searchPattern, // reading_mnemonic
         // WHERE params
         searchPattern, // characters
         searchPattern, // meanings
+        searchPattern, // user_synonyms
         searchPattern, // readings
         searchPattern, // meaning_mnemonic
         searchPattern, // reading_mnemonic
@@ -672,7 +684,9 @@ export async function searchSubjects(
   const result = await executeSql(sql, params);
 
   // Map results and determine match_type based on priority
-  return (result.rows as unknown as Array<SearchResult & { match_priority: number }>).map(row => {
+  return (
+    result.rows as unknown as Array<SearchResult & { match_priority: number }>
+  ).map(row => {
     let match_type: SearchResult['match_type'];
     switch (row.match_priority) {
       case 1:
@@ -742,11 +756,20 @@ export async function getKanjiUsingRadical(
     [radicalId, radicalId, radicalId, radicalId],
   );
 
-  return (result.rows as unknown as Array<{id: number; characters: string | null; meanings: string}>).map(row => {
+  return (
+    result.rows as unknown as Array<{
+      id: number;
+      characters: string | null;
+      meanings: string;
+    }>
+  ).map(row => {
     // Parse meanings to get primary meaning
     let meaning = '';
     try {
-      const meanings = JSON.parse(row.meanings) as Array<{meaning: string; primary: boolean}>;
+      const meanings = JSON.parse(row.meanings) as Array<{
+        meaning: string;
+        primary: boolean;
+      }>;
       const primary = meanings.find(m => m.primary);
       meaning = primary?.meaning ?? meanings[0]?.meaning ?? '';
     } catch {

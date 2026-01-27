@@ -20,6 +20,7 @@ import {
   getSubjectById,
   getSubjectsByIds,
   getAssignmentBySubjectId,
+  getUserSynonymsBySubjectId,
   type DatabaseSubject,
   type DatabaseAssignment,
 } from '../storage';
@@ -56,6 +57,7 @@ interface KanjiDetailData {
   subject: DatabaseSubject;
   assignment: DatabaseAssignment | null;
   meanings: Meaning[];
+  userSynonyms: string[];
   readings: KanjiReading[];
   componentRadicals: ComponentRadical[];
   meaningHint: string | null;
@@ -125,6 +127,10 @@ export function KanjiDetailScreen() {
       // Parse meanings
       const meanings: Meaning[] = JSON.parse(subject.meanings);
 
+      // Fetch user synonyms
+      const synonymRecords = await getUserSynonymsBySubjectId(subjectId);
+      const userSynonyms = synonymRecords.map(s => s.synonym);
+
       // Parse readings
       const readings: KanjiReading[] = subject.readings
         ? JSON.parse(subject.readings)
@@ -167,6 +173,7 @@ export function KanjiDetailScreen() {
         subject,
         assignment,
         meanings,
+        userSynonyms,
         readings,
         componentRadicals,
         meaningHint,
@@ -268,6 +275,7 @@ export function KanjiDetailScreen() {
     subject,
     assignment,
     meanings,
+    userSynonyms,
     readings,
     componentRadicals,
     meaningHint,
@@ -305,17 +313,50 @@ export function KanjiDetailScreen() {
           </Text>
           <View style={styles.meaningsList}>
             {meanings.map((meaning, index) => (
-              <Text
-                key={index}
-                style={[
-                  styles.meaningText,
-                  dynamicStyles.meaningTextColor,
-                  meaning.primary && styles.primaryMeaning,
-                ]}
-                testID={`kanji-detail-meaning-${index}`}
-              >
-                {meaning.meaning}
-              </Text>
+              <React.Fragment key={index}>
+                {index > 0 && (
+                  <Text
+                    style={[
+                      styles.meaningSeparator,
+                      dynamicStyles.sectionTitleColor,
+                    ]}
+                  >
+                    ·
+                  </Text>
+                )}
+                <Text
+                  style={[
+                    styles.meaningText,
+                    dynamicStyles.meaningTextColor,
+                    meaning.primary && styles.primaryMeaning,
+                  ]}
+                  testID={`kanji-detail-meaning-${index}`}
+                >
+                  {meaning.meaning}
+                </Text>
+              </React.Fragment>
+            ))}
+            {userSynonyms.map((synonym, index) => (
+              <React.Fragment key={`synonym-${index}`}>
+                <Text
+                  style={[
+                    styles.meaningSeparator,
+                    dynamicStyles.sectionTitleColor,
+                  ]}
+                >
+                  ·
+                </Text>
+                <Text
+                  style={[
+                    styles.meaningText,
+                    dynamicStyles.meaningTextColor,
+                    styles.synonymText,
+                  ]}
+                  testID={`kanji-detail-synonym-${index}`}
+                >
+                  {synonym}
+                </Text>
+              </React.Fragment>
             ))}
           </View>
         </View>
@@ -618,7 +659,13 @@ const styles = StyleSheet.create({
     marginVertical: SPACING.xs,
   },
   meaningsList: {
-    gap: SPACING.xs,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  meaningSeparator: {
+    fontSize: FONT_SIZES.base,
   },
   meaningText: {
     fontSize: FONT_SIZES.base,
@@ -626,6 +673,9 @@ const styles = StyleSheet.create({
   },
   primaryMeaning: {
     fontWeight: 'bold',
+  },
+  synonymText: {
+    fontStyle: 'italic',
   },
   readingGroup: {
     marginBottom: SPACING.md,

@@ -93,6 +93,8 @@ export interface QuizItem {
   readingMnemonic: string | null;
   /** Auxiliary meanings for validation (optional) */
   auxiliaryMeanings?: AuxiliaryMeaning[];
+  /** User-defined synonyms for meaning validation (optional) */
+  userSynonyms?: string[];
   /** Component radicals for kanji items (optional) */
   componentRadicals?: QuizComponentRadical[];
   /** Component kanji for vocabulary items (optional) */
@@ -444,6 +446,7 @@ export function LessonQuiz({
         answer,
         item.meanings,
         item.auxiliaryMeanings ?? [],
+        item.userSynonyms ?? [],
       );
       isCorrect = validationResult.isCorrect;
       fuzzyMatch = validationResult.isFuzzyMatch ?? false;
@@ -677,7 +680,11 @@ export function LessonQuiz({
                         characters={radical.characters}
                         meaning={radical.meaning}
                         characterImages={radical.characterImages}
-                        onPress={onComponentPress ? () => onComponentPress(radical.id) : undefined}
+                        onPress={
+                          onComponentPress
+                            ? () => onComponentPress(radical.id)
+                            : undefined
+                        }
                         testID={`lesson-quiz-component-${radical.id}`}
                       />
                     ),
@@ -688,7 +695,8 @@ export function LessonQuiz({
 
           {/* Component kanji for vocabulary items */}
           {(incorrectFeedback.question.item.subjectType === 'vocabulary' ||
-            incorrectFeedback.question.item.subjectType === 'kana_vocabulary') &&
+            incorrectFeedback.question.item.subjectType ===
+              'kana_vocabulary') &&
             incorrectFeedback.question.item.componentKanji &&
             incorrectFeedback.question.item.componentKanji.length > 0 && (
               <View
@@ -708,7 +716,11 @@ export function LessonQuiz({
                           ? kanji.reading
                           : undefined
                       }
-                      onPress={onComponentPress ? () => onComponentPress(kanji.id) : undefined}
+                      onPress={
+                        onComponentPress
+                          ? () => onComponentPress(kanji.id)
+                          : undefined
+                      }
                       testID={`lesson-quiz-component-kanji-${kanji.id}`}
                     />
                   ))}
@@ -728,7 +740,11 @@ export function LessonQuiz({
             <Text style={styles.markCorrectButtonText}>Mark as Correct</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.submitButton, styles.continueButton, styles.continueButtonFlex]}
+            style={[
+              styles.submitButton,
+              styles.continueButton,
+              styles.continueButtonFlex,
+            ]}
             onPress={handleContinue}
             activeOpacity={0.8}
             testID="lesson-quiz-continue"

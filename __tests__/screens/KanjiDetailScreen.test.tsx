@@ -117,6 +117,7 @@ function createMockAssignment(
 describe('KanjiDetailScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockDatabase.getUserSynonymsBySubjectId.mockResolvedValue([]);
   });
 
   describe('Loading State', () => {

@@ -9,6 +9,7 @@ import * as storage from '../../src/storage';
 jest.mock('../../src/storage', () => ({
   getAvailableReviews: jest.fn(),
   getSubjectsByIds: jest.fn(),
+  getUserSynonymsBySubjectId: jest.fn().mockResolvedValue([]),
 }));
 
 // Mock notification services
@@ -282,9 +283,7 @@ describe('ReviewsScreen', () => {
         sampleRadicalSubject,
       ]);
 
-      const { getByTestId } = renderWithNavigation(
-        <ReviewsScreen />,
-      );
+      const { getByTestId } = renderWithNavigation(<ReviewsScreen />);
 
       // Wait for reviews to load
       await waitFor(() => {
@@ -320,9 +319,7 @@ describe('ReviewsScreen', () => {
         sampleRadicalSubject,
       ]);
 
-      const { getByTestId } = renderWithNavigation(
-        <ReviewsScreen />,
-      );
+      const { getByTestId } = renderWithNavigation(<ReviewsScreen />);
 
       // Wait for reviews to load
       await waitFor(() => {
@@ -418,10 +415,18 @@ describe('ReviewsScreen', () => {
   describe('badge update on session completion', () => {
     beforeEach(() => {
       // Reset notification mocks and set defaults
-      (notificationServices.setBadgeCount as jest.Mock).mockReset().mockResolvedValue(undefined);
-      (notificationServices.clearBadge as jest.Mock).mockReset().mockResolvedValue(undefined);
-      (notificationServices.checkPermissions as jest.Mock).mockReset().mockResolvedValue('granted');
-      (notificationServices.getNotificationsEnabled as jest.Mock).mockReset().mockResolvedValue(true);
+      (notificationServices.setBadgeCount as jest.Mock)
+        .mockReset()
+        .mockResolvedValue(undefined);
+      (notificationServices.clearBadge as jest.Mock)
+        .mockReset()
+        .mockResolvedValue(undefined);
+      (notificationServices.checkPermissions as jest.Mock)
+        .mockReset()
+        .mockResolvedValue('granted');
+      (notificationServices.getNotificationsEnabled as jest.Mock)
+        .mockReset()
+        .mockResolvedValue(true);
       // Reset storage mocks (they'll be set up per-test)
       (storage.getAvailableReviews as jest.Mock).mockReset();
       (storage.getSubjectsByIds as jest.Mock).mockReset();
@@ -492,7 +497,9 @@ describe('ReviewsScreen', () => {
     });
 
     it('should not update badge when notification permissions are not granted', async () => {
-      (notificationServices.checkPermissions as jest.Mock).mockResolvedValue('denied');
+      (notificationServices.checkPermissions as jest.Mock).mockResolvedValue(
+        'denied',
+      );
 
       (storage.getAvailableReviews as jest.Mock)
         .mockResolvedValueOnce([sampleAssignments[0]])
@@ -527,8 +534,12 @@ describe('ReviewsScreen', () => {
     });
 
     it('should not update badge when notifications are disabled in settings', async () => {
-      (notificationServices.checkPermissions as jest.Mock).mockResolvedValue('granted');
-      (notificationServices.getNotificationsEnabled as jest.Mock).mockResolvedValue(false);
+      (notificationServices.checkPermissions as jest.Mock).mockResolvedValue(
+        'granted',
+      );
+      (
+        notificationServices.getNotificationsEnabled as jest.Mock
+      ).mockResolvedValue(false);
 
       (storage.getAvailableReviews as jest.Mock)
         .mockResolvedValueOnce([sampleAssignments[0]])
