@@ -82,3 +82,16 @@ Started:
   - Use `jest.mock('../../src/api')` and `jest.mock('../../src/storage')` to mock API/storage in tests
   - Use `findByTestId`/`findByText` (async) for elements that appear after state changes
 ---
+
+## 2026-01-27 - US-006
+- Created SyncScreen with loading indicator, status text, and auto-sync on mount
+- Uses getUserLevel(), syncSubjects(), syncAssignments() via WaniKaniClient
+- On success navigates to WizardNotification, on failure shows error with Retry button
+- Sync screen has gestureEnabled: false in navigator (no back navigation)
+- Files: src/screens/SyncScreen.tsx, __tests__/screens/SyncScreen.test.tsx, src/navigation/types.ts, src/navigation/RootNavigator.tsx
+- 6 tests pass, typecheck clean
+- **Learnings for future iterations:**
+  - syncSubjects and syncAssignments can run in parallel via Promise.all — getUserLevel must run first to get maxLevel
+  - Mock pattern for async useEffect: use `mockResolvedValue`/`mockRejectedValue` and `findByTestId`/`waitFor` for assertions
+  - Retry test: capture `mockFn.mock.calls.length` before pressing retry, then assert `calls.length > callsBefore` instead of exact count (avoids flaky tests from rapid re-renders)
+---
