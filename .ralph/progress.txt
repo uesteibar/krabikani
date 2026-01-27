@@ -29,3 +29,18 @@ Started:
   - Component uses Dimensions.get('window').width for page sizing
   - Dot indicators use opacity (1 vs 0.3) rather than filled/outline for active/inactive state
 ---
+
+## 2026-01-27 - US-002
+- Created Playwright script to capture WaniKani token generation flow screenshots
+- Script logs into WaniKani, navigates settings, captures 4 steps, generates a token, and cleans up
+- Files created: scripts/capture-wizard-screenshots.mjs, assets/wizard/step1-settings.png, step2-personal-access-tokens.png, step3-generate-token.png, step4-copy-token.png
+- Screenshots at 2x resolution (375px viewport, deviceScaleFactor: 2) for 750px output
+- **Learnings for future iterations:**
+  - WaniKani login uses `user[email]` not `user[login]` for the email field
+  - After login, WaniKani redirects to `/` not `/dashboard` — use `waitForNavigation()` instead of `waitForURL('**/dashboard')`
+  - The "Generate a new token" link goes to `/settings/personal_access_tokens/new` — navigate directly rather than clicking (Turbo/Hotwire may not work reliably with Playwright click)
+  - Token form uses `input[name="description"]` not `input[name="personal_access_token[description]"]`
+  - Submit button text is "Generate token" — use `button:has-text("Generate token")` selector
+  - Must `scrollIntoViewIfNeeded()` before clicking buttons that may be below viewport
+  - Cleanup: use `input[value="Expire"]` to find the Expire button for token cleanup
+---
