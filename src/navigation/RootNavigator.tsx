@@ -12,6 +12,7 @@ import { PracticeScreen } from '../screens/PracticeScreen';
 import { ReviewsScreen } from '../screens/ReviewsScreen';
 import { SearchScreen } from '../screens/SearchScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { SyncScreen } from '../screens/SyncScreen';
 import { InstructionsScreen } from '../screens/InstructionsScreen';
 import { VocabularyDetailScreen } from '../screens/VocabularyDetailScreen';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
@@ -69,6 +70,11 @@ export function RootNavigator() {
         name="ApiKeyInput"
         component={ApiKeyInputScreen}
         options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Sync"
+        component={SyncScreen}
+        options={{ headerShown: false, gestureEnabled: false }}
       />
       <Stack.Screen
         name="Home"
