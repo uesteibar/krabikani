@@ -1,7 +1,19 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { AccessibilityInfo } from 'react-native';
 
 import { LessonCompletion } from '../../src/components/LessonCompletion';
+
+// Mock AccessibilityInfo
+const mockIsReduceMotionEnabled = jest.fn(() => Promise.resolve(false));
+const mockAddEventListener = jest.fn(() => ({ remove: jest.fn() }));
+
+jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockImplementation(
+  mockIsReduceMotionEnabled,
+);
+jest.spyOn(AccessibilityInfo, 'addEventListener').mockImplementation(
+  mockAddEventListener as unknown as typeof AccessibilityInfo.addEventListener,
+);
 
 describe('LessonCompletion', () => {
   const defaultProps = {
@@ -14,6 +26,7 @@ describe('LessonCompletion', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockIsReduceMotionEnabled.mockResolvedValue(false);
   });
 
   describe('rendering', () => {
@@ -58,7 +71,7 @@ describe('LessonCompletion', () => {
         <LessonCompletion {...defaultProps} syncedOnline={true} />,
       );
 
-      expect(getByText('Synced with WaniKani')).toBeTruthy();
+      expect(getByText('Synced')).toBeTruthy();
     });
 
     it('should render sync status for offline queue', () => {
@@ -66,7 +79,7 @@ describe('LessonCompletion', () => {
         <LessonCompletion {...defaultProps} syncedOnline={false} />,
       );
 
-      expect(getByText('Queued for sync when online')).toBeTruthy();
+      expect(getByText('Queued')).toBeTruthy();
     });
   });
 
@@ -189,7 +202,6 @@ describe('LessonCompletion', () => {
         />,
       );
 
-      // No callbacks should be called on mount
       expect(onReturnToDashboard).not.toHaveBeenCalled();
       expect(onContinueLessons).not.toHaveBeenCalled();
     });
@@ -206,10 +218,8 @@ describe('LessonCompletion', () => {
         />,
       );
 
-      // Advance time significantly - simulating user waiting on the screen
-      jest.advanceTimersByTime(10000); // 10 seconds
+      jest.advanceTimersByTime(10000);
 
-      // Still no callbacks should be called
       expect(onReturnToDashboard).not.toHaveBeenCalled();
       expect(onContinueLessons).not.toHaveBeenCalled();
     });
@@ -226,13 +236,10 @@ describe('LessonCompletion', () => {
         />,
       );
 
-      // Verify screen is visible
       expect(getByTestId('lesson-completion')).toBeTruthy();
 
-      // Wait a long time
-      jest.advanceTimersByTime(60000); // 1 minute
+      jest.advanceTimersByTime(60000);
 
-      // Re-render to ensure no state changes occurred
       rerender(
         <LessonCompletion
           {...defaultProps}
@@ -241,10 +248,7 @@ describe('LessonCompletion', () => {
         />,
       );
 
-      // Screen should still be visible
       expect(getByTestId('lesson-completion')).toBeTruthy();
-
-      // No auto-navigation
       expect(onReturnToDashboard).not.toHaveBeenCalled();
       expect(onContinueLessons).not.toHaveBeenCalled();
     });
@@ -261,16 +265,11 @@ describe('LessonCompletion', () => {
         />,
       );
 
-      // Wait some time
       jest.advanceTimersByTime(5000);
-
-      // No callbacks yet
       expect(onContinueLessons).not.toHaveBeenCalled();
 
-      // Now press the button
       fireEvent.press(getByTestId('lesson-completion-continue'));
 
-      // Only now should the callback be called
       expect(onContinueLessons).toHaveBeenCalledTimes(1);
       expect(onReturnToDashboard).not.toHaveBeenCalled();
     });
@@ -287,18 +286,124 @@ describe('LessonCompletion', () => {
         />,
       );
 
-      // Wait some time
       jest.advanceTimersByTime(5000);
-
-      // No callbacks yet
       expect(onReturnToDashboard).not.toHaveBeenCalled();
 
-      // Now press the button
       fireEvent.press(getByTestId('lesson-completion-dashboard'));
 
-      // Only now should the callback be called
       expect(onReturnToDashboard).toHaveBeenCalledTimes(1);
       expect(onContinueLessons).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('staggered animations', () => {
+    it('should render all animated elements', () => {
+      const { getByTestId, getByText } = render(
+        <LessonCompletion {...defaultProps} />,
+      );
+
+      expect(getByTestId('lesson-completion-icon')).toBeTruthy();
+      expect(getByTestId('lesson-completion-title')).toBeTruthy();
+      expect(getByTestId('lesson-completion-count')).toBeTruthy();
+      expect(getByTestId('lesson-completion-sync-status')).toBeTruthy();
+      expect(getByTestId('lesson-completion-dashboard')).toBeTruthy();
+      expect(getByText('Return to Dashboard')).toBeTruthy();
+    });
+  });
+
+  describe('confetti animation', () => {
+    it('should show confetti particles when perfectQuiz is true', async () => {
+      const { queryByTestId } = render(
+        <LessonCompletion {...defaultProps} perfectQuiz={true} />,
+      );
+
+      await waitFor(() => {
+        expect(queryByTestId('confetti-particle-0')).toBeTruthy();
+        expect(queryByTestId('confetti-particle-5')).toBeTruthy();
+        expect(queryByTestId('confetti-particle-11')).toBeTruthy();
+      });
+    });
+
+    it('should not show confetti particles when perfectQuiz is false', () => {
+      const { queryByTestId } = render(
+        <LessonCompletion {...defaultProps} perfectQuiz={false} />,
+      );
+
+      expect(queryByTestId('confetti-particle-0')).toBeNull();
+    });
+
+    it('should not show confetti particles by default (perfectQuiz not passed)', () => {
+      const { queryByTestId } = render(
+        <LessonCompletion {...defaultProps} />,
+      );
+
+      expect(queryByTestId('confetti-particle-0')).toBeNull();
+    });
+  });
+
+  describe('reduced motion', () => {
+    it('should check reduced motion setting on mount', async () => {
+      render(<LessonCompletion {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(mockIsReduceMotionEnabled).toHaveBeenCalled();
+      });
+    });
+
+    it('should add event listener for reduced motion changes', async () => {
+      render(<LessonCompletion {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(mockAddEventListener).toHaveBeenCalledWith(
+          'reduceMotionChanged',
+          expect.any(Function),
+        );
+      });
+    });
+
+    it('should not show confetti when reduced motion is enabled', async () => {
+      mockIsReduceMotionEnabled.mockResolvedValue(true);
+
+      const { queryByTestId } = render(
+        <LessonCompletion {...defaultProps} perfectQuiz={true} />,
+      );
+
+      await waitFor(() => {
+        expect(queryByTestId('confetti-particle-0')).toBeNull();
+      });
+    });
+  });
+
+  describe('encouragement message', () => {
+    const encouragementMessages = [
+      'Great work! Keep up the momentum.',
+      'Every review brings you closer to mastery.',
+      'Consistency is the key to learning.',
+      'Your dedication is paying off!',
+      'One step closer to fluency.',
+      'Well done! Progress takes practice.',
+      'Keep showing up, and the rest follows.',
+      'Nice session! Small steps lead to big gains.',
+    ];
+
+    it('should render an encouragement message', () => {
+      const { getByTestId } = render(<LessonCompletion {...defaultProps} />);
+
+      const encouragementElement = getByTestId(
+        'lesson-completion-encouragement',
+      );
+      expect(encouragementElement).toBeTruthy();
+    });
+
+    it('should display a message from the predefined pool', () => {
+      const { getByTestId } = render(<LessonCompletion {...defaultProps} />);
+
+      const encouragementElement = getByTestId(
+        'lesson-completion-encouragement',
+      );
+      const messageText = encouragementElement.props.children;
+
+      expect(encouragementMessages).toContain(messageText);
     });
   });
 });

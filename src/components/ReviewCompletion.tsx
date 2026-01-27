@@ -31,8 +31,8 @@ import {
 } from '../theme';
 
 // Animation timing constants
-const STAGGER_DELAY = 600; // 600ms between each element (tripled from 200)
-const FADE_DURATION = 1500; // 1500ms for each fade (tripled from 500)
+const STAGGER_DELAY = 200;
+const FADE_DURATION = 500;
 const SLIDE_DISTANCE = 30; // pixels to slide up
 
 // Confetti configuration

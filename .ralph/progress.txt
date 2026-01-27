@@ -12,6 +12,7 @@
 - `subjectToReviewItem()` is duplicated per-screen (ReviewsScreen, PracticeScreen) — consider extracting if a third use appears
 - Quiz questions are shuffled — tests rendering LessonQuiz must handle either meaning or reading first; use `submitWrongAnswer` helper for question-type-agnostic wrong answer submission
 - Use React `key` prop to force component remount when scroll position needs resetting (e.g., `key={item.id}` on cards with ScrollView content)
+- Completion screens (LessonCompletion, ReviewCompletion) share the same animated pattern: animated checkmark, staggered fade-in (200ms delay, 500ms duration), confetti for perfect sessions, encouragement messages, and "Synced"/"Queued" badge
 
 Started:
 ---
@@ -74,5 +75,19 @@ Started:
   - LessonCard's ScrollView (content area) is the only scrollable element; the header and footer are fixed
   - The change is a single line addition; all 52 existing LessonBatch tests continue to pass since navigation behavior is unchanged
   - Pre-existing lint errors exist in SearchScreen.tsx and VocabularyDetailScreen.tsx (unused variables) — not related to this change
+---
+
+## 2026-01-27 - US-017
+- Implemented Unify Completion Screens feature
+- Files changed:
+  - `src/components/LessonCompletion.tsx` - Complete rewrite: added react-native-reanimated animations (staggered entrance, animated checkmark icon, confetti for perfect quiz), encouragement messages, sync status badge ("Synced"/"Queued"), ScrollView root container. Matches ReviewCompletion's visual pattern.
+  - `src/components/ReviewCompletion.tsx` - Reduced animation timing: STAGGER_DELAY 600→200ms, FADE_DURATION 1500→500ms
+  - `__tests__/components/LessonCompletion.test.tsx` - Updated tests for new animated design: added AccessibilityInfo mocks, tests for confetti (perfectQuiz prop), reduced motion, encouragement messages, staggered animations. Updated sync status text expectations from "Synced with WaniKani"/"Queued for sync when online" to "Synced"/"Queued".
+- **Learnings for future iterations:**
+  - Both completion screens now follow the same visual pattern: animated checkmark icon → title → summary → encouragement → sync badge → action buttons
+  - LessonCompletion uses `perfectQuiz` boolean prop (defaults to false) to trigger confetti, while ReviewCompletion uses `incorrectCount === 0`
+  - Sync status badge text is now "Synced"/"Queued" on both screens (shorter, matching style)
+  - Both screens share the same STAGGER_DELAY (200ms) and FADE_DURATION (500ms) constants
+  - Pre-existing failing test in ReviewSession.test.tsx (wrap-up mode incorrect feedback) — not related to completion screen changes
 ---
 
