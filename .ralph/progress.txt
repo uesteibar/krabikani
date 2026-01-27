@@ -118,3 +118,15 @@ Started:
   - Use `navigation.reset({ index: 0, routes: [{ name: 'Home' }] })` to replace entire navigation stack
   - Image source uses `require('../../assets/cabrigator-icon.png')` — same as WelcomeScreen
 ---
+
+## 2026-01-27 - US-009
+- Modified RootNavigator to check hasApiKey() on mount and set initialRoute accordingly
+- If no API key: starts at Welcome screen (wizard). If API key exists: starts at Home
+- Returns null while checking (avoids flash of wrong screen)
+- Files: src/navigation/RootNavigator.tsx, __tests__/navigation/RootNavigator.test.tsx
+- 2 tests pass, typecheck clean
+- **Learnings for future iterations:**
+  - RootNavigator uses useState<keyof RootStackParamList | null>(null) for async initial route — returns null until resolved
+  - Navigator tests need to mock all screen components to avoid heavy dependencies — use `jest.mock()` for each screen
+  - Wrap RootNavigator in both ThemeProvider and NavigationContainer for tests
+---
