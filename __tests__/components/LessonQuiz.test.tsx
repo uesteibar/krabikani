@@ -149,6 +149,21 @@ const defaultProps: LessonQuizProps = {
   autoAdvanceDelay: 0, // No delay for tests
 };
 
+/**
+ * Submit a wrong answer for the current question regardless of type.
+ * Meaning questions accept English text ('wrong'), reading questions
+ * need romaji/hiragana so we use 'a' (converts to 'あ').
+ */
+function submitWrongAnswer(
+  getByTestId: (id: string) => ReturnType<typeof render>['getByTestId'] extends (id: string) => infer R ? R : never,
+) {
+  const type = getByTestId('lesson-quiz-question-type').props.children;
+  const input = getByTestId('lesson-quiz-input');
+  const wrongText = type === 'READING' ? 'a' : 'wrong';
+  fireEvent.changeText(input, wrongText);
+  fireEvent(input, 'submitEditing');
+}
+
 describe('LessonQuiz', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -225,6 +240,62 @@ describe('LessonQuiz', () => {
     it('returns empty array for empty items', () => {
       const questions = generateQuizQuestions([]);
       expect(questions).toEqual([]);
+    });
+
+    it('shuffles the quiz questions (not always in item order)', () => {
+      // With 5 items producing 8 questions, the chance of a shuffle
+      // returning the exact original order is 1/8! = 1/40320.
+      // Running 5 trials makes a false-negative astronomically unlikely.
+      const items = fiveItems;
+      const unshuffledKeys = [
+        `${items[0].id}-meaning`,
+        `${items[1].id}-meaning`,
+        `${items[1].id}-reading`,
+        `${items[2].id}-meaning`,
+        `${items[2].id}-reading`,
+        `${items[3].id}-meaning`,
+        `${items[3].id}-reading`,
+        `${items[4].id}-meaning`,
+      ];
+
+      let sawDifferentOrder = false;
+      for (let i = 0; i < 5; i++) {
+        const questions = generateQuizQuestions(items);
+        const keys = questions.map(q => q.key);
+
+        // Same questions, same count
+        expect(keys.length).toBe(unshuffledKeys.length);
+        expect(new Set(keys)).toEqual(new Set(unshuffledKeys));
+
+        // Check if this trial produced a different order
+        if (keys.some((key, idx) => key !== unshuffledKeys[idx])) {
+          sawDifferentOrder = true;
+        }
+      }
+
+      expect(sawDifferentOrder).toBe(true);
+    });
+
+    it('randomizes meaning/reading order per item', () => {
+      // For a single kanji item, meaning and reading can appear in either order.
+      // Over multiple runs, we should see both orderings.
+      const items = [sampleKanji];
+      let sawMeaningFirst = false;
+      let sawReadingFirst = false;
+
+      for (let i = 0; i < 20; i++) {
+        const questions = generateQuizQuestions(items);
+        expect(questions.length).toBe(2);
+        if (questions[0].type === 'meaning') {
+          sawMeaningFirst = true;
+        } else {
+          sawReadingFirst = true;
+        }
+        if (sawMeaningFirst && sawReadingFirst) break;
+      }
+
+      expect(sawMeaningFirst).toBe(true);
+      expect(sawReadingFirst).toBe(true);
     });
   });
 
@@ -907,8 +978,8 @@ describe('LessonQuiz', () => {
         .children;
 
       if (questionType === 'READING') {
-        // Submit wrong answer
-        fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
+        // Submit wrong romaji answer (converts to hiragana 'あ')
+        fireEvent.changeText(getByTestId('lesson-quiz-input'), 'a');
         fireEvent.press(getByTestId('lesson-quiz-submit'));
 
         // Should show reading mnemonic
@@ -1717,7 +1788,7 @@ describe('LessonQuiz', () => {
       ],
     };
 
-    it('shows component radicals on incorrect kanji meaning answer', () => {
+    it('shows component radicals on incorrect kanji answer', () => {
       const { getByTestId, getByText } = render(
         <LessonQuiz
           items={[kanjiWithRadicals]}
@@ -1726,14 +1797,8 @@ describe('LessonQuiz', () => {
         />,
       );
 
-      // Should be on meaning question
-      const type = getByTestId('lesson-quiz-question-type').props.children;
-      expect(type).toBe('MEANING');
-
-      // Submit wrong answer
-      const input = getByTestId('lesson-quiz-input');
-      fireEvent.changeText(input, 'wrong');
-      fireEvent(input, 'submitEditing');
+      // Submit wrong answer (handles both meaning and reading questions)
+      submitWrongAnswer(getByTestId);
 
       act(() => {
         jest.runAllTimers();
@@ -1761,20 +1826,25 @@ describe('LessonQuiz', () => {
         />,
       );
 
-      // First, answer meaning question correctly
       const input = getByTestId('lesson-quiz-input');
-      fireEvent.changeText(input, 'forest');
-      fireEvent(input, 'submitEditing');
+      const firstType = getByTestId('lesson-quiz-question-type').props.children;
 
-      act(() => {
-        jest.runAllTimers();
-      });
+      if (firstType === 'MEANING') {
+        // Answer meaning correctly first, then get reading
+        fireEvent.changeText(input, 'forest');
+        fireEvent(input, 'submitEditing');
 
-      // Should now be on reading question
-      const type = getByTestId('lesson-quiz-question-type').props.children;
-      expect(type).toBe('READING');
+        act(() => {
+          jest.runAllTimers();
+        });
 
-      // Submit wrong answer (use valid hiragana, not romaji that can't convert)
+        // Should now be on reading question
+        expect(
+          getByTestId('lesson-quiz-question-type').props.children,
+        ).toBe('READING');
+      }
+
+      // Submit wrong reading answer
       fireEvent.changeText(input, 'あああ');
       fireEvent(input, 'submitEditing');
 
@@ -1801,10 +1871,8 @@ describe('LessonQuiz', () => {
         />,
       );
 
-      // Submit wrong answer
-      const input = getByTestId('lesson-quiz-input');
-      fireEvent.changeText(input, 'wrong');
-      fireEvent(input, 'submitEditing');
+      // Submit wrong answer (handles both meaning and reading questions)
+      submitWrongAnswer(getByTestId);
 
       act(() => {
         jest.runAllTimers();
@@ -1851,10 +1919,8 @@ describe('LessonQuiz', () => {
         />,
       );
 
-      // Submit wrong answer
-      const input = getByTestId('lesson-quiz-input');
-      fireEvent.changeText(input, 'wrong');
-      fireEvent(input, 'submitEditing');
+      // Submit wrong answer (handles both meaning and reading questions)
+      submitWrongAnswer(getByTestId);
 
       act(() => {
         jest.runAllTimers();
@@ -1876,10 +1942,8 @@ describe('LessonQuiz', () => {
         />,
       );
 
-      // Submit wrong answer
-      const input = getByTestId('lesson-quiz-input');
-      fireEvent.changeText(input, 'wrong');
-      fireEvent(input, 'submitEditing');
+      // Submit wrong answer (handles both meaning and reading questions)
+      submitWrongAnswer(getByTestId);
 
       act(() => {
         jest.runAllTimers();
@@ -2002,10 +2066,8 @@ describe('LessonQuiz', () => {
         />,
       );
 
-      // Submit wrong answer
-      const input = getByTestId('lesson-quiz-input');
-      fireEvent.changeText(input, 'wrong');
-      fireEvent(input, 'submitEditing');
+      // Submit wrong answer (handles both meaning and reading questions)
+      submitWrongAnswer(getByTestId);
 
       act(() => {
         jest.runAllTimers();
@@ -2027,10 +2089,8 @@ describe('LessonQuiz', () => {
         />,
       );
 
-      // Submit wrong answer
-      const input = getByTestId('lesson-quiz-input');
-      fireEvent.changeText(input, 'wrong');
-      fireEvent(input, 'submitEditing');
+      // Submit wrong answer (handles both meaning and reading questions)
+      submitWrongAnswer(getByTestId);
 
       act(() => {
         jest.runAllTimers();
@@ -2113,10 +2173,8 @@ describe('LessonQuiz', () => {
         />,
       );
 
-      // Submit wrong answer
-      const input = getByTestId('lesson-quiz-input');
-      fireEvent.changeText(input, 'wrong');
-      fireEvent(input, 'submitEditing');
+      // Submit wrong answer (handles both meaning and reading questions)
+      submitWrongAnswer(getByTestId);
 
       act(() => {
         jest.runAllTimers();

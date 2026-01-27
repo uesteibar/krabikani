@@ -10,6 +10,7 @@
 - searchSubjects(query, hiraganaQuery, limit) returns learned items - caller should pre-convert romaji to hiragana using romajiToHiragana() from src/utils
 - `getPracticeItems(limit)` returns random learned items (srs_stage >= 5) excluding currently pending reviews
 - `subjectToReviewItem()` is duplicated per-screen (ReviewsScreen, PracticeScreen) — consider extracting if a third use appears
+- Quiz questions are shuffled — tests rendering LessonQuiz must handle either meaning or reading first; use `submitWrongAnswer` helper for question-type-agnostic wrong answer submission
 
 Started:
 ---
@@ -49,5 +50,17 @@ Started:
   - Results list is collapsed by default via "View Results" toggle for a clean initial appearance
   - Items with zero total incorrect answers (meaning + reading) are marked correct; any incorrect answers marks the item as failed
   - The search screen list style was matched: left color accent bar (5px, subject-type color), character on left, meaning · reading on right, correct/incorrect indicator
+---
+
+## 2026-01-27 - US-015
+- Implemented Randomize Lesson Quiz Questions feature
+- Files changed:
+  - `src/components/LessonQuiz.tsx` - Changed `generateQuizQuestions` to shuffle the final question array using `shuffleArray` (Fisher-Yates). Removed the "do not shuffle" comment and updated JSDoc.
+  - `__tests__/components/LessonQuiz.test.tsx` - Added 2 new tests (shuffle verification + meaning/reading order randomization). Added `submitWrongAnswer` helper to handle both question types in tests. Fixed 6 existing tests that assumed deterministic question order.
+- **Learnings for future iterations:**
+  - `generateQuizQuestions` now shuffles output — tests that render LessonQuiz with non-radical items must handle either meaning or reading appearing first
+  - The `submitWrongAnswer` test helper detects question type and submits appropriate wrong answer ('wrong' for meaning, 'a' for reading which converts to hiragana 'あ')
+  - Reading input validation rejects English text — tests submitting wrong answers to reading questions must use romaji or hiragana, not English words
+  - `shuffleArray` is defined in LessonQuiz.tsx (after `generateQuizQuestions`) but hoisting makes it callable from within the same module
 ---
 

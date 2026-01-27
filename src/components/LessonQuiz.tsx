@@ -165,8 +165,7 @@ function getAcceptedReadingsDisplay(
 /**
  * Generates quiz questions for a set of items.
  * Each item gets a meaning question (and reading question if not a radical).
- * Questions are kept in order (not shuffled) - meaning first, then reading for each item.
- * This preserves the lesson order, unlike reviews which are randomized.
+ * The final question array is shuffled so users don't memorize answers by position.
  */
 export function generateQuizQuestions(items: QuizItem[]): QuizQuestion[] {
   const questions: QuizQuestion[] = [];
@@ -189,8 +188,7 @@ export function generateQuizQuestions(items: QuizItem[]): QuizQuestion[] {
     }
   }
 
-  // Lessons maintain order - do not shuffle
-  return questions;
+  return shuffleArray(questions);
 }
 
 /**
