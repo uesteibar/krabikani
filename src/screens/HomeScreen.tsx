@@ -29,9 +29,7 @@ import {
   OfflineIndicator,
   LastSyncedIndicator,
   DashboardStats,
-
   PendingSyncIndicator,
-  SyncingIndicator,
   LevelIndicator,
   LearnedCounts,
   UpcomingReviewsChart,
@@ -409,8 +407,6 @@ export function HomeScreen() {
               />
             )}
           </View>
-          <LastSyncedIndicator lastSyncedAt={syncStatus.lastSyncedAt} />
-          <SyncingIndicator isSyncing={refreshing} />
           <PendingSyncIndicator
             pendingLessonsCount={pendingData.pendingLessonsCount}
             pendingReviewsCount={pendingData.pendingReviewsCount}
@@ -471,6 +467,13 @@ export function HomeScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+          <LastSyncedIndicator
+            lastSyncedAt={syncStatus.lastSyncedAt}
+            hasPendingContent={
+              pendingData.pendingLessonsCount > 0 ||
+              pendingData.pendingReviewsCount > 0
+            }
+          />
         </View>
       </ScrollView>
     </View>

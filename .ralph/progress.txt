@@ -190,3 +190,33 @@ Started:
   - Testing buffer cap with many items: use radicals (1 question each) and answer wrong to introduce without completing; verify next question shows an already-introduced item
 ---
 
+## 2026-01-27 - UX Polish Batch (Review, Home, Search, Practice screens)
+- **ReviewCompletion**: Removed results toggle — results list always visible. Fixed "Go to Dashboard" button at bottom of screen outside ScrollView (rootContainer > ScrollView + fixedButtonContainer pattern).
+- **ReviewSession correct/incorrect labels**: Made `correctLabel` and `incorrectLabel` absolutely positioned (`position: 'absolute', bottom: SPACING.md`) to prevent kanji box height glitch when feedback appears.
+- **ReviewSession incorrect buttons**: Added `paddingTop: SPACING.lg` to `incorrectButtonRow` for breathing room from content above.
+- **ReviewSession character box**: Increased `paddingVertical` from 48 to 64 for a taller input area closer to keyboard.
+- **ReviewSession wrap-up button**: Added `minWidth: 100` to `wrapUpButton` to prevent width changes when toggling between "Wrap Up" and "Cancel" text.
+- **Mode banners**: Added banners replacing empty progress bar space in zen/practice modes. Zen mode shows "○ Zen Mode" banner, practice mode shows random motivational phrase with "◇" icon. Both `modeBanner` and `progressContainer` use fixed `height: 50` for layout consistency.
+- **Zen mode SRS badge**: Changed SRS badge condition from `showProgressStats` to `!zenModeEnabled` so SRS level is never shown in zen mode, even during wrap-up.
+- **LastSyncedIndicator**: Restyled from plain text to color-coded badge (green dot + text when synced, orange when pending content). Added `hasPendingContent` prop. Uses `COLORS.status.pendingSync` and `COLORS.feedback.correct`.
+- **HomeScreen**: Removed `SyncingIndicator` (redundant). Moved `LastSyncedIndicator` below settings button. Connected `hasPendingContent` prop to pending lessons/reviews data.
+- **SearchScreen**: Fixed "enter a search item" text hidden by keyboard — removed `flex: 1`/`justifyContent: 'center'` from `emptyStateContainer`, added `paddingTop: SPACING.xl` for fixed positioning below search bar.
+- **PracticeScreen**: Added motivational phrase banner (random from 8 phrases via `useMemo`), increased `characterContainer` `paddingVertical` to 64.
+- Files changed:
+  - `src/components/ReviewCompletion.tsx` - Removed toggle, fixed button at bottom, rootContainer/fixedButtonContainer pattern
+  - `src/components/ReviewSession.tsx` - Absolute-positioned labels, increased character box padding, mode banner, SRS badge zen mode fix, wrap-up button minWidth
+  - `src/components/LastSyncedIndicator.tsx` - Color-coded badge restyle, added hasPendingContent prop
+  - `src/screens/HomeScreen.tsx` - Removed SyncingIndicator, moved LastSyncedIndicator, connected hasPendingContent
+  - `src/screens/SearchScreen.tsx` - Fixed empty state positioning for keyboard visibility
+  - `src/screens/PracticeScreen.tsx` - Added motivational phrase banner, increased character box padding
+  - `__tests__/components/ReviewCompletion.test.tsx` - Rewrote 6 toggle tests into 4 always-visible tests
+  - `__tests__/components/LastSyncedIndicator.test.tsx` - Updated text assertions for split label/value markup
+  - `__tests__/components/ReviewSession.test.tsx` - Updated zen mode SRS badge tests (badge hidden during wrap-up in zen mode)
+  - `__tests__/screens/HomeScreen.test.tsx` - Removed 3 SyncingIndicator tests, updated LastSynced text assertions for split markup
+- **Learnings for future iterations:**
+  - Fixed button at bottom pattern: `View (flex:1) > ScrollView (flex:1) + View (fixed)` — keeps button always visible regardless of scroll content
+  - `position: 'absolute'` on dynamic feedback labels prevents parent container height changes
+  - Fixed `height` (not `minHeight`) on interchangeable containers (progress bar vs mode banner) prevents layout shifts
+  - `useMemo(() => phrases[random], [])` selects phrase once per mount — prevents re-randomization on re-renders
+  - SRS badge visibility is controlled by `!zenModeEnabled` (not `showProgressStats`) to keep it hidden in zen mode even when progress bar is shown during wrap-up
+---

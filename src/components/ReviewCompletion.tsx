@@ -163,8 +163,6 @@ export function ReviewCompletion({
   onReturnToDashboard,
   resultItems,
 }: ReviewCompletionProps) {
-  // Results list toggle state
-  const [showResults, setShowResults] = useState(false);
   // Track reduced motion preference
   const [reduceMotion, setReduceMotion] = useState(false);
 
@@ -423,108 +421,105 @@ export function ReviewCompletion({
   }));
 
   const hasIncorrect = incorrectCount > 0;
-  const correctCount = itemsReviewed - (resultItems?.filter(r => !r.isCorrect).length ?? 0);
+  const correctCount =
+    itemsReviewed - (resultItems?.filter(r => !r.isCorrect).length ?? 0);
   const failedCount = resultItems?.filter(r => !r.isCorrect).length ?? 0;
 
   return (
-    <ScrollView
-      style={styles.scrollContainer}
-      contentContainerStyle={styles.container}
-      testID="review-completion"
-    >
-      {/* Confetti particles (only for perfect sessions) */}
-      {confettiParticles.map(({ id, color }) => (
-        <ConfettiParticle
-          key={id}
-          index={id}
-          progress={confettiProgress}
-          startX={40} // Center of icon
-          startY={40} // Center of icon
-          color={color}
-        />
-      ))}
-
-      {/* Animated success icon */}
-      <Animated.View
-        style={[styles.iconContainer, iconAnimatedStyle]}
-        testID="review-completion-icon"
+    <View style={styles.rootContainer} testID="review-completion">
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.container}
       >
-        <Animated.Text style={[styles.icon, checkmarkAnimatedStyle]}>
-          ✓
-        </Animated.Text>
-      </Animated.View>
+        {/* Confetti particles (only for perfect sessions) */}
+        {confettiParticles.map(({ id, color }) => (
+          <ConfettiParticle
+            key={id}
+            index={id}
+            progress={confettiProgress}
+            startX={40} // Center of icon
+            startY={40} // Center of icon
+            color={color}
+          />
+        ))}
 
-      {/* Title */}
-      <Animated.Text
-        style={[styles.title, titleAnimatedStyle]}
-        testID="review-completion-title"
-      >
-        Reviews Complete!
-      </Animated.Text>
-
-      {/* Summary stats: N correct, M incorrect */}
-      <Animated.View style={[styles.summaryContainer, countAnimatedStyle]}>
-        {resultItems && resultItems.length > 0 ? (
-          <View style={styles.summaryStatsRow} testID="review-completion-stats">
-            <Text style={styles.summaryStatCorrect}>
-              {correctCount} correct
-            </Text>
-            <Text style={styles.summaryStatSeparator}>·</Text>
-            <Text style={styles.summaryStatIncorrect}>
-              {failedCount} incorrect
-            </Text>
-          </View>
-        ) : (
-          <>
-            <Text style={styles.summaryNumber} testID="review-completion-count">
-              {itemsReviewed}
-            </Text>
-            <Text style={styles.summaryLabel} testID="review-completion-label">
-              {itemsReviewed === 1 ? 'item reviewed' : 'items reviewed'}
-            </Text>
-          </>
-        )}
-      </Animated.View>
-
-      {/* Encouragement message */}
-      <Animated.Text
-        style={[styles.encouragementText, encouragementAnimatedStyle]}
-        testID="review-completion-encouragement"
-      >
-        {encouragementMessage}
-      </Animated.Text>
-
-      {/* Incorrect count - only show if > 0 and no results list */}
-      {hasIncorrect && (!resultItems || resultItems.length === 0) && (
+        {/* Animated success icon */}
         <Animated.View
-          style={[styles.incorrectContainer, incorrectAnimatedStyle]}
-          testID="review-completion-incorrect"
+          style={[styles.iconContainer, iconAnimatedStyle]}
+          testID="review-completion-icon"
         >
-          <Text style={styles.incorrectCount}>{incorrectCount}</Text>
-          <Text style={styles.incorrectLabel}>
-            {incorrectCount === 1 ? 'incorrect answer' : 'incorrect answers'}
-          </Text>
+          <Animated.Text style={[styles.icon, checkmarkAnimatedStyle]}>
+            ✓
+          </Animated.Text>
         </Animated.View>
-      )}
 
-      {/* Expandable results list */}
-      {resultItems && resultItems.length > 0 && (
-        <Animated.View style={[styles.resultsSection, incorrectAnimatedStyle]}>
-          <TouchableOpacity
-            style={styles.resultsToggle}
-            onPress={() => setShowResults(prev => !prev)}
-            activeOpacity={0.7}
-            testID="review-completion-results-toggle"
+        {/* Title */}
+        <Animated.Text
+          style={[styles.title, titleAnimatedStyle]}
+          testID="review-completion-title"
+        >
+          Reviews Complete!
+        </Animated.Text>
+
+        {/* Summary stats: N correct, M incorrect */}
+        <Animated.View style={[styles.summaryContainer, countAnimatedStyle]}>
+          {resultItems && resultItems.length > 0 ? (
+            <View
+              style={styles.summaryStatsRow}
+              testID="review-completion-stats"
+            >
+              <Text style={styles.summaryStatCorrect}>
+                {correctCount} correct
+              </Text>
+              <Text style={styles.summaryStatSeparator}>·</Text>
+              <Text style={styles.summaryStatIncorrect}>
+                {failedCount} incorrect
+              </Text>
+            </View>
+          ) : (
+            <>
+              <Text
+                style={styles.summaryNumber}
+                testID="review-completion-count"
+              >
+                {itemsReviewed}
+              </Text>
+              <Text
+                style={styles.summaryLabel}
+                testID="review-completion-label"
+              >
+                {itemsReviewed === 1 ? 'item reviewed' : 'items reviewed'}
+              </Text>
+            </>
+          )}
+        </Animated.View>
+
+        {/* Encouragement message */}
+        <Animated.Text
+          style={[styles.encouragementText, encouragementAnimatedStyle]}
+          testID="review-completion-encouragement"
+        >
+          {encouragementMessage}
+        </Animated.Text>
+
+        {/* Incorrect count - only show if > 0 and no results list */}
+        {hasIncorrect && (!resultItems || resultItems.length === 0) && (
+          <Animated.View
+            style={[styles.incorrectContainer, incorrectAnimatedStyle]}
+            testID="review-completion-incorrect"
           >
-            <Text style={styles.resultsToggleText}>
-              {showResults ? 'Hide Results' : 'View Results'}
+            <Text style={styles.incorrectCount}>{incorrectCount}</Text>
+            <Text style={styles.incorrectLabel}>
+              {incorrectCount === 1 ? 'incorrect answer' : 'incorrect answers'}
             </Text>
-            <Text style={styles.resultsToggleArrow}>
-              {showResults ? '▲' : '▼'}
-            </Text>
-          </TouchableOpacity>
+          </Animated.View>
+        )}
 
-          {showResults && (
+        {/* Results list */}
+        {resultItems && resultItems.length > 0 && (
+          <Animated.View
+            style={[styles.resultsSection, incorrectAnimatedStyle]}
+          >
             <View
               style={styles.resultsList}
               testID="review-completion-results-list"
@@ -578,33 +573,33 @@ export function ReviewCompletion({
                 </View>
               ))}
             </View>
-          )}
-        </Animated.View>
-      )}
+          </Animated.View>
+        )}
 
-      {/* Sync status badge */}
-      <Animated.View
-        style={[
-          styles.syncStatusContainer,
-          syncedOnline ? styles.syncStatusOnline : styles.syncStatusOffline,
-          syncAnimatedStyle,
-        ]}
-        testID="review-completion-sync-status"
-      >
-        <Text
+        {/* Sync status badge */}
+        <Animated.View
           style={[
-            styles.syncStatusText,
-            syncedOnline
-              ? styles.syncStatusTextOnline
-              : styles.syncStatusTextOffline,
+            styles.syncStatusContainer,
+            syncedOnline ? styles.syncStatusOnline : styles.syncStatusOffline,
+            syncAnimatedStyle,
           ]}
+          testID="review-completion-sync-status"
         >
-          {syncedOnline ? 'Synced' : 'Queued'}
-        </Text>
-      </Animated.View>
+          <Text
+            style={[
+              styles.syncStatusText,
+              syncedOnline
+                ? styles.syncStatusTextOnline
+                : styles.syncStatusTextOffline,
+            ]}
+          >
+            {syncedOnline ? 'Synced' : 'Queued'}
+          </Text>
+        </Animated.View>
+      </ScrollView>
 
-      {/* Return to Dashboard button */}
-      <Animated.View style={[styles.actionsContainer, buttonAnimatedStyle]}>
+      {/* Fixed button at the bottom */}
+      <Animated.View style={[styles.fixedButtonContainer, buttonAnimatedStyle]}>
         <TouchableOpacity
           style={styles.dashboardButton}
           onPress={onReturnToDashboard}
@@ -614,14 +609,17 @@ export function ReviewCompletion({
           <Text style={styles.dashboardButtonText}>Return to Dashboard</Text>
         </TouchableOpacity>
       </Animated.View>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContainer: {
+  rootContainer: {
     flex: 1,
     backgroundColor: COLORS.background.primary,
+  },
+  scrollContainer: {
+    flex: 1,
   },
   container: {
     alignItems: 'center',
@@ -629,6 +627,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xxl,
     paddingVertical: SPACING.xxxl,
     flexGrow: 1,
+  },
+  fixedButtonContainer: {
+    paddingHorizontal: SPACING.xxl,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.xxxl,
+    backgroundColor: COLORS.background.primary,
   },
   iconContainer: {
     width: 80,
@@ -714,10 +718,6 @@ const styles = StyleSheet.create({
   syncStatusTextOffline: {
     color: COLORS.feedback.warning,
   },
-  actionsContainer: {
-    width: '100%',
-    gap: SPACING.md,
-  },
   dashboardButton: {
     backgroundColor: DASHBOARD_COLORS.reviews,
     paddingVertical: SPACING.lg,
@@ -767,24 +767,7 @@ const styles = StyleSheet.create({
     width: '100%',
     marginBottom: SPACING.lg,
   },
-  resultsToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: SPACING.md,
-    gap: SPACING.sm,
-  },
-  resultsToggleText: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: '600',
-    color: COLORS.text.secondary,
-  },
-  resultsToggleArrow: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.text.tertiary,
-  },
   resultsList: {
-    marginTop: SPACING.sm,
     borderRadius: BORDER_RADIUS.md,
     overflow: 'hidden',
     borderWidth: 1,

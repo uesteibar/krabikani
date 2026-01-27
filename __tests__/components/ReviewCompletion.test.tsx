@@ -11,12 +11,14 @@ import {
 const mockIsReduceMotionEnabled = jest.fn(() => Promise.resolve(false));
 const mockAddEventListener = jest.fn(() => ({ remove: jest.fn() }));
 
-jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockImplementation(
-  mockIsReduceMotionEnabled,
-);
-jest.spyOn(AccessibilityInfo, 'addEventListener').mockImplementation(
-  mockAddEventListener as unknown as typeof AccessibilityInfo.addEventListener,
-);
+jest
+  .spyOn(AccessibilityInfo, 'isReduceMotionEnabled')
+  .mockImplementation(mockIsReduceMotionEnabled);
+jest
+  .spyOn(AccessibilityInfo, 'addEventListener')
+  .mockImplementation(
+    mockAddEventListener as unknown as typeof AccessibilityInfo.addEventListener,
+  );
 
 describe('ReviewCompletion', () => {
   const defaultProps = {
@@ -355,9 +357,8 @@ describe('ReviewCompletion', () => {
         const { getByTestId, unmount } = render(
           <ReviewCompletion {...defaultProps} />,
         );
-        const messageText = getByTestId(
-          'review-completion-encouragement',
-        ).props.children;
+        const messageText = getByTestId('review-completion-encouragement').props
+          .children;
         messages.add(messageText);
         unmount();
       }
@@ -424,33 +425,18 @@ describe('ReviewCompletion', () => {
       expect(queryByTestId('review-completion-incorrect')).toBeNull();
     });
 
-    it('should show View Results toggle collapsed by default', () => {
-      const { getByTestId, getByText, queryByTestId } = render(
+    it('should show results list immediately when resultItems is provided', () => {
+      const { getByTestId } = render(
         <ReviewCompletion {...propsWithResults} />,
       );
-
-      expect(getByTestId('review-completion-results-toggle')).toBeTruthy();
-      expect(getByText('View Results')).toBeTruthy();
-      expect(queryByTestId('review-completion-results-list')).toBeNull();
-    });
-
-    it('should expand results list when toggle is pressed', () => {
-      const { getByTestId, getByText } = render(
-        <ReviewCompletion {...propsWithResults} />,
-      );
-
-      fireEvent.press(getByTestId('review-completion-results-toggle'));
 
       expect(getByTestId('review-completion-results-list')).toBeTruthy();
-      expect(getByText('Hide Results')).toBeTruthy();
     });
 
     it('should show each result item with characters, meaning, and reading', () => {
       const { getByTestId, getByText } = render(
         <ReviewCompletion {...propsWithResults} />,
       );
-
-      fireEvent.press(getByTestId('review-completion-results-toggle'));
 
       // Kanji item
       expect(getByTestId('review-result-1')).toBeTruthy();
@@ -475,8 +461,6 @@ describe('ReviewCompletion', () => {
         <ReviewCompletion {...propsWithResults} />,
       );
 
-      fireEvent.press(getByTestId('review-completion-results-toggle'));
-
       const correctIndicator = getByTestId('review-result-indicator-1');
       expect(correctIndicator.props.children).toBe('✓');
     });
@@ -486,41 +470,22 @@ describe('ReviewCompletion', () => {
         <ReviewCompletion {...propsWithResults} />,
       );
 
-      fireEvent.press(getByTestId('review-completion-results-toggle'));
-
       const incorrectIndicator = getByTestId('review-result-indicator-2');
       expect(incorrectIndicator.props.children).toBe('✗');
     });
 
-    it('should collapse results list when toggle is pressed again', () => {
-      const { getByTestId, queryByTestId, getByText } = render(
-        <ReviewCompletion {...propsWithResults} />,
-      );
+    it('should not show results list when resultItems is not provided', () => {
+      const { queryByTestId } = render(<ReviewCompletion {...defaultProps} />);
 
-      // Expand
-      fireEvent.press(getByTestId('review-completion-results-toggle'));
-      expect(getByTestId('review-completion-results-list')).toBeTruthy();
-
-      // Collapse
-      fireEvent.press(getByTestId('review-completion-results-toggle'));
       expect(queryByTestId('review-completion-results-list')).toBeNull();
-      expect(getByText('View Results')).toBeTruthy();
     });
 
-    it('should not show results toggle when resultItems is not provided', () => {
-      const { queryByTestId } = render(
-        <ReviewCompletion {...defaultProps} />,
-      );
-
-      expect(queryByTestId('review-completion-results-toggle')).toBeNull();
-    });
-
-    it('should not show results toggle when resultItems is empty', () => {
+    it('should not show results list when resultItems is empty', () => {
       const { queryByTestId } = render(
         <ReviewCompletion {...defaultProps} resultItems={[]} />,
       );
 
-      expect(queryByTestId('review-completion-results-toggle')).toBeNull();
+      expect(queryByTestId('review-completion-results-list')).toBeNull();
     });
 
     it('should show fallback count display when resultItems is not provided', () => {

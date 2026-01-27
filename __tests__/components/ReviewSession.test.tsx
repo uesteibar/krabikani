@@ -1090,10 +1090,7 @@ describe('ReviewSession', () => {
         meanings: createMeanings([{ meaning: 'Beautiful', primary: true }]),
       };
       const { getByTestId, queryByTestId } = render(
-        <ReviewSession
-          items={[itemWithLongMeaning]}
-          autoAdvanceDelay={100}
-        />,
+        <ReviewSession items={[itemWithLongMeaning]} autoAdvanceDelay={100} />,
       );
 
       const type = getByTestId('review-session-question-type').props.children;
@@ -1106,9 +1103,9 @@ describe('ReviewSession', () => {
         // Should show fuzzy match label instead of correct label
         expect(queryByTestId('review-session-fuzzy-match-label')).toBeTruthy();
         expect(queryByTestId('review-session-correct-label')).toBeNull();
-        expect(getByTestId('review-session-fuzzy-match-label').props.children).toBe(
-          'Close enough!',
-        );
+        expect(
+          getByTestId('review-session-fuzzy-match-label').props.children,
+        ).toBe('Close enough!');
       }
     });
 
@@ -1245,9 +1242,7 @@ describe('ReviewSession', () => {
     });
 
     it('should show meaning mnemonic for meaning questions', () => {
-      const { getByTestId } = render(
-        <ReviewSession items={[sampleRadical]} />,
-      );
+      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
 
       const input = getByTestId('review-session-input');
       const submit = getByTestId('review-session-submit');
@@ -1968,7 +1963,10 @@ describe('ReviewSession', () => {
       );
 
       // Submit wrong answer
-      fireEvent.changeText(getByTestId('review-session-input'), 'my typo answer');
+      fireEvent.changeText(
+        getByTestId('review-session-input'),
+        'my typo answer',
+      );
       fireEvent.press(getByTestId('review-session-submit'));
 
       // Press Mark as Correct
@@ -2891,9 +2889,9 @@ describe('ReviewSession', () => {
 
         // Should show "Add as Synonym" link for meaning questions
         expect(getByTestId('review-session-add-synonym')).toBeTruthy();
-        expect(getByTestId('review-session-add-synonym-text').props.children).toContain(
-          'Add as Synonym',
-        );
+        expect(
+          getByTestId('review-session-add-synonym-text').props.children,
+        ).toContain('Add as Synonym');
       }
     });
 
@@ -2953,7 +2951,10 @@ describe('ReviewSession', () => {
       const type = getByTestId('review-session-question-type').props.children;
 
       if (type === 'MEANING') {
-        fireEvent.changeText(getByTestId('review-session-input'), 'wronganswer');
+        fireEvent.changeText(
+          getByTestId('review-session-input'),
+          'wronganswer',
+        );
         fireEvent.press(getByTestId('review-session-submit'));
 
         // Press the "Add as Synonym" link
@@ -3120,9 +3121,7 @@ describe('ReviewSession', () => {
     it('should show progress bar and count text when zen mode is disabled', async () => {
       (database.getSetting as jest.Mock).mockResolvedValue(false);
 
-      const { getByTestId } = render(
-        <ReviewSession items={[sampleRadical]} />,
-      );
+      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
 
       // Wait for zen mode setting to load
       await act(async () => {
@@ -3136,9 +3135,7 @@ describe('ReviewSession', () => {
     it('should show SRS badge when zen mode is disabled', async () => {
       (database.getSetting as jest.Mock).mockResolvedValue(false);
 
-      const { getByTestId } = render(
-        <ReviewSession items={[sampleRadical]} />,
-      );
+      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
 
       // Wait for zen mode setting to load
       await act(async () => {
@@ -3182,9 +3179,7 @@ describe('ReviewSession', () => {
     it('should still show wrap-up button when zen mode is enabled', async () => {
       (database.getSetting as jest.Mock).mockResolvedValue(true);
 
-      const { getByTestId } = render(
-        <ReviewSession items={[sampleRadical]} />,
-      );
+      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
 
       // Wait for zen mode setting to load
       await act(async () => {
@@ -3212,9 +3207,9 @@ describe('ReviewSession', () => {
       // Activate wrap-up mode
       fireEvent.press(getByTestId('review-session-wrap-up'));
 
-      // Progress should now be visible
+      // Progress should now be visible, but SRS badge stays hidden in zen mode
       expect(getByTestId('review-session-progress')).toBeTruthy();
-      expect(getByTestId('review-session-srs-badge')).toBeTruthy();
+      expect(queryByTestId('review-session-srs-badge')).toBeNull();
     });
 
     it('should hide progress bar and SRS badge in incorrect feedback view when zen mode is enabled', async () => {
@@ -3242,7 +3237,7 @@ describe('ReviewSession', () => {
       expect(queryByTestId('review-session-srs-badge')).toBeNull();
     });
 
-    it('should show progress bar and SRS badge in incorrect feedback view when wrap-up mode is active even in zen mode', async () => {
+    it('should show progress bar but hide SRS badge in incorrect feedback view when wrap-up mode is active in zen mode', async () => {
       (database.getSetting as jest.Mock).mockResolvedValue(true);
 
       const { getByTestId, queryByTestId, findByTestId } = render(
@@ -3267,10 +3262,10 @@ describe('ReviewSession', () => {
       // Wait for incorrect feedback view to appear
       await findByTestId('review-session-incorrect-feedback');
 
-      // Should show progress and badge in incorrect feedback view with wrap-up active
+      // Should show progress but hide SRS badge in incorrect feedback view with wrap-up active in zen mode
       expect(getByTestId('review-session-incorrect-feedback')).toBeTruthy();
       expect(getByTestId('review-session-progress')).toBeTruthy();
-      expect(getByTestId('review-session-srs-badge')).toBeTruthy();
+      expect(queryByTestId('review-session-srs-badge')).toBeNull();
     });
 
     it('should fetch zen mode setting on mount', async () => {
@@ -3362,7 +3357,8 @@ describe('ReviewSession', () => {
 
       // Now buffer is full. The next question should be a re-queued one.
       // Answer it correctly to complete one item and free a slot.
-      const currentChars = getByTestId('review-session-characters').props.children;
+      const currentChars = getByTestId('review-session-characters').props
+        .children;
       expect(introducedChars).toContain(currentChars);
 
       // Find the item and answer correctly
@@ -3370,10 +3366,7 @@ describe('ReviewSession', () => {
         item => item.characters === currentChars,
       )!;
       const correctMeaning = currentItem.meanings[0].meaning;
-      fireEvent.changeText(
-        getByTestId('review-session-input'),
-        correctMeaning,
-      );
+      fireEvent.changeText(getByTestId('review-session-input'), correctMeaning);
       fireEvent.press(getByTestId('review-session-submit'));
 
       act(() => {
@@ -3422,7 +3415,10 @@ describe('ReviewSession', () => {
       expect(onSessionComplete).toHaveBeenCalled();
 
       // Only 1 item in the progress map
-      const progressMap = onSessionComplete.mock.calls[0][0] as Map<number, unknown>;
+      const progressMap = onSessionComplete.mock.calls[0][0] as Map<
+        number,
+        unknown
+      >;
       expect(progressMap.size).toBe(1);
 
       jest.useRealTimers();

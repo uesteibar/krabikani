@@ -1,10 +1,11 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { COLORS, SPACING, FONT_SIZES } from '../theme';
+import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../theme';
 
 export interface LastSyncedIndicatorProps {
   lastSyncedAt: Date | null;
+  hasPendingContent?: boolean;
   testID?: string;
 }
 
@@ -52,27 +53,50 @@ export function formatTimeSince(date: Date | null): string {
 
 export function LastSyncedIndicator({
   lastSyncedAt,
+  hasPendingContent = false,
   testID,
 }: LastSyncedIndicatorProps) {
   const timeString = formatTimeSince(lastSyncedAt);
+  const accentColor = hasPendingContent
+    ? COLORS.status.pendingSync
+    : COLORS.feedback.correct;
 
   return (
-    <View
-      style={styles.container}
-      testID={testID ?? 'last-synced-indicator'}
-    >
-      <Text style={styles.text}>Last synced: {timeString}</Text>
+    <View style={styles.container} testID={testID ?? 'last-synced-indicator'}>
+      <View style={styles.badge}>
+        <View style={[styles.dot, { backgroundColor: accentColor }]} />
+        <Text style={styles.label}>Last synced:</Text>
+        <Text style={[styles.value, { color: accentColor }]}>{timeString}</Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: SPACING.xs,
-    paddingHorizontal: SPACING.md,
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
   },
-  text: {
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background.secondary,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    gap: SPACING.xs,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  label: {
+    fontSize: FONT_SIZES.sm,
     color: COLORS.text.secondary,
-    fontSize: FONT_SIZES.xs,
+  },
+  value: {
+    fontSize: FONT_SIZES.base,
+    fontWeight: 'bold',
   },
 });

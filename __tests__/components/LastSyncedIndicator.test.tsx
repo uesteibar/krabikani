@@ -68,10 +68,9 @@ describe('formatTimeSince', () => {
 
 describe('LastSyncedIndicator', () => {
   it('displays "Never synced" when lastSyncedAt is null', () => {
-    const { getByText } = render(
-      <LastSyncedIndicator lastSyncedAt={null} />,
-    );
-    expect(getByText('Last synced: Never synced')).toBeTruthy();
+    const { getByText } = render(<LastSyncedIndicator lastSyncedAt={null} />);
+    expect(getByText('Last synced:')).toBeTruthy();
+    expect(getByText('Never synced')).toBeTruthy();
   });
 
   it('displays relative time for recent sync', () => {
@@ -79,7 +78,8 @@ describe('LastSyncedIndicator', () => {
     const { getByText } = render(
       <LastSyncedIndicator lastSyncedAt={fiveMinutesAgo} />,
     );
-    expect(getByText('Last synced: 5 minutes ago')).toBeTruthy();
+    expect(getByText('Last synced:')).toBeTruthy();
+    expect(getByText('5 minutes ago')).toBeTruthy();
   });
 
   it('displays "Just now" for very recent sync', () => {
@@ -87,13 +87,12 @@ describe('LastSyncedIndicator', () => {
     const { getByText } = render(
       <LastSyncedIndicator lastSyncedAt={justNow} />,
     );
-    expect(getByText('Last synced: Just now')).toBeTruthy();
+    expect(getByText('Last synced:')).toBeTruthy();
+    expect(getByText('Just now')).toBeTruthy();
   });
 
   it('has default testID', () => {
-    const { getByTestId } = render(
-      <LastSyncedIndicator lastSyncedAt={null} />,
-    );
+    const { getByTestId } = render(<LastSyncedIndicator lastSyncedAt={null} />);
     expect(getByTestId('last-synced-indicator')).toBeTruthy();
   });
 

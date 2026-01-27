@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from 'react';
 import {
   StyleSheet,
   Text,
@@ -238,9 +244,7 @@ async function loadPracticeItems(): Promise<ReviewItem[]> {
       ) {
         const meanings: Meaning[] = JSON.parse(subject.meanings);
         const primaryMeaning =
-          meanings.find(m => m.primary)?.meaning ??
-          meanings[0]?.meaning ??
-          '';
+          meanings.find(m => m.primary)?.meaning ?? meanings[0]?.meaning ?? '';
         componentRadicals.set(subject.id, {
           id: subject.id,
           characters: subject.characters,
@@ -257,13 +261,9 @@ async function loadPracticeItems(): Promise<ReviewItem[]> {
           ? JSON.parse(subject.readings)
           : [];
         const primaryMeaning =
-          meanings.find(m => m.primary)?.meaning ??
-          meanings[0]?.meaning ??
-          '';
+          meanings.find(m => m.primary)?.meaning ?? meanings[0]?.meaning ?? '';
         const primaryReading =
-          readings.find(r => r.primary)?.reading ??
-          readings[0]?.reading ??
-          '';
+          readings.find(r => r.primary)?.reading ?? readings[0]?.reading ?? '';
         componentKanji.set(subject.id, {
           id: subject.id,
           characters: subject.characters ?? '?',
@@ -315,6 +315,20 @@ export function PracticeScreen() {
   const isRefilling = useRef(false);
   const inputRef = useRef<TextInputType>(null);
   const shakeAnimation = useRef(new Animated.Value(0)).current;
+
+  const practicePhrase = useMemo(() => {
+    const phrases = [
+      'Practice makes progress',
+      'Building muscle memory',
+      'Sharpen your recall',
+      'No pressure, just practice',
+      'Repetition is mastery',
+      'Train at your own pace',
+      'Every rep counts',
+      'Keep the rhythm going',
+    ];
+    return phrases[Math.floor(Math.random() * phrases.length)];
+  }, []);
 
   // Initial load
   useEffect(() => {
@@ -537,7 +551,10 @@ export function PracticeScreen() {
   // Incorrect feedback view
   if (incorrectFeedback) {
     return (
-      <View style={styles.container} testID="practice-session-incorrect-feedback">
+      <View
+        style={styles.container}
+        testID="practice-session-incorrect-feedback"
+      >
         <View
           style={[styles.characterContainer, styles.incorrectHeader]}
           testID="practice-session-character-container"
@@ -545,7 +562,10 @@ export function PracticeScreen() {
           <Text style={styles.characters} testID="practice-session-characters">
             {incorrectFeedback.question.item.characters ?? '?'}
           </Text>
-          <Text style={styles.incorrectLabel} testID="practice-session-incorrect-label">
+          <Text
+            style={styles.incorrectLabel}
+            testID="practice-session-incorrect-label"
+          >
             Incorrect
           </Text>
         </View>
@@ -555,25 +575,40 @@ export function PracticeScreen() {
           contentContainerStyle={styles.feedbackContent}
         >
           <View style={styles.feedbackSection}>
-            <Text style={styles.feedbackLabel} testID="practice-session-your-answer-label">
+            <Text
+              style={styles.feedbackLabel}
+              testID="practice-session-your-answer-label"
+            >
               Your Answer:
             </Text>
-            <Text style={styles.userAnswer} testID="practice-session-your-answer">
+            <Text
+              style={styles.userAnswer}
+              testID="practice-session-your-answer"
+            >
               {incorrectFeedback.userAnswer || '(empty)'}
             </Text>
           </View>
 
           <View style={styles.feedbackSection}>
-            <Text style={styles.feedbackLabel} testID="practice-session-correct-answer-label">
+            <Text
+              style={styles.feedbackLabel}
+              testID="practice-session-correct-answer-label"
+            >
               Correct Answer:
             </Text>
-            <Text style={styles.correctAnswerText} testID="practice-session-correct-answer">
+            <Text
+              style={styles.correctAnswerText}
+              testID="practice-session-correct-answer"
+            >
               {incorrectFeedback.correctAnswer}
             </Text>
           </View>
 
           <View style={styles.feedbackSection}>
-            <Text style={styles.feedbackLabel} testID="practice-session-mnemonic-label">
+            <Text
+              style={styles.feedbackLabel}
+              testID="practice-session-mnemonic-label"
+            >
               {incorrectFeedback.question.type === 'meaning'
                 ? 'Meaning Mnemonic:'
                 : 'Reading Mnemonic:'}
@@ -588,7 +623,10 @@ export function PracticeScreen() {
           {incorrectFeedback.question.item.subjectType === 'kanji' &&
             incorrectFeedback.question.item.componentRadicals &&
             incorrectFeedback.question.item.componentRadicals.length > 0 && (
-              <View style={styles.feedbackSection} testID="practice-session-component-radicals">
+              <View
+                style={styles.feedbackSection}
+                testID="practice-session-component-radicals"
+              >
                 <Text style={styles.feedbackLabel}>Made up of:</Text>
                 <View style={styles.componentsRow}>
                   {incorrectFeedback.question.item.componentRadicals.map(
@@ -609,10 +647,14 @@ export function PracticeScreen() {
             )}
 
           {(incorrectFeedback.question.item.subjectType === 'vocabulary' ||
-            incorrectFeedback.question.item.subjectType === 'kana_vocabulary') &&
+            incorrectFeedback.question.item.subjectType ===
+              'kana_vocabulary') &&
             incorrectFeedback.question.item.componentKanji &&
             incorrectFeedback.question.item.componentKanji.length > 0 && (
-              <View style={styles.feedbackSection} testID="practice-session-component-kanji">
+              <View
+                style={styles.feedbackSection}
+                testID="practice-session-component-kanji"
+              >
                 <Text style={styles.feedbackLabel}>Made up of:</Text>
                 <View style={styles.componentsRow}>
                   {incorrectFeedback.question.item.componentKanji.map(kanji => (
@@ -644,7 +686,9 @@ export function PracticeScreen() {
               readings={incorrectFeedback.question.item.readings}
               meaningMnemonic={incorrectFeedback.question.item.meaningMnemonic}
               readingMnemonic={incorrectFeedback.question.item.readingMnemonic}
-              componentRadicals={incorrectFeedback.question.item.componentRadicals}
+              componentRadicals={
+                incorrectFeedback.question.item.componentRadicals
+              }
               componentKanji={incorrectFeedback.question.item.componentKanji}
               onComponentPress={handleComponentPress}
               testID="practice-session-item-details"
@@ -654,7 +698,11 @@ export function PracticeScreen() {
 
         <View style={styles.buttonRow}>
           <TouchableOpacity
-            style={[styles.submitButton, styles.continueButton, styles.submitButtonFlex]}
+            style={[
+              styles.submitButton,
+              styles.continueButton,
+              styles.submitButtonFlex,
+            ]}
             onPress={handleContinue}
             activeOpacity={0.8}
             testID="practice-session-continue"
@@ -680,6 +728,11 @@ export function PracticeScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       testID="practice-session"
     >
+      <View style={styles.modeBanner} testID="practice-session-banner">
+        <Text style={styles.modeBannerIcon}>◇</Text>
+        <Text style={styles.modeBannerText}>{practicePhrase}</Text>
+      </View>
+
       <View
         style={[
           styles.characterContainer,
@@ -803,8 +856,30 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: FONT_SIZES.xxl,
   },
+  modeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.sm,
+    minHeight: 50,
+    backgroundColor: COLORS.background.secondary,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border.light,
+  },
+  modeBannerIcon: {
+    fontSize: FONT_SIZES.base,
+    color: COLORS.text.tertiary,
+  },
+  modeBannerText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
+    fontWeight: '600',
+    fontStyle: 'italic',
+  },
   characterContainer: {
-    paddingVertical: 48,
+    paddingVertical: 64,
     paddingHorizontal: SPACING.lg,
     alignItems: 'center',
     justifyContent: 'center',

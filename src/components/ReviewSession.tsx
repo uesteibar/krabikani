@@ -1219,8 +1219,8 @@ export function ReviewSession({
           style={[styles.characterContainer, styles.incorrectHeader]}
           testID="review-session-character-container"
         >
-          {/* SRS badge - hidden in zen mode unless wrap-up is active */}
-          {showProgressStats && (
+          {/* SRS badge - always hidden in zen mode */}
+          {!zenModeEnabled && (
             <View style={styles.srsLevelBadgeContainer}>
               {levelDownAnimation ? (
                 <AnimatedSrsLevelBadge
@@ -1466,7 +1466,7 @@ export function ReviewSession({
       testID="review-session"
     >
       {/* Progress indicator - hidden in zen mode unless wrap-up is active */}
-      {showProgressStats && (
+      {showProgressStats ? (
         <View style={styles.progressContainer} testID="review-session-progress">
           <View style={styles.progressTextRow}>
             <Text
@@ -1502,12 +1502,18 @@ export function ReviewSession({
             />
           </View>
         </View>
+      ) : (
+        <View style={styles.modeBanner} testID="review-session-zen-banner">
+          <Text style={styles.modeBannerIcon}>○</Text>
+          <Text style={styles.modeBannerText}>Zen Mode</Text>
+        </View>
       )}
 
       {/* Character display - with green/yellow tint if showing correct feedback */}
       <View
         style={[
           styles.characterContainer,
+
           showCorrectFeedback
             ? isFuzzyMatch
               ? styles.fuzzyMatchHeader
@@ -1516,8 +1522,8 @@ export function ReviewSession({
         ]}
         testID="review-session-character-container"
       >
-        {/* SRS badge - hidden in zen mode unless wrap-up is active */}
-        {showProgressStats && (
+        {/* SRS badge - always hidden in zen mode */}
+        {!zenModeEnabled && (
           <View style={styles.srsLevelBadgeContainer}>
             {showCorrectFeedback && levelUpAnimation ? (
               <AnimatedSrsLevelBadge
@@ -1571,7 +1577,7 @@ export function ReviewSession({
         </Text>
       </View>
 
-      {/* Input area - no flex to keep it near the question prompt */}
+      {/* Input area */}
       <Animated.View
         style={[
           styles.inputContainer,
@@ -1664,10 +1670,28 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border.medium,
   },
+  modeBanner: {
+    height: 50,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.background.secondary,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border.light,
+  },
+  modeBannerIcon: {
+    fontSize: FONT_SIZES.base,
+  },
+  modeBannerText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
+    fontWeight: '600',
+  },
   progressContainer: {
+    height: 50,
+    justifyContent: 'center',
     paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.md,
-    paddingBottom: SPACING.sm,
     backgroundColor: COLORS.background.secondary,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border.light,
@@ -1699,11 +1723,12 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.sm,
   },
   characterContainer: {
-    paddingVertical: 48,
+    paddingVertical: 64,
     paddingHorizontal: SPACING.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
+
   srsLevelBadgeContainer: {
     position: 'absolute',
     top: SPACING.md,
@@ -1724,10 +1749,11 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.feedback.fuzzyMatch,
   },
   correctLabel: {
+    position: 'absolute',
+    bottom: SPACING.md,
     fontSize: FONT_SIZES.sm,
     fontWeight: 'bold',
     color: COLORS.text.inverse,
-    marginTop: SPACING.sm,
   },
   questionContainer: {
     paddingVertical: SPACING.md,
@@ -1817,10 +1843,11 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.feedback.incorrect,
   },
   incorrectLabel: {
+    position: 'absolute',
+    bottom: SPACING.md,
     fontSize: FONT_SIZES.lg,
     fontWeight: 'bold',
     color: COLORS.text.inverse,
-    marginTop: SPACING.sm,
   },
   feedbackContainer: {
     flex: 1,
@@ -1882,6 +1909,7 @@ const styles = StyleSheet.create({
     margin: 0,
   },
   wrapUpButton: {
+    minWidth: 100,
     paddingVertical: SPACING.lg,
     paddingHorizontal: SPACING.xl,
     minHeight: MIN_TOUCH_TARGET,
@@ -1907,6 +1935,7 @@ const styles = StyleSheet.create({
   incorrectButtonRow: {
     flexDirection: 'row',
     paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.lg,
     paddingBottom: SPACING.lg,
     gap: SPACING.md,
   },

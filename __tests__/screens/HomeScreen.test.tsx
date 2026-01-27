@@ -129,7 +129,8 @@ describe('HomeScreen', () => {
       const { getByText } = renderWithNavigation(<HomeScreen />);
 
       await waitFor(() => {
-        expect(getByText('Last synced: Never synced')).toBeTruthy();
+        expect(getByText('Last synced:')).toBeTruthy();
+        expect(getByText('Never synced')).toBeTruthy();
       });
     });
 
@@ -140,7 +141,8 @@ describe('HomeScreen', () => {
       const { getByText } = renderWithNavigation(<HomeScreen />);
 
       await waitFor(() => {
-        expect(getByText('Last synced: 5 minutes ago')).toBeTruthy();
+        expect(getByText('Last synced:')).toBeTruthy();
+        expect(getByText('5 minutes ago')).toBeTruthy();
       });
     });
 
@@ -264,7 +266,6 @@ describe('HomeScreen', () => {
         expect(getByTestId('reviews-count').props.children).toBe(1);
       });
     });
-
   });
 
   describe('offline state with cached data', () => {
@@ -630,127 +631,6 @@ describe('HomeScreen', () => {
 
       expect(syncSubjects).not.toHaveBeenCalled();
       expect(syncAssignments).not.toHaveBeenCalled();
-    });
-
-    it('shows syncing indicator when pull-to-refresh is in progress', async () => {
-      __setStoredApiKey('test-api-key-123');
-
-      // Make sync take time so we can see the syncing state
-      let resolveSyncSubjects: () => void;
-      const syncSubjectsPromise = new Promise<{
-        success: boolean;
-        syncedCount: number;
-      }>(resolve => {
-        resolveSyncSubjects = () => resolve({ success: true, syncedCount: 10 });
-      });
-      syncSubjects.mockReturnValueOnce(syncSubjectsPromise);
-
-      const { getByTestId, queryByTestId } = renderWithNavigation(
-        <HomeScreen />,
-      );
-
-      await waitFor(() => {
-        expect(getByTestId('home-scroll-view')).toBeTruthy();
-      });
-
-      // Syncing indicator should not be visible initially
-      expect(queryByTestId('syncing-indicator')).toBeNull();
-
-      // Get the refresh control and trigger onRefresh (don't await)
-      const scrollView = getByTestId('home-scroll-view');
-      const refreshControl = scrollView.props.refreshControl;
-
-      // Start the refresh without awaiting
-      act(() => {
-        refreshControl.props.onRefresh();
-      });
-
-      // Syncing indicator should be visible during refresh
-      await waitFor(() => {
-        expect(getByTestId('syncing-indicator')).toBeTruthy();
-      });
-
-      // Complete the sync
-      await act(async () => {
-        resolveSyncSubjects!();
-      });
-
-      // Syncing indicator should disappear after refresh
-      await waitFor(() => {
-        expect(queryByTestId('syncing-indicator')).toBeNull();
-      });
-    });
-
-    it('hides syncing indicator when sync fails', async () => {
-      __setStoredApiKey('test-api-key-123');
-
-      // Make sync fail
-      let rejectSync: (err: Error) => void;
-      const syncSubjectsPromise = new Promise<{
-        success: boolean;
-        syncedCount: number;
-      }>((_, reject) => {
-        rejectSync = reject;
-      });
-      syncSubjects.mockReturnValueOnce(syncSubjectsPromise);
-
-      const { getByTestId, queryByTestId } = renderWithNavigation(
-        <HomeScreen />,
-      );
-
-      await waitFor(() => {
-        expect(getByTestId('home-scroll-view')).toBeTruthy();
-      });
-
-      // Get the refresh control and trigger onRefresh (don't await)
-      const scrollView = getByTestId('home-scroll-view');
-      const refreshControl = scrollView.props.refreshControl;
-
-      // Start the refresh without awaiting
-      act(() => {
-        refreshControl.props.onRefresh();
-      });
-
-      // Syncing indicator should be visible during refresh
-      await waitFor(() => {
-        expect(getByTestId('syncing-indicator')).toBeTruthy();
-      });
-
-      // Fail the sync
-      await act(async () => {
-        rejectSync!(new Error('Sync failed'));
-      });
-
-      // Syncing indicator should disappear after failure
-      await waitFor(() => {
-        expect(queryByTestId('syncing-indicator')).toBeNull();
-      });
-    });
-
-    it('shows "Syncing..." text during pull-to-refresh', async () => {
-      __setStoredApiKey('test-api-key-123');
-
-      // Make sync never complete for this test
-      syncSubjects.mockReturnValueOnce(new Promise(() => {}));
-
-      const { getByTestId, getByText } = renderWithNavigation(<HomeScreen />);
-
-      await waitFor(() => {
-        expect(getByTestId('home-scroll-view')).toBeTruthy();
-      });
-
-      // Get the refresh control and trigger onRefresh
-      const scrollView = getByTestId('home-scroll-view');
-      const refreshControl = scrollView.props.refreshControl;
-
-      act(() => {
-        refreshControl.props.onRefresh();
-      });
-
-      // Should show syncing text
-      await waitFor(() => {
-        expect(getByText('Syncing...')).toBeTruthy();
-      });
     });
   });
 });

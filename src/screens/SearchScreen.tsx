@@ -341,10 +341,9 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.base,
   },
   emptyStateContainer: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: SPACING.xxl,
+    paddingTop: SPACING.xl,
   },
   emptyStateText: {
     fontSize: FONT_SIZES.base,
