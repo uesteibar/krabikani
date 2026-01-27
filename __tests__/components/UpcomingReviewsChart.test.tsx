@@ -4,14 +4,14 @@ import { render } from '@testing-library/react-native';
 import { UpcomingReviewsChart } from '../../src/components/UpcomingReviewsChart';
 import type { UpcomingReviewsHourBucket } from '../../src/storage';
 
-// Helper to create test data
+// Helper to create test data (starts from next hour, matching getUpcomingReviewsByHour)
 function createTestData(counts: number[]): UpcomingReviewsHourBucket[] {
   const now = new Date();
   now.setMinutes(0, 0, 0);
 
   return counts.map((count, index) => {
     const hour = new Date(now);
-    hour.setHours(now.getHours() + index);
+    hour.setHours(now.getHours() + 1 + index);
     return { hour, count };
   });
 }
@@ -132,19 +132,6 @@ describe('UpcomingReviewsChart', () => {
       // Same as without prop - first row: +5 (5)
       expect(getByText('+5')).toBeTruthy();
       expect(getByText('(5)')).toBeTruthy();
-    });
-  });
-
-  describe('current hour highlighting', () => {
-    it('should highlight the current hour row', () => {
-      // Create data with the first hour being the current hour
-      const data = createTestData([10, 5, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-
-      const { getByTestId } = render(<UpcomingReviewsChart data={data} />);
-
-      // The first row should exist (current hour)
-      const currentRow = getByTestId('review-row-0');
-      expect(currentRow).toBeTruthy();
     });
   });
 

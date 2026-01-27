@@ -31,19 +31,6 @@ function formatHour(date: Date): string {
 }
 
 /**
- * Check if an hour is the current hour
- */
-function isCurrentHour(date: Date): boolean {
-  const now = new Date();
-  return (
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate() &&
-    date.getHours() === now.getHours()
-  );
-}
-
-/**
  * Format relative time for empty state (e.g., "in 2 hours", "in 2 days")
  */
 function formatRelativeTime(date: Date): string {
@@ -66,7 +53,6 @@ interface RowData {
   label: string;
   newCount: number;
   totalCount: number;
-  isCurrent: boolean;
 }
 
 /**
@@ -90,7 +76,6 @@ export function UpcomingReviewsChart({
         label: formatHour(bucket.hour),
         newCount: bucket.count,
         totalCount: cumulative,
-        isCurrent: isCurrentHour(bucket.hour),
       };
     });
   }, [data, currentPendingCount]);
@@ -140,13 +125,11 @@ export function UpcomingReviewsChart({
           return (
             <View
               key={index}
-              style={[styles.row, row.isCurrent && styles.currentRow]}
+              style={styles.row}
               testID={`review-row-${index}`}
             >
               {/* Time column */}
-              <Text
-                style={[styles.timeText, row.isCurrent && styles.currentText]}
-              >
+              <Text style={styles.timeText}>
                 {row.label}
               </Text>
 
@@ -154,12 +137,7 @@ export function UpcomingReviewsChart({
               <View style={styles.countColumn}>
                 {row.newCount > 0 ? (
                   <Text style={styles.countText}>
-                    <Text
-                      style={[
-                        styles.newCount,
-                        row.isCurrent && styles.currentText,
-                      ]}
-                    >
+                    <Text style={styles.newCount}>
                       +{row.newCount}
                     </Text>
                     <Text style={styles.totalCount}> ({row.totalCount})</Text>
@@ -176,9 +154,7 @@ export function UpcomingReviewsChart({
                     styles.bar,
                     {
                       width: `${barWidthPercent}%`,
-                      backgroundColor: row.isCurrent
-                        ? DASHBOARD_COLORS.reviews
-                        : DASHBOARD_COLORS.reviews + '80',
+                      backgroundColor: DASHBOARD_COLORS.reviews + '80',
                     },
                   ]}
                   testID={`review-bar-${index}`}
@@ -218,9 +194,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.sm,
     borderRadius: BORDER_RADIUS.sm,
   },
-  currentRow: {
-    backgroundColor: DASHBOARD_COLORS.reviews + '15',
-  },
   timeText: {
     fontSize: FONT_SIZES.sm,
     color: COLORS.text.secondary,
@@ -234,10 +207,6 @@ const styles = StyleSheet.create({
   },
   countText: {
     fontSize: FONT_SIZES.sm,
-  },
-  currentText: {
-    color: DASHBOARD_COLORS.reviews,
-    fontWeight: '600',
   },
   newCount: {
     fontWeight: '600',

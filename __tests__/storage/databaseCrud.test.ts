@@ -1187,10 +1187,14 @@ describe('Database CRUD Operations', () => {
         }
       });
 
-      it('should round down to current hour for first bucket', async () => {
+      it('should start from the next hour (skipping current hour)', async () => {
+        const now = new Date();
+        const expectedNextHour = now.getHours() + 1;
+
         const buckets = await getUpcomingReviewsByHour(1);
         const firstBucket = buckets[0];
 
+        expect(firstBucket.hour.getHours()).toBe(expectedNextHour % 24);
         expect(firstBucket.hour.getMinutes()).toBe(0);
         expect(firstBucket.hour.getSeconds()).toBe(0);
         expect(firstBucket.hour.getMilliseconds()).toBe(0);

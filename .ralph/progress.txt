@@ -125,3 +125,21 @@ Started:
   - No other components in src/components/ used useTheme before this change — LevelIndicator is the first component (besides screens) to use it directly
 ---
 
+## 2026-01-27 - US-020
+- Removed current hour from upcoming reviews chart — chart now starts from hour+1
+- `getUpcomingReviewsByHour` now creates a `startHour` (currentHour + 1) and uses it for bucket initialization, SQL query range, and bucket assignment
+- Removed `isCurrentHour` function, `isCurrent` field from RowData, `currentRow` and `currentText` styles from UpcomingReviewsChart (no longer needed since current hour isn't displayed)
+- Updated chart test helper `createTestData` to start from next hour (index + 1)
+- Removed "current hour highlighting" test section
+- Updated database test to verify first bucket starts from next hour
+- Files changed:
+  - `src/storage/database.ts` - Modified `getUpcomingReviewsByHour` to start from next hour
+  - `src/components/UpcomingReviewsChart.tsx` - Removed current hour highlighting logic and styles
+  - `__tests__/components/UpcomingReviewsChart.test.tsx` - Updated test data helper, removed current hour test
+  - `__tests__/storage/databaseCrud.test.ts` - Updated first bucket test to expect next hour
+- **Learnings for future iterations:**
+  - `getUpcomingReviewsByHour` now uses `startHour` (currentHour + 1) — the current hour's reviews are already captured in the pending count passed via `currentPendingCount` prop
+  - The cumulative total in the chart still correctly starts from `currentPendingCount` (existing pending reviews) as the base
+  - Pre-existing failing test in ReviewSession.test.tsx (wrap-up mode incorrect feedback) is unrelated
+---
+

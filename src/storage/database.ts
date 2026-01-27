@@ -1063,17 +1063,21 @@ export async function getUpcomingReviewsByHour(
   const currentHour = new Date(now);
   currentHour.setMinutes(0, 0, 0);
 
+  // Start from the next hour (current hour reviews are shown as pending count)
+  const startHour = new Date(currentHour);
+  startHour.setHours(currentHour.getHours() + 1);
+
   // Initialize all hour buckets with 0 counts
   const buckets: UpcomingReviewsHourBucket[] = [];
   for (let i = 0; i < hours; i++) {
-    const hourDate = new Date(currentHour);
-    hourDate.setHours(currentHour.getHours() + i);
+    const hourDate = new Date(startHour);
+    hourDate.setHours(startHour.getHours() + i);
     buckets.push({ hour: hourDate, count: 0 });
   }
 
   // Calculate the end time (exclusive)
-  const endTime = new Date(currentHour);
-  endTime.setHours(currentHour.getHours() + hours);
+  const endTime = new Date(startHour);
+  endTime.setHours(startHour.getHours() + hours);
 
   // Query assignments that become available within the time range
   // Only include started assignments (not lessons) with active SRS stages (1-8)
@@ -1086,7 +1090,7 @@ export async function getUpcomingReviewsByHour(
        AND started_at IS NOT NULL
        AND srs_stage > 0
        AND srs_stage < 9`,
-    [currentHour.toISOString(), endTime.toISOString()],
+    [startHour.toISOString(), endTime.toISOString()],
   );
 
   // Count reviews per hour bucket
@@ -1096,7 +1100,7 @@ export async function getUpcomingReviewsByHour(
     );
     // Find which bucket this review falls into
     const hourDiff = Math.floor(
-      (availableAt.getTime() - currentHour.getTime()) / (1000 * 60 * 60),
+      (availableAt.getTime() - startHour.getTime()) / (1000 * 60 * 60),
     );
     if (hourDiff >= 0 && hourDiff < hours) {
       buckets[hourDiff].count++;
