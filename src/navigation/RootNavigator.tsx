@@ -14,6 +14,7 @@ import { SearchScreen } from '../screens/SearchScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { SyncScreen } from '../screens/SyncScreen';
 import { InstructionsScreen } from '../screens/InstructionsScreen';
+import { WizardCompletionScreen } from '../screens/WizardCompletionScreen';
 import { WizardNotificationScreen } from '../screens/WizardNotificationScreen';
 import { VocabularyDetailScreen } from '../screens/VocabularyDetailScreen';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
@@ -80,6 +81,11 @@ export function RootNavigator() {
       <Stack.Screen
         name="WizardNotification"
         component={WizardNotificationScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="WizardCompletion"
+        component={WizardCompletionScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen
