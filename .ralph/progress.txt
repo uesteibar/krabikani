@@ -13,6 +13,7 @@
 - Quiz questions are shuffled — tests rendering LessonQuiz must handle either meaning or reading first; use `submitWrongAnswer` helper for question-type-agnostic wrong answer submission
 - Use React `key` prop to force component remount when scroll position needs resetting (e.g., `key={item.id}` on cards with ScrollView content)
 - Completion screens (LessonCompletion, ReviewCompletion) share the same animated pattern: animated checkmark, staggered fade-in (200ms delay, 500ms duration), confetti for perfect sessions, encouragement messages, and "Synced"/"Queued" badge
+- Components using `useTheme()` require `<ThemeProvider forcedColorScheme="light">` wrapper in tests (see LevelIndicator, HomeScreen tests)
 
 Started:
 ---
@@ -106,5 +107,21 @@ Started:
 - **Learnings for future iterations:**
   - `UpcomingReviewsChart` has its own `formatRelativeTime` function and empty state that shows "Next review in X hours" — independent of `NextReviewIndicator`
   - `dashboardData.nextReviewAt` is still needed even without `NextReviewIndicator` because `UpcomingReviewsChart` uses it in its empty state
+---
+
+## 2026-01-27 - US-019
+- Enhanced the LevelIndicator component to be more visually prominent
+- Redesigned from a plain "Level X" text to a badge with large number and "LEVEL" label
+- Uses theme-aware colors (background.secondary, text.primary, text.secondary) for dark mode support
+- Badge styling: rounded corners (BORDER_RADIUS.lg), centered layout, large number (FONT_SIZES.xxxl, fontWeight 800), uppercase label (FONT_SIZES.xs, fontWeight 700, letterSpacing 1.5)
+- Visually cohesive with LearnedCounts badges (same background.secondary, BORDER_RADIUS, SPACING tokens)
+- Files changed:
+  - `src/components/LevelIndicator.tsx` - Redesigned to prominent badge with "LEVEL" label and large number, added useTheme for dark mode support
+  - `__tests__/components/LevelIndicator.test.tsx` - Updated tests for new structure (separate LEVEL label and number), added ThemeProvider wrapper, added level-label testID test
+  - `__tests__/screens/HomeScreen.test.tsx` - Updated level display assertion from "Level 5" to separate "LEVEL" and "5" texts
+- **Learnings for future iterations:**
+  - LevelIndicator now uses `useTheme()` — tests must wrap in `<ThemeProvider forcedColorScheme="light">`
+  - The level number and "LEVEL" label are separate Text elements (testID: "level-text" for number, "level-label" for label)
+  - No other components in src/components/ used useTheme before this change — LevelIndicator is the first component (besides screens) to use it directly
 ---
 

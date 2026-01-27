@@ -167,7 +167,8 @@ describe('HomeScreen', () => {
 
       await waitFor(() => {
         expect(getByTestId('level-indicator')).toBeTruthy();
-        expect(getByText('Level 5')).toBeTruthy();
+        expect(getByText('LEVEL')).toBeTruthy();
+        expect(getByText('5')).toBeTruthy();
       });
     });
 

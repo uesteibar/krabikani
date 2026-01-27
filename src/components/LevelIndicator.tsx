@@ -1,7 +1,12 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { COLORS, SPACING, FONT_SIZES } from '../theme';
+import {
+  SPACING,
+  FONT_SIZES,
+  BORDER_RADIUS,
+  useTheme,
+} from '../theme';
 
 export interface LevelIndicatorProps {
   level: number | null;
@@ -9,19 +14,36 @@ export interface LevelIndicatorProps {
 }
 
 /**
- * Displays the user's current WaniKani level.
- * Shows "Level X" when level is available, nothing when loading.
+ * Displays the user's current WaniKani level in a prominent badge.
+ * Shows a large level number with "LEVEL" label when available, nothing when loading.
  */
 export function LevelIndicator({ level, testID }: LevelIndicatorProps) {
+  const theme = useTheme();
+
   // Don't render anything while loading (level is null)
   if (level === null) {
     return null;
   }
 
   return (
-    <View style={styles.container} testID={testID ?? 'level-indicator'}>
-      <Text style={styles.text} testID="level-text">
-        Level {level}
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.background.secondary },
+      ]}
+      testID={testID ?? 'level-indicator'}
+    >
+      <Text
+        style={[styles.label, { color: theme.colors.text.secondary }]}
+        testID="level-label"
+      >
+        LEVEL
+      </Text>
+      <Text
+        style={[styles.number, { color: theme.colors.text.primary }]}
+        testID="level-text"
+      >
+        {level}
       </Text>
     </View>
   );
@@ -29,12 +51,20 @@ export function LevelIndicator({ level, testID }: LevelIndicatorProps) {
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: SPACING.xs,
-    paddingHorizontal: SPACING.md,
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.xxl,
+    borderRadius: BORDER_RADIUS.lg,
+    marginBottom: SPACING.sm,
   },
-  text: {
-    color: COLORS.text.secondary,
-    fontSize: FONT_SIZES.sm,
-    fontWeight: '500',
+  label: {
+    fontSize: FONT_SIZES.xs,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+  },
+  number: {
+    fontSize: FONT_SIZES.xxxl,
+    fontWeight: '800',
+    lineHeight: FONT_SIZES.xxxl + 4,
   },
 });
