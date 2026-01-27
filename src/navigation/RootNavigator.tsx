@@ -1,6 +1,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 
+import { ApiKeyInputScreen } from '../screens/ApiKeyInputScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { ItemDetailScreen } from '../screens/ItemDetailScreen';
 import { KanjiDetailScreen } from '../screens/KanjiDetailScreen';
@@ -62,6 +63,11 @@ export function RootNavigator() {
       <Stack.Screen
         name="Instructions"
         component={InstructionsScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ApiKeyInput"
+        component={ApiKeyInputScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen
