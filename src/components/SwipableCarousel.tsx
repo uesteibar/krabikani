@@ -1,6 +1,13 @@
-import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
+import React, {
+  forwardRef,
+  useCallback,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react';
 import {
   Dimensions,
+  LayoutChangeEvent,
   NativeScrollEvent,
   NativeSyntheticEvent,
   ScrollView,
@@ -26,14 +33,21 @@ export interface SwipableCarouselRef {
   scrollToPage: (index: number) => void;
 }
 
-export const SwipableCarousel = forwardRef<SwipableCarouselRef, SwipableCarouselProps>(function SwipableCarousel({
-  pages,
-  onPageChange,
-  testID = 'swipable-carousel',
-}, ref) {
+export const SwipableCarousel = forwardRef<
+  SwipableCarouselRef,
+  SwipableCarouselProps
+>(function SwipableCarousel(
+  { pages, onPageChange, testID = 'swipable-carousel' },
+  ref,
+) {
   const { colors } = useTheme();
   const [currentPage, setCurrentPage] = useState(0);
+  const [scrollHeight, setScrollHeight] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  const handleLayout = useCallback((event: LayoutChangeEvent) => {
+    setScrollHeight(event.nativeEvent.layout.height);
+  }, []);
 
   useImperativeHandle(ref, () => ({
     scrollToPage(index: number) {
@@ -66,13 +80,17 @@ export const SwipableCarousel = forwardRef<SwipableCarouselRef, SwipableCarousel
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         onScroll={handleScroll}
+        onLayout={handleLayout}
         scrollEventThrottle={16}
         testID="carousel-scroll-view"
       >
         {pages.map((page, index) => (
           <View
             key={index}
-            style={[styles.page, { width: SCREEN_WIDTH }]}
+            style={[
+              styles.page,
+              { width: SCREEN_WIDTH, height: scrollHeight || undefined },
+            ]}
             testID={`carousel-page-${index}`}
           >
             {page}
