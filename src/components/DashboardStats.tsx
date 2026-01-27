@@ -48,20 +48,22 @@ export function DashboardStats({
         testID="lessons-button"
       >
         <Text
-          style={[
-            styles.countText,
-            styles.lessonsCountText,
-            lessonsEmpty && styles.emptyCountText,
-          ]}
+          style={[styles.labelText, lessonsEmpty && styles.emptyLabelText]}
           testID="lessons-count"
         >
-          {lessonsCount}
+          <Text
+            style={[
+              styles.countText,
+              lessonsEmpty ? styles.emptyCountText : styles.lessonsCountText,
+            ]}
+          >
+            {lessonsCount}
+          </Text>
+          {' available lessons'}
         </Text>
-        <Text
-          style={[styles.labelText, lessonsEmpty && styles.emptyLabelText]}
-        >
-          Lessons
-        </Text>
+        {!lessonsEmpty && (
+          <Text style={[styles.chevron, styles.lessonsChevron]}>›</Text>
+        )}
       </TouchableOpacity>
       <TouchableOpacity
         style={[
@@ -75,20 +77,22 @@ export function DashboardStats({
         testID="reviews-button"
       >
         <Text
-          style={[
-            styles.countText,
-            styles.reviewsCountText,
-            reviewsEmpty && styles.emptyCountText,
-          ]}
+          style={[styles.labelText, reviewsEmpty && styles.emptyLabelText]}
           testID="reviews-count"
         >
-          {reviewsCount}
+          <Text
+            style={[
+              styles.countText,
+              reviewsEmpty ? styles.emptyCountText : styles.reviewsCountText,
+            ]}
+          >
+            {reviewsCount}
+          </Text>
+          {' pending reviews'}
         </Text>
-        <Text
-          style={[styles.labelText, reviewsEmpty && styles.emptyLabelText]}
-        >
-          Reviews
-        </Text>
+        {!reviewsEmpty && (
+          <Text style={[styles.chevron, styles.reviewsChevron]}>›</Text>
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -96,21 +100,21 @@ export function DashboardStats({
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'column',
     gap: SPACING.md,
-    paddingVertical: SPACING.lg,
+    paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.lg,
     width: '100%',
   },
   statBox: {
-    flex: 1,
-    height: 100,
+    width: '100%',
     minHeight: MIN_TOUCH_TARGET,
     borderRadius: BORDER_RADIUS.lg,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.md,
     backgroundColor: COLORS.background.primary,
     borderWidth: BORDER_WIDTH,
   },
@@ -124,7 +128,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border.medium,
   },
   countText: {
-    fontSize: FONT_SIZES.xxxl + 4, // 36px
+    fontSize: FONT_SIZES.lg,
     fontWeight: 'bold',
   },
   lessonsCountText: {
@@ -137,12 +141,22 @@ const styles = StyleSheet.create({
     color: COLORS.text.tertiary,
   },
   labelText: {
-    fontSize: FONT_SIZES.sm,
+    fontSize: FONT_SIZES.lg,
     fontWeight: '600',
     color: COLORS.text.secondary,
-    marginTop: SPACING.xs,
   },
   emptyLabelText: {
     color: COLORS.text.tertiary,
+  },
+  chevron: {
+    fontSize: FONT_SIZES.xxxl,
+    lineHeight: FONT_SIZES.xxxl,
+    fontWeight: '300',
+  },
+  lessonsChevron: {
+    color: DASHBOARD_COLORS.lessons,
+  },
+  reviewsChevron: {
+    color: DASHBOARD_COLORS.reviews,
   },
 });
