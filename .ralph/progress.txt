@@ -130,3 +130,16 @@ Started:
   - Navigator tests need to mock all screen components to avoid heavy dependencies — use `jest.mock()` for each screen
   - Wrap RootNavigator in both ThemeProvider and NavigationContainer for tests
 ---
+
+## 2026-01-27 - US-010
+- Modified SettingsScreen handleClear to navigate to Welcome screen after clearing API key
+- Uses navigation.reset() to replace stack with Welcome (wizard flow)
+- Removed local state updates (setApiKey, setHasStoredKey) since navigation replaces the screen
+- Updated existing test to verify navigation to Welcome screen and clearAllData call
+- Added MockWelcomeScreen to SettingsScreen test navigator
+- Files: src/screens/SettingsScreen.tsx, __tests__/screens/SettingsScreen.test.tsx
+- 69 tests pass, typecheck clean
+- **Learnings for future iterations:**
+  - SettingsScreen test uses real navigation (NavigationContainer + Stack.Navigator) with mock screen components
+  - Alert.alert mock: extract onPress callback via `(Alert.alert as jest.Mock).mock.calls` and invoke in `act(async () => ...)`
+---
