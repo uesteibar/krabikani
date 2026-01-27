@@ -191,6 +191,7 @@ export function LessonBatch({
       {/* Lesson card with swipe gesture support */}
       <View style={styles.cardContainer} {...panResponder.panHandlers} testID="lesson-batch-swipe-area">
         <LessonCard
+          key={currentItem.id}
           subjectType={currentItem.subjectType}
           characters={currentItem.characters}
           meanings={currentItem.meanings}
