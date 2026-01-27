@@ -173,3 +173,20 @@ Started:
   - Background color is set via `getSubjectColor(item.subjectType)` in ReviewSession — this remains the primary subject type indicator
 ---
 
+## 2026-01-27 - US-023
+- Implemented review buffer cap limiting incomplete items to 10
+- Added `MAX_INCOMPLETE_ITEMS = 10` exported constant
+- Extracted `incompleteItemCount` as a `useMemo` (count of introduced but not completed items)
+- Modified `findNextQuestionIndex` to accept `currentIncompleteCount` parameter and block new items when count >= MAX_INCOMPLETE_ITEMS
+- When buffer is full, only questions for already-introduced items are shown (same behavior as wrap-up mode)
+- When wrap-up mode is active, it takes precedence (both block new items via the same `blockNewItems` flag)
+- Files changed:
+  - `src/components/ReviewSession.tsx` - Added MAX_INCOMPLETE_ITEMS constant, incompleteItemCount memo, updated findNextQuestionIndex with buffer cap logic
+  - `__tests__/components/ReviewSession.test.tsx` - Added 4 tests: constant value, buffer blocks new items at 10, buffer allows new items after completing one, wrap-up works with fewer than 10 items
+- **Learnings for future iterations:**
+  - `findNextQuestionIndex` now has 6 parameters (added `currentIncompleteCount`) — the blocking logic is unified: `blockNewItems = wrappingUp || incompleteCount >= MAX_INCOMPLETE_ITEMS`
+  - `incompleteItemCount` is derived from `introducedItemIds` and `_itemProgress` — same sets used by wrap-up remaining count
+  - `wrapUpRemainingCount` was simplified from a `useMemo` to a simple ternary using `incompleteItemCount` since they compute the same thing
+  - Testing buffer cap with many items: use radicals (1 question each) and answer wrong to introduce without completing; verify next question shows an already-introduced item
+---
+
