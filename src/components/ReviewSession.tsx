@@ -266,6 +266,9 @@ export function generateReviewQuestions(items: ReviewItem[]): ReviewQuestion[] {
 // Component
 // ============================================
 
+/** Maximum number of incomplete (initiated but not finished) items allowed at once */
+export const MAX_INCOMPLETE_ITEMS = 10;
+
 /**
  * ReviewSession presents review questions for items that are due for review.
  * Shows characters prominently with an input field for answers.
@@ -276,6 +279,7 @@ export function generateReviewQuestions(items: ReviewItem[]): ReviewQuestion[] {
  * - Remaining count display
  * - Randomized item and question order
  * - Each item requires correct answers for both meaning and reading (except radicals)
+ * - Buffer cap: limits in-progress items to MAX_INCOMPLETE_ITEMS to prevent backlog
  */
 export function ReviewSession({
   items,
@@ -442,9 +446,8 @@ export function ReviewSession({
     }
   }, [currentQuestion, introducedItemIds]);
 
-  // Calculate wrap-up state: count of introduced items that are not yet complete
-  const wrapUpRemainingCount = useMemo(() => {
-    if (!isWrappingUp) return 0;
+  // Count of introduced items that are not yet complete (used for buffer cap and wrap-up)
+  const incompleteItemCount = useMemo(() => {
     let count = 0;
     for (const itemId of introducedItemIds) {
       const progress = _itemProgress.get(itemId);
@@ -453,7 +456,10 @@ export function ReviewSession({
       }
     }
     return count;
-  }, [isWrappingUp, introducedItemIds, _itemProgress]);
+  }, [introducedItemIds, _itemProgress]);
+
+  // Calculate wrap-up state: count of introduced items that are not yet complete
+  const wrapUpRemainingCount = isWrappingUp ? incompleteItemCount : 0;
 
   // Auto-focus input when question changes or during correct feedback
   useEffect(() => {
@@ -502,7 +508,7 @@ export function ReviewSession({
       ? handleReadingInputChange
       : handleMeaningInputChange;
 
-  // Find the next valid question index, considering wrap-up mode
+  // Find the next valid question index, considering wrap-up mode and buffer cap
   const findNextQuestionIndex = useCallback(
     (
       startIndex: number,
@@ -510,12 +516,17 @@ export function ReviewSession({
       wrappingUp: boolean,
       introduced: Set<number>,
       progress: Map<number, ItemProgress>,
+      currentIncompleteCount: number,
     ): number => {
       let nextIndex = startIndex;
 
-      // In wrap-up mode, skip questions for items that haven't been introduced yet
-      // or items that are already complete
-      while (nextIndex < queue.length && wrappingUp) {
+      // Determine whether we should block new items from being introduced
+      const blockNewItems =
+        wrappingUp || currentIncompleteCount >= MAX_INCOMPLETE_ITEMS;
+
+      // When blocking new items, skip questions for items that haven't been
+      // introduced yet or items that are already complete
+      while (nextIndex < queue.length && blockNewItems) {
         const question = queue[nextIndex];
         const itemId = question.item.id;
         const itemProgress = progress.get(itemId);
@@ -548,6 +559,7 @@ export function ReviewSession({
         isWrappingUp,
         introducedItemIds,
         _itemProgress,
+        incompleteItemCount,
       );
     });
     setInputValue('');
@@ -565,6 +577,7 @@ export function ReviewSession({
     isWrappingUp,
     introducedItemIds,
     _itemProgress,
+    incompleteItemCount,
   ]);
 
   // Handle tap to continue after incorrect answer

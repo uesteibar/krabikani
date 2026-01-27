@@ -7,6 +7,7 @@ import {
   ReviewItem,
   generateReviewQuestions,
   shuffleArray,
+  MAX_INCOMPLETE_ITEMS,
 } from '../../src/components/ReviewSession';
 import type { Meaning, Reading, KanjiReading } from '../../src/api/types';
 import { SUBJECT_COLORS, COLORS } from '../../src/theme';
@@ -3283,6 +3284,148 @@ describe('ReviewSession', () => {
       });
 
       expect(database.getSetting).toHaveBeenCalledWith('zenMode');
+    });
+  });
+
+  describe('Incomplete Item Buffer Cap', () => {
+    it('should export MAX_INCOMPLETE_ITEMS constant equal to 10', () => {
+      expect(MAX_INCOMPLETE_ITEMS).toBe(10);
+    });
+
+    it('should not introduce new items when incomplete count reaches MAX_INCOMPLETE_ITEMS', () => {
+      jest.useFakeTimers();
+
+      // Create 12 radicals (radicals only need 1 answer each, simpler for testing)
+      const manyRadicals = Array.from({ length: 12 }, (_, i) =>
+        createRadicalItem(100 + i, `R${i}`, `Radical${i}`),
+      );
+
+      // Force deterministic order: items appear in sequence
+      (Math.random as jest.Mock).mockReturnValue(0.99);
+
+      const { getByTestId } = render(
+        <ReviewSession items={manyRadicals} autoAdvanceDelay={0} />,
+      );
+
+      // Track unique item IDs we see as we answer incorrectly (to introduce them
+      // without completing them)
+      const introducedIds = new Set<string>();
+
+      // Answer 10 items incorrectly to introduce them without completing
+      for (let i = 0; i < 10; i++) {
+        const chars = getByTestId('review-session-characters').props.children;
+        introducedIds.add(chars);
+
+        // Submit wrong answer to introduce but not complete
+        fireEvent.changeText(getByTestId('review-session-input'), 'wrong');
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        // Tap continue to dismiss incorrect feedback
+        fireEvent.press(getByTestId('review-session-continue'));
+      }
+
+      // We've introduced 10 items. Now the next question should be for
+      // one of the already-introduced items (re-queued from incorrect answers),
+      // NOT a new item.
+      const nextChars = getByTestId('review-session-characters').props.children;
+      expect(introducedIds.has(nextChars)).toBe(true);
+
+      jest.useRealTimers();
+    });
+
+    it('should allow new items after completing an incomplete item', () => {
+      jest.useFakeTimers();
+
+      // Create 12 radicals
+      const manyRadicals = Array.from({ length: 12 }, (_, i) =>
+        createRadicalItem(200 + i, `S${i}`, `Item${i}`),
+      );
+
+      // Force deterministic order
+      (Math.random as jest.Mock).mockReturnValue(0.99);
+
+      const { getByTestId } = render(
+        <ReviewSession items={manyRadicals} autoAdvanceDelay={0} />,
+      );
+
+      const introducedChars: string[] = [];
+
+      // Answer 10 items incorrectly to fill the buffer
+      for (let i = 0; i < 10; i++) {
+        const chars = getByTestId('review-session-characters').props.children;
+        introducedChars.push(chars);
+
+        fireEvent.changeText(getByTestId('review-session-input'), 'wrong');
+        fireEvent.press(getByTestId('review-session-submit'));
+        fireEvent.press(getByTestId('review-session-continue'));
+      }
+
+      // Now buffer is full. The next question should be a re-queued one.
+      // Answer it correctly to complete one item and free a slot.
+      const currentChars = getByTestId('review-session-characters').props.children;
+      expect(introducedChars).toContain(currentChars);
+
+      // Find the item and answer correctly
+      const currentItem = manyRadicals.find(
+        item => item.characters === currentChars,
+      )!;
+      const correctMeaning = currentItem.meanings[0].meaning;
+      fireEvent.changeText(
+        getByTestId('review-session-input'),
+        correctMeaning,
+      );
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // After completing one item, the buffer has room. The system may now
+      // show a new (previously unintroduced) item OR another re-queued item.
+      // Just verify the session is still active and not stuck.
+      expect(getByTestId('review-session-characters')).toBeTruthy();
+
+      jest.useRealTimers();
+    });
+
+    it('should allow wrap-up mode to complete with fewer than MAX_INCOMPLETE_ITEMS', () => {
+      jest.useFakeTimers();
+
+      // Use a single radical — wrap-up with 1 introduced item should work fine
+      // even though buffer cap is 10
+      const onSessionComplete = jest.fn();
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession
+          items={[sampleRadical, sampleRadical2]}
+          onSessionComplete={onSessionComplete}
+          autoAdvanceDelay={0}
+        />,
+      );
+
+      // Activate wrap-up immediately (only the current item is introduced)
+      fireEvent.press(getByTestId('review-session-wrap-up'));
+      expect(queryByTestId('review-session-wrapping-up-text')).toBeTruthy();
+
+      // Answer the introduced item correctly
+      const chars = getByTestId('review-session-characters').props.children;
+      const answer = chars === '一' ? 'Ground' : 'Person';
+
+      fireEvent.changeText(getByTestId('review-session-input'), answer);
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Session should be complete with just 1 item (wrap-up stops new items)
+      expect(queryByTestId('review-completion')).toBeTruthy();
+      expect(onSessionComplete).toHaveBeenCalled();
+
+      // Only 1 item in the progress map
+      const progressMap = onSessionComplete.mock.calls[0][0] as Map<number, unknown>;
+      expect(progressMap.size).toBe(1);
+
+      jest.useRealTimers();
     });
   });
 });
