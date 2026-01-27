@@ -91,3 +91,20 @@ Started:
   - Pre-existing failing test in ReviewSession.test.tsx (wrap-up mode incorrect feedback) — not related to completion screen changes
 ---
 
+## 2026-01-27 - US-018
+- Removed NextReviewIndicator from the home screen layout
+- Deleted NextReviewIndicator component file and its test file
+- Removed export from components/index.ts
+- Kept `getNextReviewTime` data loading and `dashboardData.nextReviewAt` since UpcomingReviewsChart still uses it for its empty state
+- Removed 2 HomeScreen tests that referenced NextReviewIndicator
+- Files changed:
+  - `src/screens/HomeScreen.tsx` - Removed NextReviewIndicator import and rendering
+  - `src/components/index.ts` - Removed NextReviewIndicator export
+  - `src/components/NextReviewIndicator.tsx` - Deleted
+  - `__tests__/components/NextReviewIndicator.test.tsx` - Deleted
+  - `__tests__/screens/HomeScreen.test.tsx` - Removed 2 tests referencing NextReviewIndicator
+- **Learnings for future iterations:**
+  - `UpcomingReviewsChart` has its own `formatRelativeTime` function and empty state that shows "Next review in X hours" — independent of `NextReviewIndicator`
+  - `dashboardData.nextReviewAt` is still needed even without `NextReviewIndicator` because `UpcomingReviewsChart` uses it in its empty state
+---
+
