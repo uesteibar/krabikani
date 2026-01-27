@@ -160,14 +160,6 @@ describe('HomeScreen', () => {
       });
     });
 
-    it('renders the next review indicator component', async () => {
-      const { getByTestId } = renderWithNavigation(<HomeScreen />);
-
-      await waitFor(() => {
-        expect(getByTestId('next-review-indicator')).toBeTruthy();
-      });
-    });
-
     it('renders the level indicator when level is cached', async () => {
       await updateSyncStatus({ user_level: 5 });
 
@@ -272,13 +264,6 @@ describe('HomeScreen', () => {
       });
     });
 
-    it('shows "No upcoming reviews" when no future reviews', async () => {
-      const { getByText } = renderWithNavigation(<HomeScreen />);
-
-      await waitFor(() => {
-        expect(getByText('No upcoming reviews')).toBeTruthy();
-      });
-    });
   });
 
   describe('offline state with cached data', () => {

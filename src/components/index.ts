@@ -15,12 +15,6 @@ export {
 } from './DashboardStats';
 
 export {
-  NextReviewIndicator,
-  formatTimeUntil,
-  type NextReviewIndicatorProps,
-} from './NextReviewIndicator';
-
-export {
   LessonCard,
   type LessonCardProps,
   type ComponentRadical,

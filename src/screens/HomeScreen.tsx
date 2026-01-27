@@ -22,7 +22,7 @@ import {
   OfflineIndicator,
   LastSyncedIndicator,
   DashboardStats,
-  NextReviewIndicator,
+
   PendingSyncIndicator,
   SyncingIndicator,
   LevelIndicator,
@@ -354,10 +354,6 @@ export function HomeScreen() {
               reviewsCount={dashboardData.reviewsCount}
               onLessonsPress={handleLessonsPress}
               onReviewsPress={handleReviewsPress}
-            />
-            <NextReviewIndicator
-              nextReviewAt={dashboardData.nextReviewAt}
-              reviewsAvailable={dashboardData.reviewsCount}
             />
             <LearnedCounts
               kanjiCount={learnedData.kanjiLearned}
