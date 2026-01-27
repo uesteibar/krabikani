@@ -331,6 +331,12 @@ export function ReviewSession({
     toStage: number;
   } | null>(null);
 
+  // Pending level-down: stored on incorrect answer, triggered on Continue
+  const [pendingLevelDown, setPendingLevelDown] = useState<{
+    fromStage: number;
+    toStage: number;
+  } | null>(null);
+
   // Synonym addition state: null | 'adding' | 'added'
   const [synonymAddState, setSynonymAddState] = useState<
     null | 'adding' | 'added'
@@ -391,6 +397,7 @@ export function ReviewSession({
     setIncorrectFeedback(null);
     setLevelUpAnimation(null);
     setLevelDownAnimation(null);
+    setPendingLevelDown(null);
     setSynonymAddState(null);
     setIsWrappingUp(false);
     setIntroducedItemIds(new Set());
@@ -548,6 +555,7 @@ export function ReviewSession({
     setShowCorrectFeedback(false);
     setIsFuzzyMatch(false);
     setLevelDownAnimation(null);
+    setPendingLevelDown(null);
     setSynonymAddState(null);
   }, [
     findNextQuestionIndex,
@@ -559,12 +567,24 @@ export function ReviewSession({
 
   // Handle tap to continue after incorrect answer
   const handleContinue = useCallback(() => {
-    advanceToNextQuestion();
-  }, [advanceToNextQuestion]);
+    if (pendingLevelDown) {
+      // Show the level-down animation briefly before advancing
+      setLevelDownAnimation(pendingLevelDown);
+      setPendingLevelDown(null);
+      setTimeout(() => {
+        advanceToNextQuestion();
+      }, 800);
+    } else {
+      advanceToNextQuestion();
+    }
+  }, [advanceToNextQuestion, pendingLevelDown]);
 
   // Handle "Mark as Correct" - treat incorrect answer as correct
   const handleMarkAsCorrect = useCallback(() => {
     if (!incorrectFeedback) return;
+
+    // Clear pending level-down since user is overriding the incorrect answer
+    setPendingLevelDown(null);
 
     const question = incorrectFeedback.question;
     const { item, type } = question;
@@ -990,9 +1010,9 @@ export function ReviewSession({
       const isLevelDown =
         currentLevel && newLevel && currentLevel.key !== newLevel.key;
 
-      // Set level-down animation state if level changed
+      // Store pending level-down (animation triggers on Continue)
       if (isLevelDown) {
-        setLevelDownAnimation({
+        setPendingLevelDown({
           fromStage: currentStage,
           toStage: newStage,
         });

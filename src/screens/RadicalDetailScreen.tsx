@@ -15,11 +15,7 @@ import type {
 
 import type { RootStackParamList } from '../navigation/types';
 import type { Meaning } from '../api/types';
-import {
-  RadicalImage,
-  MnemonicText,
-  SrsLevelBadge,
-} from '../components';
+import { RadicalImage, MnemonicText, SrsLevelBadge } from '../components';
 import {
   getSubjectById,
   getAssignmentBySubjectId,
@@ -171,7 +167,9 @@ export function RadicalDetailScreen() {
         testID="radical-detail-loading"
       >
         <ActivityIndicator size="large" color={theme.colors.text.primary} />
-        <Text style={[styles.loadingText, { color: theme.colors.text.secondary }]}>
+        <Text
+          style={[styles.loadingText, { color: theme.colors.text.secondary }]}
+        >
           Loading...
         </Text>
       </View>
@@ -222,11 +220,11 @@ export function RadicalDetailScreen() {
             testID="radical-detail-radical-image"
           />
         )}
-        <View style={styles.subjectTypeBadge} testID="radical-detail-type-badge">
-          <Text style={styles.subjectTypeText}>Radical</Text>
-        </View>
         {assignment && (
-          <View style={styles.srsBadgeContainer} testID="radical-detail-srs-badge">
+          <View
+            style={styles.srsBadgeContainer}
+            testID="radical-detail-srs-badge"
+          >
             <SrsLevelBadge stage={assignment.srs_stage} />
           </View>
         )}
@@ -251,9 +249,6 @@ export function RadicalDetailScreen() {
                 testID={`radical-detail-meaning-${index}`}
               >
                 {meaning.meaning}
-                {meaning.primary && (
-                  <Text style={styles.primaryLabel}> (primary)</Text>
-                )}
               </Text>
             ))}
           </View>
@@ -277,7 +272,10 @@ export function RadicalDetailScreen() {
         {kanjiUsingRadical.length > 0 && (
           <>
             <View style={[styles.divider, dynamicStyles.dividerColor]} />
-            <View style={styles.section} testID="radical-detail-used-in-section">
+            <View
+              style={styles.section}
+              testID="radical-detail-used-in-section"
+            >
               <Text
                 style={[styles.sectionTitle, dynamicStyles.sectionTitleColor]}
               >
@@ -292,11 +290,10 @@ export function RadicalDetailScreen() {
                     activeOpacity={0.7}
                     testID={`radical-detail-kanji-${kanji.id}`}
                   >
-                    <Text style={styles.kanjiCharacter}>{kanji.characters}</Text>
-                    <Text
-                      style={[styles.kanjiMeaning, dynamicStyles.meaningTextColor]}
-                      numberOfLines={1}
-                    >
+                    <Text style={styles.kanjiCharacter}>
+                      {kanji.characters}
+                    </Text>
+                    <Text style={styles.kanjiMeaning} numberOfLines={1}>
                       {kanji.meaning}
                     </Text>
                   </TouchableOpacity>
@@ -356,20 +353,6 @@ const styles = StyleSheet.create({
     color: COLORS.text.inverse,
     ...TEXT_STYLES.japaneseDisplay,
   },
-  subjectTypeBadge: {
-    marginTop: SPACING.md,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: BORDER_RADIUS.full,
-  },
-  subjectTypeText: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.text.inverse,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
   srsBadgeContainer: {
     marginTop: SPACING.sm,
   },
@@ -404,11 +387,6 @@ const styles = StyleSheet.create({
   },
   primaryMeaning: {
     fontWeight: 'bold',
-  },
-  primaryLabel: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.text.tertiary,
-    fontWeight: 'normal',
   },
   mnemonicText: {
     fontSize: FONT_SIZES.base,

@@ -1,4 +1,10 @@
-import React, { useRef, useEffect, useMemo, useState, useCallback } from 'react';
+import React, {
+  useRef,
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+} from 'react';
 import {
   StyleSheet,
   Text,
@@ -18,13 +24,24 @@ import {
   useTheme,
   SUBJECT_COLORS,
   TEXT_STYLES,
+  getSrsLevelInfo,
 } from '../theme';
-import { searchSubjects, type SearchResult, type SubjectType } from '../storage';
+import {
+  searchSubjects,
+  type SearchResult,
+  type SubjectType,
+} from '../storage';
 import { romajiToHiragana } from '../utils/romajiToHiragana';
 import type { RootStackParamList } from '../navigation/types';
 
 interface Meaning {
   meaning: string;
+  primary: boolean;
+  accepted_answer: boolean;
+}
+
+interface Reading {
+  reading: string;
   primary: boolean;
   accepted_answer: boolean;
 }
@@ -39,17 +56,16 @@ function getPrimaryMeaning(meaningsJson: string): string {
   }
 }
 
-function getSubjectTypeLabel(type: SubjectType): string {
-  switch (type) {
-    case 'radical':
-      return 'Radical';
-    case 'kanji':
-      return 'Kanji';
-    case 'vocabulary':
-    case 'kana_vocabulary':
-      return 'Vocabulary';
-    default:
-      return '';
+function getPrimaryReading(readingsJson: string | null): string {
+  if (!readingsJson) {
+    return '';
+  }
+  try {
+    const readings: Reading[] = JSON.parse(readingsJson);
+    const primary = readings.find(r => r.primary);
+    return primary?.reading ?? readings[0]?.reading ?? '';
+  } catch {
+    return '';
   }
 }
 
@@ -82,7 +98,11 @@ export function SearchScreen() {
 
     try {
       const hiraganaQuery = romajiToHiragana(searchQuery);
-      const searchResults = await searchSubjects(searchQuery, hiraganaQuery, 100);
+      const searchResults = await searchSubjects(
+        searchQuery,
+        hiraganaQuery,
+        100,
+      );
       setResults(searchResults);
       setHasSearched(true);
     } catch (error) {
@@ -91,19 +111,22 @@ export function SearchScreen() {
     }
   }, []);
 
-  const handleQueryChange = useCallback((text: string) => {
-    setQuery(text);
+  const handleQueryChange = useCallback(
+    (text: string) => {
+      setQuery(text);
 
-    // Clear existing timer
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
+      // Clear existing timer
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
 
-    // Set new debounce timer (300ms)
-    debounceTimerRef.current = setTimeout(() => {
-      performSearch(text);
-    }, 300);
-  }, [performSearch]);
+      // Set new debounce timer (300ms)
+      debounceTimerRef.current = setTimeout(() => {
+        performSearch(text);
+      }, 300);
+    },
+    [performSearch],
+  );
 
   // Cleanup debounce timer on unmount
   useEffect(() => {
@@ -136,60 +159,118 @@ export function SearchScreen() {
       resultMeaningText: {
         color: theme.colors.text.primary,
       },
+      resultSecondaryText: {
+        color: theme.colors.text.secondary,
+      },
     }),
     [theme],
   );
 
-  const handleResultPress = useCallback((item: SearchResult) => {
-    switch (item.object_type) {
-      case 'radical':
-        navigation.navigate('RadicalDetail', { subjectId: item.id });
-        break;
-      case 'kanji':
-        navigation.navigate('KanjiDetail', { subjectId: item.id });
-        break;
-      case 'vocabulary':
-      case 'kana_vocabulary':
-        navigation.navigate('VocabularyDetail', { subjectId: item.id });
-        break;
-    }
-  }, [navigation]);
+  const handleResultPress = useCallback(
+    (item: SearchResult) => {
+      switch (item.object_type) {
+        case 'radical':
+          navigation.navigate('RadicalDetail', { subjectId: item.id });
+          break;
+        case 'kanji':
+          navigation.navigate('KanjiDetail', { subjectId: item.id });
+          break;
+        case 'vocabulary':
+        case 'kana_vocabulary':
+          navigation.navigate('VocabularyDetail', { subjectId: item.id });
+          break;
+      }
+    },
+    [navigation],
+  );
 
-  const renderResultItem = useCallback(({ item }: { item: SearchResult }) => {
-    const primaryMeaning = getPrimaryMeaning(item.meanings);
-    const typeLabel = getSubjectTypeLabel(item.object_type);
-    const badgeColor = SUBJECT_COLORS[item.object_type];
+  const renderResultItem = useCallback(
+    ({ item }: { item: SearchResult }) => {
+      const primaryMeaning = getPrimaryMeaning(item.meanings);
+      const primaryReading = getPrimaryReading(item.readings);
+      const badgeColor = SUBJECT_COLORS[item.object_type];
+      const srsInfo = getSrsLevelInfo(item.srs_stage);
 
-    return (
-      <TouchableOpacity
-        style={[styles.resultItem, dynamicStyles.resultItemBorder]}
-        testID={`search-result-${item.id}`}
-        onPress={() => handleResultPress(item)}
-        activeOpacity={0.7}
-      >
-        <Text style={[styles.resultCharacter, TEXT_STYLES.japaneseDisplay]}>
-          {item.characters ?? '?'}
-        </Text>
-        <View style={styles.resultInfo}>
-          <Text style={[styles.resultMeaning, dynamicStyles.resultMeaningText]} numberOfLines={1}>
-            {primaryMeaning}
-          </Text>
-          <View style={[styles.typeBadge, { backgroundColor: badgeColor }]}>
-            <Text style={styles.typeBadgeText}>{typeLabel}</Text>
+      return (
+        <TouchableOpacity
+          style={[styles.resultItem, dynamicStyles.resultItemBorder]}
+          testID={`search-result-${item.id}`}
+          onPress={() => handleResultPress(item)}
+          activeOpacity={0.7}
+        >
+          <View
+            style={[styles.resultAccent, { backgroundColor: badgeColor }]}
+          />
+          <View style={styles.resultContent}>
+            <View style={styles.resultTopRow}>
+              <Text
+                style={[
+                  styles.resultCharacter,
+                  TEXT_STYLES.japaneseDisplay,
+                  dynamicStyles.resultMeaningText,
+                ]}
+              >
+                {item.characters ?? '?'}
+              </Text>
+            </View>
+            <View style={styles.resultBottomRow}>
+              <Text
+                style={[styles.resultMeaning, dynamicStyles.resultMeaningText]}
+                numberOfLines={1}
+              >
+                {primaryMeaning}
+              </Text>
+              {primaryReading.length > 0 && (
+                <>
+                  <Text
+                    style={[
+                      styles.resultSeparator,
+                      dynamicStyles.resultSecondaryText,
+                    ]}
+                  >
+                    {'·'}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.resultReading,
+                      dynamicStyles.resultSecondaryText,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {primaryReading}
+                  </Text>
+                </>
+              )}
+            </View>
           </View>
-        </View>
-      </TouchableOpacity>
-    );
-  }, [dynamicStyles, handleResultPress]);
+          {srsInfo && (
+            <Text
+              style={[styles.resultSrsLabel, dynamicStyles.resultSecondaryText]}
+            >
+              {srsInfo.name}
+            </Text>
+          )}
+        </TouchableOpacity>
+      );
+    },
+    [dynamicStyles, handleResultPress],
+  );
 
-  const keyExtractor = useCallback((item: SearchResult) => item.id.toString(), []);
+  const keyExtractor = useCallback(
+    (item: SearchResult) => item.id.toString(),
+    [],
+  );
 
   const showEmptyState = query.trim().length === 0 && !hasSearched;
-  const showNoResults = hasSearched && results.length === 0 && query.trim().length > 0;
+  const showNoResults =
+    hasSearched && results.length === 0 && query.trim().length > 0;
   const showResults = results.length > 0;
 
   return (
-    <View style={[styles.container, dynamicStyles.container]} testID="search-screen">
+    <View
+      style={[styles.container, dynamicStyles.container]}
+      testID="search-screen"
+    >
       <View style={styles.searchContainer}>
         <TextInput
           ref={inputRef}
@@ -223,7 +304,10 @@ export function SearchScreen() {
 
       {showResults && (
         <View style={styles.resultsContainer}>
-          <Text style={[styles.resultsCount, dynamicStyles.resultsCountText]} testID="results-count">
+          <Text
+            style={[styles.resultsCount, dynamicStyles.resultsCountText]}
+            testID="results-count"
+          >
             {results.length} {results.length === 1 ? 'result' : 'results'}
           </Text>
           <FlatList
@@ -280,35 +364,42 @@ const styles = StyleSheet.create({
   },
   resultItem: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'stretch',
     paddingVertical: SPACING.md,
     borderBottomWidth: 1,
   },
-  resultCharacter: {
-    fontSize: FONT_SIZES.xxxl,
-    width: 56,
-    textAlign: 'center',
+  resultAccent: {
+    width: 5,
+    borderRadius: 3,
+    marginRight: SPACING.md,
   },
-  resultInfo: {
+  resultContent: {
     flex: 1,
-    marginLeft: SPACING.md,
+  },
+  resultTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+  },
+  resultCharacter: {
+    fontSize: FONT_SIZES.xxl,
+  },
+  resultBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    marginTop: SPACING.xs,
   },
   resultMeaning: {
-    fontSize: FONT_SIZES.base,
-    flex: 1,
-    marginRight: SPACING.sm,
+    fontSize: FONT_SIZES.sm,
   },
-  typeBadge: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.sm,
+  resultSeparator: {
+    fontSize: FONT_SIZES.sm,
   },
-  typeBadgeText: {
-    color: COLORS.neutral.white,
+  resultReading: {
+    fontSize: FONT_SIZES.sm,
+  },
+  resultSrsLabel: {
     fontSize: FONT_SIZES.xs,
-    fontWeight: '600',
+    alignSelf: 'flex-end',
   },
 });

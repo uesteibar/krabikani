@@ -15,11 +15,7 @@ import type {
 
 import type { RootStackParamList } from '../navigation/types';
 import type { Meaning, KanjiReading } from '../api/types';
-import {
-  RadicalImage,
-  MnemonicText,
-  SrsLevelBadge,
-} from '../components';
+import { RadicalImage, MnemonicText, SrsLevelBadge } from '../components';
 import {
   getSubjectById,
   getSubjectsByIds,
@@ -238,7 +234,9 @@ export function KanjiDetailScreen() {
         testID="kanji-detail-loading"
       >
         <ActivityIndicator size="large" color={theme.colors.text.primary} />
-        <Text style={[styles.loadingText, { color: theme.colors.text.secondary }]}>
+        <Text
+          style={[styles.loadingText, { color: theme.colors.text.secondary }]}
+        >
           Loading...
         </Text>
       </View>
@@ -288,11 +286,11 @@ export function KanjiDetailScreen() {
         <Text style={styles.characterText} testID="kanji-detail-character">
           {subject.characters ?? '?'}
         </Text>
-        <View style={styles.subjectTypeBadge} testID="kanji-detail-type-badge">
-          <Text style={styles.subjectTypeText}>Kanji</Text>
-        </View>
         {assignment && (
-          <View style={styles.srsBadgeContainer} testID="kanji-detail-srs-badge">
+          <View
+            style={styles.srsBadgeContainer}
+            testID="kanji-detail-srs-badge"
+          >
             <SrsLevelBadge stage={assignment.srs_stage} />
           </View>
         )}
@@ -317,9 +315,6 @@ export function KanjiDetailScreen() {
                 testID={`kanji-detail-meaning-${index}`}
               >
                 {meaning.meaning}
-                {meaning.primary && (
-                  <Text style={styles.primaryLabel}> (primary)</Text>
-                )}
               </Text>
             ))}
           </View>
@@ -336,22 +331,35 @@ export function KanjiDetailScreen() {
           {/* On'yomi */}
           {groupedReadings.onyomi.length > 0 && (
             <View style={styles.readingGroup} testID="kanji-detail-onyomi">
-              <Text style={[styles.readingTypeLabel, dynamicStyles.hintTextColor]}>
+              <Text
+                style={[styles.readingTypeLabel, dynamicStyles.hintTextColor]}
+              >
                 On'yomi
               </Text>
               <View style={styles.readingsList}>
                 {groupedReadings.onyomi.map((reading, index) => (
-                  <Text
-                    key={index}
-                    style={[
-                      styles.readingText,
-                      dynamicStyles.meaningTextColor,
-                      reading.primary && styles.primaryReading,
-                    ]}
-                    testID={`kanji-detail-onyomi-${index}`}
-                  >
-                    {reading.reading}
-                  </Text>
+                  <React.Fragment key={index}>
+                    {index > 0 && (
+                      <Text
+                        style={[
+                          styles.readingSeparator,
+                          dynamicStyles.hintTextColor,
+                        ]}
+                      >
+                        ·
+                      </Text>
+                    )}
+                    <Text
+                      style={[
+                        styles.readingText,
+                        dynamicStyles.meaningTextColor,
+                        reading.primary && styles.primaryReading,
+                      ]}
+                      testID={`kanji-detail-onyomi-${index}`}
+                    >
+                      {reading.reading}
+                    </Text>
+                  </React.Fragment>
                 ))}
               </View>
             </View>
@@ -360,22 +368,35 @@ export function KanjiDetailScreen() {
           {/* Kun'yomi */}
           {groupedReadings.kunyomi.length > 0 && (
             <View style={styles.readingGroup} testID="kanji-detail-kunyomi">
-              <Text style={[styles.readingTypeLabel, dynamicStyles.hintTextColor]}>
+              <Text
+                style={[styles.readingTypeLabel, dynamicStyles.hintTextColor]}
+              >
                 Kun'yomi
               </Text>
               <View style={styles.readingsList}>
                 {groupedReadings.kunyomi.map((reading, index) => (
-                  <Text
-                    key={index}
-                    style={[
-                      styles.readingText,
-                      dynamicStyles.meaningTextColor,
-                      reading.primary && styles.primaryReading,
-                    ]}
-                    testID={`kanji-detail-kunyomi-${index}`}
-                  >
-                    {reading.reading}
-                  </Text>
+                  <React.Fragment key={index}>
+                    {index > 0 && (
+                      <Text
+                        style={[
+                          styles.readingSeparator,
+                          dynamicStyles.hintTextColor,
+                        ]}
+                      >
+                        ·
+                      </Text>
+                    )}
+                    <Text
+                      style={[
+                        styles.readingText,
+                        dynamicStyles.meaningTextColor,
+                        reading.primary && styles.primaryReading,
+                      ]}
+                      testID={`kanji-detail-kunyomi-${index}`}
+                    >
+                      {reading.reading}
+                    </Text>
+                  </React.Fragment>
                 ))}
               </View>
             </View>
@@ -384,22 +405,35 @@ export function KanjiDetailScreen() {
           {/* Nanori */}
           {groupedReadings.nanori.length > 0 && (
             <View style={styles.readingGroup} testID="kanji-detail-nanori">
-              <Text style={[styles.readingTypeLabel, dynamicStyles.hintTextColor]}>
+              <Text
+                style={[styles.readingTypeLabel, dynamicStyles.hintTextColor]}
+              >
                 Nanori
               </Text>
               <View style={styles.readingsList}>
                 {groupedReadings.nanori.map((reading, index) => (
-                  <Text
-                    key={index}
-                    style={[
-                      styles.readingText,
-                      dynamicStyles.meaningTextColor,
-                      reading.primary && styles.primaryReading,
-                    ]}
-                    testID={`kanji-detail-nanori-${index}`}
-                  >
-                    {reading.reading}
-                  </Text>
+                  <React.Fragment key={index}>
+                    {index > 0 && (
+                      <Text
+                        style={[
+                          styles.readingSeparator,
+                          dynamicStyles.hintTextColor,
+                        ]}
+                      >
+                        ·
+                      </Text>
+                    )}
+                    <Text
+                      style={[
+                        styles.readingText,
+                        dynamicStyles.meaningTextColor,
+                        reading.primary && styles.primaryReading,
+                      ]}
+                      testID={`kanji-detail-nanori-${index}`}
+                    >
+                      {reading.reading}
+                    </Text>
+                  </React.Fragment>
                 ))}
               </View>
             </View>
@@ -421,7 +455,10 @@ export function KanjiDetailScreen() {
                 {componentRadicals.map(radical => (
                   <TouchableOpacity
                     key={radical.id}
-                    style={[styles.radicalItem, dynamicStyles.radicalItemBorder]}
+                    style={[
+                      styles.radicalItem,
+                      dynamicStyles.radicalItemBorder,
+                    ]}
                     onPress={() => handleRadicalPress(radical.id)}
                     activeOpacity={0.7}
                     testID={`kanji-detail-radical-${radical.id}`}
@@ -438,10 +475,7 @@ export function KanjiDetailScreen() {
                         testID={`kanji-detail-radical-image-${radical.id}`}
                       />
                     )}
-                    <Text
-                      style={[styles.radicalMeaning, dynamicStyles.meaningTextColor]}
-                      numberOfLines={1}
-                    >
+                    <Text style={styles.radicalMeaning} numberOfLines={1}>
                       {radical.meaning}
                     </Text>
                   </TouchableOpacity>
@@ -453,7 +487,10 @@ export function KanjiDetailScreen() {
         )}
 
         {/* Meaning Mnemonic Section */}
-        <View style={styles.section} testID="kanji-detail-meaning-mnemonic-section">
+        <View
+          style={styles.section}
+          testID="kanji-detail-meaning-mnemonic-section"
+        >
           <Text style={[styles.sectionTitle, dynamicStyles.sectionTitleColor]}>
             Meaning Mnemonic
           </Text>
@@ -476,13 +513,21 @@ export function KanjiDetailScreen() {
         {subject.reading_mnemonic && (
           <>
             <View style={[styles.divider, dynamicStyles.dividerColor]} />
-            <View style={styles.section} testID="kanji-detail-reading-mnemonic-section">
-              <Text style={[styles.sectionTitle, dynamicStyles.sectionTitleColor]}>
+            <View
+              style={styles.section}
+              testID="kanji-detail-reading-mnemonic-section"
+            >
+              <Text
+                style={[styles.sectionTitle, dynamicStyles.sectionTitleColor]}
+              >
                 Reading Mnemonic
               </Text>
               <MnemonicText
                 text={subject.reading_mnemonic}
-                style={{ ...styles.mnemonicText, color: theme.colors.text.primary }}
+                style={{
+                  ...styles.mnemonicText,
+                  color: theme.colors.text.primary,
+                }}
                 testID="kanji-detail-reading-mnemonic"
               />
               {readingHint && (
@@ -547,20 +592,6 @@ const styles = StyleSheet.create({
     color: COLORS.text.inverse,
     ...TEXT_STYLES.japaneseDisplay,
   },
-  subjectTypeBadge: {
-    marginTop: SPACING.md,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: BORDER_RADIUS.full,
-  },
-  subjectTypeText: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.text.inverse,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
   srsBadgeContainer: {
     marginTop: SPACING.sm,
   },
@@ -596,11 +627,6 @@ const styles = StyleSheet.create({
   primaryMeaning: {
     fontWeight: 'bold',
   },
-  primaryLabel: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.text.tertiary,
-    fontWeight: 'normal',
-  },
   readingGroup: {
     marginBottom: SPACING.md,
   },
@@ -614,11 +640,15 @@ const styles = StyleSheet.create({
   readingsList: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    alignItems: 'center',
     gap: SPACING.sm,
   },
   readingText: {
     fontSize: FONT_SIZES.lg,
     color: COLORS.text.primary,
+  },
+  readingSeparator: {
+    fontSize: FONT_SIZES.base,
   },
   primaryReading: {
     fontWeight: 'bold',

@@ -15,10 +15,7 @@ import type {
 
 import type { RootStackParamList } from '../navigation/types';
 import type { Meaning, Reading } from '../api/types';
-import {
-  MnemonicText,
-  SrsLevelBadge,
-} from '../components';
+import { MnemonicText, SrsLevelBadge } from '../components';
 import {
   getSubjectById,
   getSubjectsByIds,
@@ -231,7 +228,9 @@ export function VocabularyDetailScreen() {
         testID="vocabulary-detail-loading"
       >
         <ActivityIndicator size="large" color={theme.colors.text.primary} />
-        <Text style={[styles.loadingText, { color: theme.colors.text.secondary }]}>
+        <Text
+          style={[styles.loadingText, { color: theme.colors.text.secondary }]}
+        >
           Loading...
         </Text>
       </View>
@@ -270,8 +269,6 @@ export function VocabularyDetailScreen() {
     isKanaVocabulary,
   } = data;
 
-  const subjectTypeLabel = isKanaVocabulary ? 'Kana Vocabulary' : 'Vocabulary';
-
   return (
     <ScrollView
       style={[styles.container, dynamicStyles.container]}
@@ -282,11 +279,11 @@ export function VocabularyDetailScreen() {
         <Text style={styles.characterText} testID="vocabulary-detail-character">
           {subject.characters ?? '?'}
         </Text>
-        <View style={styles.subjectTypeBadge} testID="vocabulary-detail-type-badge">
-          <Text style={styles.subjectTypeText}>{subjectTypeLabel}</Text>
-        </View>
         {assignment && (
-          <View style={styles.srsBadgeContainer} testID="vocabulary-detail-srs-badge">
+          <View
+            style={styles.srsBadgeContainer}
+            testID="vocabulary-detail-srs-badge"
+          >
             <SrsLevelBadge stage={assignment.srs_stage} />
           </View>
         )}
@@ -302,7 +299,10 @@ export function VocabularyDetailScreen() {
                 {partsOfSpeech.map((pos, index) => (
                   <Text
                     key={index}
-                    style={[styles.partsOfSpeechText, dynamicStyles.partsOfSpeechColor]}
+                    style={[
+                      styles.partsOfSpeechText,
+                      dynamicStyles.partsOfSpeechColor,
+                    ]}
                     testID={`vocabulary-detail-pos-${index}`}
                   >
                     {pos}
@@ -315,7 +315,10 @@ export function VocabularyDetailScreen() {
         )}
 
         {/* Meanings Section */}
-        <View style={styles.section} testID="vocabulary-detail-meanings-section">
+        <View
+          style={styles.section}
+          testID="vocabulary-detail-meanings-section"
+        >
           <Text style={[styles.sectionTitle, dynamicStyles.sectionTitleColor]}>
             Meanings
           </Text>
@@ -331,9 +334,6 @@ export function VocabularyDetailScreen() {
                 testID={`vocabulary-detail-meaning-${index}`}
               >
                 {meaning.meaning}
-                {meaning.primary && (
-                  <Text style={styles.primaryLabel}> (primary)</Text>
-                )}
               </Text>
             ))}
           </View>
@@ -342,26 +342,37 @@ export function VocabularyDetailScreen() {
         <View style={[styles.divider, dynamicStyles.dividerColor]} />
 
         {/* Readings Section */}
-        <View style={styles.section} testID="vocabulary-detail-readings-section">
+        <View
+          style={styles.section}
+          testID="vocabulary-detail-readings-section"
+        >
           <Text style={[styles.sectionTitle, dynamicStyles.sectionTitleColor]}>
             Readings
           </Text>
           <View style={styles.readingsList}>
             {readings.map((reading, index) => (
-              <Text
-                key={index}
-                style={[
-                  styles.readingText,
-                  dynamicStyles.meaningTextColor,
-                  reading.primary && styles.primaryReading,
-                ]}
-                testID={`vocabulary-detail-reading-${index}`}
-              >
-                {reading.reading}
-                {reading.primary && readings.length > 1 && (
-                  <Text style={styles.primaryLabel}> (primary)</Text>
+              <React.Fragment key={index}>
+                {index > 0 && (
+                  <Text
+                    style={[
+                      styles.readingSeparator,
+                      dynamicStyles.contextSentenceColor,
+                    ]}
+                  >
+                    ·
+                  </Text>
                 )}
-              </Text>
+                <Text
+                  style={[
+                    styles.readingText,
+                    dynamicStyles.meaningTextColor,
+                    reading.primary && styles.primaryReading,
+                  ]}
+                  testID={`vocabulary-detail-reading-${index}`}
+                >
+                  {reading.reading}
+                </Text>
+              </React.Fragment>
             ))}
           </View>
         </View>
@@ -370,7 +381,10 @@ export function VocabularyDetailScreen() {
         {componentKanji.length > 0 && (
           <>
             <View style={[styles.divider, dynamicStyles.dividerColor]} />
-            <View style={styles.section} testID="vocabulary-detail-kanji-section">
+            <View
+              style={styles.section}
+              testID="vocabulary-detail-kanji-section"
+            >
               <Text
                 style={[styles.sectionTitle, dynamicStyles.sectionTitleColor]}
               >
@@ -385,11 +399,10 @@ export function VocabularyDetailScreen() {
                     activeOpacity={0.7}
                     testID={`vocabulary-detail-kanji-${kanji.id}`}
                   >
-                    <Text style={styles.kanjiCharacter}>{kanji.characters}</Text>
-                    <Text
-                      style={[styles.kanjiMeaning, dynamicStyles.meaningTextColor]}
-                      numberOfLines={1}
-                    >
+                    <Text style={styles.kanjiCharacter}>
+                      {kanji.characters}
+                    </Text>
+                    <Text style={styles.kanjiMeaning} numberOfLines={1}>
                       {kanji.meaning}
                     </Text>
                   </TouchableOpacity>
@@ -402,7 +415,10 @@ export function VocabularyDetailScreen() {
         <View style={[styles.divider, dynamicStyles.dividerColor]} />
 
         {/* Meaning Mnemonic Section */}
-        <View style={styles.section} testID="vocabulary-detail-meaning-mnemonic-section">
+        <View
+          style={styles.section}
+          testID="vocabulary-detail-meaning-mnemonic-section"
+        >
           <Text style={[styles.sectionTitle, dynamicStyles.sectionTitleColor]}>
             Meaning Mnemonic
           </Text>
@@ -417,13 +433,21 @@ export function VocabularyDetailScreen() {
         {subject.reading_mnemonic && (
           <>
             <View style={[styles.divider, dynamicStyles.dividerColor]} />
-            <View style={styles.section} testID="vocabulary-detail-reading-mnemonic-section">
-              <Text style={[styles.sectionTitle, dynamicStyles.sectionTitleColor]}>
+            <View
+              style={styles.section}
+              testID="vocabulary-detail-reading-mnemonic-section"
+            >
+              <Text
+                style={[styles.sectionTitle, dynamicStyles.sectionTitleColor]}
+              >
                 Reading Mnemonic
               </Text>
               <MnemonicText
                 text={subject.reading_mnemonic}
-                style={{ ...styles.mnemonicText, color: theme.colors.text.primary }}
+                style={{
+                  ...styles.mnemonicText,
+                  color: theme.colors.text.primary,
+                }}
                 testID="vocabulary-detail-reading-mnemonic"
               />
             </View>
@@ -434,8 +458,13 @@ export function VocabularyDetailScreen() {
         {contextSentences.length > 0 && (
           <>
             <View style={[styles.divider, dynamicStyles.dividerColor]} />
-            <View style={styles.section} testID="vocabulary-detail-context-section">
-              <Text style={[styles.sectionTitle, dynamicStyles.sectionTitleColor]}>
+            <View
+              style={styles.section}
+              testID="vocabulary-detail-context-section"
+            >
+              <Text
+                style={[styles.sectionTitle, dynamicStyles.sectionTitleColor]}
+              >
                 Context Sentences
               </Text>
               {contextSentences.map((sentence, index) => (
@@ -445,12 +474,18 @@ export function VocabularyDetailScreen() {
                   testID={`vocabulary-detail-context-${index}`}
                 >
                   <Text
-                    style={[styles.contextJapanese, dynamicStyles.meaningTextColor]}
+                    style={[
+                      styles.contextJapanese,
+                      dynamicStyles.meaningTextColor,
+                    ]}
                   >
                     {sentence.ja}
                   </Text>
                   <Text
-                    style={[styles.contextEnglish, dynamicStyles.contextSentenceColor]}
+                    style={[
+                      styles.contextEnglish,
+                      dynamicStyles.contextSentenceColor,
+                    ]}
                   >
                     {sentence.en}
                   </Text>
@@ -510,20 +545,6 @@ const styles = StyleSheet.create({
     color: COLORS.text.inverse,
     ...TEXT_STYLES.japaneseDisplay,
   },
-  subjectTypeBadge: {
-    marginTop: SPACING.md,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: BORDER_RADIUS.full,
-  },
-  subjectTypeText: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.text.inverse,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
   srsBadgeContainer: {
     marginTop: SPACING.sm,
   },
@@ -569,19 +590,18 @@ const styles = StyleSheet.create({
   primaryMeaning: {
     fontWeight: 'bold',
   },
-  primaryLabel: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.text.tertiary,
-    fontWeight: 'normal',
-  },
   readingsList: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    alignItems: 'center',
     gap: SPACING.sm,
   },
   readingText: {
     fontSize: FONT_SIZES.lg,
     color: COLORS.text.primary,
+  },
+  readingSeparator: {
+    fontSize: FONT_SIZES.base,
   },
   primaryReading: {
     fontWeight: 'bold',

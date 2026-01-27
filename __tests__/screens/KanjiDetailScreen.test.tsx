@@ -7,7 +7,10 @@ import { KanjiDetailScreen } from '../../src/screens/KanjiDetailScreen';
 import { ThemeProvider } from '../../src/theme';
 import * as database from '../../src/storage/database';
 import type { RootStackParamList } from '../../src/navigation/types';
-import type { DatabaseSubject, DatabaseAssignment } from '../../src/storage/database';
+import type {
+  DatabaseSubject,
+  DatabaseAssignment,
+} from '../../src/storage/database';
 
 jest.mock('../../src/storage/database');
 
@@ -31,7 +34,9 @@ function renderWithNavigation(subjectId: number) {
   );
 }
 
-function createMockKanji(overrides: Partial<DatabaseSubject> = {}): DatabaseSubject {
+function createMockKanji(
+  overrides: Partial<DatabaseSubject> = {},
+): DatabaseSubject {
   return {
     id: 1,
     object_type: 'kanji',
@@ -41,9 +46,24 @@ function createMockKanji(overrides: Partial<DatabaseSubject> = {}): DatabaseSubj
       { meaning: 'Large', primary: false, accepted_answer: true },
     ]),
     readings: JSON.stringify([
-      { reading: 'おお', primary: true, accepted_answer: true, type: 'kunyomi' },
-      { reading: 'だい', primary: false, accepted_answer: true, type: 'onyomi' },
-      { reading: 'たい', primary: false, accepted_answer: true, type: 'onyomi' },
+      {
+        reading: 'おお',
+        primary: true,
+        accepted_answer: true,
+        type: 'kunyomi',
+      },
+      {
+        reading: 'だい',
+        primary: false,
+        accepted_answer: true,
+        type: 'onyomi',
+      },
+      {
+        reading: 'たい',
+        primary: false,
+        accepted_answer: true,
+        type: 'onyomi',
+      },
     ]),
     meaning_mnemonic: 'Picture a big person spreading their arms wide.',
     reading_mnemonic: 'When you see something big, you say "Oh!" (おお)',
@@ -56,12 +76,16 @@ function createMockKanji(overrides: Partial<DatabaseSubject> = {}): DatabaseSubj
   };
 }
 
-function createMockRadical(overrides: Partial<DatabaseSubject> = {}): DatabaseSubject {
+function createMockRadical(
+  overrides: Partial<DatabaseSubject> = {},
+): DatabaseSubject {
   return {
     id: 10,
     object_type: 'radical',
     characters: '一',
-    meanings: JSON.stringify([{ meaning: 'One', primary: true, accepted_answer: true }]),
+    meanings: JSON.stringify([
+      { meaning: 'One', primary: true, accepted_answer: true },
+    ]),
     readings: null,
     meaning_mnemonic: 'A single horizontal line.',
     reading_mnemonic: null,
@@ -74,7 +98,9 @@ function createMockRadical(overrides: Partial<DatabaseSubject> = {}): DatabaseSu
   };
 }
 
-function createMockAssignment(overrides: Partial<DatabaseAssignment> = {}): DatabaseAssignment {
+function createMockAssignment(
+  overrides: Partial<DatabaseAssignment> = {},
+): DatabaseAssignment {
   return {
     id: 100,
     subject_id: 1,
@@ -133,7 +159,9 @@ describe('KanjiDetailScreen', () => {
     });
 
     it('should show error when database throws an error', async () => {
-      mockDatabase.getSubjectById.mockRejectedValue(new Error('Database error'));
+      mockDatabase.getSubjectById.mockRejectedValue(
+        new Error('Database error'),
+      );
 
       const { getByTestId, getByText } = renderWithNavigation(1);
 
@@ -160,7 +188,6 @@ describe('KanjiDetailScreen', () => {
 
       expect(getByTestId('kanji-detail-character')).toBeTruthy();
       expect(getByTestId('kanji-detail-character').props.children).toBe('大');
-      expect(getByTestId('kanji-detail-type-badge')).toBeTruthy();
       expect(getByTestId('kanji-detail-header')).toBeTruthy();
     });
 
@@ -186,8 +213,18 @@ describe('KanjiDetailScreen', () => {
     it('should display readings grouped by type', async () => {
       const mockKanji = createMockKanji({
         readings: JSON.stringify([
-          { reading: 'おお', primary: true, accepted_answer: true, type: 'kunyomi' },
-          { reading: 'だい', primary: false, accepted_answer: true, type: 'onyomi' },
+          {
+            reading: 'おお',
+            primary: true,
+            accepted_answer: true,
+            type: 'kunyomi',
+          },
+          {
+            reading: 'だい',
+            primary: false,
+            accepted_answer: true,
+            type: 'onyomi',
+          },
         ]),
       });
       mockDatabase.getSubjectById.mockResolvedValue(mockKanji);
@@ -209,8 +246,18 @@ describe('KanjiDetailScreen', () => {
     it('should display nanori readings when available', async () => {
       const mockKanji = createMockKanji({
         readings: JSON.stringify([
-          { reading: 'おお', primary: true, accepted_answer: true, type: 'kunyomi' },
-          { reading: 'まさる', primary: false, accepted_answer: false, type: 'nanori' },
+          {
+            reading: 'おお',
+            primary: true,
+            accepted_answer: true,
+            type: 'kunyomi',
+          },
+          {
+            reading: 'まさる',
+            primary: false,
+            accepted_answer: false,
+            type: 'nanori',
+          },
         ]),
       });
       mockDatabase.getSubjectById.mockResolvedValue(mockKanji);
@@ -235,17 +282,24 @@ describe('KanjiDetailScreen', () => {
       const mockRadical1 = createMockRadical({
         id: 10,
         characters: '一',
-        meanings: JSON.stringify([{ meaning: 'One', primary: true, accepted_answer: true }]),
+        meanings: JSON.stringify([
+          { meaning: 'One', primary: true, accepted_answer: true },
+        ]),
       });
       const mockRadical2 = createMockRadical({
         id: 11,
         characters: '丨',
-        meanings: JSON.stringify([{ meaning: 'Stick', primary: true, accepted_answer: true }]),
+        meanings: JSON.stringify([
+          { meaning: 'Stick', primary: true, accepted_answer: true },
+        ]),
       });
 
       mockDatabase.getSubjectById.mockResolvedValue(mockKanji);
       mockDatabase.getAssignmentBySubjectId.mockResolvedValue(null);
-      mockDatabase.getSubjectsByIds.mockResolvedValue([mockRadical1, mockRadical2]);
+      mockDatabase.getSubjectsByIds.mockResolvedValue([
+        mockRadical1,
+        mockRadical2,
+      ]);
 
       const { getByTestId } = renderWithNavigation(1);
 
@@ -265,7 +319,9 @@ describe('KanjiDetailScreen', () => {
       const mockRadical = createMockRadical({
         id: 10,
         characters: null,
-        character_images: JSON.stringify([{ url: 'https://example.com/image.png', content_type: 'image/png' }]),
+        character_images: JSON.stringify([
+          { url: 'https://example.com/image.png', content_type: 'image/png' },
+        ]),
       });
 
       mockDatabase.getSubjectById.mockResolvedValue(mockKanji);
@@ -309,7 +365,9 @@ describe('KanjiDetailScreen', () => {
       const { getByTestId } = renderWithNavigation(1);
 
       await waitFor(() => {
-        expect(getByTestId('kanji-detail-meaning-mnemonic-section')).toBeTruthy();
+        expect(
+          getByTestId('kanji-detail-meaning-mnemonic-section'),
+        ).toBeTruthy();
       });
 
       expect(getByTestId('kanji-detail-meaning-mnemonic')).toBeTruthy();
@@ -326,7 +384,9 @@ describe('KanjiDetailScreen', () => {
       const { getByTestId } = renderWithNavigation(1);
 
       await waitFor(() => {
-        expect(getByTestId('kanji-detail-reading-mnemonic-section')).toBeTruthy();
+        expect(
+          getByTestId('kanji-detail-reading-mnemonic-section'),
+        ).toBeTruthy();
       });
 
       expect(getByTestId('kanji-detail-reading-mnemonic')).toBeTruthy();
@@ -381,7 +441,9 @@ describe('KanjiDetailScreen', () => {
 
   describe('Navigation', () => {
     it('should fetch correct subject ID from route params', async () => {
-      mockDatabase.getSubjectById.mockResolvedValue(createMockKanji({ id: 42 }));
+      mockDatabase.getSubjectById.mockResolvedValue(
+        createMockKanji({ id: 42 }),
+      );
       mockDatabase.getAssignmentBySubjectId.mockResolvedValue(null);
       mockDatabase.getSubjectsByIds.mockResolvedValue([]);
 

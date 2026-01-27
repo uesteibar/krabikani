@@ -7,7 +7,10 @@ import { VocabularyDetailScreen } from '../../src/screens/VocabularyDetailScreen
 import { ThemeProvider } from '../../src/theme';
 import * as database from '../../src/storage/database';
 import type { RootStackParamList } from '../../src/navigation/types';
-import type { DatabaseSubject, DatabaseAssignment } from '../../src/storage/database';
+import type {
+  DatabaseSubject,
+  DatabaseAssignment,
+} from '../../src/storage/database';
 
 jest.mock('../../src/storage/database');
 
@@ -31,7 +34,9 @@ function renderWithNavigation(subjectId: number) {
   );
 }
 
-function createMockVocabulary(overrides: Partial<DatabaseSubject> = {}): DatabaseSubject {
+function createMockVocabulary(
+  overrides: Partial<DatabaseSubject> = {},
+): DatabaseSubject {
   return {
     id: 1,
     object_type: 'vocabulary',
@@ -54,7 +59,9 @@ function createMockVocabulary(overrides: Partial<DatabaseSubject> = {}): Databas
   };
 }
 
-function createMockKanaVocabulary(overrides: Partial<DatabaseSubject> = {}): DatabaseSubject {
+function createMockKanaVocabulary(
+  overrides: Partial<DatabaseSubject> = {},
+): DatabaseSubject {
   return {
     id: 2,
     object_type: 'kana_vocabulary',
@@ -76,14 +83,23 @@ function createMockKanaVocabulary(overrides: Partial<DatabaseSubject> = {}): Dat
   };
 }
 
-function createMockKanji(overrides: Partial<DatabaseSubject> = {}): DatabaseSubject {
+function createMockKanji(
+  overrides: Partial<DatabaseSubject> = {},
+): DatabaseSubject {
   return {
     id: 10,
     object_type: 'kanji',
     characters: '大',
-    meanings: JSON.stringify([{ meaning: 'Big', primary: true, accepted_answer: true }]),
+    meanings: JSON.stringify([
+      { meaning: 'Big', primary: true, accepted_answer: true },
+    ]),
     readings: JSON.stringify([
-      { reading: 'おお', primary: true, accepted_answer: true, type: 'kunyomi' },
+      {
+        reading: 'おお',
+        primary: true,
+        accepted_answer: true,
+        type: 'kunyomi',
+      },
     ]),
     meaning_mnemonic: 'A big person spreading their arms.',
     reading_mnemonic: 'Oh!',
@@ -96,7 +112,9 @@ function createMockKanji(overrides: Partial<DatabaseSubject> = {}): DatabaseSubj
   };
 }
 
-function createMockAssignment(overrides: Partial<DatabaseAssignment> = {}): DatabaseAssignment {
+function createMockAssignment(
+  overrides: Partial<DatabaseAssignment> = {},
+): DatabaseAssignment {
   return {
     id: 100,
     subject_id: 1,
@@ -168,7 +186,9 @@ describe('VocabularyDetailScreen', () => {
     });
 
     it('should show error when database throws an error', async () => {
-      mockDatabase.getSubjectById.mockRejectedValue(new Error('Database error'));
+      mockDatabase.getSubjectById.mockRejectedValue(
+        new Error('Database error'),
+      );
 
       const { getByTestId, getByText } = renderWithNavigation(1);
 
@@ -194,8 +214,9 @@ describe('VocabularyDetailScreen', () => {
       });
 
       expect(getByTestId('vocabulary-detail-character')).toBeTruthy();
-      expect(getByTestId('vocabulary-detail-character').props.children).toBe('大きい');
-      expect(getByTestId('vocabulary-detail-type-badge')).toBeTruthy();
+      expect(getByTestId('vocabulary-detail-character').props.children).toBe(
+        '大きい',
+      );
       expect(getByTestId('vocabulary-detail-header')).toBeTruthy();
     });
 
@@ -239,22 +260,22 @@ describe('VocabularyDetailScreen', () => {
   });
 
   describe('Kana Vocabulary', () => {
-    it('should display kana vocabulary with correct type badge', async () => {
+    it('should display kana vocabulary screen', async () => {
       const mockKanaVocab = createMockKanaVocabulary();
       mockDatabase.getSubjectById.mockResolvedValue(mockKanaVocab);
       mockDatabase.getAssignmentBySubjectId.mockResolvedValue(null);
 
-      const { getByTestId, getByText } = renderWithNavigation(2);
+      const { getByTestId } = renderWithNavigation(2);
 
       await waitFor(() => {
         expect(getByTestId('vocabulary-detail-screen')).toBeTruthy();
       });
-
-      expect(getByText('Kana Vocabulary')).toBeTruthy();
     });
 
     it('should not show reading mnemonic for kana vocabulary without one', async () => {
-      const mockKanaVocab = createMockKanaVocabulary({ reading_mnemonic: null });
+      const mockKanaVocab = createMockKanaVocabulary({
+        reading_mnemonic: null,
+      });
       mockDatabase.getSubjectById.mockResolvedValue(mockKanaVocab);
       mockDatabase.getAssignmentBySubjectId.mockResolvedValue(null);
 
@@ -264,7 +285,9 @@ describe('VocabularyDetailScreen', () => {
         expect(getByTestId('vocabulary-detail-screen')).toBeTruthy();
       });
 
-      expect(queryByTestId('vocabulary-detail-reading-mnemonic-section')).toBeNull();
+      expect(
+        queryByTestId('vocabulary-detail-reading-mnemonic-section'),
+      ).toBeNull();
     });
 
     it('should not fetch component kanji for kana vocabulary', async () => {
@@ -290,7 +313,9 @@ describe('VocabularyDetailScreen', () => {
       const mockKanji = createMockKanji({
         id: 10,
         characters: '大',
-        meanings: JSON.stringify([{ meaning: 'Big', primary: true, accepted_answer: true }]),
+        meanings: JSON.stringify([
+          { meaning: 'Big', primary: true, accepted_answer: true },
+        ]),
       });
 
       mockDatabase.getSubjectById.mockResolvedValue(mockVocabulary);
@@ -308,7 +333,9 @@ describe('VocabularyDetailScreen', () => {
     });
 
     it('should not show kanji section when no component_subject_ids', async () => {
-      const mockVocabulary = createMockVocabulary({ component_subject_ids: null });
+      const mockVocabulary = createMockVocabulary({
+        component_subject_ids: null,
+      });
       mockDatabase.getSubjectById.mockResolvedValue(mockVocabulary);
       mockDatabase.getAssignmentBySubjectId.mockResolvedValue(null);
 
@@ -334,7 +361,9 @@ describe('VocabularyDetailScreen', () => {
       const { getByTestId } = renderWithNavigation(1);
 
       await waitFor(() => {
-        expect(getByTestId('vocabulary-detail-meaning-mnemonic-section')).toBeTruthy();
+        expect(
+          getByTestId('vocabulary-detail-meaning-mnemonic-section'),
+        ).toBeTruthy();
       });
 
       expect(getByTestId('vocabulary-detail-meaning-mnemonic')).toBeTruthy();
@@ -351,7 +380,9 @@ describe('VocabularyDetailScreen', () => {
       const { getByTestId } = renderWithNavigation(1);
 
       await waitFor(() => {
-        expect(getByTestId('vocabulary-detail-reading-mnemonic-section')).toBeTruthy();
+        expect(
+          getByTestId('vocabulary-detail-reading-mnemonic-section'),
+        ).toBeTruthy();
       });
 
       expect(getByTestId('vocabulary-detail-reading-mnemonic')).toBeTruthy();
@@ -369,7 +400,9 @@ describe('VocabularyDetailScreen', () => {
         expect(getByTestId('vocabulary-detail-screen')).toBeTruthy();
       });
 
-      expect(queryByTestId('vocabulary-detail-reading-mnemonic-section')).toBeNull();
+      expect(
+        queryByTestId('vocabulary-detail-reading-mnemonic-section'),
+      ).toBeNull();
     });
   });
 
@@ -406,7 +439,9 @@ describe('VocabularyDetailScreen', () => {
 
   describe('Navigation', () => {
     it('should fetch correct subject ID from route params', async () => {
-      mockDatabase.getSubjectById.mockResolvedValue(createMockVocabulary({ id: 42 }));
+      mockDatabase.getSubjectById.mockResolvedValue(
+        createMockVocabulary({ id: 42 }),
+      );
       mockDatabase.getAssignmentBySubjectId.mockResolvedValue(null);
       mockDatabase.getSubjectsByIds.mockResolvedValue([]);
 
