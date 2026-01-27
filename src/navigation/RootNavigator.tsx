@@ -1,5 +1,5 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { ApiKeyInputScreen } from '../screens/ApiKeyInputScreen';
 import { HomeScreen } from '../screens/HomeScreen';
@@ -18,6 +18,7 @@ import { WizardCompletionScreen } from '../screens/WizardCompletionScreen';
 import { WizardNotificationScreen } from '../screens/WizardNotificationScreen';
 import { VocabularyDetailScreen } from '../screens/VocabularyDetailScreen';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
+import { hasApiKey } from '../storage';
 import { useTheme } from '../theme';
 import type { RootStackParamList } from './types';
 
@@ -39,10 +40,22 @@ const screenOptions = {
 export function RootNavigator() {
   const theme = useTheme();
   const { colors, isDark } = theme;
+  const [initialRoute, setInitialRoute] =
+    useState<keyof RootStackParamList | null>(null);
+
+  useEffect(() => {
+    hasApiKey().then(keyExists => {
+      setInitialRoute(keyExists ? 'Home' : 'Welcome');
+    });
+  }, []);
+
+  if (initialRoute === null) {
+    return null;
+  }
 
   return (
     <Stack.Navigator
-      initialRouteName="Home"
+      initialRouteName={initialRoute}
       screenOptions={{
         ...screenOptions,
         headerStyle: {
