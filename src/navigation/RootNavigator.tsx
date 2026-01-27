@@ -12,6 +12,7 @@ import { ReviewsScreen } from '../screens/ReviewsScreen';
 import { SearchScreen } from '../screens/SearchScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { VocabularyDetailScreen } from '../screens/VocabularyDetailScreen';
+import { WelcomeScreen } from '../screens/WelcomeScreen';
 import { useTheme } from '../theme';
 import type { RootStackParamList } from './types';
 
@@ -52,6 +53,11 @@ export function RootNavigator() {
         headerShadowVisible: !isDark,
       }}
     >
+      <Stack.Screen
+        name="Welcome"
+        component={WelcomeScreen}
+        options={{ headerShown: false }}
+      />
       <Stack.Screen
         name="Home"
         component={HomeScreen}
