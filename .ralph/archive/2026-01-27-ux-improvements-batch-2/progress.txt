@@ -1,0 +1,222 @@
+# Ralph Progress Log
+
+## Codebase Patterns
+
+- Custom fonts go in `assets/fonts/` and are linked via `react-native.config.js`
+- Theme exports are centralized in `src/theme/index.ts`
+- Use Platform.select() for platform-specific font family names (iOS uses font family name, Android uses file name without extension)
+- DATABASE_VERSION in database.ts must match the expected version in tests
+- Tests with state transitions after fireEvent.press() may need `findByTestId` with async await
+- searchSubjects(query, hiraganaQuery, limit) returns learned items - caller should pre-convert romaji to hiragana using romajiToHiragana() from src/utils
+- `getPracticeItems(limit)` returns random learned items (srs_stage >= 5) excluding currently pending reviews
+- `subjectToReviewItem()` is duplicated per-screen (ReviewsScreen, PracticeScreen) — consider extracting if a third use appears
+- Quiz questions are shuffled — tests rendering LessonQuiz must handle either meaning or reading first; use `submitWrongAnswer` helper for question-type-agnostic wrong answer submission
+- Use React `key` prop to force component remount when scroll position needs resetting (e.g., `key={item.id}` on cards with ScrollView content)
+- Completion screens (LessonCompletion, ReviewCompletion) share the same animated pattern: animated checkmark, staggered fade-in (200ms delay, 500ms duration), confetti for perfect sessions, encouragement messages, and "Synced"/"Queued" badge
+- Components using `useTheme()` require `<ThemeProvider forcedColorScheme="light">` wrapper in tests (see LevelIndicator, HomeScreen tests)
+- The react-native-reanimated mock in jest.setup.js must export any Animated.* components used (View, Text, Image) — add new ones as needed
+
+Started:
+---
+
+## 2026-01-27 - US-013
+- Implemented Random Practice Mode feature
+- Files changed:
+  - `src/storage/database.ts` - Added `getPracticeItems()` and `getPracticeItemCount()` functions (srs_stage >= 5, excludes items pending review)
+  - `src/storage/index.ts` - Exported new practice functions
+  - `src/navigation/types.ts` - Added `Practice` route to `RootStackParamList`
+  - `src/navigation/RootNavigator.tsx` - Registered `PracticeScreen` in the navigator
+  - `src/screens/PracticeScreen.tsx` - New screen implementing infinite practice quiz with no SRS effects
+  - `src/screens/HomeScreen.tsx` - Added "Practice" outline button between Search and Settings
+  - `__tests__/screens/PracticeScreen.test.tsx` - New test suite for the practice screen
+  - `__tests__/storage/databaseCrud.test.ts` - Added tests for `getPracticeItems` and `getPracticeItemCount`
+- **Learnings for future iterations:**
+  - Practice mode reuses `ReviewItem` type and answer validation from reviews but does NOT use `ReviewSession` component directly (too coupled to SRS logic)
+  - The practice screen implements its own question queue with auto-refill when remaining questions drop below `REFILL_THRESHOLD` (3)
+  - `subjectToReviewItem` conversion logic was duplicated from ReviewsScreen rather than sharing, since the function is tightly scoped to its screen
+  - `shuffleArray` from ReviewSession is exported and reusable
+  - Practice excludes items currently pending review via `available_at IS NULL OR available_at > now`
+---
+
+## 2026-01-27 - US-014
+- Implemented Review Session Results List feature
+- Files changed:
+  - `src/components/ReviewCompletion.tsx` - Added `ReviewResultItem` type, expandable results list UI with "View Results" toggle, summary stats row ("N correct · M incorrect"), subject type color accents, and correct/incorrect indicators. Changed container from `View` to `ScrollView` for scrollability.
+  - `src/components/ReviewSession.tsx` - Updated completion section to build `ReviewResultItem[]` from item progress and pass to `ReviewCompletion`
+  - `src/components/index.ts` - Exported `ReviewResultItem` type
+  - `__tests__/components/ReviewCompletion.test.tsx` - Added 11 new tests for results list feature (toggle, expand/collapse, item rendering, indicators, empty state, stats display)
+  - `__tests__/components/ReviewSession.test.tsx` - Updated completion test to match new stats-based display
+  - `__tests__/screens/ReviewsScreen.test.tsx` - Updated 3 completion tests to match new stats-based display
+- **Learnings for future iterations:**
+  - `ReviewCompletion` now uses `ScrollView` instead of `View` as root container to support scrollable results list
+  - When `resultItems` is provided, the summary shows "N correct · M incorrect" stats row instead of the large number count
+  - The separate incorrect count section is hidden when `resultItems` is provided (redundant with stats row)
+  - Results list is collapsed by default via "View Results" toggle for a clean initial appearance
+  - Items with zero total incorrect answers (meaning + reading) are marked correct; any incorrect answers marks the item as failed
+  - The search screen list style was matched: left color accent bar (5px, subject-type color), character on left, meaning · reading on right, correct/incorrect indicator
+---
+
+## 2026-01-27 - US-015
+- Implemented Randomize Lesson Quiz Questions feature
+- Files changed:
+  - `src/components/LessonQuiz.tsx` - Changed `generateQuizQuestions` to shuffle the final question array using `shuffleArray` (Fisher-Yates). Removed the "do not shuffle" comment and updated JSDoc.
+  - `__tests__/components/LessonQuiz.test.tsx` - Added 2 new tests (shuffle verification + meaning/reading order randomization). Added `submitWrongAnswer` helper to handle both question types in tests. Fixed 6 existing tests that assumed deterministic question order.
+- **Learnings for future iterations:**
+  - `generateQuizQuestions` now shuffles output — tests that render LessonQuiz with non-radical items must handle either meaning or reading appearing first
+  - The `submitWrongAnswer` test helper detects question type and submits appropriate wrong answer ('wrong' for meaning, 'a' for reading which converts to hiragana 'あ')
+  - Reading input validation rejects English text — tests submitting wrong answers to reading questions must use romaji or hiragana, not English words
+  - `shuffleArray` is defined in LessonQuiz.tsx (after `generateQuizQuestions`) but hoisting makes it callable from within the same module
+---
+
+## 2026-01-27 - US-016
+- Implemented Scroll to Top on Lesson Navigation
+- Files changed:
+  - `src/components/LessonBatch.tsx` - Added `key={currentItem.id}` to `LessonCard`, forcing React to remount the component on every navigation (Next, Back, or swipe), which resets the ScrollView position to top
+- **Learnings for future iterations:**
+  - Using React `key` prop to force remount is the simplest way to reset scroll position in React Native — no refs or imperative `scrollTo` calls needed
+  - LessonCard's ScrollView (content area) is the only scrollable element; the header and footer are fixed
+  - The change is a single line addition; all 52 existing LessonBatch tests continue to pass since navigation behavior is unchanged
+  - Pre-existing lint errors exist in SearchScreen.tsx and VocabularyDetailScreen.tsx (unused variables) — not related to this change
+---
+
+## 2026-01-27 - US-017
+- Implemented Unify Completion Screens feature
+- Files changed:
+  - `src/components/LessonCompletion.tsx` - Complete rewrite: added react-native-reanimated animations (staggered entrance, animated checkmark icon, confetti for perfect quiz), encouragement messages, sync status badge ("Synced"/"Queued"), ScrollView root container. Matches ReviewCompletion's visual pattern.
+  - `src/components/ReviewCompletion.tsx` - Reduced animation timing: STAGGER_DELAY 600→200ms, FADE_DURATION 1500→500ms
+  - `__tests__/components/LessonCompletion.test.tsx` - Updated tests for new animated design: added AccessibilityInfo mocks, tests for confetti (perfectQuiz prop), reduced motion, encouragement messages, staggered animations. Updated sync status text expectations from "Synced with WaniKani"/"Queued for sync when online" to "Synced"/"Queued".
+- **Learnings for future iterations:**
+  - Both completion screens now follow the same visual pattern: animated checkmark icon → title → summary → encouragement → sync badge → action buttons
+  - LessonCompletion uses `perfectQuiz` boolean prop (defaults to false) to trigger confetti, while ReviewCompletion uses `incorrectCount === 0`
+  - Sync status badge text is now "Synced"/"Queued" on both screens (shorter, matching style)
+  - Both screens share the same STAGGER_DELAY (200ms) and FADE_DURATION (500ms) constants
+  - Pre-existing failing test in ReviewSession.test.tsx (wrap-up mode incorrect feedback) — not related to completion screen changes
+---
+
+## 2026-01-27 - US-018
+- Removed NextReviewIndicator from the home screen layout
+- Deleted NextReviewIndicator component file and its test file
+- Removed export from components/index.ts
+- Kept `getNextReviewTime` data loading and `dashboardData.nextReviewAt` since UpcomingReviewsChart still uses it for its empty state
+- Removed 2 HomeScreen tests that referenced NextReviewIndicator
+- Files changed:
+  - `src/screens/HomeScreen.tsx` - Removed NextReviewIndicator import and rendering
+  - `src/components/index.ts` - Removed NextReviewIndicator export
+  - `src/components/NextReviewIndicator.tsx` - Deleted
+  - `__tests__/components/NextReviewIndicator.test.tsx` - Deleted
+  - `__tests__/screens/HomeScreen.test.tsx` - Removed 2 tests referencing NextReviewIndicator
+- **Learnings for future iterations:**
+  - `UpcomingReviewsChart` has its own `formatRelativeTime` function and empty state that shows "Next review in X hours" — independent of `NextReviewIndicator`
+  - `dashboardData.nextReviewAt` is still needed even without `NextReviewIndicator` because `UpcomingReviewsChart` uses it in its empty state
+---
+
+## 2026-01-27 - US-019
+- Enhanced the LevelIndicator component to be more visually prominent
+- Redesigned from a plain "Level X" text to a badge with large number and "LEVEL" label
+- Uses theme-aware colors (background.secondary, text.primary, text.secondary) for dark mode support
+- Badge styling: rounded corners (BORDER_RADIUS.lg), centered layout, large number (FONT_SIZES.xxxl, fontWeight 800), uppercase label (FONT_SIZES.xs, fontWeight 700, letterSpacing 1.5)
+- Visually cohesive with LearnedCounts badges (same background.secondary, BORDER_RADIUS, SPACING tokens)
+- Files changed:
+  - `src/components/LevelIndicator.tsx` - Redesigned to prominent badge with "LEVEL" label and large number, added useTheme for dark mode support
+  - `__tests__/components/LevelIndicator.test.tsx` - Updated tests for new structure (separate LEVEL label and number), added ThemeProvider wrapper, added level-label testID test
+  - `__tests__/screens/HomeScreen.test.tsx` - Updated level display assertion from "Level 5" to separate "LEVEL" and "5" texts
+- **Learnings for future iterations:**
+  - LevelIndicator now uses `useTheme()` — tests must wrap in `<ThemeProvider forcedColorScheme="light">`
+  - The level number and "LEVEL" label are separate Text elements (testID: "level-text" for number, "level-label" for label)
+  - No other components in src/components/ used useTheme before this change — LevelIndicator is the first component (besides screens) to use it directly
+---
+
+## 2026-01-27 - US-020
+- Removed current hour from upcoming reviews chart — chart now starts from hour+1
+- `getUpcomingReviewsByHour` now creates a `startHour` (currentHour + 1) and uses it for bucket initialization, SQL query range, and bucket assignment
+- Removed `isCurrentHour` function, `isCurrent` field from RowData, `currentRow` and `currentText` styles from UpcomingReviewsChart (no longer needed since current hour isn't displayed)
+- Updated chart test helper `createTestData` to start from next hour (index + 1)
+- Removed "current hour highlighting" test section
+- Updated database test to verify first bucket starts from next hour
+- Files changed:
+  - `src/storage/database.ts` - Modified `getUpcomingReviewsByHour` to start from next hour
+  - `src/components/UpcomingReviewsChart.tsx` - Removed current hour highlighting logic and styles
+  - `__tests__/components/UpcomingReviewsChart.test.tsx` - Updated test data helper, removed current hour test
+  - `__tests__/storage/databaseCrud.test.ts` - Updated first bucket test to expect next hour
+- **Learnings for future iterations:**
+  - `getUpcomingReviewsByHour` now uses `startHour` (currentHour + 1) — the current hour's reviews are already captured in the pending count passed via `currentPendingCount` prop
+  - The cumulative total in the chart still correctly starts from `currentPendingCount` (existing pending reviews) as the base
+  - Pre-existing failing test in ReviewSession.test.tsx (wrap-up mode incorrect feedback) is unrelated
+---
+
+## 2026-01-27 - US-021
+- Implemented animated crab tap interaction on the home screen
+- Tapping the crab triggers a rock/tilt animation using react-native-reanimated (left-right rocking with diminishing amplitude)
+- Animation is ~600ms total (5 steps × 120ms each): -12° → +12° → -6° → +6° → 0°
+- Crab image wrapped in Pressable; uses Animated.Image with useAnimatedStyle for rotation transform
+- Files changed:
+  - `src/screens/HomeScreen.tsx` - Replaced plain Image with Pressable + Animated.Image, added rock animation via withSequence/withTiming
+  - `__tests__/screens/HomeScreen.test.tsx` - Added 2 tests: pressable wrapper exists, withSequence called on tap
+  - `jest.setup.js` - Added Image to react-native-reanimated mock (for Animated.Image support)
+- **Learnings for future iterations:**
+  - `Animated.Image` requires `Image` in the reanimated mock's default export (jest.setup.js) — was previously only View and Text
+  - The rock animation uses `withSequence` of `withTiming` calls with diminishing angles for a natural dampened oscillation effect
+  - Pressable is preferred over TouchableOpacity for the crab since no opacity feedback is desired (the animation itself is the feedback)
+  - Animation total duration is 5 × ROCK_DURATION (120ms) = 600ms, well under the 1-second requirement
+---
+
+## 2026-01-27 - US-022
+- Removed subject type text label ("radical", "kanji", "vocabulary", "kana vocabulary") from review session question view
+- The background color continues to indicate subject type (blue for radical, pink for kanji, purple for vocabulary)
+- Practice mode (US-013) already did not show this label — no changes needed there
+- Files changed:
+  - `src/components/ReviewSession.tsx` - Removed subject type Text element and its `subjectType` style definition; changed ternary to conditional render for correct feedback only
+  - `__tests__/components/ReviewSession.test.tsx` - Updated test from "should hide subject type label during correct feedback" to "should not show subject type label" (verifies label is never present)
+- **Learnings for future iterations:**
+  - The subject type label was only in ReviewSession.tsx — PracticeScreen never had one
+  - LessonQuiz has its own subject type label (`lesson-quiz-subject-type` testID) which is separate and unaffected by this change
+  - Background color is set via `getSubjectColor(item.subjectType)` in ReviewSession — this remains the primary subject type indicator
+---
+
+## 2026-01-27 - US-023
+- Implemented review buffer cap limiting incomplete items to 10
+- Added `MAX_INCOMPLETE_ITEMS = 10` exported constant
+- Extracted `incompleteItemCount` as a `useMemo` (count of introduced but not completed items)
+- Modified `findNextQuestionIndex` to accept `currentIncompleteCount` parameter and block new items when count >= MAX_INCOMPLETE_ITEMS
+- When buffer is full, only questions for already-introduced items are shown (same behavior as wrap-up mode)
+- When wrap-up mode is active, it takes precedence (both block new items via the same `blockNewItems` flag)
+- Files changed:
+  - `src/components/ReviewSession.tsx` - Added MAX_INCOMPLETE_ITEMS constant, incompleteItemCount memo, updated findNextQuestionIndex with buffer cap logic
+  - `__tests__/components/ReviewSession.test.tsx` - Added 4 tests: constant value, buffer blocks new items at 10, buffer allows new items after completing one, wrap-up works with fewer than 10 items
+- **Learnings for future iterations:**
+  - `findNextQuestionIndex` now has 6 parameters (added `currentIncompleteCount`) — the blocking logic is unified: `blockNewItems = wrappingUp || incompleteCount >= MAX_INCOMPLETE_ITEMS`
+  - `incompleteItemCount` is derived from `introducedItemIds` and `_itemProgress` — same sets used by wrap-up remaining count
+  - `wrapUpRemainingCount` was simplified from a `useMemo` to a simple ternary using `incompleteItemCount` since they compute the same thing
+  - Testing buffer cap with many items: use radicals (1 question each) and answer wrong to introduce without completing; verify next question shows an already-introduced item
+---
+
+## 2026-01-27 - UX Polish Batch (Review, Home, Search, Practice screens)
+- **ReviewCompletion**: Removed results toggle — results list always visible. Fixed "Go to Dashboard" button at bottom of screen outside ScrollView (rootContainer > ScrollView + fixedButtonContainer pattern).
+- **ReviewSession correct/incorrect labels**: Made `correctLabel` and `incorrectLabel` absolutely positioned (`position: 'absolute', bottom: SPACING.md`) to prevent kanji box height glitch when feedback appears.
+- **ReviewSession incorrect buttons**: Added `paddingTop: SPACING.lg` to `incorrectButtonRow` for breathing room from content above.
+- **ReviewSession character box**: Increased `paddingVertical` from 48 to 64 for a taller input area closer to keyboard.
+- **ReviewSession wrap-up button**: Added `minWidth: 100` to `wrapUpButton` to prevent width changes when toggling between "Wrap Up" and "Cancel" text.
+- **Mode banners**: Added banners replacing empty progress bar space in zen/practice modes. Zen mode shows "○ Zen Mode" banner, practice mode shows random motivational phrase with "◇" icon. Both `modeBanner` and `progressContainer` use fixed `height: 50` for layout consistency.
+- **Zen mode SRS badge**: Changed SRS badge condition from `showProgressStats` to `!zenModeEnabled` so SRS level is never shown in zen mode, even during wrap-up.
+- **LastSyncedIndicator**: Restyled from plain text to color-coded badge (green dot + text when synced, orange when pending content). Added `hasPendingContent` prop. Uses `COLORS.status.pendingSync` and `COLORS.feedback.correct`.
+- **HomeScreen**: Removed `SyncingIndicator` (redundant). Moved `LastSyncedIndicator` below settings button. Connected `hasPendingContent` prop to pending lessons/reviews data.
+- **SearchScreen**: Fixed "enter a search item" text hidden by keyboard — removed `flex: 1`/`justifyContent: 'center'` from `emptyStateContainer`, added `paddingTop: SPACING.xl` for fixed positioning below search bar.
+- **PracticeScreen**: Added motivational phrase banner (random from 8 phrases via `useMemo`), increased `characterContainer` `paddingVertical` to 64.
+- Files changed:
+  - `src/components/ReviewCompletion.tsx` - Removed toggle, fixed button at bottom, rootContainer/fixedButtonContainer pattern
+  - `src/components/ReviewSession.tsx` - Absolute-positioned labels, increased character box padding, mode banner, SRS badge zen mode fix, wrap-up button minWidth
+  - `src/components/LastSyncedIndicator.tsx` - Color-coded badge restyle, added hasPendingContent prop
+  - `src/screens/HomeScreen.tsx` - Removed SyncingIndicator, moved LastSyncedIndicator, connected hasPendingContent
+  - `src/screens/SearchScreen.tsx` - Fixed empty state positioning for keyboard visibility
+  - `src/screens/PracticeScreen.tsx` - Added motivational phrase banner, increased character box padding
+  - `__tests__/components/ReviewCompletion.test.tsx` - Rewrote 6 toggle tests into 4 always-visible tests
+  - `__tests__/components/LastSyncedIndicator.test.tsx` - Updated text assertions for split label/value markup
+  - `__tests__/components/ReviewSession.test.tsx` - Updated zen mode SRS badge tests (badge hidden during wrap-up in zen mode)
+  - `__tests__/screens/HomeScreen.test.tsx` - Removed 3 SyncingIndicator tests, updated LastSynced text assertions for split markup
+- **Learnings for future iterations:**
+  - Fixed button at bottom pattern: `View (flex:1) > ScrollView (flex:1) + View (fixed)` — keeps button always visible regardless of scroll content
+  - `position: 'absolute'` on dynamic feedback labels prevents parent container height changes
+  - Fixed `height` (not `minHeight`) on interchangeable containers (progress bar vs mode banner) prevents layout shifts
+  - `useMemo(() => phrases[random], [])` selects phrase once per mount — prevents re-randomization on re-renders
+  - SRS badge visibility is controlled by `!zenModeEnabled` (not `showProgressStats`) to keep it hidden in zen mode even when progress bar is shown during wrap-up
+---
