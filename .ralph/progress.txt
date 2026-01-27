@@ -44,3 +44,15 @@ Started:
   - Must `scrollIntoViewIfNeeded()` before clicking buttons that may be below viewport
   - Cleanup: use `input[value="Expire"]` to find the Expire button for token cleanup
 ---
+
+## 2026-01-27 - US-003
+- Created WelcomeScreen component with Cabrigator logo (240x240), app name "Krabikani", tagline, and "Get Started" button styled with vocabulary purple (#AA00FF)
+- Added WelcomeScreen to RootStackParamList and RootNavigator (headerShown: false)
+- Also added Instructions route placeholder to types for navigation from WelcomeScreen
+- Files: src/screens/WelcomeScreen.tsx, __tests__/screens/WelcomeScreen.test.tsx, src/navigation/types.ts, src/navigation/RootNavigator.tsx
+- 6 tests pass, typecheck clean
+- **Learnings for future iterations:**
+  - Use `COLORS.subject.vocabulary` for the vocabulary purple (#AA00FF) — it's a static constant, don't use `colors.subject.vocabulary` from theme
+  - Wizard screens use `headerShown: false` to hide the navigation header
+  - The pre-existing ReviewSession test failure (wrap-up mode with incomplete items) is unrelated to wizard work
+---
