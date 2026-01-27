@@ -160,3 +160,16 @@ Started:
   - Animation total duration is 5 × ROCK_DURATION (120ms) = 600ms, well under the 1-second requirement
 ---
 
+## 2026-01-27 - US-022
+- Removed subject type text label ("radical", "kanji", "vocabulary", "kana vocabulary") from review session question view
+- The background color continues to indicate subject type (blue for radical, pink for kanji, purple for vocabulary)
+- Practice mode (US-013) already did not show this label — no changes needed there
+- Files changed:
+  - `src/components/ReviewSession.tsx` - Removed subject type Text element and its `subjectType` style definition; changed ternary to conditional render for correct feedback only
+  - `__tests__/components/ReviewSession.test.tsx` - Updated test from "should hide subject type label during correct feedback" to "should not show subject type label" (verifies label is never present)
+- **Learnings for future iterations:**
+  - The subject type label was only in ReviewSession.tsx — PracticeScreen never had one
+  - LessonQuiz has its own subject type label (`lesson-quiz-subject-type` testID) which is separate and unaffected by this change
+  - Background color is set via `getSubjectColor(item.subjectType)` in ReviewSession — this remains the primary subject type indicator
+---
+

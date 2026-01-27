@@ -1071,20 +1071,13 @@ describe('ReviewSession', () => {
       expect(queryByTestId('review-completion')).toBeTruthy();
     });
 
-    it('should hide subject type label during correct feedback', () => {
-      const { getByTestId, queryByTestId } = render(
+    it('should not show subject type label', () => {
+      const { queryByTestId } = render(
         <ReviewSession items={[sampleRadical]} autoAdvanceDelay={100} />,
       );
 
-      const input = getByTestId('review-session-input');
-      const submit = getByTestId('review-session-submit');
-
-      fireEvent.changeText(input, 'Ground');
-      fireEvent.press(submit);
-
-      // Subject type should be hidden, correct label shown instead
+      // Subject type label is never shown — background color conveys subject type
       expect(queryByTestId('review-session-subject-type')).toBeNull();
-      expect(queryByTestId('review-session-correct-label')).toBeTruthy();
     });
   });
 

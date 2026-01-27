@@ -1524,7 +1524,7 @@ export function ReviewSession({
         <Text style={styles.characters} testID="review-session-characters">
           {item.characters ?? '?'}
         </Text>
-        {showCorrectFeedback ? (
+        {showCorrectFeedback && (
           <Text
             style={styles.correctLabel}
             testID={
@@ -1534,10 +1534,6 @@ export function ReviewSession({
             }
           >
             {isFuzzyMatch ? 'Close enough!' : 'Correct!'}
-          </Text>
-        ) : (
-          <Text style={styles.subjectType} testID="review-session-subject-type">
-            {item.subjectType.replace('_', ' ')}
           </Text>
         )}
       </View>
@@ -1705,12 +1701,6 @@ const styles = StyleSheet.create({
     ...TEXT_STYLES.japaneseDisplay,
     color: COLORS.text.inverse,
     textAlign: 'center',
-  },
-  subjectType: {
-    fontSize: FONT_SIZES.sm,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginTop: SPACING.sm,
-    textTransform: 'capitalize',
   },
   // Correct feedback styles
   correctHeader: {
