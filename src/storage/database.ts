@@ -943,6 +943,49 @@ export async function getAssignmentCount(): Promise<number> {
 }
 
 /**
+ * Retrieves random learned items for practice mode.
+ * "Learned" means srs_stage >= 5 (Guru 1 and above).
+ * Excludes items that are currently pending review (available_at <= now).
+ *
+ * @param limit Maximum number of items to return (default 10)
+ * @returns Array of assignments with their subject data joined
+ */
+export async function getPracticeItems(
+  limit: number = 10,
+): Promise<Array<DatabaseAssignment & { subject_id: number }>> {
+  const now = new Date().toISOString();
+  const result = await executeSql(
+    `SELECT a.* FROM assignments a
+     WHERE a.srs_stage >= 5
+       AND a.started_at IS NOT NULL
+       AND (a.available_at IS NULL OR a.available_at > ?)
+     ORDER BY RANDOM()
+     LIMIT ?`,
+    [now, limit],
+  );
+  return result.rows as unknown as Array<
+    DatabaseAssignment & { subject_id: number }
+  >;
+}
+
+/**
+ * Gets the count of items available for practice.
+ * "Learned" means srs_stage >= 5 (Guru 1 and above).
+ * Excludes items currently pending review (available_at <= now).
+ */
+export async function getPracticeItemCount(): Promise<number> {
+  const now = new Date().toISOString();
+  const result = await executeSql(
+    `SELECT COUNT(*) as count FROM assignments
+     WHERE srs_stage >= 5
+       AND started_at IS NOT NULL
+       AND (available_at IS NULL OR available_at > ?)`,
+    [now],
+  );
+  return (result.rows[0] as { count: number }).count;
+}
+
+/**
  * Gets the next review time (earliest available_at after now).
  * Returns null if no upcoming reviews are scheduled.
  */

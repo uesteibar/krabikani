@@ -8,7 +8,28 @@
 - DATABASE_VERSION in database.ts must match the expected version in tests
 - Tests with state transitions after fireEvent.press() may need `findByTestId` with async await
 - searchSubjects(query, hiraganaQuery, limit) returns learned items - caller should pre-convert romaji to hiragana using romajiToHiragana() from src/utils
+- `getPracticeItems(limit)` returns random learned items (srs_stage >= 5) excluding currently pending reviews
+- `subjectToReviewItem()` is duplicated per-screen (ReviewsScreen, PracticeScreen) — consider extracting if a third use appears
 
 Started:
+---
+
+## 2026-01-27 - US-013
+- Implemented Random Practice Mode feature
+- Files changed:
+  - `src/storage/database.ts` - Added `getPracticeItems()` and `getPracticeItemCount()` functions (srs_stage >= 5, excludes items pending review)
+  - `src/storage/index.ts` - Exported new practice functions
+  - `src/navigation/types.ts` - Added `Practice` route to `RootStackParamList`
+  - `src/navigation/RootNavigator.tsx` - Registered `PracticeScreen` in the navigator
+  - `src/screens/PracticeScreen.tsx` - New screen implementing infinite practice quiz with no SRS effects
+  - `src/screens/HomeScreen.tsx` - Added "Practice" outline button between Search and Settings
+  - `__tests__/screens/PracticeScreen.test.tsx` - New test suite for the practice screen
+  - `__tests__/storage/databaseCrud.test.ts` - Added tests for `getPracticeItems` and `getPracticeItemCount`
+- **Learnings for future iterations:**
+  - Practice mode reuses `ReviewItem` type and answer validation from reviews but does NOT use `ReviewSession` component directly (too coupled to SRS logic)
+  - The practice screen implements its own question queue with auto-refill when remaining questions drop below `REFILL_THRESHOLD` (3)
+  - `subjectToReviewItem` conversion logic was duplicated from ReviewsScreen rather than sharing, since the function is tightly scoped to its screen
+  - `shuffleArray` from ReviewSession is exported and reusable
+  - Practice excludes items currently pending review via `available_at IS NULL OR available_at > now`
 ---
 

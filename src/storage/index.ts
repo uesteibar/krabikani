@@ -37,6 +37,8 @@ export {
   getAssignmentBySubjectId,
   getAvailableReviews,
   getAvailableLessons,
+  getPracticeItems,
+  getPracticeItemCount,
   getAllAssignments,
   deleteAssignment,
   getAssignmentCount,

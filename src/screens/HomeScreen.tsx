@@ -401,6 +401,24 @@ export function HomeScreen() {
                 styles.outlineButton,
                 { borderColor: theme.colors.text.tertiary },
               ]}
+              onPress={() => navigation.navigate('Practice')}
+              activeOpacity={0.6}
+              testID="practice-button"
+            >
+              <Text
+                style={[
+                  styles.outlineButtonText,
+                  { color: theme.colors.text.primary },
+                ]}
+              >
+                Practice
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.outlineButton,
+                { borderColor: theme.colors.text.tertiary },
+              ]}
               onPress={() => navigation.navigate('Settings')}
               activeOpacity={0.6}
               testID="settings-button"

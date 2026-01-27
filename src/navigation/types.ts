@@ -3,6 +3,7 @@ export type RootStackParamList = {
   Settings: undefined;
   Lessons: undefined;
   Reviews: undefined;
+  Practice: undefined;
   Search: undefined;
   ItemDetail: { subjectId: number };
   RadicalDetail: { subjectId: number };

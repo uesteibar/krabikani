@@ -7,6 +7,7 @@ import { KanjiDetailScreen } from '../screens/KanjiDetailScreen';
 import { LessonsScreen } from '../screens/LessonsScreen';
 import { NotificationPermissionScreen } from '../screens/NotificationPermissionScreen';
 import { RadicalDetailScreen } from '../screens/RadicalDetailScreen';
+import { PracticeScreen } from '../screens/PracticeScreen';
 import { ReviewsScreen } from '../screens/ReviewsScreen';
 import { SearchScreen } from '../screens/SearchScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
@@ -65,6 +66,11 @@ export function RootNavigator() {
         name="Reviews"
         component={ReviewsScreen}
         options={{ title: 'Reviews' }}
+      />
+      <Stack.Screen
+        name="Practice"
+        component={PracticeScreen}
+        options={{ title: 'Practice' }}
       />
       <Stack.Screen
         name="Search"
