@@ -1,6 +1,7 @@
 export type RootStackParamList = {
   Welcome: undefined;
   Instructions: undefined;
+  ApiKeyInput: undefined;
   Home: undefined;
   Settings: undefined;
   Lessons: undefined;

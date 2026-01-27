@@ -134,4 +134,5 @@ export {
 export {
   SwipableCarousel,
   type SwipableCarouselProps,
+  type SwipableCarouselRef,
 } from './SwipableCarousel';

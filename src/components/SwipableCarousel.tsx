@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import {
   Dimensions,
   NativeScrollEvent,
@@ -22,14 +22,27 @@ export interface SwipableCarouselProps {
   testID?: string;
 }
 
-export function SwipableCarousel({
+export interface SwipableCarouselRef {
+  scrollToPage: (index: number) => void;
+}
+
+export const SwipableCarousel = forwardRef<SwipableCarouselRef, SwipableCarouselProps>(function SwipableCarousel({
   pages,
   onPageChange,
   testID = 'swipable-carousel',
-}: SwipableCarouselProps) {
+}, ref) {
   const { colors } = useTheme();
   const [currentPage, setCurrentPage] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  useImperativeHandle(ref, () => ({
+    scrollToPage(index: number) {
+      scrollViewRef.current?.scrollTo({
+        x: index * SCREEN_WIDTH,
+        animated: true,
+      });
+    },
+  }));
 
   const handleScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -84,7 +97,7 @@ export function SwipableCarousel({
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
