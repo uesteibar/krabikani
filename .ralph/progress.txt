@@ -11,6 +11,7 @@
 - `getPracticeItems(limit)` returns random learned items (srs_stage >= 5) excluding currently pending reviews
 - `subjectToReviewItem()` is duplicated per-screen (ReviewsScreen, PracticeScreen) — consider extracting if a third use appears
 - Quiz questions are shuffled — tests rendering LessonQuiz must handle either meaning or reading first; use `submitWrongAnswer` helper for question-type-agnostic wrong answer submission
+- Use React `key` prop to force component remount when scroll position needs resetting (e.g., `key={item.id}` on cards with ScrollView content)
 
 Started:
 ---
@@ -62,5 +63,16 @@ Started:
   - The `submitWrongAnswer` test helper detects question type and submits appropriate wrong answer ('wrong' for meaning, 'a' for reading which converts to hiragana 'あ')
   - Reading input validation rejects English text — tests submitting wrong answers to reading questions must use romaji or hiragana, not English words
   - `shuffleArray` is defined in LessonQuiz.tsx (after `generateQuizQuestions`) but hoisting makes it callable from within the same module
+---
+
+## 2026-01-27 - US-016
+- Implemented Scroll to Top on Lesson Navigation
+- Files changed:
+  - `src/components/LessonBatch.tsx` - Added `key={currentItem.id}` to `LessonCard`, forcing React to remount the component on every navigation (Next, Back, or swipe), which resets the ScrollView position to top
+- **Learnings for future iterations:**
+  - Using React `key` prop to force remount is the simplest way to reset scroll position in React Native — no refs or imperative `scrollTo` calls needed
+  - LessonCard's ScrollView (content area) is the only scrollable element; the header and footer are fixed
+  - The change is a single line addition; all 52 existing LessonBatch tests continue to pass since navigation behavior is unchanged
+  - Pre-existing lint errors exist in SearchScreen.tsx and VocabularyDetailScreen.tsx (unused variables) — not related to this change
 ---
 
