@@ -10,6 +10,21 @@
 
 ---
 
+<p align="center">
+  <img src="assets/screenshots/home.png" width="19%" />
+  <img src="assets/screenshots/lesson.png" width="19%" />
+  <img src="assets/screenshots/review.png" width="19%" />
+  <img src="assets/screenshots/incorrect.png" width="19%" />
+  <img src="assets/screenshots/complete.png" width="19%" />
+</p>
+<p align="center">
+  <img src="assets/screenshots/search.png" width="19%" />
+  <img src="assets/screenshots/detail.png" width="19%" />
+  <img src="assets/screenshots/settings.png" width="19%" />
+</p>
+
+---
+
 Built with React Native, Krabikani syncs with the WaniKani API and works offline so you can study anywhere.
 
 ## Features
