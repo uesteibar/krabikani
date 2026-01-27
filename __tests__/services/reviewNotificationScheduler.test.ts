@@ -199,7 +199,7 @@ describe('reviewNotificationScheduler', () => {
 
       expect(notifee.displayNotification).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: 'UnaiNikani',
+          title: 'Krabikani',
           body: '20 reviews ready! Time to level up your Japanese',
         }),
       );

@@ -36,7 +36,10 @@ export const __clearMockStorage = () => {
 
 // Helper to set a stored API key for testing
 export const __setStoredApiKey = (apiKey: string) => {
-  storage.set('com.unainikani.apikey', { username: 'wanikani', password: apiKey });
+  storage.set('com.krabikani.apikey', {
+    username: 'wanikani',
+    password: apiKey,
+  });
 };
 
 // Reset mock for tests

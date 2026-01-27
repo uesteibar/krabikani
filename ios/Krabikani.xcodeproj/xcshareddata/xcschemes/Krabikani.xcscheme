@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-               BuildableName = "UnaiNikani.app"
-               BlueprintName = "UnaiNikani"
-               ReferencedContainer = "container:UnaiNikani.xcodeproj">
+               BuildableName = "Krabikani.app"
+               BlueprintName = "Krabikani"
+               ReferencedContainer = "container:Krabikani.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "00E356ED1AD99517003FC87E"
-               BuildableName = "UnaiNikaniTests.xctest"
-               BlueprintName = "UnaiNikaniTests"
-               ReferencedContainer = "container:UnaiNikani.xcodeproj">
+               BuildableName = "KrabikaniTests.xctest"
+               BlueprintName = "KrabikaniTests"
+               ReferencedContainer = "container:Krabikani.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -55,9 +55,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "UnaiNikani.app"
-            BlueprintName = "UnaiNikani"
-            ReferencedContainer = "container:UnaiNikani.xcodeproj">
+            BuildableName = "Krabikani.app"
+            BlueprintName = "Krabikani"
+            ReferencedContainer = "container:Krabikani.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -72,9 +72,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "UnaiNikani.app"
-            BlueprintName = "UnaiNikani"
-            ReferencedContainer = "container:UnaiNikani.xcodeproj">
+            BuildableName = "Krabikani.app"
+            BlueprintName = "Krabikani"
+            ReferencedContainer = "container:Krabikani.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

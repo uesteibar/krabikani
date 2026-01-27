@@ -1,4 +1,4 @@
-package com.unainikani
+package com.krabikani
 
 import android.app.Application
 import com.facebook.react.PackageList

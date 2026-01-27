@@ -106,7 +106,7 @@ export async function performHourlyReviewCheck(): Promise<void> {
 
     // Display the notification
     await notifee.displayNotification({
-      title: 'UnaiNikani',
+      title: 'Krabikani',
       body: `${reviewCount} reviews ready! Time to level up your Japanese`,
       android: {
         channelId: NOTIFICATION_CHANNEL_ID,

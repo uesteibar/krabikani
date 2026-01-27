@@ -95,7 +95,7 @@ export async function scheduleHourlyNotification(
 
   await notifee.createTriggerNotification(
     {
-      title: 'UnaiNikani',
+      title: 'Krabikani',
       body: `${reviewCount} reviews ready! Time to level up your Japanese`,
       android: {
         channelId: NOTIFICATION_CHANNEL_ID,

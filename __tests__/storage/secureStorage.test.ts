@@ -28,7 +28,7 @@ describe('secureStorage', () => {
       expect(Keychain.setGenericPassword).toHaveBeenCalledWith(
         'wanikani',
         'test-api-key',
-        { service: 'com.unainikani.apikey' },
+        { service: 'com.krabikani.apikey' },
       );
     });
 
@@ -77,7 +77,7 @@ describe('secureStorage', () => {
 
       expect(result.success).toBe(true);
       expect(Keychain.resetGenericPassword).toHaveBeenCalledWith({
-        service: 'com.unainikani.apikey',
+        service: 'com.krabikani.apikey',
       });
     });
 

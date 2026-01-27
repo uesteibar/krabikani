@@ -183,7 +183,7 @@ describe('notificationService', () => {
 
       expect(notifee.createTriggerNotification).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: 'UnaiNikani',
+          title: 'Krabikani',
           body: '42 reviews ready! Time to level up your Japanese',
         }),
         expect.objectContaining({

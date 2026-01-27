@@ -1,6 +1,6 @@
 import * as Keychain from 'react-native-keychain';
 
-const API_KEY_SERVICE = 'com.unainikani.apikey';
+const API_KEY_SERVICE = 'com.krabikani.apikey';
 
 export interface SecureStorageResult {
   success: boolean;

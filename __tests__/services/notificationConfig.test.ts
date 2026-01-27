@@ -42,7 +42,7 @@ describe('notificationConfig', () => {
 
       expect(notificationId).toBe('notification-id');
       expect(notifee.displayNotification).toHaveBeenCalledWith({
-        title: 'UnaiNikani',
+        title: 'Krabikani',
         body: 'Test notification - everything is working!',
         android: {
           channelId: NOTIFICATION_CHANNEL_ID,
