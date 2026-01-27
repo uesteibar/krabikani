@@ -130,3 +130,8 @@ export {
   UpcomingReviewsChart,
   type UpcomingReviewsChartProps,
 } from './UpcomingReviewsChart';
+
+export {
+  SwipableCarousel,
+  type SwipableCarouselProps,
+} from './SwipableCarousel';
