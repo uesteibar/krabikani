@@ -95,3 +95,16 @@ Started:
   - Mock pattern for async useEffect: use `mockResolvedValue`/`mockRejectedValue` and `findByTestId`/`waitFor` for assertions
   - Retry test: capture `mockFn.mock.calls.length` before pressing retry, then assert `calls.length > callsBefore` instead of exact count (avoids flaky tests from rapid re-renders)
 ---
+
+## 2026-01-27 - US-007
+- Created WizardNotificationScreen for the wizard flow notification permission step
+- Reuses same notification service calls as NotificationPermissionScreen but navigates to WizardCompletion instead of Home
+- Two buttons: "Enable Notifications" (requests OS permissions) and "Maybe Later" (skips)
+- Both paths navigate to WizardCompletion after handling permissions
+- Files: src/screens/WizardNotificationScreen.tsx, __tests__/screens/WizardNotificationScreen.test.tsx, src/navigation/RootNavigator.tsx
+- 9 tests pass, typecheck clean
+- **Learnings for future iterations:**
+  - WizardNotificationScreen is separate from NotificationPermissionScreen because the navigation logic differs (wizard → WizardCompletion vs settings → goBack/Home)
+  - The existing NotificationPermissionScreen uses `isInitialSetup` param for its own reset-to-Home flow — wizard flow uses a dedicated screen instead
+  - Mock `require()` after `jest.mock()` to get typed mock references: `const mod = require('...') as jest.Mocked<typeof import('...')>`
+---
