@@ -18,3 +18,14 @@
 
 Started:
 ---
+
+## 2026-01-27 - US-001
+- Verified existing SwipableCarousel component already implements all acceptance criteria
+- Component uses ScrollView with pagingEnabled and horizontal, accepts ReactNode[] pages, has page indicator dots, supports onPageChange callback
+- Files: src/components/SwipableCarousel.tsx, __tests__/components/SwipableCarousel.test.tsx, src/components/index.ts (already exported)
+- All 7 tests pass, typecheck clean, lint clean (1 expected warning for dynamic inline style)
+- **Learnings for future iterations:**
+  - SwipableCarousel was already implemented in a prior commit (541aa23) — check git log before starting implementation
+  - Component uses Dimensions.get('window').width for page sizing
+  - Dot indicators use opacity (1 vs 0.3) rather than filled/outline for active/inactive state
+---
