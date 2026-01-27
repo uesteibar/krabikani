@@ -108,3 +108,13 @@ Started:
   - The existing NotificationPermissionScreen uses `isInitialSetup` param for its own reset-to-Home flow — wizard flow uses a dedicated screen instead
   - Mock `require()` after `jest.mock()` to get typed mock references: `const mod = require('...') as jest.Mocked<typeof import('...')>`
 ---
+
+## 2026-01-27 - US-008
+- Created WizardCompletionScreen with Cabrigator logo, "You're all set!" message, and "Start Learning" button
+- Start Learning uses navigation.reset() to clear the stack and go to Home (prevents back navigation to wizard)
+- Files: src/screens/WizardCompletionScreen.tsx, __tests__/screens/WizardCompletionScreen.test.tsx, src/navigation/RootNavigator.tsx
+- 5 tests pass, typecheck clean
+- **Learnings for future iterations:**
+  - Use `navigation.reset({ index: 0, routes: [{ name: 'Home' }] })` to replace entire navigation stack
+  - Image source uses `require('../../assets/cabrigator-icon.png')` — same as WelcomeScreen
+---
