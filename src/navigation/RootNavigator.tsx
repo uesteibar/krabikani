@@ -1,6 +1,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
+import { ApiKeyInputScreen } from '../screens/ApiKeyInputScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { ItemDetailScreen } from '../screens/ItemDetailScreen';
 import { KanjiDetailScreen } from '../screens/KanjiDetailScreen';
@@ -11,7 +12,13 @@ import { PracticeScreen } from '../screens/PracticeScreen';
 import { ReviewsScreen } from '../screens/ReviewsScreen';
 import { SearchScreen } from '../screens/SearchScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { SyncScreen } from '../screens/SyncScreen';
+import { InstructionsScreen } from '../screens/InstructionsScreen';
+import { WizardCompletionScreen } from '../screens/WizardCompletionScreen';
+import { WizardNotificationScreen } from '../screens/WizardNotificationScreen';
 import { VocabularyDetailScreen } from '../screens/VocabularyDetailScreen';
+import { WelcomeScreen } from '../screens/WelcomeScreen';
+import { hasApiKey } from '../storage';
 import { useTheme } from '../theme';
 import type { RootStackParamList } from './types';
 
@@ -33,10 +40,22 @@ const screenOptions = {
 export function RootNavigator() {
   const theme = useTheme();
   const { colors, isDark } = theme;
+  const [initialRoute, setInitialRoute] =
+    useState<keyof RootStackParamList | null>(null);
+
+  useEffect(() => {
+    hasApiKey().then(keyExists => {
+      setInitialRoute(keyExists ? 'Home' : 'Welcome');
+    });
+  }, []);
+
+  if (initialRoute === null) {
+    return null;
+  }
 
   return (
     <Stack.Navigator
-      initialRouteName="Home"
+      initialRouteName={initialRoute}
       screenOptions={{
         ...screenOptions,
         headerStyle: {
@@ -52,6 +71,36 @@ export function RootNavigator() {
         headerShadowVisible: !isDark,
       }}
     >
+      <Stack.Screen
+        name="Welcome"
+        component={WelcomeScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Instructions"
+        component={InstructionsScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ApiKeyInput"
+        component={ApiKeyInputScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Sync"
+        component={SyncScreen}
+        options={{ headerShown: false, gestureEnabled: false }}
+      />
+      <Stack.Screen
+        name="WizardNotification"
+        component={WizardNotificationScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="WizardCompletion"
+        component={WizardCompletionScreen}
+        options={{ headerShown: false }}
+      />
       <Stack.Screen
         name="Home"
         component={HomeScreen}

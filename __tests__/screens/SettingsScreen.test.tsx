@@ -44,6 +44,15 @@ function MockNotificationPermissionScreen() {
   );
 }
 
+// Mock Welcome screen for navigation tests
+function MockWelcomeScreen() {
+  return (
+    <View testID="welcome-screen">
+      <Text>Welcome Screen</Text>
+    </View>
+  );
+}
+
 // Wrapper for tests that need navigation
 function renderWithNavigation(
   initialRouteName: keyof RootStackParamList = 'Settings',
@@ -52,6 +61,7 @@ function renderWithNavigation(
     <NavigationContainer>
       <Stack.Navigator initialRouteName={initialRouteName}>
         <Stack.Screen name="Home" component={MockHomeScreen} />
+        <Stack.Screen name="Welcome" component={MockWelcomeScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
         <Stack.Screen
           name="NotificationPermission"
@@ -311,10 +321,10 @@ describe('SettingsScreen', () => {
     );
   });
 
-  it('should clear API key when confirmed', async () => {
+  it('should clear API key and navigate to Welcome when confirmed', async () => {
     mockSecureStorage.getApiKey.mockResolvedValue('existing-key');
 
-    const { getByTestId, queryByTestId } = renderWithNavigation();
+    const { getByTestId, findByTestId } = renderWithNavigation();
 
     await waitFor(() => {
       expect(getByTestId('clear-button')).toBeTruthy();
@@ -334,10 +344,11 @@ describe('SettingsScreen', () => {
     });
 
     expect(mockSecureStorage.clearApiKey).toHaveBeenCalled();
+    expect(mockDatabase.clearAllData).toHaveBeenCalled();
 
-    await waitFor(() => {
-      expect(queryByTestId('clear-button')).toBeNull();
-    });
+    // Should navigate to Welcome screen (wizard)
+    const welcomeScreen = await findByTestId('welcome-screen');
+    expect(welcomeScreen).toBeTruthy();
   });
 
   it('should trim whitespace from API key when validating and saving', async () => {

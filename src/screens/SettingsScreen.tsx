@@ -232,10 +232,11 @@ export function SettingsScreen() {
           onPress: async () => {
             const result = await clearApiKey();
             if (result.success) {
-              // Clear all synced data from the database
               await clearAllData();
-              setApiKey('');
-              setHasStoredKey(false);
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Welcome' }],
+              });
             } else {
               Alert.alert('Error', result.error || 'Failed to clear API key');
             }
