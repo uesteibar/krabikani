@@ -77,7 +77,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-001 (carousel component) and US-002 (screenshots)"
     },
     {

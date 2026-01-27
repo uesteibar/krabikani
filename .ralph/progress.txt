@@ -56,3 +56,16 @@ Started:
   - Wizard screens use `headerShown: false` to hide the navigation header
   - The pre-existing ReviewSession test failure (wrap-up mode with incomplete items) is unrelated to wizard work
 ---
+
+## 2026-01-27 - US-004
+- Created InstructionsScreen with SwipableCarousel showing 4 step pages with screenshots
+- Enhanced SwipableCarousel with forwardRef/useImperativeHandle to expose scrollToPage() method
+- Added Back/Next buttons with page-aware navigation, Continue button on last page navigates to ApiKeyInput
+- Last page includes "Open WaniKani Settings" link button
+- Files: src/screens/InstructionsScreen.tsx, __tests__/screens/InstructionsScreen.test.tsx, src/components/SwipableCarousel.tsx, src/components/index.ts
+- 10 tests pass, typecheck clean, existing carousel tests still pass
+- **Learnings for future iterations:**
+  - SwipableCarousel now uses forwardRef with SwipableCarouselRef type — use `carouselRef.current?.scrollToPage(index)` to programmatically scroll
+  - Continue button is conditionally rendered based on currentPage state — tests must simulate scroll to last page to test it
+  - All 4 carousel pages are rendered in DOM simultaneously (ScrollView), so tests can query elements on any page directly
+---
