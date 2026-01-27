@@ -69,3 +69,16 @@ Started:
   - Continue button is conditionally rendered based on currentPage state — tests must simulate scroll to last page to test it
   - All 4 carousel pages are rendered in DOM simultaneously (ScrollView), so tests can query elements on any page directly
 ---
+
+## 2026-01-27 - US-005
+- Created ApiKeyInputScreen with secure text input, validation via validateApiKey(), save via saveApiKey()
+- Handles invalid key error, network error, and loading states
+- Navigates to Sync on success, stays on screen with error message on failure
+- Files: src/screens/ApiKeyInputScreen.tsx, __tests__/screens/ApiKeyInputScreen.test.tsx, src/navigation/types.ts, src/navigation/RootNavigator.tsx
+- 8 tests pass, typecheck clean
+- **Learnings for future iterations:**
+  - Import `validateApiKey` from `../api` and `saveApiKey` from `../storage` — both are barrel-exported
+  - validateApiKey returns `{ success: true, user }` or `{ success: false, error }` — network errors throw TypeError
+  - Use `jest.mock('../../src/api')` and `jest.mock('../../src/storage')` to mock API/storage in tests
+  - Use `findByTestId`/`findByText` (async) for elements that appear after state changes
+---
