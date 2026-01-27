@@ -289,7 +289,7 @@ export function SearchScreen() {
       {showEmptyState && (
         <View style={styles.emptyStateContainer} testID="empty-state">
           <Text style={[styles.emptyStateText, dynamicStyles.emptyStateText]}>
-            Enter a search term to find learned items
+            Search for radicals, kanji, or vocabulary
           </Text>
         </View>
       )}
@@ -297,7 +297,7 @@ export function SearchScreen() {
       {showNoResults && (
         <View style={styles.emptyStateContainer} testID="no-results">
           <Text style={[styles.emptyStateText, dynamicStyles.emptyStateText]}>
-            No results found
+            No matches found
           </Text>
         </View>
       )}

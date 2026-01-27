@@ -67,8 +67,7 @@ const STEPS: InstructionStep[] = [
   {
     title: (
       <>
-        Copy the <U>token code</U>.{'\n'}Keep it, you will need it in the next
-        step!
+        Copy your <U>API key</U>.{'\n'}You'll need it in the next step!
       </>
     ),
     image: require('../../assets/wizard/step4-copy-tokens.png'),

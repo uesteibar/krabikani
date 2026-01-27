@@ -148,7 +148,9 @@ export function LessonsScreen() {
       const assignments = await getAvailableLessons();
 
       if (assignments.length === 0) {
-        setErrorMessage('No lessons available');
+        setErrorMessage(
+          'No lessons right now. Check back after your next review.',
+        );
         setPhase('error');
         return;
       }
@@ -169,7 +171,9 @@ export function LessonsScreen() {
       );
 
       if (validAssignments.length === 0) {
-        setErrorMessage('No valid lessons found');
+        setErrorMessage(
+          "Couldn't load lesson data. Try syncing from the home screen.",
+        );
         setPhase('error');
         return;
       }
@@ -263,7 +267,9 @@ export function LessonsScreen() {
       setPhase('learning');
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Failed to load lessons';
+        error instanceof Error
+          ? error.message
+          : "Couldn't load lessons. Try again.";
       setErrorMessage(message);
       setPhase('error');
     }
@@ -375,9 +381,12 @@ export function LessonsScreen() {
   }, [navigation]);
 
   // Handle component press (navigate to item detail)
-  const handleComponentPress = useCallback((subjectId: number) => {
-    navigation.push('ItemDetail', { subjectId });
-  }, [navigation]);
+  const handleComponentPress = useCallback(
+    (subjectId: number) => {
+      navigation.push('ItemDetail', { subjectId });
+    },
+    [navigation],
+  );
 
   // Handle continue to next batch
   const handleContinueLessons = useCallback(() => {
@@ -453,7 +462,11 @@ export function LessonsScreen() {
 
     return (
       <View style={styles.container} testID="lessons-screen">
-        <LessonQuiz items={quizItems} onQuizComplete={handleQuizComplete} onComponentPress={handleComponentPress} />
+        <LessonQuiz
+          items={quizItems}
+          onQuizComplete={handleQuizComplete}
+          onComponentPress={handleComponentPress}
+        />
       </View>
     );
   }

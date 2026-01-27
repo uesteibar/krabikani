@@ -50,12 +50,12 @@ export function ApiKeyInputScreen() {
         navigation.navigate('Sync');
       } else {
         setError(
-          'Invalid API key. Please check your token and try again.',
+          "That API key didn't work. Double-check you copied the full key and try again.",
         );
       }
     } catch {
       setError(
-        'Could not connect to WaniKani. Please check your internet connection and try again.',
+        "Couldn't reach WaniKani. Check your internet connection and try again.",
       );
     } finally {
       setIsLoading(false);
@@ -73,7 +73,7 @@ export function ApiKeyInputScreen() {
         </Text>
 
         <Text style={[styles.description, { color: colors.text.secondary }]}>
-          Paste the personal access token you copied from WaniKani
+          Paste the API key you copied from WaniKani
         </Text>
 
         <TextInput
@@ -82,7 +82,9 @@ export function ApiKeyInputScreen() {
             {
               color: colors.text.primary,
               backgroundColor: colors.background.input,
-              borderColor: error ? COLORS.feedback.incorrect : colors.border.medium,
+              borderColor: error
+                ? COLORS.feedback.incorrect
+                : colors.border.medium,
             },
           ]}
           value={apiKey}
@@ -92,7 +94,7 @@ export function ApiKeyInputScreen() {
               setError(null);
             }
           }}
-          placeholder="Paste your API token here"
+          placeholder="Paste your API key here"
           placeholderTextColor={colors.text.placeholder}
           secureTextEntry
           autoCapitalize="none"
@@ -132,14 +134,20 @@ export function ApiKeyInputScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.secondaryButton, { borderColor: colors.border.medium }]}
+          style={[
+            styles.secondaryButton,
+            { borderColor: colors.border.medium },
+          ]}
           onPress={() => navigation.goBack()}
           activeOpacity={0.8}
           disabled={isLoading}
           testID="back-button"
         >
           <Text
-            style={[styles.secondaryButtonText, { color: colors.text.secondary }]}
+            style={[
+              styles.secondaryButtonText,
+              { color: colors.text.secondary },
+            ]}
           >
             Back
           </Text>

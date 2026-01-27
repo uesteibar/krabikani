@@ -22,10 +22,7 @@ import {
   MIN_TOUCH_TARGET,
 } from '../theme';
 
-type SyncNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  'Sync'
->;
+type SyncNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Sync'>;
 
 export function SyncScreen() {
   const navigation = useNavigation<SyncNavigationProp>();
@@ -40,7 +37,7 @@ export function SyncScreen() {
     try {
       const apiKey = await getApiKey();
       if (!apiKey) {
-        setError('No API key found. Please go back and enter your key.');
+        setError('No API key found. Go back and enter your key to continue.');
         setIsSyncing(false);
         return;
       }
@@ -55,7 +52,7 @@ export function SyncScreen() {
 
       navigation.navigate('WizardNotification');
     } catch {
-      setError('Something went wrong. Please try again.');
+      setError('Sync failed. Check your connection and try again.');
     } finally {
       setIsSyncing(false);
     }
@@ -86,7 +83,9 @@ export function SyncScreen() {
 
         {error && (
           <>
-            <Text style={[styles.errorText, { color: COLORS.feedback.incorrect }]}>
+            <Text
+              style={[styles.errorText, { color: COLORS.feedback.incorrect }]}
+            >
               {error}
             </Text>
             <TouchableOpacity

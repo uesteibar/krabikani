@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   StyleSheet,
   Switch,
   Text,
@@ -55,6 +56,7 @@ export function SettingsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [storedApiKey, setStoredApiKey] = useState('');
   const [syncError, setSyncError] = useState<string | null>(null);
   const [zenModeEnabled, setZenModeEnabled] = useState(false);
   const [notificationsEnabled, setNotificationsEnabledState] = useState(false);
@@ -64,18 +66,24 @@ export function SettingsScreen() {
   const loadStoredKey = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [storedKey, zenModeSetting, notificationsSetting, permissionStatus] =
-        await Promise.all([
-          getApiKey(),
-          getSetting('zenMode'),
-          getNotificationsEnabled(),
-          checkPermissions(),
-        ]);
+      const [
+        storedKey,
+        zenModeSetting,
+        notificationsSetting,
+        permissionStatus,
+      ] = await Promise.all([
+        getApiKey(),
+        getSetting('zenMode'),
+        getNotificationsEnabled(),
+        checkPermissions(),
+      ]);
       if (storedKey) {
         setApiKey(storedKey);
+        setStoredApiKey(storedKey);
         setHasStoredKey(true);
       } else {
         setApiKey('');
+        setStoredApiKey('');
         setHasStoredKey(false);
       }
       setZenModeEnabled(zenModeSetting === true);
@@ -92,18 +100,20 @@ export function SettingsScreen() {
 
   // Listen for app state changes to refresh permission status when returning from system settings
   useEffect(() => {
-    const unsubscribe = addAppStateChangeListener(async (nextState, previousState) => {
-      // Check if coming to foreground from background/inactive
-      const isComingToForeground =
-        (previousState === 'background' || previousState === 'inactive') &&
-        nextState === 'active';
+    const unsubscribe = addAppStateChangeListener(
+      async (nextState, previousState) => {
+        // Check if coming to foreground from background/inactive
+        const isComingToForeground =
+          (previousState === 'background' || previousState === 'inactive') &&
+          nextState === 'active';
 
-      if (isComingToForeground) {
-        // Refresh permission status when returning to the app
-        const permissionStatus = await checkPermissions();
-        setNotificationPermissionGranted(permissionStatus === 'granted');
-      }
-    });
+        if (isComingToForeground) {
+          // Refresh permission status when returning to the app
+          const permissionStatus = await checkPermissions();
+          setNotificationPermissionGranted(permissionStatus === 'granted');
+        }
+      },
+    );
 
     return () => {
       unsubscribe();
@@ -137,7 +147,12 @@ export function SettingsScreen() {
         if (!alreadyAsked && permissionStatus !== 'granted') {
           navigation.reset({
             index: 0,
-            routes: [{ name: 'NotificationPermission', params: { isInitialSetup: true } }],
+            routes: [
+              {
+                name: 'NotificationPermission',
+                params: { isInitialSetup: true },
+              },
+            ],
           });
         } else {
           // Navigate to Home screen after successful sync
@@ -187,7 +202,7 @@ export function SettingsScreen() {
   const handleSave = async () => {
     const trimmedKey = apiKey.trim();
     if (!trimmedKey) {
-      Alert.alert('Error', 'Please enter an API key');
+      Alert.alert('Missing API Key', 'Enter your API key to continue.');
       return;
     }
 
@@ -197,8 +212,9 @@ export function SettingsScreen() {
       const validationResult = await validateApiKey(trimmedKey);
       if (!validationResult.success) {
         Alert.alert(
-          'Validation Failed',
-          validationResult.error || 'Invalid API key',
+          'Invalid API Key',
+          validationResult.error ||
+            "That key didn't work. Double-check and try again.",
         );
         setIsSaving(false);
         return;
@@ -212,7 +228,10 @@ export function SettingsScreen() {
         // Perform the actual sync
         await performSync(trimmedKey);
       } else {
-        Alert.alert('Error', saveResult.error || 'Failed to save API key');
+        Alert.alert(
+          'Save Failed',
+          saveResult.error || "Couldn't save your API key. Try again.",
+        );
         setIsSaving(false);
       }
     } catch {
@@ -222,12 +241,12 @@ export function SettingsScreen() {
 
   const handleClear = () => {
     Alert.alert(
-      'Clear API Key',
-      'Are you sure you want to remove your API key? This will also delete all synced data.',
+      'Remove API Key?',
+      'This will sign you out and delete all downloaded data. You can reconnect later with a new key.',
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Keep', style: 'cancel' },
         {
-          text: 'Clear',
+          text: 'Remove',
           style: 'destructive',
           onPress: async () => {
             const result = await clearApiKey();
@@ -238,7 +257,10 @@ export function SettingsScreen() {
                 routes: [{ name: 'Welcome' }],
               });
             } else {
-              Alert.alert('Error', result.error || 'Failed to clear API key');
+              Alert.alert(
+                'Remove Failed',
+                result.error || "Couldn't remove your API key. Try again.",
+              );
             }
           },
         },
@@ -295,8 +317,18 @@ export function SettingsScreen() {
     <View style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.label}>WaniKani API Key</Text>
-        <Text style={styles.hint}>
-          Get your API key from wanikani.com/settings/personal_access_tokens
+        <Text
+          style={styles.hint}
+          onPress={() =>
+            Linking.openURL(
+              'https://www.wanikani.com/settings/personal_access_tokens',
+            )
+          }
+        >
+          Find your key at{' '}
+          <Text style={styles.hintLink}>
+            wanikani.com/settings/personal_access_tokens
+          </Text>
         </Text>
         <TextInput
           style={styles.input}
@@ -314,10 +346,11 @@ export function SettingsScreen() {
           style={[
             styles.button,
             styles.saveButton,
-            isSaving && styles.buttonDisabled,
+            (isSaving || apiKey.trim() === storedApiKey) &&
+              styles.buttonDisabled,
           ]}
           onPress={handleSave}
-          disabled={isSaving}
+          disabled={isSaving || apiKey.trim() === storedApiKey}
           testID="save-button"
         >
           {isSaving ? (
@@ -384,7 +417,7 @@ export function SettingsScreen() {
             <View style={styles.settingInfo}>
               <Text style={styles.settingLabel}>Review Notifications</Text>
               <Text style={styles.settingDescriptionDisabled}>
-                Enable in system settings
+                Tap to open system settings
               </Text>
             </View>
             <Switch
@@ -451,6 +484,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginBottom: 16,
+  },
+  hintLink: {
+    color: COLORS.subject.vocabulary,
+    textDecorationLine: 'underline',
   },
   input: {
     borderWidth: 1,

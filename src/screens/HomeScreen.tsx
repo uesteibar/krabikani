@@ -357,8 +357,8 @@ export function HomeScreen() {
             No Connection
           </Text>
           <Text style={[styles.errorMessage, dynamicStyles.errorMessage]}>
-            Please connect to the internet to download your data. This app
-            requires an initial sync before it can work offline.
+            Connect to the internet to download your WaniKani data. Once
+            downloaded, you can study offline.
           </Text>
         </View>
       </View>

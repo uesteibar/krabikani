@@ -140,7 +140,7 @@ export function ReviewsScreen() {
       const assignments = await getAvailableReviews();
 
       if (assignments.length === 0) {
-        setErrorMessage('No reviews available');
+        setErrorMessage('No reviews right now. Check back later.');
         setPhase('error');
         return;
       }
@@ -161,7 +161,9 @@ export function ReviewsScreen() {
       );
 
       if (validAssignments.length === 0) {
-        setErrorMessage('No valid reviews found');
+        setErrorMessage(
+          "Couldn't load review data. Try syncing from the home screen.",
+        );
         setPhase('error');
         return;
       }
@@ -267,7 +269,9 @@ export function ReviewsScreen() {
       setPhase('reviewing');
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Failed to load reviews';
+        error instanceof Error
+          ? error.message
+          : "Couldn't load reviews. Try again.";
       setErrorMessage(message);
       setPhase('error');
     }
