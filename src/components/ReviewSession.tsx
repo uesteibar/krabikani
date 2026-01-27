@@ -1173,7 +1173,7 @@ export function ReviewSession({
     return (
       <View style={styles.container} testID="review-session-incorrect-feedback">
         {/* Progress indicator - hidden in zen mode unless wrap-up is active */}
-        {showProgressStats && (
+        {showProgressStats ? (
           <View
             style={styles.progressContainer}
             testID="review-session-progress"
@@ -1211,6 +1211,11 @@ export function ReviewSession({
                 testID="review-session-progress-fill"
               />
             </View>
+          </View>
+        ) : (
+          <View style={styles.modeBanner} testID="review-session-zen-banner">
+            <Text style={styles.modeBannerIcon}>○</Text>
+            <Text style={styles.modeBannerText}>Zen Mode</Text>
           </View>
         )}
 

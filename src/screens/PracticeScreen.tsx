@@ -555,6 +555,11 @@ export function PracticeScreen() {
         style={styles.container}
         testID="practice-session-incorrect-feedback"
       >
+        <View style={styles.modeBanner} testID="practice-session-banner">
+          <Text style={styles.modeBannerIcon}>◇</Text>
+          <Text style={styles.modeBannerText}>{practicePhrase}</Text>
+        </View>
+
         <View
           style={[styles.characterContainer, styles.incorrectHeader]}
           testID="practice-session-character-container"
@@ -897,10 +902,11 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.feedback.fuzzyMatch,
   },
   correctLabel: {
+    position: 'absolute',
+    bottom: SPACING.md,
     fontSize: FONT_SIZES.sm,
     fontWeight: 'bold',
     color: COLORS.text.inverse,
-    marginTop: SPACING.sm,
   },
   incorrectHeader: {
     backgroundColor: COLORS.feedback.incorrect,
