@@ -682,8 +682,8 @@ describe('ReviewSession', () => {
 
       expect(getByTestId('review-completion')).toBeTruthy();
       expect(getByText('Reviews Complete!')).toBeTruthy();
-      expect(getByText('1')).toBeTruthy();
-      expect(getByText('item reviewed')).toBeTruthy();
+      expect(getByTestId('review-completion-stats')).toBeTruthy();
+      expect(getByText('1 correct')).toBeTruthy();
       jest.useRealTimers();
     });
   });

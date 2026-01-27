@@ -54,7 +54,7 @@ import { MnemonicText } from './MnemonicText';
 import { ComponentDisplay } from './ComponentDisplay';
 import { SrsLevelBadge } from './SrsLevelBadge';
 import { AnimatedSrsLevelBadge } from './AnimatedSrsLevelBadge';
-import { ReviewCompletion } from './ReviewCompletion';
+import { ReviewCompletion, type ReviewResultItem } from './ReviewCompletion';
 import { ExpandableDetails } from './ExpandableDetails';
 import { ItemDetails } from './ItemDetails';
 import { getSrsLevelInfo, calculateSrsStageAfterIncorrect } from '../theme';
@@ -1078,6 +1078,39 @@ export function ReviewSession({
       ? introducedItemIds.size
       : completedItemCount;
 
+    // Build result items for the results list
+    const resultItems: ReviewResultItem[] = [];
+    for (const item of items) {
+      // In wrap-up mode, only include introduced items
+      if (isWrappingUp && !introducedItemIds.has(item.id)) continue;
+
+      const progress = _itemProgress.get(item.id);
+      if (!progress) continue;
+
+      const totalItemIncorrect =
+        progress.incorrectMeaningAnswers + progress.incorrectReadingAnswers;
+
+      const primaryMeaning =
+        item.meanings.find(m => m.primary)?.meaning ??
+        item.meanings[0]?.meaning ??
+        '';
+
+      let primaryReading = '';
+      if (item.readings) {
+        const primary = item.readings.find(r => r.primary);
+        primaryReading = primary?.reading ?? item.readings[0]?.reading ?? '';
+      }
+
+      resultItems.push({
+        id: item.id,
+        characters: item.characters,
+        primaryMeaning,
+        primaryReading,
+        subjectType: item.subjectType,
+        isCorrect: totalItemIncorrect === 0,
+      });
+    }
+
     const handleReturnToDashboard = () => {
       onReturnToDashboard?.();
     };
@@ -1088,6 +1121,7 @@ export function ReviewSession({
         incorrectCount={totalIncorrect}
         syncedOnline={syncedOnline}
         onReturnToDashboard={handleReturnToDashboard}
+        resultItems={resultItems}
       />
     );
   }

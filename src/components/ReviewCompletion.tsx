@@ -4,6 +4,7 @@ import {
   Text,
   View,
   TouchableOpacity,
+  ScrollView,
   AccessibilityInfo,
 } from 'react-native';
 import Animated, {
@@ -16,6 +17,7 @@ import Animated, {
   SharedValue,
 } from 'react-native-reanimated';
 
+import type { SubjectType } from '../api/types';
 import {
   DASHBOARD_COLORS,
   COLORS,
@@ -24,6 +26,8 @@ import {
   SPACING,
   FONT_SIZES,
   MIN_TOUCH_TARGET,
+  TEXT_STYLES,
+  getSubjectColor,
 } from '../theme';
 
 // Animation timing constants
@@ -56,6 +60,22 @@ const ENCOURAGEMENT_MESSAGES = [
   'Nice session! Small steps lead to big gains.',
 ];
 
+/** A single item result for the review session results list */
+export interface ReviewResultItem {
+  /** Subject ID */
+  id: number;
+  /** Characters to display */
+  characters: string | null;
+  /** Primary meaning */
+  primaryMeaning: string;
+  /** Primary reading (empty string if none) */
+  primaryReading: string;
+  /** Subject type for color accent */
+  subjectType: SubjectType;
+  /** Whether the item had zero incorrect answers */
+  isCorrect: boolean;
+}
+
 export interface ReviewCompletionProps {
   /** Number of items reviewed in this session */
   itemsReviewed: number;
@@ -65,6 +85,8 @@ export interface ReviewCompletionProps {
   syncedOnline: boolean;
   /** Callback when user wants to return to dashboard */
   onReturnToDashboard: () => void;
+  /** Optional list of reviewed items with results */
+  resultItems?: ReviewResultItem[];
 }
 
 /**
@@ -139,7 +161,10 @@ export function ReviewCompletion({
   incorrectCount,
   syncedOnline,
   onReturnToDashboard,
+  resultItems,
 }: ReviewCompletionProps) {
+  // Results list toggle state
+  const [showResults, setShowResults] = useState(false);
   // Track reduced motion preference
   const [reduceMotion, setReduceMotion] = useState(false);
 
@@ -398,9 +423,15 @@ export function ReviewCompletion({
   }));
 
   const hasIncorrect = incorrectCount > 0;
+  const correctCount = itemsReviewed - (resultItems?.filter(r => !r.isCorrect).length ?? 0);
+  const failedCount = resultItems?.filter(r => !r.isCorrect).length ?? 0;
 
   return (
-    <View style={styles.container} testID="review-completion">
+    <ScrollView
+      style={styles.scrollContainer}
+      contentContainerStyle={styles.container}
+      testID="review-completion"
+    >
       {/* Confetti particles (only for perfect sessions) */}
       {confettiParticles.map(({ id, color }) => (
         <ConfettiParticle
@@ -431,14 +462,28 @@ export function ReviewCompletion({
         Reviews Complete!
       </Animated.Text>
 
-      {/* Items reviewed count - large 64px */}
+      {/* Summary stats: N correct, M incorrect */}
       <Animated.View style={[styles.summaryContainer, countAnimatedStyle]}>
-        <Text style={styles.summaryNumber} testID="review-completion-count">
-          {itemsReviewed}
-        </Text>
-        <Text style={styles.summaryLabel} testID="review-completion-label">
-          {itemsReviewed === 1 ? 'item reviewed' : 'items reviewed'}
-        </Text>
+        {resultItems && resultItems.length > 0 ? (
+          <View style={styles.summaryStatsRow} testID="review-completion-stats">
+            <Text style={styles.summaryStatCorrect}>
+              {correctCount} correct
+            </Text>
+            <Text style={styles.summaryStatSeparator}>·</Text>
+            <Text style={styles.summaryStatIncorrect}>
+              {failedCount} incorrect
+            </Text>
+          </View>
+        ) : (
+          <>
+            <Text style={styles.summaryNumber} testID="review-completion-count">
+              {itemsReviewed}
+            </Text>
+            <Text style={styles.summaryLabel} testID="review-completion-label">
+              {itemsReviewed === 1 ? 'item reviewed' : 'items reviewed'}
+            </Text>
+          </>
+        )}
       </Animated.View>
 
       {/* Encouragement message */}
@@ -449,8 +494,8 @@ export function ReviewCompletion({
         {encouragementMessage}
       </Animated.Text>
 
-      {/* Incorrect count - only show if > 0, with red tint */}
-      {hasIncorrect && (
+      {/* Incorrect count - only show if > 0 and no results list */}
+      {hasIncorrect && (!resultItems || resultItems.length === 0) && (
         <Animated.View
           style={[styles.incorrectContainer, incorrectAnimatedStyle]}
           testID="review-completion-incorrect"
@@ -459,6 +504,81 @@ export function ReviewCompletion({
           <Text style={styles.incorrectLabel}>
             {incorrectCount === 1 ? 'incorrect answer' : 'incorrect answers'}
           </Text>
+        </Animated.View>
+      )}
+
+      {/* Expandable results list */}
+      {resultItems && resultItems.length > 0 && (
+        <Animated.View style={[styles.resultsSection, incorrectAnimatedStyle]}>
+          <TouchableOpacity
+            style={styles.resultsToggle}
+            onPress={() => setShowResults(prev => !prev)}
+            activeOpacity={0.7}
+            testID="review-completion-results-toggle"
+          >
+            <Text style={styles.resultsToggleText}>
+              {showResults ? 'Hide Results' : 'View Results'}
+            </Text>
+            <Text style={styles.resultsToggleArrow}>
+              {showResults ? '▲' : '▼'}
+            </Text>
+          </TouchableOpacity>
+
+          {showResults && (
+            <View
+              style={styles.resultsList}
+              testID="review-completion-results-list"
+            >
+              {resultItems.map(item => (
+                <View
+                  key={item.id}
+                  style={styles.resultItem}
+                  testID={`review-result-${item.id}`}
+                >
+                  <View
+                    style={[
+                      styles.resultAccent,
+                      { backgroundColor: getSubjectColor(item.subjectType) },
+                    ]}
+                  />
+                  <View style={styles.resultContent}>
+                    <Text
+                      style={[
+                        styles.resultCharacter,
+                        TEXT_STYLES.japaneseDisplay,
+                      ]}
+                    >
+                      {item.characters ?? '?'}
+                    </Text>
+                    <View style={styles.resultDetails}>
+                      <Text style={styles.resultMeaning} numberOfLines={1}>
+                        {item.primaryMeaning}
+                      </Text>
+                      {item.primaryReading.length > 0 && (
+                        <>
+                          <Text style={styles.resultSeparator}>·</Text>
+                          <Text style={styles.resultReading} numberOfLines={1}>
+                            {item.primaryReading}
+                          </Text>
+                        </>
+                      )}
+                    </View>
+                  </View>
+                  <Text
+                    style={[
+                      styles.resultIndicator,
+                      item.isCorrect
+                        ? styles.resultIndicatorCorrect
+                        : styles.resultIndicatorIncorrect,
+                    ]}
+                    testID={`review-result-indicator-${item.id}`}
+                  >
+                    {item.isCorrect ? '✓' : '✗'}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
         </Animated.View>
       )}
 
@@ -494,17 +614,21 @@ export function ReviewCompletion({
           <Text style={styles.dashboardButtonText}>Return to Dashboard</Text>
         </TouchableOpacity>
       </Animated.View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  scrollContainer: {
     flex: 1,
     backgroundColor: COLORS.background.primary,
+  },
+  container: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: SPACING.xxl,
+    paddingVertical: SPACING.xxxl,
+    flexGrow: 1,
   },
   iconContainer: {
     width: 80,
@@ -617,5 +741,107 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 2,
+  },
+  // Summary stats row
+  summaryStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  summaryStatCorrect: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+    color: COLORS.feedback.correct,
+  },
+  summaryStatSeparator: {
+    fontSize: FONT_SIZES.lg,
+    color: COLORS.text.tertiary,
+  },
+  summaryStatIncorrect: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+    color: COLORS.feedback.incorrect,
+  },
+  // Results list
+  resultsSection: {
+    width: '100%',
+    marginBottom: SPACING.lg,
+  },
+  resultsToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.md,
+    gap: SPACING.sm,
+  },
+  resultsToggleText: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '600',
+    color: COLORS.text.secondary,
+  },
+  resultsToggleArrow: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.text.tertiary,
+  },
+  resultsList: {
+    marginTop: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
+  },
+  resultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
+    paddingRight: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border.light,
+  },
+  resultAccent: {
+    width: 5,
+    alignSelf: 'stretch',
+  },
+  resultContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: SPACING.md,
+    gap: SPACING.md,
+  },
+  resultCharacter: {
+    fontSize: FONT_SIZES.xxl,
+    color: COLORS.text.primary,
+  },
+  resultDetails: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  resultMeaning: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.primary,
+    flexShrink: 1,
+  },
+  resultSeparator: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.tertiary,
+  },
+  resultReading: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
+    flexShrink: 1,
+  },
+  resultIndicator: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: 'bold',
+    marginLeft: SPACING.sm,
+  },
+  resultIndicatorCorrect: {
+    color: COLORS.feedback.correct,
+  },
+  resultIndicatorIncorrect: {
+    color: COLORS.feedback.incorrect,
   },
 });

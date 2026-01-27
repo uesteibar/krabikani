@@ -114,6 +114,7 @@ export {
 export {
   ReviewCompletion,
   type ReviewCompletionProps,
+  type ReviewResultItem,
 } from './ReviewCompletion';
 
 export {

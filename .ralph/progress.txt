@@ -33,3 +33,21 @@ Started:
   - Practice excludes items currently pending review via `available_at IS NULL OR available_at > now`
 ---
 
+## 2026-01-27 - US-014
+- Implemented Review Session Results List feature
+- Files changed:
+  - `src/components/ReviewCompletion.tsx` - Added `ReviewResultItem` type, expandable results list UI with "View Results" toggle, summary stats row ("N correct · M incorrect"), subject type color accents, and correct/incorrect indicators. Changed container from `View` to `ScrollView` for scrollability.
+  - `src/components/ReviewSession.tsx` - Updated completion section to build `ReviewResultItem[]` from item progress and pass to `ReviewCompletion`
+  - `src/components/index.ts` - Exported `ReviewResultItem` type
+  - `__tests__/components/ReviewCompletion.test.tsx` - Added 11 new tests for results list feature (toggle, expand/collapse, item rendering, indicators, empty state, stats display)
+  - `__tests__/components/ReviewSession.test.tsx` - Updated completion test to match new stats-based display
+  - `__tests__/screens/ReviewsScreen.test.tsx` - Updated 3 completion tests to match new stats-based display
+- **Learnings for future iterations:**
+  - `ReviewCompletion` now uses `ScrollView` instead of `View` as root container to support scrollable results list
+  - When `resultItems` is provided, the summary shows "N correct · M incorrect" stats row instead of the large number count
+  - The separate incorrect count section is hidden when `resultItems` is provided (redundant with stats row)
+  - Results list is collapsed by default via "View Results" toggle for a clean initial appearance
+  - Items with zero total incorrect answers (meaning + reading) are marked correct; any incorrect answers marks the item as failed
+  - The search screen list style was matched: left color accent bar (5px, subject-type color), character on left, meaning · reading on right, correct/incorrect indicator
+---
+

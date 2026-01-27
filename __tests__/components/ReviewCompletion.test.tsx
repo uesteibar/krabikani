@@ -2,7 +2,10 @@ import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { AccessibilityInfo } from 'react-native';
 
-import { ReviewCompletion } from '../../src/components/ReviewCompletion';
+import {
+  ReviewCompletion,
+  type ReviewResultItem,
+} from '../../src/components/ReviewCompletion';
 
 // Mock AccessibilityInfo
 const mockIsReduceMotionEnabled = jest.fn(() => Promise.resolve(false));
@@ -365,6 +368,168 @@ describe('ReviewCompletion', () => {
       messages.forEach(message => {
         expect(encouragementMessages).toContain(message);
       });
+    });
+  });
+
+  describe('results list', () => {
+    const sampleResultItems: ReviewResultItem[] = [
+      {
+        id: 1,
+        characters: '大',
+        primaryMeaning: 'Big',
+        primaryReading: 'おお',
+        subjectType: 'kanji',
+        isCorrect: true,
+      },
+      {
+        id: 2,
+        characters: '食べる',
+        primaryMeaning: 'To Eat',
+        primaryReading: 'たべる',
+        subjectType: 'vocabulary',
+        isCorrect: false,
+      },
+      {
+        id: 3,
+        characters: '水',
+        primaryMeaning: 'Water',
+        primaryReading: '',
+        subjectType: 'radical',
+        isCorrect: true,
+      },
+    ];
+
+    const propsWithResults = {
+      ...defaultProps,
+      itemsReviewed: 3,
+      incorrectCount: 1,
+      resultItems: sampleResultItems,
+    };
+
+    it('should show summary stats when resultItems is provided', () => {
+      const { getByTestId, getByText } = render(
+        <ReviewCompletion {...propsWithResults} />,
+      );
+
+      expect(getByTestId('review-completion-stats')).toBeTruthy();
+      expect(getByText('2 correct')).toBeTruthy();
+      expect(getByText('1 incorrect')).toBeTruthy();
+    });
+
+    it('should not show separate incorrect section when resultItems is provided', () => {
+      const { queryByTestId } = render(
+        <ReviewCompletion {...propsWithResults} />,
+      );
+
+      expect(queryByTestId('review-completion-incorrect')).toBeNull();
+    });
+
+    it('should show View Results toggle collapsed by default', () => {
+      const { getByTestId, getByText, queryByTestId } = render(
+        <ReviewCompletion {...propsWithResults} />,
+      );
+
+      expect(getByTestId('review-completion-results-toggle')).toBeTruthy();
+      expect(getByText('View Results')).toBeTruthy();
+      expect(queryByTestId('review-completion-results-list')).toBeNull();
+    });
+
+    it('should expand results list when toggle is pressed', () => {
+      const { getByTestId, getByText } = render(
+        <ReviewCompletion {...propsWithResults} />,
+      );
+
+      fireEvent.press(getByTestId('review-completion-results-toggle'));
+
+      expect(getByTestId('review-completion-results-list')).toBeTruthy();
+      expect(getByText('Hide Results')).toBeTruthy();
+    });
+
+    it('should show each result item with characters, meaning, and reading', () => {
+      const { getByTestId, getByText } = render(
+        <ReviewCompletion {...propsWithResults} />,
+      );
+
+      fireEvent.press(getByTestId('review-completion-results-toggle'));
+
+      // Kanji item
+      expect(getByTestId('review-result-1')).toBeTruthy();
+      expect(getByText('大')).toBeTruthy();
+      expect(getByText('Big')).toBeTruthy();
+      expect(getByText('おお')).toBeTruthy();
+
+      // Vocabulary item
+      expect(getByTestId('review-result-2')).toBeTruthy();
+      expect(getByText('食べる')).toBeTruthy();
+      expect(getByText('To Eat')).toBeTruthy();
+      expect(getByText('たべる')).toBeTruthy();
+
+      // Radical item (no reading)
+      expect(getByTestId('review-result-3')).toBeTruthy();
+      expect(getByText('水')).toBeTruthy();
+      expect(getByText('Water')).toBeTruthy();
+    });
+
+    it('should show correct indicator (checkmark) for correct items', () => {
+      const { getByTestId } = render(
+        <ReviewCompletion {...propsWithResults} />,
+      );
+
+      fireEvent.press(getByTestId('review-completion-results-toggle'));
+
+      const correctIndicator = getByTestId('review-result-indicator-1');
+      expect(correctIndicator.props.children).toBe('✓');
+    });
+
+    it('should show incorrect indicator (X) for failed items', () => {
+      const { getByTestId } = render(
+        <ReviewCompletion {...propsWithResults} />,
+      );
+
+      fireEvent.press(getByTestId('review-completion-results-toggle'));
+
+      const incorrectIndicator = getByTestId('review-result-indicator-2');
+      expect(incorrectIndicator.props.children).toBe('✗');
+    });
+
+    it('should collapse results list when toggle is pressed again', () => {
+      const { getByTestId, queryByTestId, getByText } = render(
+        <ReviewCompletion {...propsWithResults} />,
+      );
+
+      // Expand
+      fireEvent.press(getByTestId('review-completion-results-toggle'));
+      expect(getByTestId('review-completion-results-list')).toBeTruthy();
+
+      // Collapse
+      fireEvent.press(getByTestId('review-completion-results-toggle'));
+      expect(queryByTestId('review-completion-results-list')).toBeNull();
+      expect(getByText('View Results')).toBeTruthy();
+    });
+
+    it('should not show results toggle when resultItems is not provided', () => {
+      const { queryByTestId } = render(
+        <ReviewCompletion {...defaultProps} />,
+      );
+
+      expect(queryByTestId('review-completion-results-toggle')).toBeNull();
+    });
+
+    it('should not show results toggle when resultItems is empty', () => {
+      const { queryByTestId } = render(
+        <ReviewCompletion {...defaultProps} resultItems={[]} />,
+      );
+
+      expect(queryByTestId('review-completion-results-toggle')).toBeNull();
+    });
+
+    it('should show fallback count display when resultItems is not provided', () => {
+      const { getByTestId } = render(
+        <ReviewCompletion {...defaultProps} itemsReviewed={10} />,
+      );
+
+      expect(getByTestId('review-completion-count')).toBeTruthy();
+      expect(getByTestId('review-completion-label')).toBeTruthy();
     });
   });
 });

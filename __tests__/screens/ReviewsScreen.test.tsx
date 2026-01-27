@@ -267,11 +267,12 @@ describe('ReviewsScreen', () => {
       fireEvent.changeText(input, 'Ground');
       fireEvent.press(submit);
 
-      // Should show completion (via ReviewCompletion component)
+      // Should show completion (via ReviewCompletion component) with stats
       await waitFor(() => {
         expect(getByTestId('review-completion')).toBeTruthy();
         expect(getByText('Reviews Complete!')).toBeTruthy();
-        expect(getByTestId('review-completion-count').props.children).toBe(1);
+        expect(getByTestId('review-completion-stats')).toBeTruthy();
+        expect(getByText('1 correct')).toBeTruthy();
       });
     });
 
@@ -283,7 +284,7 @@ describe('ReviewsScreen', () => {
         sampleRadicalSubject,
       ]);
 
-      const { getByTestId } = renderWithNavigation(<ReviewsScreen />);
+      const { getByTestId, getByText } = renderWithNavigation(<ReviewsScreen />);
 
       // Wait for reviews to load
       await waitFor(() => {
@@ -304,10 +305,11 @@ describe('ReviewsScreen', () => {
       fireEvent.changeText(getByTestId('review-session-input'), 'Ground');
       fireEvent.press(getByTestId('review-session-submit'));
 
-      // Should show completion with incorrect count (via ReviewCompletion component)
+      // Should show completion with incorrect count in stats (via ReviewCompletion component)
       await waitFor(() => {
         expect(getByTestId('review-completion')).toBeTruthy();
-        expect(getByTestId('review-completion-incorrect')).toBeTruthy();
+        expect(getByTestId('review-completion-stats')).toBeTruthy();
+        expect(getByText('1 incorrect')).toBeTruthy();
       });
     });
 
@@ -319,7 +321,7 @@ describe('ReviewsScreen', () => {
         sampleRadicalSubject,
       ]);
 
-      const { getByTestId } = renderWithNavigation(<ReviewsScreen />);
+      const { getByTestId, getByText } = renderWithNavigation(<ReviewsScreen />);
 
       // Wait for reviews to load
       await waitFor(() => {
@@ -346,10 +348,11 @@ describe('ReviewsScreen', () => {
       fireEvent.changeText(getByTestId('review-session-input'), 'Ground');
       fireEvent.press(getByTestId('review-session-submit'));
 
-      // Should show completion with plural incorrect count (via ReviewCompletion component)
+      // Should show completion with incorrect count in stats (via ReviewCompletion component)
       await waitFor(() => {
         expect(getByTestId('review-completion')).toBeTruthy();
-        expect(getByTestId('review-completion-incorrect')).toBeTruthy();
+        expect(getByTestId('review-completion-stats')).toBeTruthy();
+        expect(getByText('1 incorrect')).toBeTruthy();
       });
     });
 
