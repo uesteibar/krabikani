@@ -1,8 +1,26 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react';
+import {
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableOpacity,
+  ScrollView,
+  type TextInput as TextInputType,
+} from 'react-native';
 
 import type { Meaning, Reading, AuxiliaryMeaning } from '../api/types';
 import type { ReviewComponentKanji } from '../components/ReviewSession';
+import { shuffleArray } from '../components/ReviewSession';
+import { MnemonicText } from '../components/MnemonicText';
 import {
   getReversePracticeItems,
   getReversePracticeItemCount,
@@ -11,7 +29,17 @@ import {
   type DatabaseAssignment,
   type DatabaseSubject,
 } from '../storage';
-import { COLORS, SPACING, FONT_SIZES } from '../theme';
+import {
+  getSubjectColor,
+  COLORS,
+  SHADOW,
+  BORDER_RADIUS,
+  SPACING,
+  FONT_SIZES,
+  MIN_TOUCH_TARGET,
+  TEXT_STYLES,
+} from '../theme';
+import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 
 export interface ReversePracticeItem {
   id: number;
@@ -28,7 +56,20 @@ export interface ReversePracticeItem {
   userSynonyms: string[];
 }
 
+interface ReversePracticeQuestion {
+  item: ReversePracticeItem;
+  key: string;
+}
+
+interface ReverseIncorrectFeedback {
+  question: ReversePracticeQuestion;
+  userAnswer: string;
+  correctAnswer: string;
+  mnemonic: string;
+}
+
 const REVERSE_PRACTICE_BATCH_SIZE = 10;
+const REFILL_THRESHOLD = 3;
 
 function subjectToReversePracticeItem(
   subject: DatabaseSubject,
@@ -157,16 +198,40 @@ async function loadReversePracticeItems(): Promise<ReversePracticeItem[]> {
   );
 }
 
+function generateReverseQuestions(
+  items: ReversePracticeItem[],
+): ReversePracticeQuestion[] {
+  const shuffledItems = shuffleArray(items);
+  return shuffledItems.map(item => ({
+    item,
+    key: `${item.id}-reverse-${Date.now()}-${Math.random()}`,
+  }));
+}
+
+function getPrimaryMeaning(meanings: Meaning[]): string {
+  const primary = meanings.find(m => m.primary);
+  return primary?.meaning ?? meanings[0]?.meaning ?? '';
+}
+
 export function ReversePracticeScreen() {
   const [phase, setPhase] = useState<'loading' | 'practicing' | 'empty'>(
     'loading',
   );
-  const [items, setItems] = useState<ReversePracticeItem[]>([]);
+  const [questionQueue, setQuestionQueue] = useState<ReversePracticeQuestion[]>(
+    [],
+  );
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [inputValue, setInputValue] = useState('');
+  const [showCorrectFeedback, setShowCorrectFeedback] = useState(false);
+  const [incorrectFeedback, setIncorrectFeedback] =
+    useState<ReverseIncorrectFeedback | null>(null);
+  const isRefilling = useRef(false);
+  const inputRef = useRef<TextInputType>(null);
 
   const practicePhrase = useMemo(() => {
     const phrases = [
       'Reverse your recall',
-      'Meaning to reading',
+      'Meaning to writing',
       'Test your production',
       'Write what you know',
       'From English to Japanese',
@@ -192,17 +257,102 @@ export function ReversePracticeScreen() {
         return;
       }
 
-      setItems(loadedItems);
+      const questions = generateReverseQuestions(loadedItems);
+      setQuestionQueue(questions);
       setPhase('practicing');
     };
 
     init();
   }, []);
 
+  // Auto-focus input
+  useEffect(() => {
+    if (!incorrectFeedback && phase === 'practicing') {
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [currentQuestionIndex, incorrectFeedback, showCorrectFeedback, phase]);
+
+  // Refill queue when running low
+  const maybeRefillQueue = useCallback(
+    async (currentIndex: number, queue: ReversePracticeQuestion[]) => {
+      const remaining = queue.length - currentIndex;
+      if (remaining <= REFILL_THRESHOLD && !isRefilling.current) {
+        isRefilling.current = true;
+        try {
+          const newItems = await loadReversePracticeItems();
+          if (newItems.length > 0) {
+            const newQuestions = generateReverseQuestions(newItems);
+            setQuestionQueue(prev => [...prev, ...newQuestions]);
+          }
+        } finally {
+          isRefilling.current = false;
+        }
+      }
+    },
+    [],
+  );
+
+  const currentQuestion = questionQueue[currentQuestionIndex];
+
+  const handleInputChange = useCallback((text: string) => {
+    setInputValue(text);
+  }, []);
+
+  const advanceToNextQuestion = useCallback(() => {
+    const nextIndex = currentQuestionIndex + 1;
+    setCurrentQuestionIndex(nextIndex);
+    setInputValue('');
+    setIncorrectFeedback(null);
+    setShowCorrectFeedback(false);
+    maybeRefillQueue(nextIndex, questionQueue);
+  }, [currentQuestionIndex, questionQueue, maybeRefillQueue]);
+
+  const handleContinue = useCallback(() => {
+    advanceToNextQuestion();
+  }, [advanceToNextQuestion]);
+
+  const handleSubmit = useCallback(() => {
+    if (!currentQuestion || showCorrectFeedback || incorrectFeedback) return;
+
+    const { item } = currentQuestion;
+    const answer = inputValue.trim();
+    const correctAnswer = item.characters;
+
+    // Exact match required
+    const isCorrect = answer === correctAnswer;
+
+    if (isCorrect) {
+      setShowCorrectFeedback(true);
+      setTimeout(() => {
+        setShowCorrectFeedback(false);
+        advanceToNextQuestion();
+      }, 500);
+    } else {
+      setIncorrectFeedback({
+        question: currentQuestion,
+        userAnswer: answer,
+        correctAnswer,
+        mnemonic: item.meaningMnemonic,
+      });
+    }
+  }, [
+    currentQuestion,
+    inputValue,
+    showCorrectFeedback,
+    incorrectFeedback,
+    advanceToNextQuestion,
+  ]);
+
   // Empty state
   if (phase === 'empty') {
     return (
-      <View style={styles.centerContainer} testID="reverse-practice-screen-empty">
+      <View
+        style={styles.centerContainer}
+        testID="reverse-practice-screen-empty"
+      >
         <Text style={styles.emptyTitle}>No Vocabulary Items</Text>
         <Text style={styles.emptyMessage}>
           Vocabulary items become available for reverse practice once they reach
@@ -213,24 +363,195 @@ export function ReversePracticeScreen() {
   }
 
   // Loading state
-  if (phase === 'loading') {
+  if (phase === 'loading' || !currentQuestion) {
     return (
-      <View style={styles.centerContainer} testID="reverse-practice-screen-loading">
+      <View
+        style={styles.centerContainer}
+        testID="reverse-practice-screen-loading"
+      >
         <Text style={styles.loadingText}>Loading vocabulary items...</Text>
       </View>
     );
   }
 
-  // Practicing state - placeholder for US-007
+  // Incorrect feedback view
+  if (incorrectFeedback) {
+    return (
+      <View style={styles.container} testID="reverse-practice-incorrect-feedback">
+        <View style={styles.modeBanner} testID="reverse-practice-banner">
+          <MaterialDesignIcons
+            name="swap-horizontal"
+            size={FONT_SIZES.base}
+            color={COLORS.text.tertiary}
+          />
+          <Text style={styles.modeBannerText}>{practicePhrase}</Text>
+        </View>
+
+        <View
+          style={[styles.characterContainer, styles.incorrectHeader]}
+          testID="reverse-practice-character-container"
+        >
+          <Text
+            style={styles.characters}
+            testID="reverse-practice-characters"
+          >
+            {incorrectFeedback.question.item.characters}
+          </Text>
+          <Text
+            style={styles.incorrectLabel}
+            testID="reverse-practice-incorrect-label"
+          >
+            Incorrect
+          </Text>
+        </View>
+
+        <ScrollView
+          style={styles.feedbackContainer}
+          contentContainerStyle={styles.feedbackContent}
+        >
+          <View style={styles.feedbackSection}>
+            <Text
+              style={styles.feedbackLabel}
+              testID="reverse-practice-your-answer-label"
+            >
+              Your Answer:
+            </Text>
+            <Text
+              style={styles.userAnswer}
+              testID="reverse-practice-your-answer"
+            >
+              {incorrectFeedback.userAnswer || '(empty)'}
+            </Text>
+          </View>
+
+          <View style={styles.feedbackSection}>
+            <Text
+              style={styles.feedbackLabel}
+              testID="reverse-practice-correct-answer-label"
+            >
+              Correct Answer:
+            </Text>
+            <Text
+              style={[styles.correctAnswerText, TEXT_STYLES.japaneseDisplay]}
+              testID="reverse-practice-correct-answer"
+            >
+              {incorrectFeedback.correctAnswer}
+            </Text>
+          </View>
+
+          <View style={styles.feedbackSection}>
+            <Text
+              style={styles.feedbackLabel}
+              testID="reverse-practice-mnemonic-label"
+            >
+              Meaning Mnemonic:
+            </Text>
+            <MnemonicText
+              text={incorrectFeedback.mnemonic}
+              style={styles.mnemonicText}
+              testID="reverse-practice-mnemonic"
+            />
+          </View>
+        </ScrollView>
+
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              styles.continueButton,
+              styles.submitButtonFlex,
+            ]}
+            onPress={handleContinue}
+            activeOpacity={0.8}
+            testID="reverse-practice-continue"
+          >
+            <Text style={styles.submitButtonText}>Continue</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  // Active question view
+  const { item } = currentQuestion;
+  const backgroundColor = getSubjectColor(item.subjectType);
+  const primaryMeaning = getPrimaryMeaning(item.meanings);
+
   return (
-    <View style={styles.container} testID="reverse-practice-session">
-      <View style={styles.placeholderContent}>
-        <Text style={styles.placeholderTitle}>{practicePhrase}</Text>
-        <Text style={styles.placeholderMessage}>
-          {items.length} vocabulary item{items.length !== 1 ? 's' : ''} loaded
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      testID="reverse-practice-session"
+    >
+      <View style={styles.modeBanner} testID="reverse-practice-banner">
+        <MaterialDesignIcons
+          name="swap-horizontal"
+          size={FONT_SIZES.base}
+          color={COLORS.text.tertiary}
+        />
+        <Text style={styles.modeBannerText}>{practicePhrase}</Text>
+      </View>
+
+      <View
+        style={[
+          styles.meaningContainer,
+          showCorrectFeedback ? styles.correctHeader : { backgroundColor },
+        ]}
+        testID="reverse-practice-meaning-container"
+      >
+        <Text style={styles.meaningText} testID="reverse-practice-meaning">
+          {primaryMeaning}
+        </Text>
+        {showCorrectFeedback && (
+          <Text style={styles.correctLabel} testID="reverse-practice-correct-label">
+            Correct!
+          </Text>
+        )}
+      </View>
+
+      <View style={styles.questionContainer}>
+        <Text style={styles.questionType} testID="reverse-practice-question-type">
+          WRITE THE JAPANESE
         </Text>
       </View>
-    </View>
+
+      <View style={styles.inputContainer} testID="reverse-practice-input-container">
+        <TextInput
+          ref={inputRef}
+          style={[styles.input, { borderColor: backgroundColor }]}
+          value={inputValue}
+          onChangeText={handleInputChange}
+          onSubmitEditing={handleSubmit}
+          placeholder="Enter Japanese..."
+          placeholderTextColor="#999"
+          autoCapitalize="none"
+          autoCorrect={false}
+          spellCheck={false}
+          autoComplete="off"
+          returnKeyType="done"
+          blurOnSubmit={false}
+          testID="reverse-practice-input"
+        />
+      </View>
+
+      <View style={styles.spacer} />
+
+      <View style={styles.buttonRow}>
+        <TouchableOpacity
+          style={[
+            styles.submitButton,
+            styles.submitButtonFlex,
+            { backgroundColor },
+          ]}
+          onPress={handleSubmit}
+          disabled={showCorrectFeedback}
+          activeOpacity={0.8}
+          testID="reverse-practice-submit"
+        >
+          <Text style={styles.submitButtonText}>Submit</Text>
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -263,22 +584,158 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: FONT_SIZES.xxl,
   },
-  placeholderContent: {
-    flex: 1,
-    justifyContent: 'center',
+  modeBanner: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: SPACING.xxxl,
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.sm,
+    minHeight: 50,
+    backgroundColor: COLORS.background.secondary,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border.light,
   },
-  placeholderTitle: {
-    fontSize: FONT_SIZES.xl,
+  modeBannerText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
     fontWeight: '600',
     fontStyle: 'italic',
-    color: COLORS.text.secondary,
-    marginBottom: SPACING.md,
   },
-  placeholderMessage: {
-    fontSize: FONT_SIZES.base,
-    color: COLORS.text.tertiary,
+  meaningContainer: {
+    paddingVertical: 64,
+    paddingHorizontal: SPACING.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  characterContainer: {
+    paddingVertical: 64,
+    paddingHorizontal: SPACING.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  meaningText: {
+    fontSize: FONT_SIZES.display,
+    fontWeight: 'bold',
+    color: COLORS.text.inverse,
     textAlign: 'center',
+  },
+  characters: {
+    fontSize: FONT_SIZES.display,
+    ...TEXT_STYLES.japaneseDisplay,
+    color: COLORS.text.inverse,
+    textAlign: 'center',
+  },
+  correctHeader: {
+    backgroundColor: COLORS.feedback.correct,
+  },
+  correctLabel: {
+    position: 'absolute',
+    bottom: SPACING.md,
+    fontSize: FONT_SIZES.sm,
+    fontWeight: 'bold',
+    color: COLORS.text.inverse,
+  },
+  incorrectHeader: {
+    backgroundColor: COLORS.feedback.incorrect,
+  },
+  incorrectLabel: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: 'bold',
+    color: COLORS.text.inverse,
+    marginTop: SPACING.sm,
+  },
+  questionContainer: {
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    alignItems: 'center',
+    backgroundColor: COLORS.neutral.white,
+  },
+  questionType: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '700',
+    color: COLORS.text.tertiary,
+    letterSpacing: 2,
+  },
+  inputContainer: {
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.sm,
+  },
+  input: {
+    borderWidth: 2,
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: SPACING.lg,
+    paddingHorizontal: SPACING.lg,
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+    textAlign: 'center',
+    backgroundColor: COLORS.background.input,
+  },
+  spacer: {
+    flex: 1,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.lg,
+    gap: SPACING.md,
+  },
+  submitButton: {
+    margin: SPACING.lg,
+    paddingVertical: SPACING.lg,
+    minHeight: MIN_TOUCH_TARGET,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: SHADOW.color,
+    shadowOffset: SHADOW.offset,
+    shadowOpacity: SHADOW.opacity,
+    shadowRadius: SHADOW.radius,
+    elevation: SHADOW.elevation,
+  },
+  submitButtonFlex: {
+    flex: 1,
+    margin: 0,
+  },
+  submitButtonText: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: 'bold',
+    color: COLORS.text.inverse,
+  },
+  continueButton: {
+    backgroundColor: COLORS.neutral.gray600,
+  },
+  feedbackContainer: {
+    flex: 1,
+  },
+  feedbackContent: {
+    padding: SPACING.lg,
+  },
+  feedbackSection: {
+    marginBottom: SPACING.xl,
+  },
+  feedbackLabel: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '600',
+    color: COLORS.text.secondary,
+    marginBottom: SPACING.xs,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  userAnswer: {
+    fontSize: FONT_SIZES.xl,
+    color: COLORS.feedback.incorrect,
+    fontWeight: '500',
+  },
+  correctAnswerText: {
+    fontSize: FONT_SIZES.xxl,
+    color: COLORS.feedback.correct,
+    fontWeight: 'bold',
+  },
+  mnemonicText: {
+    fontSize: FONT_SIZES.base,
+    color: COLORS.text.primary,
+    lineHeight: FONT_SIZES.xxl,
   },
 });

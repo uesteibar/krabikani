@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, waitFor } from '@testing-library/react-native';
+import { render, waitFor, fireEvent } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
 
 import { ReversePracticeScreen } from '../../src/screens/ReversePracticeScreen';
@@ -200,11 +200,41 @@ describe('ReversePracticeScreen', () => {
       expect(session).toBeTruthy();
     });
 
-    it('should show item count in practice session', async () => {
-      const { findByText } = renderWithNavigation(<ReversePracticeScreen />);
+    it('should display the English meaning as the prompt', async () => {
+      const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
 
-      const countText = await findByText(/2 vocabulary items? loaded/);
-      expect(countText).toBeTruthy();
+      await findByTestId('reverse-practice-session');
+      const meaningText = await findByTestId('reverse-practice-meaning');
+      expect(meaningText).toBeTruthy();
+      // Should show either "Adult" or "Hello" depending on shuffle
+    });
+
+    it('should show question type as WRITE THE JAPANESE', async () => {
+      const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
+
+      const questionType = await findByTestId('reverse-practice-question-type');
+      expect(questionType.props.children).toBe('WRITE THE JAPANESE');
+    });
+
+    it('should have an input field', async () => {
+      const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
+
+      const input = await findByTestId('reverse-practice-input');
+      expect(input).toBeTruthy();
+    });
+
+    it('should have a submit button', async () => {
+      const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
+
+      const submit = await findByTestId('reverse-practice-submit');
+      expect(submit).toBeTruthy();
+    });
+
+    it('should have mode banner with swap icon', async () => {
+      const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
+
+      const banner = await findByTestId('reverse-practice-banner');
+      expect(banner).toBeTruthy();
     });
 
     it('should load only vocabulary and kana_vocabulary subjects', async () => {
@@ -237,6 +267,142 @@ describe('ReversePracticeScreen', () => {
     });
   });
 
+  describe('question flow', () => {
+    beforeEach(() => {
+      // Use single item for predictable testing
+      (storage.getReversePracticeItemCount as jest.Mock).mockResolvedValue(1);
+      (storage.getReversePracticeItems as jest.Mock).mockResolvedValue([
+        sampleVocabularyAssignments[0],
+      ]);
+      (storage.getSubjectsByIds as jest.Mock).mockImplementation(
+        async (ids: number[]) => {
+          if (ids.includes(1)) return [sampleVocabularySubject];
+          if (ids.includes(100)) return [sampleKanjiComponent];
+          return [];
+        },
+      );
+    });
+
+    it('should show correct feedback after exact match', async () => {
+      const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
+
+      const input = await findByTestId('reverse-practice-input');
+      fireEvent.changeText(input, '大人');
+      fireEvent(input, 'submitEditing');
+
+      const correctLabel = await findByTestId('reverse-practice-correct-label');
+      expect(correctLabel).toBeTruthy();
+    });
+
+    it('should show incorrect feedback when answer is wrong', async () => {
+      const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
+
+      const input = await findByTestId('reverse-practice-input');
+      fireEvent.changeText(input, '大');
+      fireEvent(input, 'submitEditing');
+
+      const incorrectFeedback = await findByTestId(
+        'reverse-practice-incorrect-feedback',
+      );
+      expect(incorrectFeedback).toBeTruthy();
+    });
+
+    it('should display user answer in incorrect feedback', async () => {
+      const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
+
+      const input = await findByTestId('reverse-practice-input');
+      fireEvent.changeText(input, 'wrong');
+      fireEvent(input, 'submitEditing');
+
+      const userAnswer = await findByTestId('reverse-practice-your-answer');
+      expect(userAnswer.props.children).toBe('wrong');
+    });
+
+    it('should display correct answer (kanji) in incorrect feedback', async () => {
+      const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
+
+      const input = await findByTestId('reverse-practice-input');
+      fireEvent.changeText(input, 'wrong');
+      fireEvent(input, 'submitEditing');
+
+      const correctAnswer = await findByTestId('reverse-practice-correct-answer');
+      expect(correctAnswer.props.children).toBe('大人');
+    });
+
+    it('should display meaning mnemonic in incorrect feedback', async () => {
+      const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
+
+      const input = await findByTestId('reverse-practice-input');
+      fireEvent.changeText(input, 'wrong');
+      fireEvent(input, 'submitEditing');
+
+      const mnemonic = await findByTestId('reverse-practice-mnemonic');
+      expect(mnemonic).toBeTruthy();
+    });
+
+    it('should show characters in header when incorrect', async () => {
+      const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
+
+      const input = await findByTestId('reverse-practice-input');
+      fireEvent.changeText(input, 'wrong');
+      fireEvent(input, 'submitEditing');
+
+      const characters = await findByTestId('reverse-practice-characters');
+      expect(characters.props.children).toBe('大人');
+    });
+
+    it('should show (empty) for empty answer in incorrect feedback', async () => {
+      const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
+
+      const input = await findByTestId('reverse-practice-input');
+      fireEvent.changeText(input, '');
+      fireEvent(input, 'submitEditing');
+
+      const userAnswer = await findByTestId('reverse-practice-your-answer');
+      expect(userAnswer.props.children).toBe('(empty)');
+    });
+
+    it('should have continue button in incorrect feedback', async () => {
+      const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
+
+      const input = await findByTestId('reverse-practice-input');
+      fireEvent.changeText(input, 'wrong');
+      fireEvent(input, 'submitEditing');
+
+      const continueButton = await findByTestId('reverse-practice-continue');
+      expect(continueButton).toBeTruthy();
+    });
+
+    it('should advance to next question after tapping Continue', async () => {
+      const { findByTestId, queryByTestId } = renderWithNavigation(
+        <ReversePracticeScreen />,
+      );
+
+      const input = await findByTestId('reverse-practice-input');
+      fireEvent.changeText(input, 'wrong');
+      fireEvent(input, 'submitEditing');
+
+      const continueButton = await findByTestId('reverse-practice-continue');
+      fireEvent.press(continueButton);
+
+      // After continuing, incorrect feedback should be gone
+      await waitFor(() => {
+        expect(queryByTestId('reverse-practice-incorrect-feedback')).toBeNull();
+      });
+    });
+
+    it('should trim whitespace when validating answer', async () => {
+      const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
+
+      const input = await findByTestId('reverse-practice-input');
+      fireEvent.changeText(input, '  大人  ');
+      fireEvent(input, 'submitEditing');
+
+      const correctLabel = await findByTestId('reverse-practice-correct-label');
+      expect(correctLabel).toBeTruthy();
+    });
+  });
+
   describe('data loading edge cases', () => {
     it('should show empty state when count > 0 but no items are returned', async () => {
       (storage.getReversePracticeItemCount as jest.Mock).mockResolvedValue(5);
@@ -261,25 +427,6 @@ describe('ReversePracticeScreen', () => {
       // Should show empty state since no valid items
       const emptyScreen = await findByTestId('reverse-practice-screen-empty');
       expect(emptyScreen).toBeTruthy();
-    });
-
-    it('should handle single item correctly', async () => {
-      (storage.getReversePracticeItemCount as jest.Mock).mockResolvedValue(1);
-      (storage.getReversePracticeItems as jest.Mock).mockResolvedValue([
-        sampleVocabularyAssignments[0],
-      ]);
-      (storage.getSubjectsByIds as jest.Mock).mockImplementation(
-        async (ids: number[]) => {
-          if (ids.includes(1)) return [sampleVocabularySubject];
-          if (ids.includes(100)) return [sampleKanjiComponent];
-          return [];
-        },
-      );
-
-      const { findByText } = renderWithNavigation(<ReversePracticeScreen />);
-
-      const countText = await findByText(/1 vocabulary item loaded/);
-      expect(countText).toBeTruthy();
     });
   });
 });
