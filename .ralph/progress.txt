@@ -64,3 +64,18 @@ Started:
   - `subjectToReviewItem()` is duplicated in ReviewsScreen and PracticeScreen - pattern noted in Codebase Patterns
 ---
 
+## 2026-01-28 - US-003
+- Implemented sync of completed items when leaving a review session
+- Files changed:
+  - src/components/ReviewSession.tsx: Added `onProgressChange` callback prop to track item progress changes
+  - src/screens/ReviewsScreen.tsx: Added exit handling via `beforeRemove` navigation listener, syncs completed items (both meaning and reading correct) when user navigates away
+  - __tests__/screens/ReviewsScreen.test.tsx: Added tests for exit sync behavior (4 new tests)
+- **Learnings for future iterations:**
+  - React Navigation's `beforeRemove` listener allows intercepting navigation before the screen is removed
+  - The listener receives an event object but we don't need to call `preventDefault()` since we want the navigation to proceed
+  - `useRef` is used to track progress state outside of React's render cycle for access during exit
+  - `submitReviews()` works offline by queuing to `pending_reviews` table
+  - An item is considered "complete" when both `meaningCorrect` and `readingCorrect` are true in `ItemProgress`
+  - Radicals are auto-complete for `readingCorrect` since they have no reading question
+---
+
