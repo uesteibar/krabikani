@@ -17,6 +17,7 @@ import {
 } from '../../src/services/reviewNotificationScheduler';
 import {
   getAvailableReviews,
+  getNewReviewCountThisHour,
   getUpcomingReviewsByHour,
 } from '../../src/storage';
 import {
@@ -35,6 +36,7 @@ jest.mock('react-native', () => ({
 jest.mock('@notifee/react-native');
 jest.mock('../../src/storage', () => ({
   getAvailableReviews: jest.fn(),
+  getNewReviewCountThisHour: jest.fn(),
   getUpcomingReviewsByHour: jest.fn(),
 }));
 jest.mock('../../src/services/notificationService', () => ({
@@ -54,6 +56,7 @@ describe('reviewNotificationScheduler', () => {
     (checkPermissions as jest.Mock).mockResolvedValue('granted');
     (getNotificationsEnabled as jest.Mock).mockResolvedValue(true);
     (getAvailableReviews as jest.Mock).mockResolvedValue([]);
+    (getNewReviewCountThisHour as jest.Mock).mockResolvedValue(1);
     (getUpcomingReviewsByHour as jest.Mock).mockResolvedValue([]);
     (notifee.getNotificationSettings as jest.Mock).mockResolvedValue({
       authorizationStatus: AuthorizationStatus.AUTHORIZED,
@@ -178,6 +181,22 @@ describe('reviewNotificationScheduler', () => {
       await performHourlyReviewCheck();
 
       expect(notifee.displayNotification).not.toHaveBeenCalled();
+    });
+
+    it('skips notification if no new reviews became available this hour', async () => {
+      (getAvailableReviews as jest.Mock).mockResolvedValue(
+        Array(25).fill({ id: 1 }),
+      );
+      (getNewReviewCountThisHour as jest.Mock).mockResolvedValue(0);
+
+      await performHourlyReviewCheck();
+
+      // Badge should still be updated
+      expect(setBadgeCount).toHaveBeenCalledWith(25);
+      // But no notification
+      expect(notifee.displayNotification).not.toHaveBeenCalled();
+      // Should still schedule next check
+      expect(notifee.createTriggerNotification).toHaveBeenCalled();
     });
 
     it('skips notification if review count is less than 20', async () => {

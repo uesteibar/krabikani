@@ -5,7 +5,11 @@
 import notifee, { EventType, TriggerType } from '@notifee/react-native';
 import { AppState, Platform } from 'react-native';
 
-import { getAvailableReviews, getUpcomingReviewsByHour } from '../storage';
+import {
+  getAvailableReviews,
+  getNewReviewCountThisHour,
+  getUpcomingReviewsByHour,
+} from '../storage';
 import {
   NOTIFICATION_CHANNEL_ID,
   setupNotificationChannel,
@@ -96,6 +100,13 @@ export async function performHourlyReviewCheck(): Promise<void> {
 
   // Update app badge to current review count (0 clears the badge)
   await setBadgeCount(reviewCount);
+
+  // Skip notification if no new reviews became available this hour
+  const newReviews = await getNewReviewCountThisHour();
+  if (newReviews === 0) {
+    await scheduleNextHourlyCheck();
+    return;
+  }
 
   // Only show notification if count >= 20
   if (reviewCount >= MIN_REVIEWS_FOR_NOTIFICATION) {
