@@ -92,3 +92,17 @@ Started:
   - Tests may need unique subject/assignment IDs to avoid cross-test pollution from async exit handlers
 ---
 
+## 2026-01-28 - US-005
+- Implemented confirmation dialog when leaving a review session
+- Files changed:
+  - src/screens/ReviewsScreen.tsx: Added confirmation dialog using Alert.alert, blocks navigation with e.preventDefault() until user choice
+  - __tests__/screens/ReviewsScreen.test.tsx: Added 7 new tests for confirmation dialog behavior
+- **Learnings for future iterations:**
+  - Use `e.preventDefault()` in beforeRemove listener to block navigation and show a dialog
+  - Use `navigation.dispatch(e.data.action)` to continue with the original navigation action after user confirms
+  - Import `EventArg` type from `@react-navigation/native` to properly type the event parameter
+  - To mock `Alert.alert` in tests, use `jest.spyOn(Alert, 'alert').mockImplementation(jest.fn())` at the top of the test file
+  - Items that will be lost = items where `isStarted && !isComplete && !hasFailures` (started, with correct answers only, no failures)
+  - The dialog always shows, even when no items will be lost - message adjusts to "All progress will be saved" vs "N item(s) will be lost"
+---
+
