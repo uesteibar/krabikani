@@ -43,3 +43,24 @@ Started:
   - Pagination uses `client.getNextPage(currentPage)` pattern, checking `currentPage.pages.next_url`
 ---
 
+## 2026-01-28 - US-002
+- Implemented storage and use of auxiliary meanings from subjects
+- Files changed:
+  - src/storage/database.ts: Added migration v7 for `auxiliary_meanings` column, updated interfaces and upsert functions
+  - src/sync/syncService.ts: Updated `convertSubjectToInput()` to extract and store auxiliary_meanings as JSON
+  - src/screens/ReviewsScreen.tsx: Updated `subjectToReviewItem()` to load auxiliary_meanings from subject instead of hardcoding []
+  - src/screens/PracticeScreen.tsx: Updated `subjectToReviewItem()` to load auxiliary_meanings from subject instead of hardcoding []
+  - __tests__/storage/database.test.ts: Updated expected DATABASE_VERSION to 7
+  - __tests__/storage/databaseCrud.test.ts: Added auxiliary_meanings to test subjects, updated expected version to 7
+  - __tests__/screens/HomeScreen.test.tsx: Added auxiliary_meanings to mock subjects
+  - __tests__/screens/ItemDetailScreen.test.tsx: Added auxiliary_meanings to mock subject factory functions
+  - __tests__/screens/KanjiDetailScreen.test.tsx: Added auxiliary_meanings to mock subject factory functions
+  - __tests__/screens/VocabularyDetailScreen.test.tsx: Added auxiliary_meanings to mock subject factory functions
+- **Learnings for future iterations:**
+  - `auxiliary_meanings` is an array of `{ meaning: string, type: 'whitelist' | 'blacklist' }` objects
+  - Whitelist meanings are accepted as correct answers, blacklist meanings are rejected
+  - The `DatabaseSubject` interface stores auxiliary_meanings as `string | null` (JSON serialized)
+  - Answer validation in `validateMeaningAnswer()` already supports auxiliaryMeanings parameter - no changes needed there
+  - `subjectToReviewItem()` is duplicated in ReviewsScreen and PracticeScreen - pattern noted in Codebase Patterns
+---
+
