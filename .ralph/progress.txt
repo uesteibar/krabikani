@@ -20,7 +20,26 @@
 - `jest.clearAllMocks()` resets mock return values — re-setup `mockResolvedValue` after calling it
 - SettingsScreen save button is disabled when `apiKey.trim() === storedApiKey` — empty key error path is unreachable via UI
 - jest.config.js has `testPathIgnorePatterns` for `.ralph/.worktrees/` to exclude old worktree copies from test discovery
+- `addUserSynonym` uses `INSERT OR REPLACE` but SQLite UNIQUE is case-sensitive — for case-insensitive updates, delete existing row first then insert
+- Background sync functions return result objects with `success`, `syncedCount`, etc. and are composed in `backgroundSync()` function
 
 Started:
+---
+
+## 2026-01-28 - US-001
+- Implemented study materials sync during background sync
+- Files changed:
+  - src/storage/database.ts: Added migration v6 for `last_study_materials_sync` column, updated interfaces
+  - src/sync/syncService.ts: Added `syncStudyMaterials()` function, integrated into `backgroundSync()`
+  - __tests__/sync/syncService.test.ts: Added comprehensive tests for syncStudyMaterials
+  - __tests__/sync/backgroundSync.test.ts: Updated mocks for study materials sync
+  - __tests__/storage/database.test.ts: Updated expected DATABASE_VERSION to 6
+  - __tests__/storage/databaseCrud.test.ts: Updated expected DATABASE_VERSION to 6
+- **Learnings for future iterations:**
+  - `addUserSynonym` uses `INSERT OR REPLACE` with UNIQUE(subject_id, synonym) constraint, but SQLite comparison is case-sensitive by default
+  - To overwrite a synonym with different casing, must delete old row first then insert new one
+  - The `processStudyMaterial()` function handles this case-insensitive matching manually using a Map with lowercase keys
+  - The `BackgroundSyncResult` interface now includes `studyMaterials?: SyncStudyMaterialsResult`
+  - Pagination uses `client.getNextPage(currentPage)` pattern, checking `currentPage.pages.next_url`
 ---
 
