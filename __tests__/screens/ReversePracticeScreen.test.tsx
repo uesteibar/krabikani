@@ -209,11 +209,11 @@ describe('ReversePracticeScreen', () => {
       // Should show either "Adult" or "Hello" depending on shuffle
     });
 
-    it('should show question type as WRITE THE JAPANESE', async () => {
+    it('should show question type as KANJI', async () => {
       const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
 
       const questionType = await findByTestId('reverse-practice-question-type');
-      expect(questionType.props.children).toBe('WRITE THE JAPANESE');
+      expect(questionType.props.children).toBe('KANJI');
     });
 
     it('should have an input field', async () => {
@@ -311,21 +311,23 @@ describe('ReversePracticeScreen', () => {
       const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
 
       const input = await findByTestId('reverse-practice-input');
-      fireEvent.changeText(input, 'wrong');
+      fireEvent.changeText(input, 'あ');
       fireEvent(input, 'submitEditing');
 
       const userAnswer = await findByTestId('reverse-practice-your-answer');
-      expect(userAnswer.props.children).toBe('wrong');
+      expect(userAnswer.props.children).toBe('あ');
     });
 
     it('should display correct answer (kanji) in incorrect feedback', async () => {
       const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
 
       const input = await findByTestId('reverse-practice-input');
-      fireEvent.changeText(input, 'wrong');
+      fireEvent.changeText(input, 'あ');
       fireEvent(input, 'submitEditing');
 
-      const correctAnswer = await findByTestId('reverse-practice-correct-answer');
+      const correctAnswer = await findByTestId(
+        'reverse-practice-correct-answer',
+      );
       expect(correctAnswer.props.children).toBe('大人');
     });
 
@@ -333,40 +335,44 @@ describe('ReversePracticeScreen', () => {
       const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
 
       const input = await findByTestId('reverse-practice-input');
-      fireEvent.changeText(input, 'wrong');
+      fireEvent.changeText(input, 'あ');
       fireEvent(input, 'submitEditing');
 
       const mnemonic = await findByTestId('reverse-practice-mnemonic');
       expect(mnemonic).toBeTruthy();
     });
 
-    it('should show characters in header when incorrect', async () => {
+    it('should show meaning in header when incorrect', async () => {
       const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
 
       const input = await findByTestId('reverse-practice-input');
-      fireEvent.changeText(input, 'wrong');
+      fireEvent.changeText(input, 'あ');
       fireEvent(input, 'submitEditing');
 
+      // Incorrect feedback shows the English meaning in the header (what was asked)
       const characters = await findByTestId('reverse-practice-characters');
-      expect(characters.props.children).toBe('大人');
+      expect(characters.props.children).toBe('Adult');
     });
 
-    it('should show (empty) for empty answer in incorrect feedback', async () => {
-      const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
+    it('should shake and reject empty answer', async () => {
+      const { findByTestId, queryByTestId } = renderWithNavigation(
+        <ReversePracticeScreen />,
+      );
 
       const input = await findByTestId('reverse-practice-input');
       fireEvent.changeText(input, '');
       fireEvent(input, 'submitEditing');
 
-      const userAnswer = await findByTestId('reverse-practice-your-answer');
-      expect(userAnswer.props.children).toBe('(empty)');
+      // Empty input triggers shake, not incorrect feedback
+      await new Promise<void>(resolve => setTimeout(resolve, 100));
+      expect(queryByTestId('reverse-practice-incorrect-feedback')).toBeNull();
     });
 
     it('should have continue button in incorrect feedback', async () => {
       const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
 
       const input = await findByTestId('reverse-practice-input');
-      fireEvent.changeText(input, 'wrong');
+      fireEvent.changeText(input, 'あ');
       fireEvent(input, 'submitEditing');
 
       const continueButton = await findByTestId('reverse-practice-continue');
@@ -379,7 +385,7 @@ describe('ReversePracticeScreen', () => {
       );
 
       const input = await findByTestId('reverse-practice-input');
-      fireEvent.changeText(input, 'wrong');
+      fireEvent.changeText(input, 'あ');
       fireEvent(input, 'submitEditing');
 
       const continueButton = await findByTestId('reverse-practice-continue');
@@ -389,6 +395,22 @@ describe('ReversePracticeScreen', () => {
       await waitFor(() => {
         expect(queryByTestId('reverse-practice-incorrect-feedback')).toBeNull();
       });
+    });
+
+    it('should shake and reject romaji input', async () => {
+      const { findByTestId, queryByTestId } = renderWithNavigation(
+        <ReversePracticeScreen />,
+      );
+
+      const input = await findByTestId('reverse-practice-input');
+      fireEvent.changeText(input, 'wrong');
+      fireEvent(input, 'submitEditing');
+
+      // Romaji input triggers shake, not incorrect feedback
+      await new Promise<void>(resolve => setTimeout(resolve, 100));
+      expect(queryByTestId('reverse-practice-incorrect-feedback')).toBeNull();
+      // Should still be on the question screen
+      expect(queryByTestId('reverse-practice-session')).toBeTruthy();
     });
 
     it('should trim whitespace when validating answer', async () => {

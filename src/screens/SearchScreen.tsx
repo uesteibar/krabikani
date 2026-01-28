@@ -26,11 +26,7 @@ import {
   TEXT_STYLES,
   getSrsLevelInfo,
 } from '../theme';
-import {
-  searchSubjects,
-  type SearchResult,
-  type SubjectType,
-} from '../storage';
+import { searchSubjects, type SearchResult } from '../storage';
 import { romajiToHiragana } from '../utils/romajiToHiragana';
 import type { RootStackParamList } from '../navigation/types';
 

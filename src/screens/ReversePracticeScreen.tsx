@@ -14,6 +14,7 @@ import {
   Platform,
   TouchableOpacity,
   ScrollView,
+  Animated,
   type TextInput as TextInputType,
 } from 'react-native';
 
@@ -21,6 +22,8 @@ import type { Meaning, Reading, AuxiliaryMeaning } from '../api/types';
 import type { ReviewComponentKanji } from '../components/ReviewSession';
 import { shuffleArray } from '../components/ReviewSession';
 import { MnemonicText } from '../components/MnemonicText';
+import { ExpandableDetails } from '../components/ExpandableDetails';
+import { ItemDetails } from '../components/ItemDetails';
 import {
   getReversePracticeItems,
   getReversePracticeItemCount,
@@ -118,7 +121,9 @@ function subjectToReversePracticeItem(
 }
 
 async function loadReversePracticeItems(): Promise<ReversePracticeItem[]> {
-  const assignments = await getReversePracticeItems(REVERSE_PRACTICE_BATCH_SIZE);
+  const assignments = await getReversePracticeItems(
+    REVERSE_PRACTICE_BATCH_SIZE,
+  );
   if (assignments.length === 0) return [];
 
   const subjectIds = assignments.map(a => a.subject_id);
@@ -227,6 +232,7 @@ export function ReversePracticeScreen() {
     useState<ReverseIncorrectFeedback | null>(null);
   const isRefilling = useRef(false);
   const inputRef = useRef<TextInputType>(null);
+  const shakeAnimation = useRef(new Animated.Value(0)).current;
 
   const practicePhrase = useMemo(() => {
     const phrases = [
@@ -314,11 +320,55 @@ export function ReversePracticeScreen() {
     advanceToNextQuestion();
   }, [advanceToNextQuestion]);
 
+  // Trigger shake animation for invalid input (romaji)
+  const triggerShake = useCallback(() => {
+    shakeAnimation.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnimation, {
+        toValue: 10,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnimation, {
+        toValue: -10,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnimation, {
+        toValue: 10,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnimation, {
+        toValue: -10,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnimation, {
+        toValue: 0,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [shakeAnimation]);
+
+  // Check if input contains latin letters (romaji)
+  const containsRomaji = (text: string): boolean => {
+    return /[a-zA-Z]/.test(text);
+  };
+
   const handleSubmit = useCallback(() => {
     if (!currentQuestion || showCorrectFeedback || incorrectFeedback) return;
 
     const { item } = currentQuestion;
     const answer = inputValue.trim();
+
+    // Reject if input contains romaji
+    if (containsRomaji(answer) || answer.length === 0) {
+      triggerShake();
+      return;
+    }
+
     const correctAnswer = item.characters;
 
     // Exact match required
@@ -344,6 +394,7 @@ export function ReversePracticeScreen() {
     showCorrectFeedback,
     incorrectFeedback,
     advanceToNextQuestion,
+    triggerShake,
   ]);
 
   // Empty state
@@ -377,7 +428,10 @@ export function ReversePracticeScreen() {
   // Incorrect feedback view
   if (incorrectFeedback) {
     return (
-      <View style={styles.container} testID="reverse-practice-incorrect-feedback">
+      <View
+        style={styles.container}
+        testID="reverse-practice-incorrect-feedback"
+      >
         <View style={styles.modeBanner} testID="reverse-practice-banner">
           <MaterialDesignIcons
             name="swap-horizontal"
@@ -388,14 +442,11 @@ export function ReversePracticeScreen() {
         </View>
 
         <View
-          style={[styles.characterContainer, styles.incorrectHeader]}
+          style={[styles.meaningContainer, styles.incorrectHeader]}
           testID="reverse-practice-character-container"
         >
-          <Text
-            style={styles.characters}
-            testID="reverse-practice-characters"
-          >
-            {incorrectFeedback.question.item.characters}
+          <Text style={styles.meaningText} testID="reverse-practice-characters">
+            {getPrimaryMeaning(incorrectFeedback.question.item.meanings)}
           </Text>
           <Text
             style={styles.incorrectLabel}
@@ -403,6 +454,10 @@ export function ReversePracticeScreen() {
           >
             Incorrect
           </Text>
+        </View>
+
+        <View style={styles.questionContainerKanji}>
+          <Text style={styles.questionTypeKanji}>KANJI</Text>
         </View>
 
         <ScrollView
@@ -452,6 +507,22 @@ export function ReversePracticeScreen() {
               testID="reverse-practice-mnemonic"
             />
           </View>
+
+          <ExpandableDetails
+            resetKey={incorrectFeedback.question.key}
+            testID="reverse-practice-expandable-details"
+          >
+            <ItemDetails
+              subjectType={incorrectFeedback.question.item.subjectType}
+              meanings={incorrectFeedback.question.item.meanings}
+              readings={incorrectFeedback.question.item.readings}
+              meaningMnemonic={incorrectFeedback.question.item.meaningMnemonic}
+              readingMnemonic={incorrectFeedback.question.item.readingMnemonic}
+              componentKanji={incorrectFeedback.question.item.componentKanji}
+              hideMnemonicType="meaning"
+              testID="reverse-practice-item-details"
+            />
+          </ExpandableDetails>
         </ScrollView>
 
         <View style={styles.buttonRow}>
@@ -503,19 +574,31 @@ export function ReversePracticeScreen() {
           {primaryMeaning}
         </Text>
         {showCorrectFeedback && (
-          <Text style={styles.correctLabel} testID="reverse-practice-correct-label">
+          <Text
+            style={styles.correctLabel}
+            testID="reverse-practice-correct-label"
+          >
             Correct!
           </Text>
         )}
       </View>
 
-      <View style={styles.questionContainer}>
-        <Text style={styles.questionType} testID="reverse-practice-question-type">
-          WRITE THE JAPANESE
+      <View style={styles.questionContainerKanji}>
+        <Text
+          style={styles.questionTypeKanji}
+          testID="reverse-practice-question-type"
+        >
+          KANJI
         </Text>
       </View>
 
-      <View style={styles.inputContainer} testID="reverse-practice-input-container">
+      <Animated.View
+        style={[
+          styles.inputContainer,
+          { transform: [{ translateX: shakeAnimation }] },
+        ]}
+        testID="reverse-practice-input-container"
+      >
         <TextInput
           ref={inputRef}
           style={[styles.input, { borderColor: backgroundColor }]}
@@ -530,9 +613,10 @@ export function ReversePracticeScreen() {
           autoComplete="off"
           returnKeyType="done"
           blurOnSubmit={false}
+          caretHidden={true}
           testID="reverse-practice-input"
         />
-      </View>
+      </Animated.View>
 
       <View style={styles.spacer} />
 
@@ -603,7 +687,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   meaningContainer: {
-    paddingVertical: 64,
+    height: 232,
     paddingHorizontal: SPACING.lg,
     alignItems: 'center',
     justifyContent: 'center',
@@ -615,7 +699,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   meaningText: {
-    fontSize: FONT_SIZES.display,
+    fontSize: FONT_SIZES.xxl,
     fontWeight: 'bold',
     color: COLORS.text.inverse,
     textAlign: 'center',
@@ -651,7 +735,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COLORS.neutral.white,
   },
+  questionContainerKanji: {
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    alignItems: 'center',
+    backgroundColor: COLORS.neutral.white,
+  },
   questionType: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '700',
+    color: COLORS.text.tertiary,
+    letterSpacing: 2,
+  },
+  questionTypeKanji: {
     fontSize: FONT_SIZES.sm,
     fontWeight: '700',
     color: COLORS.text.tertiary,
@@ -678,8 +774,10 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: 'row',
     paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.lg,
     paddingBottom: SPACING.lg,
     gap: SPACING.md,
+    backgroundColor: COLORS.background.primary,
   },
   submitButton: {
     margin: SPACING.lg,

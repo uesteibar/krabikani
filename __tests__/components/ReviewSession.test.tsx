@@ -3424,7 +3424,7 @@ describe('ReviewSession', () => {
       // Use a single radical — wrap-up with 1 introduced item should work fine
       // even though buffer cap is 10
       const onSessionComplete = jest.fn();
-      const { getByTestId, queryByTestId, findByTestId } = render(
+      const { getByTestId, queryByTestId } = render(
         <ReviewSession
           items={[sampleRadical, sampleRadical2]}
           onSessionComplete={onSessionComplete}

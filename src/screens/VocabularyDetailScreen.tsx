@@ -274,7 +274,6 @@ export function VocabularyDetailScreen() {
     componentKanji,
     contextSentences,
     partsOfSpeech,
-    isKanaVocabulary,
   } = data;
 
   return (

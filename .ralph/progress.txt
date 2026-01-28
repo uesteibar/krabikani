@@ -141,3 +141,40 @@ Started:
   - MnemonicText component used for rendering mnemonics with special formatting
 ---
 
+## 2026-01-28 - Code Review Fixes (US-006, US-007, US-005)
+- Fixed UI issues in ReversePracticeScreen and ReviewsScreen based on code review feedback
+- Files changed:
+  - src/screens/ReversePracticeScreen.tsx:
+    - Changed meaningText fontSize from FONT_SIZES.display (72) to FONT_SIZES.xxxl (32) - text was too large
+    - Changed meaningContainer from paddingVertical to fixed height: 200 to match review screens
+    - Added caretHidden={true} to TextInput to hide blinking cursor
+    - Added ExpandableDetails and ItemDetails components for "show details" toggle on incorrect screen
+    - Added questionContainerKanji with "KANJI" label bar (white background) to match review screen header height
+    - Added shake animation using Animated.View for romaji input rejection
+    - Added containsRomaji() validation to reject English/romaji input with shake instead of submitting
+    - Changed incorrect feedback header to show English meaning (getPrimaryMeaning()) instead of kanji characters
+    - Added backgroundColor and paddingTop to buttonRow for consistent "Continue" button styling
+  - src/screens/ReviewsScreen.tsx:
+    - Fixed isStarted logic to properly check (!isRadical && progress.readingCorrect) - radicals have readingCorrect=true by default
+    - Added early return when lostItemCount === 0 to skip "All progress will be saved" dialog
+  - __tests__/screens/ReversePracticeScreen.test.tsx:
+    - Changed incorrect answer tests to use 'あ' instead of 'wrong' (romaji now triggers shake)
+    - Updated test for question type from "WRITE THE JAPANESE" to "KANJI"
+    - Updated test for header to expect English meaning instead of kanji characters
+    - Added test for romaji rejection with shake animation
+    - Updated empty answer test to expect shake instead of incorrect feedback
+  - __tests__/screens/ReviewsScreen.test.tsx:
+    - Updated tests that expected "All progress will be saved" dialog to expect NO dialog (now skipped)
+    - Updated tests needing dialog to first answer a question so there's something to lose
+  - src/screens/LessonsScreen.tsx: Fixed lint - changed `catch (_error)` to `catch {}`
+  - src/screens/SearchScreen.tsx: Fixed lint - removed unused SubjectType import
+  - src/screens/VocabularyDetailScreen.tsx: Fixed lint - removed unused isKanaVocabulary destructure
+  - __tests__/components/ReviewSession.test.tsx: Fixed lint - removed unused findByTestId from destructure (2 places)
+- **Learnings for future iterations:**
+  - React Native doesn't support forcing specific language keyboards (Japanese) via keyboardType - this is OS-controlled
+  - Use Animated.sequence with Animated.timing for shake animations (translateX oscillation)
+  - When testing input that now gets rejected (romaji), update tests to use valid Japanese characters
+  - The isStarted check for review exit must account for radicals having readingCorrect=true by default
+  - Skip confirmation dialogs when there's nothing to confirm (lostItemCount === 0) for better UX
+  - Fixed height containers are better than minHeight when content size varies (e.g., multi-line English vs single kanji)
+---

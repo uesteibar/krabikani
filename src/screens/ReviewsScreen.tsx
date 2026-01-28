@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react';
 import { StyleSheet, Text, View, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { EventArg } from '@react-navigation/native';
@@ -354,13 +360,22 @@ export function ReviewsScreen() {
         let lostItemCount = 0;
 
         for (const [subjectId, progress] of itemProgress) {
+          const subject = sessionData.subjects.find(s => s.id === subjectId);
+          const isRadical = subject?.object_type === 'radical';
+
           const isComplete = progress.meaningCorrect && progress.readingCorrect;
           const hasFailures =
             progress.incorrectMeaningAnswers > 0 ||
             progress.incorrectReadingAnswers > 0;
+          // An item is "started" only if the user has actually answered a question:
+          // - meaningCorrect means they answered the meaning question correctly
+          // - readingCorrect for non-radicals means they answered the reading question
+          // - incorrectMeaningAnswers > 0 means they attempted meaning
+          // - incorrectReadingAnswers > 0 means they attempted reading
+          // Note: radicals have readingCorrect=true by default, so we exclude it for them
           const isStarted =
             progress.meaningCorrect ||
-            progress.readingCorrect ||
+            (!isRadical && progress.readingCorrect) ||
             progress.incorrectMeaningAnswers > 0 ||
             progress.incorrectReadingAnswers > 0;
 
@@ -383,19 +398,39 @@ export function ReviewsScreen() {
           }
         }
 
+        // If nothing will be lost, just sync and exit without asking
+        if (lostItemCount === 0) {
+          exitSyncInProgressRef.current = true;
+
+          if (reviewsToSubmit.length > 0) {
+            // Fire and forget - don't block navigation
+            (async () => {
+              try {
+                const online = await isOnline();
+                const apiKey = await getApiKey();
+                const client =
+                  online && apiKey ? new WaniKaniClient(apiKey) : null;
+                await submitReviews(client, reviewsToSubmit);
+              } catch {
+                console.warn(
+                  '[ReviewsScreen] Failed to sync completed reviews on exit',
+                );
+              }
+            })();
+          }
+
+          // Let navigation proceed without blocking
+          return;
+        }
+
         // Block navigation to show confirmation dialog
         e.preventDefault();
 
         // Build dialog message
-        let message: string;
-        if (lostItemCount === 0) {
-          message = 'All progress will be saved.';
-        } else if (lostItemCount === 1) {
-          message =
-            '1 item will be lost (started but not yet failed or completed).';
-        } else {
-          message = `${lostItemCount} items will be lost (started but not yet failed or completed).`;
-        }
+        const message =
+          lostItemCount === 1
+            ? '1 item will be lost (started but not yet failed or completed).'
+            : `${lostItemCount} items will be lost (started but not yet failed or completed).`;
 
         // Show confirmation dialog
         Alert.alert('Leave Review Session?', message, [

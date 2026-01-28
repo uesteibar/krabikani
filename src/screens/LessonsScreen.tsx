@@ -379,7 +379,7 @@ export function LessonsScreen() {
       ) {
         setSyncedOnline(result.completedCount > 0);
       }
-    } catch (_error) {
+    } catch {
       // Sync failure is not critical — lessons are queued locally
       setSyncedOnline(false);
     }
