@@ -16,6 +16,7 @@ import Animated, {
   SharedValue,
 } from 'react-native-reanimated';
 
+import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 import {
   DASHBOARD_COLORS,
   COLORS,
@@ -230,51 +231,81 @@ export function LessonCompletion({
     // Element 2: Title
     titleOpacity.value = withDelay(
       STAGGER_DELAY,
-      withTiming(1, { duration: FADE_DURATION, easing: Easing.out(Easing.ease) }),
+      withTiming(1, {
+        duration: FADE_DURATION,
+        easing: Easing.out(Easing.ease),
+      }),
     );
     titleTranslateY.value = withDelay(
       STAGGER_DELAY,
-      withTiming(0, { duration: FADE_DURATION, easing: Easing.out(Easing.ease) }),
+      withTiming(0, {
+        duration: FADE_DURATION,
+        easing: Easing.out(Easing.ease),
+      }),
     );
 
     // Element 3: Items count
     countOpacity.value = withDelay(
       STAGGER_DELAY * 2,
-      withTiming(1, { duration: FADE_DURATION, easing: Easing.out(Easing.ease) }),
+      withTiming(1, {
+        duration: FADE_DURATION,
+        easing: Easing.out(Easing.ease),
+      }),
     );
     countTranslateY.value = withDelay(
       STAGGER_DELAY * 2,
-      withTiming(0, { duration: FADE_DURATION, easing: Easing.out(Easing.ease) }),
+      withTiming(0, {
+        duration: FADE_DURATION,
+        easing: Easing.out(Easing.ease),
+      }),
     );
 
     // Element 4: Encouragement message
     encouragementOpacity.value = withDelay(
       STAGGER_DELAY * 3,
-      withTiming(1, { duration: FADE_DURATION, easing: Easing.out(Easing.ease) }),
+      withTiming(1, {
+        duration: FADE_DURATION,
+        easing: Easing.out(Easing.ease),
+      }),
     );
     encouragementTranslateY.value = withDelay(
       STAGGER_DELAY * 3,
-      withTiming(0, { duration: FADE_DURATION, easing: Easing.out(Easing.ease) }),
+      withTiming(0, {
+        duration: FADE_DURATION,
+        easing: Easing.out(Easing.ease),
+      }),
     );
 
     // Element 5: Sync status
     syncOpacity.value = withDelay(
       STAGGER_DELAY * 4,
-      withTiming(1, { duration: FADE_DURATION, easing: Easing.out(Easing.ease) }),
+      withTiming(1, {
+        duration: FADE_DURATION,
+        easing: Easing.out(Easing.ease),
+      }),
     );
     syncTranslateY.value = withDelay(
       STAGGER_DELAY * 4,
-      withTiming(0, { duration: FADE_DURATION, easing: Easing.out(Easing.ease) }),
+      withTiming(0, {
+        duration: FADE_DURATION,
+        easing: Easing.out(Easing.ease),
+      }),
     );
 
     // Element 6: Button(s)
     buttonOpacity.value = withDelay(
       STAGGER_DELAY * 5,
-      withTiming(1, { duration: FADE_DURATION, easing: Easing.out(Easing.ease) }),
+      withTiming(1, {
+        duration: FADE_DURATION,
+        easing: Easing.out(Easing.ease),
+      }),
     );
     buttonTranslateY.value = withDelay(
       STAGGER_DELAY * 5,
-      withTiming(0, { duration: FADE_DURATION, easing: Easing.out(Easing.ease) }),
+      withTiming(0, {
+        duration: FADE_DURATION,
+        easing: Easing.out(Easing.ease),
+      }),
     );
   }, [
     reduceMotion,
@@ -351,9 +382,13 @@ export function LessonCompletion({
         style={[styles.iconContainer, iconAnimatedStyle]}
         testID="lesson-completion-icon"
       >
-        <Animated.Text style={[styles.icon, checkmarkAnimatedStyle]}>
-          ✓
-        </Animated.Text>
+        <Animated.View style={checkmarkAnimatedStyle}>
+          <MaterialDesignIcons
+            name="check-circle"
+            size={40}
+            color={COLORS.text.inverse}
+          />
+        </Animated.View>
       </Animated.View>
 
       {/* Title */}
@@ -467,11 +502,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  icon: {
-    fontSize: 40,
-    color: COLORS.text.inverse,
-    fontWeight: 'bold',
-  },
+
   title: {
     fontSize: 28,
     fontWeight: 'bold',

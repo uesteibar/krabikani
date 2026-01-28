@@ -17,6 +17,7 @@ import Animated, {
   SharedValue,
 } from 'react-native-reanimated';
 
+import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 import type { SubjectType } from '../api/types';
 import {
   DASHBOARD_COLORS,
@@ -448,9 +449,13 @@ export function ReviewCompletion({
           style={[styles.iconContainer, iconAnimatedStyle]}
           testID="review-completion-icon"
         >
-          <Animated.Text style={[styles.icon, checkmarkAnimatedStyle]}>
-            ✓
-          </Animated.Text>
+          <Animated.View style={checkmarkAnimatedStyle}>
+            <MaterialDesignIcons
+              name="check-circle"
+              size={40}
+              color={COLORS.text.inverse}
+            />
+          </Animated.View>
         </Animated.View>
 
         {/* Title */}
@@ -559,17 +564,16 @@ export function ReviewCompletion({
                       )}
                     </View>
                   </View>
-                  <Text
-                    style={[
-                      styles.resultIndicator,
+                  <MaterialDesignIcons
+                    name={item.isCorrect ? 'check' : 'close'}
+                    size={FONT_SIZES.lg}
+                    color={
                       item.isCorrect
-                        ? styles.resultIndicatorCorrect
-                        : styles.resultIndicatorIncorrect,
-                    ]}
+                        ? COLORS.feedback.correct
+                        : COLORS.feedback.incorrect
+                    }
                     testID={`review-result-indicator-${item.id}`}
-                  >
-                    {item.isCorrect ? '✓' : '✗'}
-                  </Text>
+                  />
                 </View>
               ))}
             </View>
@@ -648,11 +652,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  icon: {
-    fontSize: 40,
-    color: COLORS.text.inverse,
-    fontWeight: 'bold',
-  },
+
   title: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -784,6 +784,8 @@ const styles = StyleSheet.create({
   resultAccent: {
     width: 5,
     alignSelf: 'stretch',
+    marginLeft: SPACING.md,
+    borderRadius: BORDER_RADIUS.sm,
   },
   resultContent: {
     flex: 1,
@@ -815,16 +817,5 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm,
     color: COLORS.text.secondary,
     flexShrink: 1,
-  },
-  resultIndicator: {
-    fontSize: FONT_SIZES.lg,
-    fontWeight: 'bold',
-    marginLeft: SPACING.sm,
-  },
-  resultIndicatorCorrect: {
-    color: COLORS.feedback.correct,
-  },
-  resultIndicatorIncorrect: {
-    color: COLORS.feedback.incorrect,
   },
 });

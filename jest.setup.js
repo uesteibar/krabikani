@@ -1,4 +1,17 @@
 /* eslint-env jest */
+// Mock @react-native-vector-icons/material-design-icons
+jest.mock('@react-native-vector-icons/material-design-icons', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+  const MaterialDesignIcons = (props) => {
+    return React.createElement(Text, {
+      testID: props.testID,
+      children: props.name,
+    });
+  };
+  return { MaterialDesignIcons };
+});
+
 // Mock react-native-worklets first (dependency of reanimated)
 jest.mock('react-native-worklets', () => ({
   init: jest.fn(),

@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, LayoutChangeEvent } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  LayoutChangeEvent,
+} from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -7,12 +13,8 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 
-import {
-  COLORS,
-  SPACING,
-  FONT_SIZES,
-  BORDER_RADIUS,
-} from '../theme';
+import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
+import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../theme';
 
 export interface ExpandableDetailsProps {
   /** Unique key to reset expanded state (e.g., item ID or question key) */
@@ -63,31 +65,28 @@ export function ExpandableDetails({
     setIsExpanded(newExpanded);
 
     // Animate chevron rotation (0 → 180 when expanding, 180 → 0 when collapsing)
-    chevronRotation.value = withTiming(
-      newExpanded ? 180 : 0,
-      {
-        duration: CHEVRON_ROTATION_DURATION,
-        easing: Easing.out(Easing.cubic),
-      }
-    );
+    chevronRotation.value = withTiming(newExpanded ? 180 : 0, {
+      duration: CHEVRON_ROTATION_DURATION,
+      easing: Easing.out(Easing.cubic),
+    });
 
     // Animate content height
-    heightProgress.value = withTiming(
-      newExpanded ? 1 : 0,
-      {
-        duration: CONTENT_HEIGHT_DURATION,
-        easing: Easing.out(Easing.poly(4)), // ease-out-quart
-      }
-    );
+    heightProgress.value = withTiming(newExpanded ? 1 : 0, {
+      duration: CONTENT_HEIGHT_DURATION,
+      easing: Easing.out(Easing.poly(4)), // ease-out-quart
+    });
   }, [isExpanded, chevronRotation, heightProgress]);
 
   // Measure content height
-  const handleContentLayout = useCallback((event: LayoutChangeEvent) => {
-    const { height } = event.nativeEvent.layout;
-    if (height > 0 && height !== contentHeight) {
-      setContentHeight(height);
-    }
-  }, [contentHeight]);
+  const handleContentLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      const { height } = event.nativeEvent.layout;
+      if (height > 0 && height !== contentHeight) {
+        setContentHeight(height);
+      }
+    },
+    [contentHeight],
+  );
 
   // Animated styles
   const chevronAnimatedStyle = useAnimatedStyle(() => ({
@@ -117,12 +116,16 @@ export function ExpandableDetails({
         <Text style={styles.toggleText}>
           {isExpanded ? 'Hide details' : 'Show full details'}
         </Text>
-        <Animated.Text
-          style={[styles.chevron, chevronAnimatedStyle]}
+        <Animated.View
+          style={chevronAnimatedStyle}
           testID={testID ? `${testID}-chevron` : 'expandable-details-chevron'}
         >
-          ▼
-        </Animated.Text>
+          <MaterialDesignIcons
+            name="chevron-down"
+            size={FONT_SIZES.base}
+            color={COLORS.text.secondary}
+          />
+        </Animated.View>
       </TouchableOpacity>
 
       {/* Animated content container */}
@@ -131,10 +134,7 @@ export function ExpandableDetails({
         testID={testID ? `${testID}-content` : 'expandable-details-content'}
       >
         {/* Hidden measurement view */}
-        <View
-          style={styles.measureContainer}
-          onLayout={handleContentLayout}
-        >
+        <View style={styles.measureContainer} onLayout={handleContentLayout}>
           {children}
         </View>
       </Animated.View>
@@ -161,10 +161,7 @@ const styles = StyleSheet.create({
     color: COLORS.text.secondary,
     fontWeight: '500',
   },
-  chevron: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.text.secondary,
-  },
+
   contentContainer: {
     marginTop: SPACING.md,
   },

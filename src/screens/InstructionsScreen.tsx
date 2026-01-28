@@ -119,6 +119,19 @@ export function InstructionsScreen() {
       <Text style={[styles.stepCaption, { color: colors.text.secondary }]}>
         {step.title}
       </Text>
+
+      {index === STEPS.length - 1 && (
+        <TouchableOpacity
+          style={[styles.linkButton, { borderColor: colors.border.medium }]}
+          onPress={() => Linking.openURL(WANIKANI_TOKENS_URL)}
+          activeOpacity={0.8}
+          testID="open-wanikani-button"
+        >
+          <Text style={[styles.linkButtonText, { color: colors.text.primary }]}>
+            Open WaniKani Settings
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   ));
 
@@ -141,16 +154,6 @@ export function InstructionsScreen() {
       />
 
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.linkButton, { borderColor: colors.border.medium }]}
-          onPress={() => Linking.openURL(WANIKANI_TOKENS_URL)}
-          activeOpacity={0.8}
-          testID="open-wanikani-button"
-        >
-          <Text style={[styles.linkButtonText, { color: colors.text.primary }]}>
-            Open WaniKani Settings
-          </Text>
-        </TouchableOpacity>
         <View style={styles.buttonRow}>
           <TouchableOpacity
             style={[
@@ -248,7 +251,9 @@ const styles = StyleSheet.create({
     height: 350,
   },
   linkButton: {
+    marginTop: SPACING.xxl,
     marginBottom: SPACING.lg,
+    marginHorizontal: SPACING.lg,
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.xl,
     borderRadius: BORDER_RADIUS.md,

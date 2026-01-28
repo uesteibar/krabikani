@@ -50,8 +50,8 @@ import {
   MIN_TOUCH_TARGET,
   TEXT_STYLES,
 } from '../theme';
+import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 import { MnemonicText } from './MnemonicText';
-import { ComponentDisplay } from './ComponentDisplay';
 import { SrsLevelBadge } from './SrsLevelBadge';
 import { AnimatedSrsLevelBadge } from './AnimatedSrsLevelBadge';
 import { ReviewCompletion, type ReviewResultItem } from './ReviewCompletion';
@@ -1214,7 +1214,11 @@ export function ReviewSession({
           </View>
         ) : (
           <View style={styles.modeBanner} testID="review-session-zen-banner">
-            <Text style={styles.modeBannerIcon}>○</Text>
+            <MaterialDesignIcons
+              name="meditation"
+              size={FONT_SIZES.base}
+              color={COLORS.text.tertiary}
+            />
             <Text style={styles.modeBannerText}>Zen Mode</Text>
           </View>
         )}
@@ -1304,72 +1308,6 @@ export function ReviewSession({
             />
           </View>
 
-          {/* Component radicals for kanji items */}
-          {incorrectFeedback.question.item.subjectType === 'kanji' &&
-            incorrectFeedback.question.item.componentRadicals &&
-            incorrectFeedback.question.item.componentRadicals.length > 0 && (
-              <View
-                style={styles.feedbackSection}
-                testID="review-session-component-radicals"
-              >
-                <Text style={styles.feedbackLabel}>Made up of:</Text>
-                <View style={styles.componentsRow}>
-                  {incorrectFeedback.question.item.componentRadicals.map(
-                    radical => (
-                      <ComponentDisplay
-                        key={radical.id}
-                        subjectType="radical"
-                        characters={radical.characters}
-                        meaning={radical.meaning}
-                        characterImages={radical.characterImages}
-                        onPress={
-                          onComponentPress
-                            ? () => onComponentPress(radical.id)
-                            : undefined
-                        }
-                        testID={`review-session-component-${radical.id}`}
-                      />
-                    ),
-                  )}
-                </View>
-              </View>
-            )}
-
-          {/* Component kanji for vocabulary items */}
-          {(incorrectFeedback.question.item.subjectType === 'vocabulary' ||
-            incorrectFeedback.question.item.subjectType ===
-              'kana_vocabulary') &&
-            incorrectFeedback.question.item.componentKanji &&
-            incorrectFeedback.question.item.componentKanji.length > 0 && (
-              <View
-                style={styles.feedbackSection}
-                testID="review-session-component-kanji"
-              >
-                <Text style={styles.feedbackLabel}>Made up of:</Text>
-                <View style={styles.componentsRow}>
-                  {incorrectFeedback.question.item.componentKanji.map(kanji => (
-                    <ComponentDisplay
-                      key={kanji.id}
-                      subjectType="kanji"
-                      characters={kanji.characters}
-                      meaning={kanji.meaning}
-                      displayText={
-                        incorrectFeedback.question.type === 'reading'
-                          ? kanji.reading
-                          : undefined
-                      }
-                      onPress={
-                        onComponentPress
-                          ? () => onComponentPress(kanji.id)
-                          : undefined
-                      }
-                      testID={`review-session-component-kanji-${kanji.id}`}
-                    />
-                  ))}
-                </View>
-              </View>
-            )}
-
           {/* Expandable full details section */}
           <ExpandableDetails
             resetKey={incorrectFeedback.question.key}
@@ -1386,6 +1324,7 @@ export function ReviewSession({
               }
               componentKanji={incorrectFeedback.question.item.componentKanji}
               onComponentPress={onComponentPress}
+              hideMnemonicType={incorrectFeedback.question.type}
               testID="review-session-item-details"
             />
           </ExpandableDetails>
@@ -1509,7 +1448,11 @@ export function ReviewSession({
         </View>
       ) : (
         <View style={styles.modeBanner} testID="review-session-zen-banner">
-          <Text style={styles.modeBannerIcon}>○</Text>
+          <MaterialDesignIcons
+            name="meditation"
+            size={FONT_SIZES.base}
+            color={COLORS.text.tertiary}
+          />
           <Text style={styles.modeBannerText}>Zen Mode</Text>
         </View>
       )}
@@ -1685,9 +1628,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border.light,
   },
-  modeBannerIcon: {
-    fontSize: FONT_SIZES.base,
-  },
+
   modeBannerText: {
     fontSize: FONT_SIZES.sm,
     color: COLORS.text.secondary,
@@ -1885,11 +1826,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.base,
     color: COLORS.text.primary,
     lineHeight: FONT_SIZES.xxl,
-  },
-  componentsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.md,
   },
   continueButton: {
     backgroundColor: COLORS.neutral.gray600,

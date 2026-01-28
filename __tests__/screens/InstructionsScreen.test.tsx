@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { InstructionsScreen } from '../../src/screens/InstructionsScreen';
 import { ThemeProvider } from '../../src/theme';
@@ -16,7 +17,14 @@ jest.mock('@react-navigation/native', () => ({
 
 function renderWithTheme(ui: React.ReactElement) {
   return render(
-    <ThemeProvider forcedColorScheme="light">{ui}</ThemeProvider>,
+    <SafeAreaProvider
+      initialMetrics={{
+        frame: { x: 0, y: 0, width: 375, height: 812 },
+        insets: { top: 47, left: 0, right: 0, bottom: 34 },
+      }}
+    >
+      <ThemeProvider forcedColorScheme="light">{ui}</ThemeProvider>
+    </SafeAreaProvider>,
   );
 }
 
@@ -45,10 +53,10 @@ describe('InstructionsScreen', () => {
 
   it('shows step titles on each page', () => {
     const { getByText } = renderWithTheme(<InstructionsScreen />);
-    expect(getByText('Go to your WaniKani Settings')).toBeTruthy();
-    expect(getByText('Click on Personal Access Tokens')).toBeTruthy();
-    expect(getByText('Generate a new token')).toBeTruthy();
-    expect(getByText('Copy your new token')).toBeTruthy();
+    expect(getByText(/Personal API Tokens/)).toBeTruthy();
+    expect(getByText(/Generate a new token/)).toBeTruthy();
+    expect(getByText(/check all permissions/)).toBeTruthy();
+    expect(getByText(/Copy your/)).toBeTruthy();
   });
 
   it('shows page indicator dots', () => {
@@ -73,8 +81,10 @@ describe('InstructionsScreen', () => {
     expect(getByTestId('instruction-image-0')).toBeTruthy();
   });
 
-  it('renders the Open WaniKani Settings link on the last page', () => {
+  it('renders the Open WaniKani Settings link inside the last page', () => {
     const { getByTestId } = renderWithTheme(<InstructionsScreen />);
+
+    // The link is rendered inside the last carousel page (always in DOM)
     expect(getByTestId('open-wanikani-button')).toBeTruthy();
   });
 

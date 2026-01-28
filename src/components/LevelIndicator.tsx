@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.lg,
     paddingHorizontal: SPACING.lg,
     borderRadius: BORDER_RADIUS.lg,
-    marginBottom: SPACING.sm,
+    marginTop: SPACING.md,
     marginHorizontal: SPACING.lg,
   },
   row: {

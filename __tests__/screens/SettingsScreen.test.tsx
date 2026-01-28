@@ -218,7 +218,7 @@ describe('SettingsScreen', () => {
 
     await waitFor(() => {
       expect(Alert.alert).toHaveBeenCalledWith(
-        'Validation Failed',
+        'Invalid API Key',
         'Invalid API key',
       );
     });
@@ -245,7 +245,7 @@ describe('SettingsScreen', () => {
 
     await waitFor(() => {
       expect(Alert.alert).toHaveBeenCalledWith(
-        'Validation Failed',
+        'Invalid API Key',
         'Network error. Please check your internet connection.',
       );
     });
@@ -253,7 +253,7 @@ describe('SettingsScreen', () => {
     expect(mockSecureStorage.saveApiKey).not.toHaveBeenCalled();
   });
 
-  it('should show error when saving empty API key', async () => {
+  it('should disable save button when API key is empty', async () => {
     mockSecureStorage.getApiKey.mockResolvedValue(null);
 
     const { getByTestId } = renderWithNavigation();
@@ -262,15 +262,12 @@ describe('SettingsScreen', () => {
       expect(getByTestId('api-key-input')).toBeTruthy();
     });
 
-    fireEvent.press(getByTestId('save-button'));
+    // Save button should be disabled when key is empty (matches stored empty key)
+    const saveButton = getByTestId('save-button');
+    expect(saveButton.props.accessibilityState?.disabled ?? saveButton.props.disabled).toBeTruthy();
 
-    await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledWith(
-        'Error',
-        'Please enter an API key',
-      );
-    });
-
+    // Pressing a disabled button should not trigger validation or save
+    fireEvent.press(saveButton);
     expect(mockWanikaniApi.validateApiKey).not.toHaveBeenCalled();
     expect(mockSecureStorage.saveApiKey).not.toHaveBeenCalled();
   });
@@ -296,7 +293,7 @@ describe('SettingsScreen', () => {
     fireEvent.press(getByTestId('save-button'));
 
     await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Storage unavailable');
+      expect(Alert.alert).toHaveBeenCalledWith('Save Failed', 'Storage unavailable');
     });
   });
 
@@ -312,11 +309,11 @@ describe('SettingsScreen', () => {
     fireEvent.press(getByTestId('clear-button'));
 
     expect(Alert.alert).toHaveBeenCalledWith(
-      'Clear API Key',
-      'Are you sure you want to remove your API key? This will also delete all synced data.',
+      'Remove API Key?',
+      'This will sign you out and delete all downloaded data. You can reconnect later with a new key.',
       expect.arrayContaining([
-        expect.objectContaining({ text: 'Cancel' }),
-        expect.objectContaining({ text: 'Clear' }),
+        expect.objectContaining({ text: 'Keep' }),
+        expect.objectContaining({ text: 'Remove' }),
       ]),
     );
   });
@@ -334,9 +331,9 @@ describe('SettingsScreen', () => {
 
     // Get the Clear button callback from Alert.alert
     const alertCalls = (Alert.alert as jest.Mock).mock.calls;
-    const clearAlertCall = alertCalls.find(call => call[0] === 'Clear API Key');
+    const clearAlertCall = alertCalls.find(call => call[0] === 'Remove API Key?');
     const clearButton = clearAlertCall?.[2]?.find(
-      (btn: { text: string }) => btn.text === 'Clear',
+      (btn: { text: string }) => btn.text === 'Remove',
     );
 
     await act(async () => {
@@ -452,7 +449,7 @@ describe('SettingsScreen', () => {
 
       await waitFor(() => {
         expect(Alert.alert).toHaveBeenCalledWith(
-          'Validation Failed',
+          'Invalid API Key',
           'Invalid API key',
         );
       });
@@ -484,7 +481,7 @@ describe('SettingsScreen', () => {
 
       await waitFor(() => {
         expect(Alert.alert).toHaveBeenCalledWith(
-          'Error',
+          'Save Failed',
           'Storage unavailable',
         );
       });
@@ -651,7 +648,7 @@ describe('SettingsScreen', () => {
 
       await waitFor(() => {
         expect(Alert.alert).toHaveBeenCalledWith(
-          'Validation Failed',
+          'Invalid API Key',
           'Invalid API key',
         );
       });
@@ -683,7 +680,7 @@ describe('SettingsScreen', () => {
 
       await waitFor(() => {
         expect(Alert.alert).toHaveBeenCalledWith(
-          'Error',
+          'Save Failed',
           'Storage unavailable',
         );
       });

@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 
 import {
   DASHBOARD_COLORS,
@@ -62,7 +63,11 @@ export function DashboardStats({
           {' available lessons'}
         </Text>
         {!lessonsEmpty && (
-          <Text style={[styles.chevron, styles.lessonsChevron]}>›</Text>
+          <MaterialDesignIcons
+            name="chevron-right"
+            size={FONT_SIZES.xxxl}
+            color={DASHBOARD_COLORS.lessons}
+          />
         )}
       </TouchableOpacity>
       <TouchableOpacity
@@ -91,7 +96,11 @@ export function DashboardStats({
           {' pending reviews'}
         </Text>
         {!reviewsEmpty && (
-          <Text style={[styles.chevron, styles.reviewsChevron]}>›</Text>
+          <MaterialDesignIcons
+            name="chevron-right"
+            size={FONT_SIZES.xxxl}
+            color={DASHBOARD_COLORS.reviews}
+          />
         )}
       </TouchableOpacity>
     </View>
@@ -147,16 +156,5 @@ const styles = StyleSheet.create({
   },
   emptyLabelText: {
     color: COLORS.text.tertiary,
-  },
-  chevron: {
-    fontSize: FONT_SIZES.xxxl,
-    lineHeight: FONT_SIZES.xxxl,
-    fontWeight: '300',
-  },
-  lessonsChevron: {
-    color: DASHBOARD_COLORS.lessons,
-  },
-  reviewsChevron: {
-    color: DASHBOARD_COLORS.reviews,
   },
 });

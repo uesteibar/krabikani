@@ -81,7 +81,7 @@ describe('LessonsScreen', () => {
 
       await waitFor(() => {
         expect(getByTestId('lessons-screen-error')).toBeTruthy();
-        expect(getByText('No lessons available')).toBeTruthy();
+        expect(getByText('No lessons right now. Check back after your next review.')).toBeTruthy();
       });
     });
 
@@ -95,7 +95,7 @@ describe('LessonsScreen', () => {
 
       await waitFor(() => {
         expect(getByTestId('lessons-screen-error')).toBeTruthy();
-        expect(getByText('No valid lessons found')).toBeTruthy();
+        expect(getByText("Couldn't load lesson data. Try syncing from the home screen.")).toBeTruthy();
       });
     });
 

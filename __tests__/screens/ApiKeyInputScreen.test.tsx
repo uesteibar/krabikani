@@ -91,7 +91,7 @@ describe('ApiKeyInputScreen', () => {
     fireEvent.press(getByTestId('validate-button'));
 
     const errorMsg = await findByText(
-      'Could not connect to WaniKani. Please check your internet connection and try again.',
+      "Couldn't reach WaniKani. Check your internet connection and try again.",
     );
     expect(errorMsg).toBeTruthy();
   });

@@ -14,7 +14,12 @@
 - Use React `key` prop to force component remount when scroll position needs resetting (e.g., `key={item.id}` on cards with ScrollView content)
 - Completion screens (LessonCompletion, ReviewCompletion) share the same animated pattern: animated checkmark, staggered fade-in (200ms delay, 500ms duration), confetti for perfect sessions, encouragement messages, and "Synced"/"Queued" badge
 - Components using `useTheme()` require `<ThemeProvider forcedColorScheme="light">` wrapper in tests (see LevelIndicator, HomeScreen tests)
+- Components using `useSafeAreaInsets()` require `<SafeAreaProvider initialMetrics={...}>` wrapper in tests (see InstructionsScreen tests)
 - The react-native-reanimated mock in jest.setup.js must export any Animated.* components used (View, Text, Image) — add new ones as needed
+- Prefer `getByText(/regex/)` over `.props.children` assertions for text content — resilient to nested `<Text>` element changes
+- `jest.clearAllMocks()` resets mock return values — re-setup `mockResolvedValue` after calling it
+- SettingsScreen save button is disabled when `apiKey.trim() === storedApiKey` — empty key error path is unreachable via UI
+- jest.config.js has `testPathIgnorePatterns` for `.ralph/.worktrees/` to exclude old worktree copies from test discovery
 
 Started:
 ---
@@ -142,4 +147,55 @@ Started:
 - **Learnings for future iterations:**
   - SettingsScreen test uses real navigation (NavigationContainer + Stack.Navigator) with mock screen components
   - Alert.alert mock: extract onPress callback via `(Alert.alert as jest.Mock).mock.calls` and invoke in `act(async () => ...)`
+---
+
+## 2026-01-28 - Post-merge commits (4979180..4cb9ec8)
+
+### 511ebf2 - Fix banner on incorrect screen
+- Fixed incorrect answer banner display in ReviewSession and PracticeScreen
+- Files: src/components/ReviewSession.tsx, src/screens/PracticeScreen.tsx
+
+### 4cc5abe - Full width reviews and lessons buttons
+- Redesigned DashboardStats to use full-width buttons with count + label layout (e.g., "5 available lessons", "10 pending reviews")
+- Replaced separate count text + "Lessons"/"Reviews" labels with inline text
+- Files: src/components/DashboardStats.tsx
+
+### 86141cd - Better copy
+- Updated user-facing copy across multiple screens for clarity and tone
+- ApiKeyInputScreen: network error message changed to "Couldn't reach WaniKani..."
+- LessonsScreen: error messages changed to "No lessons right now..." and "Couldn't load lesson data..."
+- ReviewsScreen: error messages changed to "No reviews right now..." and "Couldn't load review data..."
+- SettingsScreen: major rewrite — Alert titles changed (Invalid API Key, Save Failed, Missing API Key, Remove API Key?), button labels (Keep/Remove instead of Cancel/Clear), save button disabled when key matches stored key
+- SyncScreen: error message changed to "Sync failed. Check your connection and try again."
+- InstructionsScreen: step titles updated with new copy and `<U>` highlighted fragments
+- HomeScreen: offline error text updated
+- Files: src/screens/ApiKeyInputScreen.tsx, src/screens/HomeScreen.tsx, src/screens/InstructionsScreen.tsx, src/screens/LessonsScreen.tsx, src/screens/ReviewsScreen.tsx, src/screens/SearchScreen.tsx, src/screens/SettingsScreen.tsx, src/screens/SyncScreen.tsx
+
+### 4cb9ec8 - Dashboard UI improvements
+- Enhanced LevelIndicator with kanji progress tracking (passed/total at current level)
+- Added animated crab logo on HomeScreen (rocking animation on press using react-native-reanimated)
+- Added UpcomingReviewsChart improvements
+- Added database functions for kanji progress: getKanjiPassedAtLevel, getTotalKanjiAtLevel
+- Files: src/components/LevelIndicator.tsx, src/components/UpcomingReviewsChart.tsx, src/screens/HomeScreen.tsx, src/storage/database.ts, src/storage/index.ts
+
+### Test fixes applied
+- Fixed jest.config.js: added testPathIgnorePatterns for `.ralph/.worktrees/`
+- Fixed DashboardStats tests: updated to use `getByText(/regex/)` instead of `props.children` checks (due to new inline text layout)
+- Fixed ReviewCompletion tests: updated indicator expectations from `✓`/`✗` to `check`/`close` (MaterialDesignIcons names)
+- Fixed HomeScreen tests: updated count assertions to regex-based text matching, fixed offline error message text
+- Fixed InstructionsScreen tests: added SafeAreaProvider wrapper, updated step title assertions to regex matching
+- Fixed SettingsScreen tests: updated Alert.alert title expectations to match new copy, updated clear/remove flow expectations, changed empty key test to verify disabled button state
+- Fixed SyncScreen tests: updated error message text
+- Fixed ApiKeyInputScreen tests: updated network error message text
+- Fixed LessonsScreen tests: updated error message text
+- Fixed ReviewsScreen tests: updated error message text
+- Fixed ReviewSession wrap-up test: added Math.random mock restore and multiple act/timer flush cycles
+- **Learnings for future iterations:**
+  - When UI copy changes, ALL corresponding test assertions must be updated — many tests had hardcoded string expectations
+  - DashboardStats changed from separate count + label to inline `<Text>` with nested text — test assertions using `.props.children` broke; prefer `getByText(/regex/)` for resilience
+  - SettingsScreen save button is disabled when `apiKey.trim() === storedApiKey` — the "empty key" error path is unreachable via UI, tests should verify disabled state instead
+  - InstructionsScreen uses `useSafeAreaInsets()` — tests need `<SafeAreaProvider initialMetrics={...}>` wrapper
+  - ReviewSession wrap-up test needs multiple `act(() => jest.runAllTimers())` cycles to flush all pending state updates through the correct feedback → advance → completion pipeline
+  - `jest.clearAllMocks()` resets mock return values — must re-setup `mockResolvedValue` after clearing
+  - Math.random mock from earlier tests can leak — call `mockRestore()` + re-`spyOn()` before tests that need fresh random behavior
 ---

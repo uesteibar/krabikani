@@ -75,7 +75,7 @@ describe('SyncScreen', () => {
 
     const { findByTestId, findByText } = renderWithTheme(<SyncScreen />);
 
-    await findByText('Something went wrong. Please try again.');
+    await findByText('Sync failed. Check your connection and try again.');
     const retryButton = await findByTestId('retry-button');
     expect(retryButton).toBeTruthy();
   });

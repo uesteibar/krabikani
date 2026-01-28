@@ -50,7 +50,7 @@ const { __resetMockDatabase } = jest.requireMock('@op-engineering/op-sqlite');
 const { __setStoredApiKey, __resetMock: __resetKeychainMock } =
   jest.requireMock('react-native-keychain');
 
-const { syncSubjects, syncAssignments } = jest.requireMock(
+const { syncSubjects, syncAssignments, getUserLevel } = jest.requireMock(
   '../../src/sync/syncService',
 );
 
@@ -184,11 +184,11 @@ describe('HomeScreen', () => {
     });
 
     it('shows zero counts when no lessons or reviews available', async () => {
-      const { getByTestId } = renderWithNavigation(<HomeScreen />);
+      const { getByText } = renderWithNavigation(<HomeScreen />);
 
       await waitFor(() => {
-        expect(getByTestId('lessons-count').props.children).toBe(0);
-        expect(getByTestId('reviews-count').props.children).toBe(0);
+        expect(getByText(/0.*available lessons/)).toBeTruthy();
+        expect(getByText(/0.*pending reviews/)).toBeTruthy();
       });
     });
 
@@ -221,10 +221,10 @@ describe('HomeScreen', () => {
         data_updated_at: null,
       });
 
-      const { getByTestId } = renderWithNavigation(<HomeScreen />);
+      const { getByText } = renderWithNavigation(<HomeScreen />);
 
       await waitFor(() => {
-        expect(getByTestId('lessons-count').props.children).toBe(1);
+        expect(getByText(/1.*available lessons/)).toBeTruthy();
       });
     });
 
@@ -260,10 +260,10 @@ describe('HomeScreen', () => {
         data_updated_at: null,
       });
 
-      const { getByTestId } = renderWithNavigation(<HomeScreen />);
+      const { getByText } = renderWithNavigation(<HomeScreen />);
 
       await waitFor(() => {
-        expect(getByTestId('reviews-count').props.children).toBe(1);
+        expect(getByText(/1.*pending reviews/)).toBeTruthy();
       });
     });
   });
@@ -344,7 +344,7 @@ describe('HomeScreen', () => {
 
       await waitFor(() => {
         expect(
-          getByText(/Please connect to the internet to download your data/i),
+          getByText(/Connect to the internet to download your WaniKani data/i),
         ).toBeTruthy();
       });
     });
@@ -417,10 +417,10 @@ describe('HomeScreen', () => {
         data_updated_at: null,
       });
 
-      const { getByTestId, findByTestId } = renderWithFullNavigator();
+      const { getByText, getByTestId, findByTestId } = renderWithFullNavigator();
 
       await waitFor(() => {
-        expect(getByTestId('lessons-count').props.children).toBe(1);
+        expect(getByText(/1.*available lessons/)).toBeTruthy();
       });
 
       await act(async () => {
@@ -462,10 +462,10 @@ describe('HomeScreen', () => {
         data_updated_at: null,
       });
 
-      const { getByTestId, findByTestId } = renderWithFullNavigator();
+      const { getByText, getByTestId, findByTestId } = renderWithFullNavigator();
 
       await waitFor(() => {
-        expect(getByTestId('reviews-count').props.children).toBe(1);
+        expect(getByText(/1.*pending reviews/)).toBeTruthy();
       });
 
       await act(async () => {
@@ -476,10 +476,10 @@ describe('HomeScreen', () => {
     });
 
     it('does not navigate when lessons count is 0', async () => {
-      const { getByTestId, queryByTestId } = renderWithFullNavigator();
+      const { getByText, getByTestId, queryByTestId } = renderWithFullNavigator();
 
       await waitFor(() => {
-        expect(getByTestId('lessons-count').props.children).toBe(0);
+        expect(getByText(/0.*available lessons/)).toBeTruthy();
       });
 
       await act(async () => {
@@ -492,10 +492,10 @@ describe('HomeScreen', () => {
     });
 
     it('does not navigate when reviews count is 0', async () => {
-      const { getByTestId, queryByTestId } = renderWithFullNavigator();
+      const { getByText, getByTestId, queryByTestId } = renderWithFullNavigator();
 
       await waitFor(() => {
-        expect(getByTestId('reviews-count').props.children).toBe(0);
+        expect(getByText(/0.*pending reviews/)).toBeTruthy();
       });
 
       await act(async () => {
@@ -539,6 +539,10 @@ describe('HomeScreen', () => {
     beforeEach(async () => {
       __resetKeychainMock();
       jest.clearAllMocks();
+      // Re-setup sync mock return values after clearAllMocks
+      syncSubjects.mockResolvedValue({ success: true, syncedCount: 10 });
+      syncAssignments.mockResolvedValue({ success: true, syncedCount: 5 });
+      getUserLevel.mockResolvedValue(5);
     });
 
     it('renders scroll view with refresh control', async () => {

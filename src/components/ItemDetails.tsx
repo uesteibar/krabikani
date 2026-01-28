@@ -4,13 +4,11 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { Meaning, Reading, KanjiReading, SubjectType } from '../api/types';
 import { MnemonicText } from './MnemonicText';
 import { ComponentDisplay } from './ComponentDisplay';
-import {
-  COLORS,
-  SPACING,
-  FONT_SIZES,
-  BORDER_RADIUS,
-} from '../theme';
-import type { ReviewComponentRadical, ReviewComponentKanji } from './ReviewSession';
+import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../theme';
+import type {
+  ReviewComponentRadical,
+  ReviewComponentKanji,
+} from './ReviewSession';
 
 export interface ItemDetailsProps {
   /** The subject type of the item */
@@ -29,6 +27,8 @@ export interface ItemDetailsProps {
   componentKanji?: ReviewComponentKanji[];
   /** Callback when a component is pressed (for navigation to item detail) */
   onComponentPress?: (subjectId: number) => void;
+  /** Hide a specific mnemonic type (e.g., when already shown inline) */
+  hideMnemonicType?: 'meaning' | 'reading';
   /** Test ID for the component */
   testID?: string;
 }
@@ -52,7 +52,9 @@ function formatReadingType(type: string): string {
 /**
  * Group kanji readings by type
  */
-function groupReadingsByType(readings: KanjiReading[]): Record<string, KanjiReading[]> {
+function groupReadingsByType(
+  readings: KanjiReading[],
+): Record<string, KanjiReading[]> {
   const groups: Record<string, KanjiReading[]> = {};
   for (const reading of readings) {
     if (!groups[reading.type]) {
@@ -82,6 +84,7 @@ export function ItemDetails({
   componentRadicals,
   componentKanji,
   onComponentPress,
+  hideMnemonicType,
   testID,
 }: ItemDetailsProps) {
   const hasReadings = readings && readings.length > 0;
@@ -92,7 +95,10 @@ export function ItemDetails({
   return (
     <View style={styles.container} testID={testID ?? 'item-details'}>
       {/* Meanings Section */}
-      <View style={styles.section} testID={testID ? `${testID}-meanings` : 'item-details-meanings'}>
+      <View
+        style={styles.section}
+        testID={testID ? `${testID}-meanings` : 'item-details-meanings'}
+      >
         <Text style={styles.sectionTitle}>Meanings</Text>
         <View style={styles.meaningsList}>
           {meanings.map((meaning, index) => (
@@ -102,10 +108,16 @@ export function ItemDetails({
                 styles.meaningText,
                 meaning.primary && styles.primaryMeaning,
               ]}
-              testID={testID ? `${testID}-meaning-${index}` : `item-details-meaning-${index}`}
+              testID={
+                testID
+                  ? `${testID}-meaning-${index}`
+                  : `item-details-meaning-${index}`
+              }
             >
               {meaning.meaning}
-              {meaning.primary && <Text style={styles.primaryLabel}> (primary)</Text>}
+              {meaning.primary && (
+                <Text style={styles.primaryLabel}> (primary)</Text>
+              )}
             </Text>
           ))}
         </View>
@@ -117,7 +129,10 @@ export function ItemDetails({
       {/* Readings Section */}
       {hasReadings && (
         <>
-          <View style={styles.section} testID={testID ? `${testID}-readings` : 'item-details-readings'}>
+          <View
+            style={styles.section}
+            testID={testID ? `${testID}-readings` : 'item-details-readings'}
+          >
             <Text style={styles.sectionTitle}>Readings</Text>
             {subjectType === 'kanji' ? (
               // Kanji readings grouped by type
@@ -132,10 +147,16 @@ export function ItemDetails({
                       styles.readingText,
                       reading.primary && styles.primaryReading,
                     ]}
-                    testID={testID ? `${testID}-reading-${index}` : `item-details-reading-${index}`}
+                    testID={
+                      testID
+                        ? `${testID}-reading-${index}`
+                        : `item-details-reading-${index}`
+                    }
                   >
                     {reading.reading}
-                    {reading.primary && <Text style={styles.primaryLabel}> (primary)</Text>}
+                    {reading.primary && (
+                      <Text style={styles.primaryLabel}> (primary)</Text>
+                    )}
                   </Text>
                 ))}
               </View>
@@ -146,25 +167,49 @@ export function ItemDetails({
       )}
 
       {/* Meaning Mnemonic Section */}
-      <View style={styles.section} testID={testID ? `${testID}-meaning-mnemonic` : 'item-details-meaning-mnemonic'}>
-        <Text style={styles.sectionTitle}>Meaning Mnemonic</Text>
-        <MnemonicText
-          text={meaningMnemonic}
-          style={styles.mnemonicText}
-          testID={testID ? `${testID}-meaning-mnemonic-text` : 'item-details-meaning-mnemonic-text'}
-        />
-      </View>
+      {hideMnemonicType !== 'meaning' && (
+        <View
+          style={styles.section}
+          testID={
+            testID
+              ? `${testID}-meaning-mnemonic`
+              : 'item-details-meaning-mnemonic'
+          }
+        >
+          <Text style={styles.sectionTitle}>Meaning Mnemonic</Text>
+          <MnemonicText
+            text={meaningMnemonic}
+            style={styles.mnemonicText}
+            testID={
+              testID
+                ? `${testID}-meaning-mnemonic-text`
+                : 'item-details-meaning-mnemonic-text'
+            }
+          />
+        </View>
+      )}
 
       {/* Reading Mnemonic Section (if applicable) */}
-      {readingMnemonic && (
+      {readingMnemonic && hideMnemonicType !== 'reading' && (
         <>
           <View style={styles.divider} />
-          <View style={styles.section} testID={testID ? `${testID}-reading-mnemonic` : 'item-details-reading-mnemonic'}>
+          <View
+            style={styles.section}
+            testID={
+              testID
+                ? `${testID}-reading-mnemonic`
+                : 'item-details-reading-mnemonic'
+            }
+          >
             <Text style={styles.sectionTitle}>Reading Mnemonic</Text>
             <MnemonicText
               text={readingMnemonic}
               style={styles.mnemonicText}
-              testID={testID ? `${testID}-reading-mnemonic-text` : 'item-details-reading-mnemonic-text'}
+              testID={
+                testID
+                  ? `${testID}-reading-mnemonic-text`
+                  : 'item-details-reading-mnemonic-text'
+              }
             />
           </View>
         </>
@@ -174,7 +219,10 @@ export function ItemDetails({
       {hasComponents && (
         <>
           <View style={styles.divider} />
-          <View style={styles.section} testID={testID ? `${testID}-components` : 'item-details-components'}>
+          <View
+            style={styles.section}
+            testID={testID ? `${testID}-components` : 'item-details-components'}
+          >
             <Text style={styles.sectionTitle}>Made up of</Text>
             <View style={styles.componentsRow}>
               {componentRadicals?.map(radical => (
@@ -184,8 +232,16 @@ export function ItemDetails({
                   characters={radical.characters}
                   meaning={radical.meaning}
                   characterImages={radical.characterImages}
-                  onPress={onComponentPress ? () => onComponentPress(radical.id) : undefined}
-                  testID={testID ? `${testID}-component-${radical.id}` : `item-details-component-${radical.id}`}
+                  onPress={
+                    onComponentPress
+                      ? () => onComponentPress(radical.id)
+                      : undefined
+                  }
+                  testID={
+                    testID
+                      ? `${testID}-component-${radical.id}`
+                      : `item-details-component-${radical.id}`
+                  }
                 />
               ))}
               {componentKanji?.map(kanji => (
@@ -194,8 +250,16 @@ export function ItemDetails({
                   subjectType="kanji"
                   characters={kanji.characters}
                   meaning={kanji.meaning}
-                  onPress={onComponentPress ? () => onComponentPress(kanji.id) : undefined}
-                  testID={testID ? `${testID}-component-${kanji.id}` : `item-details-component-${kanji.id}`}
+                  onPress={
+                    onComponentPress
+                      ? () => onComponentPress(kanji.id)
+                      : undefined
+                  }
+                  testID={
+                    testID
+                      ? `${testID}-component-${kanji.id}`
+                      : `item-details-component-${kanji.id}`
+                  }
                 />
               ))}
             </View>
@@ -223,9 +287,15 @@ function renderKanjiReadings(readings: KanjiReading[], testID?: string) {
           <View
             key={type}
             style={styles.readingTypeGroup}
-            testID={testID ? `${testID}-readings-${type}` : `item-details-readings-${type}`}
+            testID={
+              testID
+                ? `${testID}-readings-${type}`
+                : `item-details-readings-${type}`
+            }
           >
-            <Text style={styles.readingTypeLabel}>{formatReadingType(type)}</Text>
+            <Text style={styles.readingTypeLabel}>
+              {formatReadingType(type)}
+            </Text>
             <View style={styles.readingsList}>
               {typeReadings.map((reading, index) => (
                 <Text
@@ -234,10 +304,16 @@ function renderKanjiReadings(readings: KanjiReading[], testID?: string) {
                     styles.readingText,
                     reading.primary && styles.primaryReading,
                   ]}
-                  testID={testID ? `${testID}-reading-${type}-${index}` : `item-details-reading-${type}-${index}`}
+                  testID={
+                    testID
+                      ? `${testID}-reading-${type}-${index}`
+                      : `item-details-reading-${type}-${index}`
+                  }
                 >
                   {reading.reading}
-                  {reading.primary && <Text style={styles.primaryLabel}> (primary)</Text>}
+                  {reading.primary && (
+                    <Text style={styles.primaryLabel}> (primary)</Text>
+                  )}
                 </Text>
               ))}
             </View>

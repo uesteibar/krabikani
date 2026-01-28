@@ -139,7 +139,7 @@ describe('ReviewsScreen', () => {
 
       await waitFor(() => {
         expect(getByTestId('reviews-screen-error')).toBeTruthy();
-        expect(getByText('No reviews available')).toBeTruthy();
+        expect(getByText('No reviews right now. Check back later.')).toBeTruthy();
       });
     });
 
@@ -155,7 +155,7 @@ describe('ReviewsScreen', () => {
 
       await waitFor(() => {
         expect(getByTestId('reviews-screen-error')).toBeTruthy();
-        expect(getByText('No valid reviews found')).toBeTruthy();
+        expect(getByText("Couldn't load review data. Try syncing from the home screen.")).toBeTruthy();
       });
     });
 

@@ -462,7 +462,7 @@ describe('ReviewCompletion', () => {
       );
 
       const correctIndicator = getByTestId('review-result-indicator-1');
-      expect(correctIndicator.props.children).toBe('✓');
+      expect(correctIndicator.props.children).toBe('check');
     });
 
     it('should show incorrect indicator (X) for failed items', () => {
@@ -471,7 +471,7 @@ describe('ReviewCompletion', () => {
       );
 
       const incorrectIndicator = getByTestId('review-result-indicator-2');
-      expect(incorrectIndicator.props.children).toBe('✗');
+      expect(incorrectIndicator.props.children).toBe('close');
     });
 
     it('should not show results list when resultItems is not provided', () => {

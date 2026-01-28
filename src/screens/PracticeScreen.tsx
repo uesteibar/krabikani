@@ -59,8 +59,8 @@ import {
   MIN_TOUCH_TARGET,
   TEXT_STYLES,
 } from '../theme';
+import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 import { MnemonicText } from '../components/MnemonicText';
-import { ComponentDisplay } from '../components/ComponentDisplay';
 import { ExpandableDetails } from '../components/ExpandableDetails';
 import { ItemDetails } from '../components/ItemDetails';
 import { shuffleArray } from '../components/ReviewSession';
@@ -556,7 +556,11 @@ export function PracticeScreen() {
         testID="practice-session-incorrect-feedback"
       >
         <View style={styles.modeBanner} testID="practice-session-banner">
-          <Text style={styles.modeBannerIcon}>◇</Text>
+          <MaterialDesignIcons
+            name="weight-lifter"
+            size={FONT_SIZES.base}
+            color={COLORS.text.tertiary}
+          />
           <Text style={styles.modeBannerText}>{practicePhrase}</Text>
         </View>
 
@@ -625,62 +629,6 @@ export function PracticeScreen() {
             />
           </View>
 
-          {incorrectFeedback.question.item.subjectType === 'kanji' &&
-            incorrectFeedback.question.item.componentRadicals &&
-            incorrectFeedback.question.item.componentRadicals.length > 0 && (
-              <View
-                style={styles.feedbackSection}
-                testID="practice-session-component-radicals"
-              >
-                <Text style={styles.feedbackLabel}>Made up of:</Text>
-                <View style={styles.componentsRow}>
-                  {incorrectFeedback.question.item.componentRadicals.map(
-                    radical => (
-                      <ComponentDisplay
-                        key={radical.id}
-                        subjectType="radical"
-                        characters={radical.characters}
-                        meaning={radical.meaning}
-                        characterImages={radical.characterImages}
-                        onPress={() => handleComponentPress(radical.id)}
-                        testID={`practice-session-component-${radical.id}`}
-                      />
-                    ),
-                  )}
-                </View>
-              </View>
-            )}
-
-          {(incorrectFeedback.question.item.subjectType === 'vocabulary' ||
-            incorrectFeedback.question.item.subjectType ===
-              'kana_vocabulary') &&
-            incorrectFeedback.question.item.componentKanji &&
-            incorrectFeedback.question.item.componentKanji.length > 0 && (
-              <View
-                style={styles.feedbackSection}
-                testID="practice-session-component-kanji"
-              >
-                <Text style={styles.feedbackLabel}>Made up of:</Text>
-                <View style={styles.componentsRow}>
-                  {incorrectFeedback.question.item.componentKanji.map(kanji => (
-                    <ComponentDisplay
-                      key={kanji.id}
-                      subjectType="kanji"
-                      characters={kanji.characters}
-                      meaning={kanji.meaning}
-                      displayText={
-                        incorrectFeedback.question.type === 'reading'
-                          ? kanji.reading
-                          : undefined
-                      }
-                      onPress={() => handleComponentPress(kanji.id)}
-                      testID={`practice-session-component-kanji-${kanji.id}`}
-                    />
-                  ))}
-                </View>
-              </View>
-            )}
-
           <ExpandableDetails
             resetKey={incorrectFeedback.question.key}
             testID="practice-session-expandable-details"
@@ -696,6 +644,7 @@ export function PracticeScreen() {
               }
               componentKanji={incorrectFeedback.question.item.componentKanji}
               onComponentPress={handleComponentPress}
+              hideMnemonicType={incorrectFeedback.question.type}
               testID="practice-session-item-details"
             />
           </ExpandableDetails>
@@ -734,7 +683,11 @@ export function PracticeScreen() {
       testID="practice-session"
     >
       <View style={styles.modeBanner} testID="practice-session-banner">
-        <Text style={styles.modeBannerIcon}>◇</Text>
+        <MaterialDesignIcons
+          name="weight-lifter"
+          size={FONT_SIZES.base}
+          color={COLORS.text.tertiary}
+        />
         <Text style={styles.modeBannerText}>{practicePhrase}</Text>
       </View>
 
@@ -873,10 +826,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border.light,
   },
-  modeBannerIcon: {
-    fontSize: FONT_SIZES.base,
-    color: COLORS.text.tertiary,
-  },
+
   modeBannerText: {
     fontSize: FONT_SIZES.sm,
     color: COLORS.text.secondary,
@@ -1017,10 +967,5 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.base,
     color: COLORS.text.primary,
     lineHeight: FONT_SIZES.xxl,
-  },
-  componentsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.md,
   },
 });

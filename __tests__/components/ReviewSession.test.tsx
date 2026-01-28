@@ -2245,14 +2245,22 @@ describe('ReviewSession', () => {
         // Should show incorrect feedback
         expect(getByTestId('review-session-incorrect-feedback')).toBeTruthy();
 
-        // Should show component radicals section
-        expect(getByTestId('review-session-component-radicals')).toBeTruthy();
-        expect(getByText('Made up of:')).toBeTruthy();
+        // Should show component radicals in item details
+        expect(
+          getByTestId('review-session-item-details-components'),
+        ).toBeTruthy();
+        expect(getByText('Made up of')).toBeTruthy();
 
         // Should show each component radical
-        expect(getByTestId('review-session-component-1')).toBeTruthy();
-        expect(getByTestId('review-session-component-2')).toBeTruthy();
-        expect(getByTestId('review-session-component-3')).toBeTruthy();
+        expect(
+          getByTestId('review-session-item-details-component-1'),
+        ).toBeTruthy();
+        expect(
+          getByTestId('review-session-item-details-component-2'),
+        ).toBeTruthy();
+        expect(
+          getByTestId('review-session-item-details-component-3'),
+        ).toBeTruthy();
       }
     });
 
@@ -2291,8 +2299,10 @@ describe('ReviewSession', () => {
         // Should show incorrect feedback
         expect(getByTestId('review-session-incorrect-feedback')).toBeTruthy();
 
-        // Should not show component radicals section
-        expect(queryByTestId('review-session-component-radicals')).toBeNull();
+        // Should not show component radicals in item details
+        expect(
+          queryByTestId('review-session-item-details-components'),
+        ).toBeNull();
       }
     });
 
@@ -2323,8 +2333,10 @@ describe('ReviewSession', () => {
       // Should show incorrect feedback
       expect(getByTestId('review-session-incorrect-feedback')).toBeTruthy();
 
-      // Should not show component radicals section
-      expect(queryByTestId('review-session-component-radicals')).toBeNull();
+      // Should not show component radicals in item details
+      expect(
+        queryByTestId('review-session-item-details-components'),
+      ).toBeNull();
     });
 
     it('does not show component radicals for vocabulary', () => {
@@ -2357,8 +2369,10 @@ describe('ReviewSession', () => {
         // Should show incorrect feedback
         expect(getByTestId('review-session-incorrect-feedback')).toBeTruthy();
 
-        // Should not show component radicals section
-        expect(queryByTestId('review-session-component-radicals')).toBeNull();
+        // Should not show component radicals in item details
+        expect(
+          queryByTestId('review-session-item-details-components'),
+        ).toBeNull();
       }
     });
 
@@ -2465,16 +2479,22 @@ describe('ReviewSession', () => {
       // Should show incorrect feedback
       expect(getByTestId('review-session-incorrect-feedback')).toBeTruthy();
 
-      // Should show component kanji section
-      expect(getByTestId('review-session-component-kanji')).toBeTruthy();
-      expect(getByText('Made up of:')).toBeTruthy();
+      // Should show component kanji in item details
+      expect(
+        getByTestId('review-session-item-details-components'),
+      ).toBeTruthy();
+      expect(getByText('Made up of')).toBeTruthy();
 
       // Should show each component kanji
-      expect(getByTestId('review-session-component-kanji-10')).toBeTruthy();
-      expect(getByTestId('review-session-component-kanji-11')).toBeTruthy();
+      expect(
+        getByTestId('review-session-item-details-component-10'),
+      ).toBeTruthy();
+      expect(
+        getByTestId('review-session-item-details-component-11'),
+      ).toBeTruthy();
     });
 
-    it('shows component kanji with readings on incorrect vocabulary reading answer', () => {
+    it('shows component kanji on incorrect vocabulary reading answer', () => {
       // Reset random to reading first
       callIndex = 0;
       (Math.random as jest.Mock).mockImplementation(() => {
@@ -2506,13 +2526,15 @@ describe('ReviewSession', () => {
         jest.runAllTimers();
       });
 
-      // Should show incorrect feedback with component kanji
+      // Should show incorrect feedback with component kanji in item details
       expect(getByTestId('review-session-incorrect-feedback')).toBeTruthy();
-      expect(getByTestId('review-session-component-kanji')).toBeTruthy();
+      expect(
+        getByTestId('review-session-item-details-components'),
+      ).toBeTruthy();
 
-      // For reading questions, should show the reading instead of meaning
-      expect(getByText('おお')).toBeTruthy();
-      expect(getByText('ひと')).toBeTruthy();
+      // Should show component kanji meanings
+      expect(getByText('Big')).toBeTruthy();
+      expect(getByText('Person')).toBeTruthy();
     });
 
     it('does not show component kanji for vocabulary without components', () => {
@@ -2550,8 +2572,10 @@ describe('ReviewSession', () => {
       // Should show incorrect feedback
       expect(getByTestId('review-session-incorrect-feedback')).toBeTruthy();
 
-      // Should not show component kanji section
-      expect(queryByTestId('review-session-component-kanji')).toBeNull();
+      // Should not show component kanji in item details
+      expect(
+        queryByTestId('review-session-item-details-components'),
+      ).toBeNull();
     });
 
     it('does not show component kanji for kanji items', () => {
@@ -2584,8 +2608,10 @@ describe('ReviewSession', () => {
       // Should show incorrect feedback
       expect(getByTestId('review-session-incorrect-feedback')).toBeTruthy();
 
-      // Should not show component kanji section (kanji shows radicals, not kanji)
-      expect(queryByTestId('review-session-component-kanji')).toBeNull();
+      // Kanji items show radicals, not component kanji — sampleKanji has no components
+      expect(
+        queryByTestId('review-session-item-details-components'),
+      ).toBeNull();
     });
 
     it('displays kanji characters correctly', () => {
@@ -2666,8 +2692,10 @@ describe('ReviewSession', () => {
       // Should show incorrect feedback
       expect(getByTestId('review-session-incorrect-feedback')).toBeTruthy();
 
-      // Should not show component kanji section (empty array)
-      expect(queryByTestId('review-session-component-kanji')).toBeNull();
+      // Should not show components in item details (empty array)
+      expect(
+        queryByTestId('review-session-item-details-components'),
+      ).toBeNull();
     });
   });
 
@@ -3116,6 +3144,8 @@ describe('ReviewSession', () => {
   describe('Zen Mode', () => {
     beforeEach(() => {
       jest.clearAllMocks();
+      // Re-spy after clearAllMocks resets Math.random's implementation
+      jest.spyOn(Math, 'random');
     });
 
     it('should show progress bar and count text when zen mode is disabled', async () => {
@@ -3256,7 +3286,10 @@ describe('ReviewSession', () => {
 
       // Submit wrong answer to get to incorrect feedback view
       const input = getByTestId('review-session-input');
-      fireEvent.changeText(input, 'Wrong');
+      const questionType = getByTestId('review-session-question-type').props
+        .children;
+      const wrongAnswer = questionType === 'READING' ? 'あああ' : 'Wrong';
+      fireEvent.changeText(input, wrongAnswer);
       fireEvent.press(getByTestId('review-session-submit'));
 
       // Wait for incorrect feedback view to appear
@@ -3381,13 +3414,17 @@ describe('ReviewSession', () => {
       jest.useRealTimers();
     });
 
-    it('should allow wrap-up mode to complete with fewer than MAX_INCOMPLETE_ITEMS', () => {
+    it('should allow wrap-up mode to complete with fewer than MAX_INCOMPLETE_ITEMS', async () => {
       jest.useFakeTimers();
+
+      // Restore Math.random to default spy (previous test may have set mockReturnValue)
+      (Math.random as jest.Mock).mockRestore();
+      jest.spyOn(Math, 'random');
 
       // Use a single radical — wrap-up with 1 introduced item should work fine
       // even though buffer cap is 10
       const onSessionComplete = jest.fn();
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId, findByTestId } = render(
         <ReviewSession
           items={[sampleRadical, sampleRadical2]}
           onSessionComplete={onSessionComplete}
@@ -3406,9 +3443,12 @@ describe('ReviewSession', () => {
       fireEvent.changeText(getByTestId('review-session-input'), answer);
       fireEvent.press(getByTestId('review-session-submit'));
 
-      act(() => {
-        jest.runAllTimers();
-      });
+      // Flush timers repeatedly to process correct feedback → completion pipeline
+      for (let i = 0; i < 5; i++) {
+        act(() => {
+          jest.runAllTimers();
+        });
+      }
 
       // Session should be complete with just 1 item (wrap-up stops new items)
       expect(queryByTestId('review-completion')).toBeTruthy();

@@ -16,6 +16,7 @@ import {
   RefreshControl,
   Pressable,
 } from 'react-native';
+import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -448,14 +449,11 @@ export function HomeScreen() {
               >
                 Search
               </Text>
-              <Text
-                style={[
-                  styles.outlineButtonChevron,
-                  { color: theme.colors.text.tertiary },
-                ]}
-              >
-                ›
-              </Text>
+              <MaterialDesignIcons
+                name="magnify"
+                size={FONT_SIZES.xxl}
+                color={theme.colors.text.tertiary}
+              />
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -474,14 +472,11 @@ export function HomeScreen() {
               >
                 Practice
               </Text>
-              <Text
-                style={[
-                  styles.outlineButtonChevron,
-                  { color: theme.colors.text.tertiary },
-                ]}
-              >
-                ›
-              </Text>
+              <MaterialDesignIcons
+                name="weight-lifter"
+                size={FONT_SIZES.xxl}
+                color={theme.colors.text.tertiary}
+              />
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -500,14 +495,11 @@ export function HomeScreen() {
               >
                 Settings
               </Text>
-              <Text
-                style={[
-                  styles.outlineButtonChevron,
-                  { color: theme.colors.text.tertiary },
-                ]}
-              >
-                ›
-              </Text>
+              <MaterialDesignIcons
+                name="cog-outline"
+                size={FONT_SIZES.xxl}
+                color={theme.colors.text.tertiary}
+              />
             </TouchableOpacity>
           </View>
           <LastSyncedIndicator
@@ -551,7 +543,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   bottomButtons: {
-    marginTop: MIN_TOUCH_TARGET,
+    marginTop: SPACING.xl,
     marginBottom: SPACING.xxl,
     width: '100%',
     paddingHorizontal: SPACING.xxl,
@@ -559,7 +551,7 @@ const styles = StyleSheet.create({
   },
   outlineButton: {
     width: '100%',
-    paddingVertical: SPACING.sm,
+    paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.xl,
     backgroundColor: 'transparent',
     borderWidth: 1,
@@ -572,11 +564,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.lg,
     fontWeight: '600',
   },
-  outlineButtonChevron: {
-    fontSize: FONT_SIZES.xxxl,
-    lineHeight: FONT_SIZES.xxxl,
-    fontWeight: '300',
-  },
+
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
