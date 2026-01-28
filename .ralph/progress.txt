@@ -106,3 +106,22 @@ Started:
   - The dialog always shows, even when no items will be lost - message adjusts to "All progress will be saved" vs "N item(s) will be lost"
 ---
 
+## 2026-01-28 - US-006
+- Implemented reverse practice screen with navigation and data loading
+- Files changed:
+  - src/screens/ReversePracticeScreen.tsx: New screen with loading, empty, and practicing states
+  - src/navigation/types.ts: Added ReversePractice to RootStackParamList
+  - src/navigation/RootNavigator.tsx: Registered ReversePracticeScreen with same transition style
+  - src/screens/HomeScreen.tsx: Added "Reverse" button navigation entry point
+  - src/storage/database.ts: Added getReversePracticeItems() and getReversePracticeItemCount() functions
+  - src/storage/index.ts: Exported new database functions
+  - __tests__/screens/ReversePracticeScreen.test.tsx: New test file with 12 tests covering loading/empty/practicing states
+  - __tests__/storage/databaseCrud.test.ts: Added tests for new database functions
+- **Learnings for future iterations:**
+  - `getReversePracticeItems()` uses INNER JOIN with subjects table to filter by object_type IN ('vocabulary', 'kana_vocabulary')
+  - The ReversePracticeItem interface is similar to ReviewItem but specialized for vocabulary (no radicals, always has readings)
+  - The screen follows the same loading/empty/practicing state pattern as PracticeScreen
+  - The Home screen button uses "swap-horizontal" icon from MaterialDesignIcons
+  - When running tests in a worktree, the jest.config.js testPathIgnorePatterns may need temporary adjustment
+---
+
