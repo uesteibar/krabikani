@@ -1,6 +1,11 @@
 import React from 'react';
 import { render, waitFor, fireEvent } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
+import { Alert } from 'react-native';
+
+// Spy on Alert.alert
+jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+
 
 import { ReviewsScreen } from '../../src/screens/ReviewsScreen';
 import * as storage from '../../src/storage';
@@ -43,9 +48,14 @@ import * as notificationServices from '../../src/services';
 const mockGoBack = jest.fn();
 const mockPush = jest.fn();
 const mockAddListener = jest.fn();
+const mockDispatch = jest.fn();
 
 // Store beforeRemove listeners so tests can trigger them (prefixed with mock for jest)
-let mockBeforeRemoveListeners: Array<(e: { preventDefault: () => void }) => void> = [];
+interface BeforeRemoveEvent {
+  preventDefault: () => void;
+  data: { action: { type: string } };
+}
+let mockBeforeRemoveListeners: Array<(e: BeforeRemoveEvent) => void> = [];
 
 jest.mock('@react-navigation/native', () => {
   const actualNav = jest.requireActual('@react-navigation/native');
@@ -54,8 +64,9 @@ jest.mock('@react-navigation/native', () => {
     useNavigation: () => ({
       goBack: mockGoBack,
       push: mockPush,
+      dispatch: mockDispatch,
       addListener: mockAddListener.mockImplementation(
-        (event: string, callback: (e: { preventDefault: () => void }) => void) => {
+        (event: string, callback: (e: BeforeRemoveEvent) => void) => {
           if (event === 'beforeRemove') {
             mockBeforeRemoveListeners.push(callback);
           }
@@ -708,7 +719,16 @@ describe('ReviewsScreen', () => {
 
       // Trigger beforeRemove (simulate user navigating away)
       const mockPreventDefault = jest.fn();
-      mockBeforeRemoveListeners.forEach(listener => listener({ preventDefault: mockPreventDefault }));
+      const mockAction = { type: 'GO_BACK' };
+      mockBeforeRemoveListeners.forEach(listener =>
+        listener({ preventDefault: mockPreventDefault, data: { action: mockAction } }),
+      );
+
+      // Dialog should be shown, click "Leave" to proceed
+      const alertCalls = (Alert.alert as jest.Mock).mock.calls;
+      const leaveDialog = alertCalls.find(call => call[0] === 'Leave Review Session?');
+      const leaveButton = leaveDialog?.[2]?.find((btn: { text: string }) => btn.text === 'Leave');
+      await leaveButton?.onPress?.();
 
       // Wait for async exit sync to complete
       await waitFor(() => {
@@ -748,7 +768,23 @@ describe('ReviewsScreen', () => {
 
       // Trigger beforeRemove before answering ANY question
       const mockPreventDefault = jest.fn();
-      mockBeforeRemoveListeners.forEach(listener => listener({ preventDefault: mockPreventDefault }));
+      const mockAction = { type: 'GO_BACK' };
+      mockBeforeRemoveListeners.forEach(listener =>
+        listener({ preventDefault: mockPreventDefault, data: { action: mockAction } }),
+      );
+
+      // Dialog should be shown with "All progress will be saved" since no items started
+      expect((Alert.alert as jest.Mock)).toHaveBeenCalledWith(
+        'Leave Review Session?',
+        'All progress will be saved.',
+        expect.any(Array),
+      );
+
+      // Click "Leave" to proceed
+      const alertCalls = (Alert.alert as jest.Mock).mock.calls;
+      const leaveDialog = alertCalls.find(call => call[0] === 'Leave Review Session?');
+      const leaveButton = leaveDialog?.[2]?.find((btn: { text: string }) => btn.text === 'Leave');
+      await leaveButton?.onPress?.();
 
       // Wait a bit for any async operations
       await new Promise<void>(resolve => setTimeout(resolve, 100));
@@ -799,7 +835,16 @@ describe('ReviewsScreen', () => {
 
       // Trigger beforeRemove
       const mockPreventDefault = jest.fn();
-      mockBeforeRemoveListeners.forEach(listener => listener({ preventDefault: mockPreventDefault }));
+      const mockAction = { type: 'GO_BACK' };
+      mockBeforeRemoveListeners.forEach(listener =>
+        listener({ preventDefault: mockPreventDefault, data: { action: mockAction } }),
+      );
+
+      // Dialog should be shown, click "Leave" to proceed
+      const alertCalls = (Alert.alert as jest.Mock).mock.calls;
+      const leaveDialog = alertCalls.find(call => call[0] === 'Leave Review Session?');
+      const leaveButton = leaveDialog?.[2]?.find((btn: { text: string }) => btn.text === 'Leave');
+      await leaveButton?.onPress?.();
 
       // Wait for async exit sync
       await waitFor(() => {
@@ -846,7 +891,16 @@ describe('ReviewsScreen', () => {
 
       // Trigger beforeRemove
       const mockPreventDefault = jest.fn();
-      mockBeforeRemoveListeners.forEach(listener => listener({ preventDefault: mockPreventDefault }));
+      const mockAction = { type: 'GO_BACK' };
+      mockBeforeRemoveListeners.forEach(listener =>
+        listener({ preventDefault: mockPreventDefault, data: { action: mockAction } }),
+      );
+
+      // Dialog should be shown, click "Leave" to proceed
+      const alertCalls = (Alert.alert as jest.Mock).mock.calls;
+      const leaveDialog = alertCalls.find(call => call[0] === 'Leave Review Session?');
+      const leaveButton = leaveDialog?.[2]?.find((btn: { text: string }) => btn.text === 'Leave');
+      await leaveButton?.onPress?.();
 
       // Wait for async exit sync
       await waitFor(() => {
@@ -896,7 +950,16 @@ describe('ReviewsScreen', () => {
 
       // Trigger beforeRemove
       const mockPreventDefault = jest.fn();
-      mockBeforeRemoveListeners.forEach(listener => listener({ preventDefault: mockPreventDefault }));
+      const mockAction = { type: 'GO_BACK' };
+      mockBeforeRemoveListeners.forEach(listener =>
+        listener({ preventDefault: mockPreventDefault, data: { action: mockAction } }),
+      );
+
+      // Dialog should be shown, click "Leave" to proceed
+      const alertCalls = (Alert.alert as jest.Mock).mock.calls;
+      const leaveDialog = alertCalls.find(call => call[0] === 'Leave Review Session?');
+      const leaveButton = leaveDialog?.[2]?.find((btn: { text: string }) => btn.text === 'Leave');
+      await leaveButton?.onPress?.();
 
       // Wait for async exit sync
       await waitFor(() => {
@@ -972,9 +1035,6 @@ describe('ReviewsScreen', () => {
         expect(getByTestId('review-session')).toBeTruthy();
       });
 
-      // Track call count AFTER loading but BEFORE triggering any exit behavior
-      const callCountAfterLoad = (sync.submitReviews as jest.Mock).mock.calls.length;
-
       // Determine question type and answer correctly
       const firstQuestionType = getByTestId('review-session-question-type').props.children;
 
@@ -993,7 +1053,23 @@ describe('ReviewsScreen', () => {
 
       // Trigger beforeRemove - item is started but has no failures, should NOT be synced
       const mockPreventDefault = jest.fn();
-      mockBeforeRemoveListeners.forEach(listener => listener({ preventDefault: mockPreventDefault }));
+      const mockAction = { type: 'GO_BACK' };
+      mockBeforeRemoveListeners.forEach(listener =>
+        listener({ preventDefault: mockPreventDefault, data: { action: mockAction } }),
+      );
+
+      // Dialog should be shown with "1 item will be lost" message
+      expect((Alert.alert as jest.Mock)).toHaveBeenCalledWith(
+        'Leave Review Session?',
+        '1 item will be lost (started but not yet failed or completed).',
+        expect.any(Array),
+      );
+
+      // Click "Leave" to proceed
+      const alertCalls = (Alert.alert as jest.Mock).mock.calls;
+      const leaveDialog = alertCalls.find(call => call[0] === 'Leave Review Session?');
+      const leaveButton = leaveDialog?.[2]?.find((btn: { text: string }) => btn.text === 'Leave');
+      await leaveButton?.onPress?.();
 
       // Wait for any async operations
       await new Promise<void>(resolve => setTimeout(resolve, 200));
@@ -1007,6 +1083,309 @@ describe('ReviewsScreen', () => {
       });
 
       expect(callsForOurSubject.length).toBe(0);
+    });
+  });
+
+  describe('confirmation dialog on exit', () => {
+    const kanjiSubjectWithReadings = {
+      id: 3,
+      object_type: 'kanji',
+      characters: '日',
+      meanings: JSON.stringify([
+        { meaning: 'Sun', primary: true, accepted_answer: true },
+      ]),
+      readings: JSON.stringify([
+        { reading: 'にち', primary: true, accepted_answer: true, type: 'onyomi' },
+      ]),
+      meaning_mnemonic: 'Mnemonic for sun.',
+      reading_mnemonic: 'Reading mnemonic for sun.',
+      level: 1,
+      component_subject_ids: null,
+      auxiliary_meanings: null,
+      data_updated_at: '2026-01-01T00:00:00.000Z',
+      created_at: '2026-01-01T00:00:00.000Z',
+    };
+
+    const kanjiAssignment = {
+      id: 1003,
+      subject_id: 3,
+      srs_stage: 2,
+      available_at: '2026-01-01T00:00:00.000Z',
+      started_at: '2026-01-01T00:00:00.000Z',
+      unlocked_at: '2026-01-01T00:00:00.000Z',
+      data_updated_at: '2026-01-01T00:00:00.000Z',
+      created_at: '2026-01-01T00:00:00.000Z',
+    };
+
+    beforeEach(() => {
+      mockBeforeRemoveListeners = [];
+      (sync.submitReviews as jest.Mock).mockClear();
+      (Alert.alert as jest.Mock).mockClear();
+      (storage.getAvailableReviews as jest.Mock).mockReset();
+      (storage.getSubjectsByIds as jest.Mock).mockReset();
+      (storage.getUserSynonymsBySubjectId as jest.Mock).mockReset();
+    });
+
+    it('should show confirmation dialog when navigating away', async () => {
+      (storage.getAvailableReviews as jest.Mock).mockResolvedValue([kanjiAssignment]);
+      (storage.getSubjectsByIds as jest.Mock).mockResolvedValue([kanjiSubjectWithReadings]);
+      (storage.getUserSynonymsBySubjectId as jest.Mock).mockResolvedValue([]);
+
+      const { getByTestId } = renderWithNavigation(<ReviewsScreen />);
+
+      // Wait for reviews to load
+      await waitFor(() => {
+        expect(getByTestId('review-session')).toBeTruthy();
+      });
+
+      // Trigger beforeRemove
+      const mockPreventDefault = jest.fn();
+      const mockAction = { type: 'GO_BACK' };
+      mockBeforeRemoveListeners.forEach(listener =>
+        listener({ preventDefault: mockPreventDefault, data: { action: mockAction } }),
+      );
+
+      // Confirmation dialog should be shown
+      expect((Alert.alert as jest.Mock)).toHaveBeenCalledWith(
+        'Leave Review Session?',
+        expect.any(String),
+        expect.arrayContaining([
+          expect.objectContaining({ text: 'Continue', style: 'cancel' }),
+          expect.objectContaining({ text: 'Leave', style: 'destructive' }),
+        ]),
+      );
+    });
+
+    it('should block navigation when dialog is shown', async () => {
+      (storage.getAvailableReviews as jest.Mock).mockResolvedValue([kanjiAssignment]);
+      (storage.getSubjectsByIds as jest.Mock).mockResolvedValue([kanjiSubjectWithReadings]);
+      (storage.getUserSynonymsBySubjectId as jest.Mock).mockResolvedValue([]);
+
+      const { getByTestId } = renderWithNavigation(<ReviewsScreen />);
+
+      // Wait for reviews to load
+      await waitFor(() => {
+        expect(getByTestId('review-session')).toBeTruthy();
+      });
+
+      // Trigger beforeRemove
+      const mockPreventDefault = jest.fn();
+      const mockAction = { type: 'GO_BACK' };
+      mockBeforeRemoveListeners.forEach(listener =>
+        listener({ preventDefault: mockPreventDefault, data: { action: mockAction } }),
+      );
+
+      // Navigation should be blocked
+      expect(mockPreventDefault).toHaveBeenCalled();
+    });
+
+    it('should not navigate when Continue is pressed', async () => {
+      (storage.getAvailableReviews as jest.Mock).mockResolvedValue([kanjiAssignment]);
+      (storage.getSubjectsByIds as jest.Mock).mockResolvedValue([kanjiSubjectWithReadings]);
+      (storage.getUserSynonymsBySubjectId as jest.Mock).mockResolvedValue([]);
+
+      const { getByTestId } = renderWithNavigation(<ReviewsScreen />);
+
+      // Wait for reviews to load
+      await waitFor(() => {
+        expect(getByTestId('review-session')).toBeTruthy();
+      });
+
+      // Trigger beforeRemove
+      const mockPreventDefault = jest.fn();
+      const mockAction = { type: 'GO_BACK' };
+      mockBeforeRemoveListeners.forEach(listener =>
+        listener({ preventDefault: mockPreventDefault, data: { action: mockAction } }),
+      );
+
+      // Press Continue
+      const alertCalls = (Alert.alert as jest.Mock).mock.calls;
+      const dialog = alertCalls.find(call => call[0] === 'Leave Review Session?');
+      const continueButton = dialog?.[2]?.find((btn: { text: string }) => btn.text === 'Continue');
+      continueButton?.onPress?.();
+
+      // Navigation should NOT be dispatched
+      expect(mockDispatch).not.toHaveBeenCalled();
+    });
+
+    it('should dispatch navigation when Leave is pressed', async () => {
+      (storage.getAvailableReviews as jest.Mock).mockResolvedValue([kanjiAssignment]);
+      (storage.getSubjectsByIds as jest.Mock).mockResolvedValue([kanjiSubjectWithReadings]);
+      (storage.getUserSynonymsBySubjectId as jest.Mock).mockResolvedValue([]);
+
+      const { getByTestId } = renderWithNavigation(<ReviewsScreen />);
+
+      // Wait for reviews to load
+      await waitFor(() => {
+        expect(getByTestId('review-session')).toBeTruthy();
+      });
+
+      // Trigger beforeRemove
+      const mockPreventDefault = jest.fn();
+      const mockAction = { type: 'GO_BACK' };
+      mockBeforeRemoveListeners.forEach(listener =>
+        listener({ preventDefault: mockPreventDefault, data: { action: mockAction } }),
+      );
+
+      // Press Leave
+      const alertCalls = (Alert.alert as jest.Mock).mock.calls;
+      const dialog = alertCalls.find(call => call[0] === 'Leave Review Session?');
+      const leaveButton = dialog?.[2]?.find((btn: { text: string }) => btn.text === 'Leave');
+      await leaveButton?.onPress?.();
+
+      // Navigation should be dispatched
+      expect(mockDispatch).toHaveBeenCalledWith(mockAction);
+    });
+
+    it('should show "All progress will be saved" when no items are started (nothing to lose)', async () => {
+      // When no questions have been answered, there's nothing to lose
+      (storage.getAvailableReviews as jest.Mock).mockResolvedValue([kanjiAssignment]);
+      (storage.getSubjectsByIds as jest.Mock).mockResolvedValue([kanjiSubjectWithReadings]);
+      (storage.getUserSynonymsBySubjectId as jest.Mock).mockResolvedValue([]);
+
+      const { getByTestId } = renderWithNavigation(<ReviewsScreen />);
+
+      // Wait for reviews to load
+      await waitFor(() => {
+        expect(getByTestId('review-session')).toBeTruthy();
+      });
+
+      // Don't answer any questions - just trigger exit immediately
+      const mockPreventDefault = jest.fn();
+      const mockAction = { type: 'GO_BACK' };
+      mockBeforeRemoveListeners.forEach(listener =>
+        listener({ preventDefault: mockPreventDefault, data: { action: mockAction } }),
+      );
+
+      // Should show "All progress will be saved" since no items were started
+      expect((Alert.alert as jest.Mock)).toHaveBeenCalledWith(
+        'Leave Review Session?',
+        'All progress will be saved.',
+        expect.any(Array),
+      );
+    });
+
+    it('should show correct count for multiple items that will be lost', async () => {
+      // Set up two kanji items - each kanji has 2 questions (meaning + reading)
+      // We'll answer one question per item correctly, leaving them incomplete (started but not failed/complete)
+      const kanji1 = {
+        ...kanjiSubjectWithReadings,
+        id: 5,
+        characters: '月',
+        meanings: JSON.stringify([
+          { meaning: 'Moon', primary: true, accepted_answer: true },
+        ]),
+      };
+      const kanji2 = {
+        ...kanjiSubjectWithReadings,
+        id: 6,
+        characters: '火',
+        meanings: JSON.stringify([
+          { meaning: 'Fire', primary: true, accepted_answer: true },
+        ]),
+      };
+
+      const assignment1 = { ...kanjiAssignment, id: 1005, subject_id: 5 };
+      const assignment2 = { ...kanjiAssignment, id: 1006, subject_id: 6 };
+
+      (storage.getAvailableReviews as jest.Mock).mockResolvedValue([assignment1, assignment2]);
+      (storage.getSubjectsByIds as jest.Mock).mockResolvedValue([kanji1, kanji2]);
+      (storage.getUserSynonymsBySubjectId as jest.Mock).mockResolvedValue([]);
+
+      const { getByTestId } = renderWithNavigation(<ReviewsScreen />);
+
+      // Wait for reviews to load
+      await waitFor(() => {
+        expect(getByTestId('review-session')).toBeTruthy();
+      });
+
+      // Answer the first question correctly
+      const firstQuestionType = getByTestId('review-session-question-type').props.children;
+      if (firstQuestionType === 'MEANING') {
+        fireEvent.changeText(getByTestId('review-session-input'), 'Moon');
+      } else {
+        fireEvent.changeText(getByTestId('review-session-input'), 'nichi');
+      }
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Wait for next question
+      await new Promise<void>(resolve => setTimeout(resolve, 600));
+
+      // Answer another question correctly (could be same item's reading or different item)
+      const secondQuestionType = getByTestId('review-session-question-type').props.children;
+      if (secondQuestionType === 'MEANING') {
+        // Try both Moon and Fire - one will match
+        fireEvent.changeText(getByTestId('review-session-input'), 'Fire');
+      } else {
+        fireEvent.changeText(getByTestId('review-session-input'), 'nichi');
+      }
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Wait for feedback
+      await new Promise<void>(resolve => setTimeout(resolve, 600));
+
+      // At this point, we may have completed one kanji (if both questions were for the same item)
+      // or have two incomplete items. Either way, we should trigger the exit now and verify.
+
+      // Trigger beforeRemove
+      const mockPreventDefault = jest.fn();
+      const mockAction = { type: 'GO_BACK' };
+      mockBeforeRemoveListeners.forEach(listener =>
+        listener({ preventDefault: mockPreventDefault, data: { action: mockAction } }),
+      );
+
+      // Verify dialog was shown - the exact count depends on question ordering
+      expect((Alert.alert as jest.Mock)).toHaveBeenCalled();
+      const alertCalls = (Alert.alert as jest.Mock).mock.calls;
+      const dialog = alertCalls.find(call => call[0] === 'Leave Review Session?');
+      expect(dialog).toBeDefined();
+
+      // Message should indicate items will be lost or all progress saved
+      const message = dialog?.[1] as string;
+      expect(
+        message.includes('will be lost') || message.includes('All progress will be saved'),
+      ).toBe(true);
+    });
+
+    it('should show singular form when exactly 1 item will be lost', async () => {
+      // Set up one kanji (has meaning + reading)
+      // Answer meaning correctly, don't answer reading
+      (storage.getAvailableReviews as jest.Mock).mockResolvedValue([kanjiAssignment]);
+      (storage.getSubjectsByIds as jest.Mock).mockResolvedValue([kanjiSubjectWithReadings]);
+      (storage.getUserSynonymsBySubjectId as jest.Mock).mockResolvedValue([]);
+
+      const { getByTestId } = renderWithNavigation(<ReviewsScreen />);
+
+      // Wait for reviews to load
+      await waitFor(() => {
+        expect(getByTestId('review-session')).toBeTruthy();
+      });
+
+      // Answer the first question correctly (leaves item incomplete)
+      const firstQuestionType = getByTestId('review-session-question-type').props.children;
+      if (firstQuestionType === 'MEANING') {
+        fireEvent.changeText(getByTestId('review-session-input'), 'Sun');
+      } else {
+        fireEvent.changeText(getByTestId('review-session-input'), 'nichi');
+      }
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Wait for feedback
+      await new Promise<void>(resolve => setTimeout(resolve, 600));
+
+      // Trigger beforeRemove - one item is started but not complete
+      const mockPreventDefault = jest.fn();
+      const mockAction = { type: 'GO_BACK' };
+      mockBeforeRemoveListeners.forEach(listener =>
+        listener({ preventDefault: mockPreventDefault, data: { action: mockAction } }),
+      );
+
+      // Should show "1 item will be lost" (singular)
+      expect((Alert.alert as jest.Mock)).toHaveBeenCalledWith(
+        'Leave Review Session?',
+        '1 item will be lost (started but not yet failed or completed).',
+        expect.any(Array),
+      );
     });
   });
 });

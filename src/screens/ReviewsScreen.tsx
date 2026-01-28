@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import type { EventArg } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../navigation/types';
@@ -334,63 +335,107 @@ export function ReviewsScreen() {
     [],
   );
 
-  // Handle exit from review session - sync completed and failed items
+  // Handle exit from review session - show confirmation dialog, sync completed and failed items
   useEffect(() => {
     // Only set up exit handling when we're in the reviewing phase
     if (phase !== 'reviewing' || !sessionData) return;
 
-    const unsubscribe = navigation.addListener('beforeRemove', async _e => {
-      // Prevent duplicate exit syncs
-      if (exitSyncInProgressRef.current) return;
+    const unsubscribe = navigation.addListener(
+      'beforeRemove',
+      (e: EventArg<'beforeRemove', true, { action: { type: string } }>) => {
+        // Prevent duplicate exit syncs
+        if (exitSyncInProgressRef.current) return;
 
-      // Get current progress
-      const itemProgress = currentProgressRef.current;
-      if (itemProgress.size === 0) return;
+        // Get current progress
+        const itemProgress = currentProgressRef.current;
 
-      // Find items to sync:
-      // 1. Completed items (both meaning and reading answered correctly)
-      // 2. Failed items (started AND at least one incorrect answer)
-      // Note: Items that are started but have zero failures are lost (not synced)
-      const reviewsToSubmit: ReviewToSubmit[] = [];
-      for (const [subjectId, progress] of itemProgress) {
-        const isComplete = progress.meaningCorrect && progress.readingCorrect;
-        const hasFailures =
-          progress.incorrectMeaningAnswers > 0 ||
-          progress.incorrectReadingAnswers > 0;
+        // Calculate items that will be synced vs lost
+        const reviewsToSubmit: ReviewToSubmit[] = [];
+        let lostItemCount = 0;
 
-        // Sync if complete OR if there are any failures (indicates the item was started and struggled with)
-        if (isComplete || hasFailures) {
-          const assignment = sessionData.assignments.find(
-            a => a.subject_id === subjectId,
-          );
-          if (assignment) {
-            reviewsToSubmit.push({
-              assignmentId: assignment.id,
-              subjectId,
-              incorrectMeaningAnswers: progress.incorrectMeaningAnswers,
-              incorrectReadingAnswers: progress.incorrectReadingAnswers,
-            });
+        for (const [subjectId, progress] of itemProgress) {
+          const isComplete = progress.meaningCorrect && progress.readingCorrect;
+          const hasFailures =
+            progress.incorrectMeaningAnswers > 0 ||
+            progress.incorrectReadingAnswers > 0;
+          const isStarted =
+            progress.meaningCorrect ||
+            progress.readingCorrect ||
+            progress.incorrectMeaningAnswers > 0 ||
+            progress.incorrectReadingAnswers > 0;
+
+          // Sync if complete OR if there are any failures
+          if (isComplete || hasFailures) {
+            const assignment = sessionData.assignments.find(
+              a => a.subject_id === subjectId,
+            );
+            if (assignment) {
+              reviewsToSubmit.push({
+                assignmentId: assignment.id,
+                subjectId,
+                incorrectMeaningAnswers: progress.incorrectMeaningAnswers,
+                incorrectReadingAnswers: progress.incorrectReadingAnswers,
+              });
+            }
+          } else if (isStarted) {
+            // Started but no failures - will be lost
+            lostItemCount++;
           }
         }
-      }
 
-      // If no items to sync, allow navigation immediately
-      if (reviewsToSubmit.length === 0) return;
+        // Block navigation to show confirmation dialog
+        e.preventDefault();
 
-      // Mark exit sync as in progress
-      exitSyncInProgressRef.current = true;
+        // Build dialog message
+        let message: string;
+        if (lostItemCount === 0) {
+          message = 'All progress will be saved.';
+        } else if (lostItemCount === 1) {
+          message =
+            '1 item will be lost (started but not yet failed or completed).';
+        } else {
+          message = `${lostItemCount} items will be lost (started but not yet failed or completed).`;
+        }
 
-      // Submit completed reviews (async, but don't block navigation)
-      try {
-        const online = await isOnline();
-        const apiKey = await getApiKey();
-        const client = online && apiKey ? new WaniKaniClient(apiKey) : null;
-        await submitReviews(client, reviewsToSubmit);
-      } catch {
-        // Silently fail - reviews will be lost, but we don't want to block exit
-        console.warn('[ReviewsScreen] Failed to sync completed reviews on exit');
-      }
-    });
+        // Show confirmation dialog
+        Alert.alert('Leave Review Session?', message, [
+          {
+            text: 'Continue',
+            style: 'cancel',
+            onPress: () => {
+              // Do nothing - stay in session
+            },
+          },
+          {
+            text: 'Leave',
+            style: 'destructive',
+            onPress: async () => {
+              // Mark exit sync as in progress
+              exitSyncInProgressRef.current = true;
+
+              // Submit reviews if any
+              if (reviewsToSubmit.length > 0) {
+                try {
+                  const online = await isOnline();
+                  const apiKey = await getApiKey();
+                  const client =
+                    online && apiKey ? new WaniKaniClient(apiKey) : null;
+                  await submitReviews(client, reviewsToSubmit);
+                } catch {
+                  // Silently fail - reviews will be lost, but we don't want to block exit
+                  console.warn(
+                    '[ReviewsScreen] Failed to sync completed reviews on exit',
+                  );
+                }
+              }
+
+              // Now proceed with navigation
+              navigation.dispatch(e.data.action);
+            },
+          },
+        ]);
+      },
+    );
 
     return unsubscribe;
   }, [phase, sessionData, navigation]);
