@@ -40,6 +40,8 @@ export {
   getAvailableLessons,
   getPracticeItems,
   getPracticeItemCount,
+  getReversePracticeItems,
+  getReversePracticeItemCount,
   getAllAssignments,
   deleteAssignment,
   getAssignmentCount,

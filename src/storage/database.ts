@@ -1014,6 +1014,55 @@ export async function getPracticeItemCount(): Promise<number> {
 }
 
 /**
+ * Gets random items for reverse practice (vocabulary only).
+ * "Learned" means srs_stage >= 5 (Guru 1 and above).
+ * Excludes items that are currently pending review (available_at <= now).
+ * Only includes vocabulary and kana_vocabulary subject types.
+ *
+ * @param limit Maximum number of items to return (default 10)
+ * @returns Array of assignments with their subject data joined
+ */
+export async function getReversePracticeItems(
+  limit: number = 10,
+): Promise<Array<DatabaseAssignment & { subject_id: number }>> {
+  const now = new Date().toISOString();
+  const result = await executeSql(
+    `SELECT a.* FROM assignments a
+     INNER JOIN subjects s ON a.subject_id = s.id
+     WHERE a.srs_stage >= 5
+       AND a.started_at IS NOT NULL
+       AND (a.available_at IS NULL OR a.available_at > ?)
+       AND s.object_type IN ('vocabulary', 'kana_vocabulary')
+     ORDER BY RANDOM()
+     LIMIT ?`,
+    [now, limit],
+  );
+  return result.rows as unknown as Array<
+    DatabaseAssignment & { subject_id: number }
+  >;
+}
+
+/**
+ * Gets the count of items available for reverse practice (vocabulary only).
+ * "Learned" means srs_stage >= 5 (Guru 1 and above).
+ * Excludes items currently pending review (available_at <= now).
+ * Only includes vocabulary and kana_vocabulary subject types.
+ */
+export async function getReversePracticeItemCount(): Promise<number> {
+  const now = new Date().toISOString();
+  const result = await executeSql(
+    `SELECT COUNT(*) as count FROM assignments a
+     INNER JOIN subjects s ON a.subject_id = s.id
+     WHERE a.srs_stage >= 5
+       AND a.started_at IS NOT NULL
+       AND (a.available_at IS NULL OR a.available_at > ?)
+       AND s.object_type IN ('vocabulary', 'kana_vocabulary')`,
+    [now],
+  );
+  return (result.rows[0] as { count: number }).count;
+}
+
+/**
  * Gets the next review time (earliest available_at after now).
  * Returns null if no upcoming reviews are scheduled.
  */

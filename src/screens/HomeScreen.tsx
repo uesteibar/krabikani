@@ -483,6 +483,29 @@ export function HomeScreen() {
                 styles.outlineButton,
                 { borderColor: theme.colors.text.tertiary },
               ]}
+              onPress={() => navigation.navigate('ReversePractice')}
+              activeOpacity={0.6}
+              testID="reverse-practice-button"
+            >
+              <Text
+                style={[
+                  styles.outlineButtonText,
+                  { color: theme.colors.text.primary },
+                ]}
+              >
+                Reverse
+              </Text>
+              <MaterialDesignIcons
+                name="swap-horizontal"
+                size={FONT_SIZES.xxl}
+                color={theme.colors.text.tertiary}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.outlineButton,
+                { borderColor: theme.colors.text.tertiary },
+              ]}
               onPress={() => navigation.navigate('Settings')}
               activeOpacity={0.6}
               testID="settings-button"

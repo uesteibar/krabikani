@@ -9,6 +9,7 @@ import { LessonsScreen } from '../screens/LessonsScreen';
 import { NotificationPermissionScreen } from '../screens/NotificationPermissionScreen';
 import { RadicalDetailScreen } from '../screens/RadicalDetailScreen';
 import { PracticeScreen } from '../screens/PracticeScreen';
+import { ReversePracticeScreen } from '../screens/ReversePracticeScreen';
 import { ReviewsScreen } from '../screens/ReviewsScreen';
 import { SearchScreen } from '../screens/SearchScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
@@ -121,6 +122,11 @@ export function RootNavigator() {
         name="Practice"
         component={PracticeScreen}
         options={{ title: 'Practice' }}
+      />
+      <Stack.Screen
+        name="ReversePractice"
+        component={ReversePracticeScreen}
+        options={{ title: 'Reverse Practice' }}
       />
       <Stack.Screen
         name="Search"
