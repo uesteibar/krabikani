@@ -980,6 +980,8 @@ export function ReviewSession({
     if (isCorrect) {
       // Check if this correct answer causes a level-up
       // WaniKani SRS: correct = +1 stage (capped at 9 for burned)
+      // IMPORTANT: Only show level-up animation when item is FULLY completed
+      // (both meaning and reading answered correctly), not on partial completion
       const currentStage = item.srsStage;
       const newStage = Math.min(currentStage + 1, 9);
       const currentLevel = getSrsLevelInfo(currentStage);
@@ -987,8 +989,8 @@ export function ReviewSession({
       const isLevelUp =
         currentLevel && newLevel && currentLevel.key !== newLevel.key;
 
-      // Set level-up animation state if level changed
-      if (isLevelUp) {
+      // Set level-up animation state only if level changed AND item just completed
+      if (isLevelUp && itemJustCompleted) {
         setLevelUpAnimation({
           fromStage: currentStage,
           toStage: newStage,
