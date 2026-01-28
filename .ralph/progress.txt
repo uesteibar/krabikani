@@ -125,3 +125,19 @@ Started:
   - When running tests in a worktree, the jest.config.js testPathIgnorePatterns may need temporary adjustment
 ---
 
+## 2026-01-28 - US-007
+- Implemented reverse practice question flow with full interaction
+- Files changed:
+  - src/screens/ReversePracticeScreen.tsx: Implemented question display, input handling, correct/incorrect feedback, and auto-refill
+  - __tests__/screens/ReversePracticeScreen.test.tsx: Added 25 tests covering question flow, answer validation, and feedback states
+- **Learnings for future iterations:**
+  - Reverse practice shows English meaning as prompt and requires exact Japanese character match
+  - Uses same shuffleArray helper from ReviewSession for question randomization
+  - Uses generateReverseQuestions() to create questions with unique keys for React
+  - Correct feedback shows green header for 500ms then auto-advances
+  - Incorrect feedback shows red header with characters, user answer, correct answer, and mnemonic
+  - Auto-refill uses REFILL_THRESHOLD (3) to load more items before running out
+  - Input has autoCorrect={false}, spellCheck={false} for Japanese keyboard input
+  - MnemonicText component used for rendering mnemonics with special formatting
+---
+
