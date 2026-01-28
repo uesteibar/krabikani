@@ -79,3 +79,16 @@ Started:
   - Radicals are auto-complete for `readingCorrect` since they have no reading question
 ---
 
+## 2026-01-28 - US-004
+- Extended exit handling to also sync failed items (items with at least one incorrect answer)
+- Files changed:
+  - src/screens/ReviewsScreen.tsx: Updated exit handler logic to sync items where `incorrectMeaningAnswers > 0` OR `incorrectReadingAnswers > 0`
+  - __tests__/screens/ReviewsScreen.test.tsx: Added 2 new tests for failed items sync behavior
+- **Learnings for future iterations:**
+  - Items are synced on exit if: (1) both meaning and reading are correct (complete), OR (2) at least one incorrect answer exists (failed)
+  - Items that are started but have ONLY correct answers (partial progress, no failures) are NOT synced - this progress is lost
+  - The rationale: items with failures should be demoted by the SRS, while partially-correct items haven't demonstrated mastery or struggle
+  - For reading questions, test must use valid romaji (e.g., 'aa') not English words ('wrong') - invalid romaji triggers shake rejection, not incorrect feedback
+  - Tests may need unique subject/assignment IDs to avoid cross-test pollution from async exit handlers
+---
+
