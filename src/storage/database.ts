@@ -5,7 +5,7 @@ const DATABASE_NAME = 'wanikani.db';
 // DATABASE_VERSION should match the latest migration version.
 // Fresh databases are created with all schema changes included, so they
 // start at this version and skip migrations that are already in the schema.
-const DATABASE_VERSION = 6;
+const DATABASE_VERSION = 7;
 
 // Current database instance
 let db: DB | null = null;
@@ -16,7 +16,7 @@ let db: DB | null = null;
 
 /**
  * Subjects table stores WaniKani subjects (radicals, kanji, vocabulary, kana_vocabulary).
- * Complex fields (meanings, readings, component_subject_ids) are stored as JSON strings.
+ * Complex fields (meanings, readings, component_subject_ids, auxiliary_meanings) are stored as JSON strings.
  */
 const CREATE_SUBJECTS_TABLE = `
   CREATE TABLE IF NOT EXISTS subjects (
@@ -30,6 +30,7 @@ const CREATE_SUBJECTS_TABLE = `
     level INTEGER NOT NULL,
     component_subject_ids TEXT,
     character_images TEXT,
+    auxiliary_meanings TEXT,
     data_updated_at TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   )
@@ -208,6 +209,7 @@ export interface DatabaseSubject {
   level: number;
   component_subject_ids: string | null; // JSON string of number[] or null
   character_images: string | null; // JSON string of CharacterImage[] or null
+  auxiliary_meanings: string | null; // JSON string of AuxiliaryMeaning[] or null
   data_updated_at: string | null;
   created_at: string;
 }
@@ -400,6 +402,7 @@ export interface SubjectInput {
   level: number;
   component_subject_ids: string | null; // JSON string
   character_images: string | null; // JSON string
+  auxiliary_meanings: string | null; // JSON string of AuxiliaryMeaning[]
   data_updated_at: string | null;
 }
 
@@ -410,8 +413,8 @@ export interface SubjectInput {
 export async function upsertSubject(subject: SubjectInput): Promise<void> {
   await executeSql(
     `INSERT OR REPLACE INTO subjects
-      (id, object_type, characters, meanings, readings, meaning_mnemonic, reading_mnemonic, level, component_subject_ids, character_images, data_updated_at, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT created_at FROM subjects WHERE id = ?), CURRENT_TIMESTAMP))`,
+      (id, object_type, characters, meanings, readings, meaning_mnemonic, reading_mnemonic, level, component_subject_ids, character_images, auxiliary_meanings, data_updated_at, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT created_at FROM subjects WHERE id = ?), CURRENT_TIMESTAMP))`,
     [
       subject.id,
       subject.object_type,
@@ -423,6 +426,7 @@ export async function upsertSubject(subject: SubjectInput): Promise<void> {
       subject.level,
       subject.component_subject_ids,
       subject.character_images,
+      subject.auxiliary_meanings,
       subject.data_updated_at,
       subject.id, // For the COALESCE subquery
     ],
@@ -440,8 +444,8 @@ export async function upsertSubjects(subjects: SubjectInput[]): Promise<void> {
     for (const subject of subjects) {
       await tx.execute(
         `INSERT OR REPLACE INTO subjects
-          (id, object_type, characters, meanings, readings, meaning_mnemonic, reading_mnemonic, level, component_subject_ids, character_images, data_updated_at, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT created_at FROM subjects WHERE id = ?), CURRENT_TIMESTAMP))`,
+          (id, object_type, characters, meanings, readings, meaning_mnemonic, reading_mnemonic, level, component_subject_ids, character_images, auxiliary_meanings, data_updated_at, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT created_at FROM subjects WHERE id = ?), CURRENT_TIMESTAMP))`,
         [
           subject.id,
           subject.object_type,
@@ -453,6 +457,7 @@ export async function upsertSubjects(subjects: SubjectInput[]): Promise<void> {
           subject.level,
           subject.component_subject_ids,
           subject.character_images,
+          subject.auxiliary_meanings,
           subject.data_updated_at,
           subject.id,
         ],
@@ -1825,6 +1830,11 @@ const MIGRATIONS: Migration[] = [
     description: 'Add last_study_materials_sync column to sync_status table',
     up: ['ALTER TABLE sync_status ADD COLUMN last_study_materials_sync TEXT'],
   },
+  {
+    version: 7,
+    description: 'Add auxiliary_meanings column to subjects table',
+    up: ['ALTER TABLE subjects ADD COLUMN auxiliary_meanings TEXT'],
+  },
 ];
 
 /**
@@ -1954,6 +1964,19 @@ async function ensureSchemaIntegrity(): Promise<void> {
     console.log('[Database] Adding missing last_study_materials_sync column');
     await executeSql(
       'ALTER TABLE sync_status ADD COLUMN last_study_materials_sync TEXT',
+      [],
+    );
+  }
+
+  // Check and add auxiliary_meanings column to subjects table
+  const hasAuxiliaryMeanings = await columnExists(
+    'subjects',
+    'auxiliary_meanings',
+  );
+  if (!hasAuxiliaryMeanings) {
+    console.log('[Database] Adding missing auxiliary_meanings column');
+    await executeSql(
+      'ALTER TABLE subjects ADD COLUMN auxiliary_meanings TEXT',
       [],
     );
   }

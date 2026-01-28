@@ -94,6 +94,11 @@ function subjectToReviewItem(
           .filter((k): k is ReviewComponentKanji => k !== undefined)
       : undefined;
 
+  // Parse auxiliary_meanings from stored JSON
+  const auxiliaryMeanings: AuxiliaryMeaning[] = subject.auxiliary_meanings
+    ? JSON.parse(subject.auxiliary_meanings)
+    : [];
+
   return {
     id: subject.id,
     assignmentId: assignment.id,
@@ -104,7 +109,7 @@ function subjectToReviewItem(
     readings,
     meaningMnemonic: subject.meaning_mnemonic,
     readingMnemonic: subject.reading_mnemonic,
-    auxiliaryMeanings: [] as AuxiliaryMeaning[],
+    auxiliaryMeanings,
     componentRadicals,
     componentKanji,
     userSynonyms: synonymsMap.get(subject.id) ?? [],

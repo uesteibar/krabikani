@@ -124,6 +124,7 @@ describe('Database CRUD Operations', () => {
       level: 1,
       component_subject_ids: JSON.stringify([440]),
       character_images: null,
+      auxiliary_meanings: null,
       data_updated_at: '2023-01-01T00:00:00.000Z',
     };
 
@@ -2413,8 +2414,8 @@ describe('Database CRUD Operations', () => {
 
         const result = await runMigrations();
 
-        // For fresh database, should set to DATABASE_VERSION (6)
-        expect(result.currentVersion).toBe(6);
+        // For fresh database, should set to DATABASE_VERSION (7)
+        expect(result.currentVersion).toBe(7);
         expect(result.applied).toEqual([]);
       });
 

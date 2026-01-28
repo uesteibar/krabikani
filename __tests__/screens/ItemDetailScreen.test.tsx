@@ -48,6 +48,7 @@ function createMockSubject(overrides: Partial<DatabaseSubject> = {}): DatabaseSu
     level: 1,
     component_subject_ids: JSON.stringify([10, 11]),
     character_images: null,
+    auxiliary_meanings: null,
     data_updated_at: '2024-01-01T00:00:00.000Z',
     created_at: '2024-01-01T00:00:00.000Z',
     ...overrides,
@@ -66,6 +67,7 @@ function createMockRadical(overrides: Partial<DatabaseSubject> = {}): DatabaseSu
     level: 1,
     component_subject_ids: null,
     character_images: null,
+    auxiliary_meanings: null,
     data_updated_at: '2024-01-01T00:00:00.000Z',
     created_at: '2024-01-01T00:00:00.000Z',
     ...overrides,
@@ -203,6 +205,7 @@ describe('ItemDetailScreen', () => {
         level: 3,
         component_subject_ids: JSON.stringify([1, 2]),
         character_images: null,
+        auxiliary_meanings: null,
         data_updated_at: '2024-01-01T00:00:00.000Z',
         created_at: '2024-01-01T00:00:00.000Z',
       };
@@ -217,6 +220,7 @@ describe('ItemDetailScreen', () => {
         level: 1,
         component_subject_ids: null,
         character_images: null,
+        auxiliary_meanings: null,
         data_updated_at: '2024-01-01T00:00:00.000Z',
         created_at: '2024-01-01T00:00:00.000Z',
       };
@@ -231,6 +235,7 @@ describe('ItemDetailScreen', () => {
         level: 1,
         component_subject_ids: null,
         character_images: null,
+        auxiliary_meanings: null,
         data_updated_at: '2024-01-01T00:00:00.000Z',
         created_at: '2024-01-01T00:00:00.000Z',
       };
@@ -304,6 +309,7 @@ describe('ItemDetailScreen', () => {
         level: 1,
         component_subject_ids: null,
         character_images: null,
+        auxiliary_meanings: null,
         data_updated_at: '2024-01-01T00:00:00.000Z',
         created_at: '2024-01-01T00:00:00.000Z',
       };

@@ -207,6 +207,7 @@ describe('HomeScreen', () => {
         level: 1,
         component_subject_ids: null,
         character_images: null,
+        auxiliary_meanings: null,
         data_updated_at: null,
       });
 
@@ -245,6 +246,7 @@ describe('HomeScreen', () => {
         level: 1,
         component_subject_ids: null,
         character_images: null,
+        auxiliary_meanings: null,
         data_updated_at: null,
       });
 
@@ -284,6 +286,7 @@ describe('HomeScreen', () => {
         level: 1,
         component_subject_ids: null,
         character_images: null,
+        auxiliary_meanings: null,
         data_updated_at: null,
       });
 
@@ -403,6 +406,7 @@ describe('HomeScreen', () => {
         level: 1,
         component_subject_ids: null,
         character_images: null,
+        auxiliary_meanings: null,
         data_updated_at: null,
       });
 
@@ -447,6 +451,7 @@ describe('HomeScreen', () => {
         level: 1,
         component_subject_ids: null,
         character_images: null,
+        auxiliary_meanings: null,
         data_updated_at: null,
       });
 
@@ -589,6 +594,7 @@ describe('HomeScreen', () => {
         level: 1,
         component_subject_ids: null,
         character_images: null,
+        auxiliary_meanings: null,
         data_updated_at: null,
       });
 

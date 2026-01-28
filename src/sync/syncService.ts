@@ -134,6 +134,12 @@ export function convertSubjectToInput(
     characterImages = JSON.stringify(data.character_images);
   }
 
+  // Extract auxiliary_meanings (whitelist/blacklist meanings for answer validation)
+  let auxiliaryMeanings: string | null = null;
+  if (data.auxiliary_meanings && data.auxiliary_meanings.length > 0) {
+    auxiliaryMeanings = JSON.stringify(data.auxiliary_meanings);
+  }
+
   return {
     id: resource.id,
     object_type: objectType,
@@ -145,6 +151,7 @@ export function convertSubjectToInput(
     level: data.level,
     component_subject_ids: componentSubjectIds,
     character_images: characterImages,
+    auxiliary_meanings: auxiliaryMeanings,
     data_updated_at: resource.data_updated_at,
   };
 }
