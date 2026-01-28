@@ -334,7 +334,7 @@ export function ReviewsScreen() {
     [],
   );
 
-  // Handle exit from review session - sync completed items
+  // Handle exit from review session - sync completed and failed items
   useEffect(() => {
     // Only set up exit handling when we're in the reviewing phase
     if (phase !== 'reviewing' || !sessionData) return;
@@ -347,11 +347,19 @@ export function ReviewsScreen() {
       const itemProgress = currentProgressRef.current;
       if (itemProgress.size === 0) return;
 
-      // Find completed items (both meaning and reading answered correctly)
+      // Find items to sync:
+      // 1. Completed items (both meaning and reading answered correctly)
+      // 2. Failed items (started AND at least one incorrect answer)
+      // Note: Items that are started but have zero failures are lost (not synced)
       const reviewsToSubmit: ReviewToSubmit[] = [];
       for (const [subjectId, progress] of itemProgress) {
-        // Only sync items that are fully completed (both meaning and reading correct)
-        if (progress.meaningCorrect && progress.readingCorrect) {
+        const isComplete = progress.meaningCorrect && progress.readingCorrect;
+        const hasFailures =
+          progress.incorrectMeaningAnswers > 0 ||
+          progress.incorrectReadingAnswers > 0;
+
+        // Sync if complete OR if there are any failures (indicates the item was started and struggled with)
+        if (isComplete || hasFailures) {
           const assignment = sessionData.assignments.find(
             a => a.subject_id === subjectId,
           );
@@ -366,7 +374,7 @@ export function ReviewsScreen() {
         }
       }
 
-      // If no completed items to sync, allow navigation immediately
+      // If no items to sync, allow navigation immediately
       if (reviewsToSubmit.length === 0) return;
 
       // Mark exit sync as in progress

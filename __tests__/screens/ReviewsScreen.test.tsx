@@ -859,5 +859,154 @@ describe('ReviewsScreen', () => {
         expect.any(Array),
       );
     });
+
+    it('should sync failed items (with incorrect answers) when user navigates away', async () => {
+      // Set up with kanji (has both meaning and reading)
+      (storage.getAvailableReviews as jest.Mock).mockResolvedValue([kanjiAssignment]);
+      (storage.getSubjectsByIds as jest.Mock).mockResolvedValue([kanjiSubjectWithReadings]);
+      (storage.getUserSynonymsBySubjectId as jest.Mock).mockResolvedValue([]);
+
+      const { getByTestId } = renderWithNavigation(<ReviewsScreen />);
+
+      // Wait for reviews to load
+      await waitFor(() => {
+        expect(getByTestId('review-session')).toBeTruthy();
+      });
+
+      // Determine question type and answer incorrectly
+      const firstQuestionType = getByTestId('review-session-question-type').props.children;
+
+      if (firstQuestionType === 'MEANING') {
+        // For meaning questions, a wrong English word triggers incorrect feedback
+        fireEvent.changeText(getByTestId('review-session-input'), 'Wrong');
+      } else {
+        // For reading questions, must use valid romaji that doesn't match (e.g., 'aa' instead of 'oo')
+        fireEvent.changeText(getByTestId('review-session-input'), 'aa');
+      }
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Press continue to dismiss incorrect feedback
+      await waitFor(() => {
+        expect(getByTestId('review-session-continue')).toBeTruthy();
+      });
+      fireEvent.press(getByTestId('review-session-continue'));
+
+      // Don't complete the item - just trigger exit with one wrong answer
+      // The item is NOT complete but has a failure, so it should be synced
+
+      // Trigger beforeRemove
+      const mockPreventDefault = jest.fn();
+      mockBeforeRemoveListeners.forEach(listener => listener({ preventDefault: mockPreventDefault }));
+
+      // Wait for async exit sync
+      await waitFor(() => {
+        expect(sync.submitReviews).toHaveBeenCalled();
+      });
+
+      // Verify submitReviews was called with the failed item (check the actual question type answered)
+      if (firstQuestionType === 'MEANING') {
+        expect(sync.submitReviews).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.arrayContaining([
+            expect.objectContaining({
+              assignmentId: 1002,
+              subjectId: 2,
+              incorrectMeaningAnswers: 1,
+            }),
+          ]),
+        );
+      } else {
+        expect(sync.submitReviews).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.arrayContaining([
+            expect.objectContaining({
+              assignmentId: 1002,
+              subjectId: 2,
+              incorrectReadingAnswers: 1,
+            }),
+          ]),
+        );
+      }
+    });
+
+    it('should NOT sync started items with only correct answers (no failures)', async () => {
+      // Use a unique subject setup to isolate from other tests
+      const uniqueKanjiSubject = {
+        id: 999, // Unique ID that won't conflict with other tests
+        object_type: 'kanji',
+        characters: '日',
+        meanings: JSON.stringify([
+          { meaning: 'Sun', primary: true, accepted_answer: true },
+        ]),
+        readings: JSON.stringify([
+          { reading: 'にち', primary: true, accepted_answer: true, type: 'onyomi' },
+        ]),
+        meaning_mnemonic: 'This is the sun.',
+        reading_mnemonic: 'This is how you read sun.',
+        level: 1,
+        component_subject_ids: null,
+        auxiliary_meanings: null,
+        data_updated_at: '2026-01-01T00:00:00.000Z',
+        created_at: '2026-01-01T00:00:00.000Z',
+      };
+
+      const uniqueAssignment = {
+        id: 9999,
+        subject_id: 999,
+        srs_stage: 2,
+        available_at: '2026-01-01T00:00:00.000Z',
+        started_at: '2026-01-01T00:00:00.000Z',
+        unlocked_at: '2026-01-01T00:00:00.000Z',
+        data_updated_at: '2026-01-01T00:00:00.000Z',
+        created_at: '2026-01-01T00:00:00.000Z',
+      };
+
+      (storage.getAvailableReviews as jest.Mock).mockResolvedValue([uniqueAssignment]);
+      (storage.getSubjectsByIds as jest.Mock).mockResolvedValue([uniqueKanjiSubject]);
+      (storage.getUserSynonymsBySubjectId as jest.Mock).mockResolvedValue([]);
+
+      const { getByTestId } = renderWithNavigation(<ReviewsScreen />);
+
+      // Wait for reviews to load
+      await waitFor(() => {
+        expect(getByTestId('review-session')).toBeTruthy();
+      });
+
+      // Track call count AFTER loading but BEFORE triggering any exit behavior
+      const callCountAfterLoad = (sync.submitReviews as jest.Mock).mock.calls.length;
+
+      // Determine question type and answer correctly
+      const firstQuestionType = getByTestId('review-session-question-type').props.children;
+
+      if (firstQuestionType === 'MEANING') {
+        // Answer meaning correctly (but not reading yet)
+        fireEvent.changeText(getByTestId('review-session-input'), 'Sun');
+        fireEvent.press(getByTestId('review-session-submit'));
+      } else {
+        // Answer reading correctly (but not meaning yet)
+        fireEvent.changeText(getByTestId('review-session-input'), 'nichi');
+        fireEvent.press(getByTestId('review-session-submit'));
+      }
+
+      // Wait for correct feedback to show and clear
+      await new Promise<void>(resolve => setTimeout(resolve, 600));
+
+      // Trigger beforeRemove - item is started but has no failures, should NOT be synced
+      const mockPreventDefault = jest.fn();
+      mockBeforeRemoveListeners.forEach(listener => listener({ preventDefault: mockPreventDefault }));
+
+      // Wait for any async operations
+      await new Promise<void>(resolve => setTimeout(resolve, 200));
+
+      // Check that no NEW calls to submitReviews were made for our unique subject
+      // (any calls would be for subject 999, assignment 9999)
+      const allCalls = (sync.submitReviews as jest.Mock).mock.calls;
+      const callsForOurSubject = allCalls.filter((call: any) => {
+        const reviews = call[1] as Array<{ subjectId: number }>;
+        return reviews?.some(r => r.subjectId === 999);
+      });
+
+      expect(callsForOurSubject.length).toBe(0);
+    });
   });
 });
