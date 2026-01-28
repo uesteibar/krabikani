@@ -5,7 +5,7 @@ const DATABASE_NAME = 'wanikani.db';
 // DATABASE_VERSION should match the latest migration version.
 // Fresh databases are created with all schema changes included, so they
 // start at this version and skip migrations that are already in the schema.
-const DATABASE_VERSION = 5;
+const DATABASE_VERSION = 6;
 
 // Current database instance
 let db: DB | null = null;
@@ -76,6 +76,7 @@ const CREATE_SYNC_STATUS_TABLE = `
     last_subjects_sync TEXT,
     last_assignments_sync TEXT,
     last_summary_sync TEXT,
+    last_study_materials_sync TEXT,
     user_level INTEGER,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -236,6 +237,7 @@ export interface DatabaseSyncStatus {
   last_subjects_sync: string | null;
   last_assignments_sync: string | null;
   last_summary_sync: string | null;
+  last_study_materials_sync: string | null;
   user_level: number | null;
   created_at: string;
   updated_at: string;
@@ -1592,6 +1594,7 @@ export interface SyncStatusUpdate {
   last_subjects_sync?: string | null;
   last_assignments_sync?: string | null;
   last_summary_sync?: string | null;
+  last_study_materials_sync?: string | null;
   user_level?: number | null;
 }
 
@@ -1616,6 +1619,10 @@ export async function updateSyncStatus(
   if (update.last_summary_sync !== undefined) {
     updates.push('last_summary_sync = ?');
     values.push(update.last_summary_sync);
+  }
+  if (update.last_study_materials_sync !== undefined) {
+    updates.push('last_study_materials_sync = ?');
+    values.push(update.last_study_materials_sync);
   }
   if (update.user_level !== undefined) {
     updates.push('user_level = ?');
@@ -1657,6 +1664,7 @@ export async function resetSyncStatus(): Promise<void> {
        last_subjects_sync = NULL,
        last_assignments_sync = NULL,
        last_summary_sync = NULL,
+       last_study_materials_sync = NULL,
        user_level = NULL,
        updated_at = CURRENT_TIMESTAMP
      WHERE id = 1`,
@@ -1766,6 +1774,7 @@ export async function clearAllData(): Promise<void> {
          last_subjects_sync = NULL,
          last_assignments_sync = NULL,
          last_summary_sync = NULL,
+         last_study_materials_sync = NULL,
          user_level = NULL,
          updated_at = CURRENT_TIMESTAMP
        WHERE id = 1`,
@@ -1810,6 +1819,11 @@ const MIGRATIONS: Migration[] = [
     version: 5,
     description: 'Add user_settings table for local preferences',
     up: [CREATE_USER_SETTINGS_TABLE],
+  },
+  {
+    version: 6,
+    description: 'Add last_study_materials_sync column to sync_status table',
+    up: ['ALTER TABLE sync_status ADD COLUMN last_study_materials_sync TEXT'],
   },
 ];
 
@@ -1927,6 +1941,19 @@ async function ensureSchemaIntegrity(): Promise<void> {
     console.log('[Database] Adding missing user_level column');
     await executeSql(
       'ALTER TABLE sync_status ADD COLUMN user_level INTEGER',
+      [],
+    );
+  }
+
+  // Check and add last_study_materials_sync column to sync_status table
+  const hasStudyMaterialsSync = await columnExists(
+    'sync_status',
+    'last_study_materials_sync',
+  );
+  if (!hasStudyMaterialsSync) {
+    console.log('[Database] Adding missing last_study_materials_sync column');
+    await executeSql(
+      'ALTER TABLE sync_status ADD COLUMN last_study_materials_sync TEXT',
       [],
     );
   }

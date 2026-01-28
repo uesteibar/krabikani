@@ -11,6 +11,7 @@ jest.mock('../../src/storage/database', () => ({
     id: 1,
     last_subjects_sync: '2026-01-25T10:00:00.000Z',
     last_assignments_sync: '2026-01-25T10:00:00.000Z',
+    last_study_materials_sync: '2026-01-25T10:00:00.000Z',
     last_summary_sync: null,
   }),
   getAllPendingLessons: jest.fn().mockResolvedValue([]),
@@ -26,6 +27,8 @@ jest.mock('../../src/storage/database', () => ({
   deletePendingSynonymBySubjectAndSynonym: jest.fn().mockResolvedValue(undefined),
   deleteAllPendingSynonyms: jest.fn().mockResolvedValue(undefined),
   markSynonymSynced: jest.fn().mockResolvedValue(undefined),
+  addUserSynonym: jest.fn().mockResolvedValue(1),
+  getUserSynonymsBySubjectId: jest.fn().mockResolvedValue([]),
 }));
 
 // Create a mock fetch for API tests
@@ -100,6 +103,19 @@ describe('backgroundSync', () => {
           data_updated_at: '2026-01-25T10:00:00.000Z',
           data: [],
         }),
+      })
+      // getStudyMaterials (empty result - no updates)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({
+          object: 'collection',
+          url: 'https://api.wanikani.com/v2/study_materials',
+          pages: { next_url: null, previous_url: null, per_page: 500 },
+          total_count: 0,
+          data_updated_at: '2026-01-25T10:00:00.000Z',
+          data: [],
+        }),
       });
   });
 
@@ -112,6 +128,7 @@ describe('backgroundSync', () => {
       expect(result.pendingData).toBeDefined();
       expect(result.subjects).toBeDefined();
       expect(result.assignments).toBeDefined();
+      expect(result.studyMaterials).toBeDefined();
     });
 
     it('should sync pending data first', async () => {
@@ -121,6 +138,14 @@ describe('backgroundSync', () => {
       expect(result.pendingData?.success).toBe(true);
       expect(result.pendingData?.lessons.syncedCount).toBe(0);
       expect(result.pendingData?.reviews.syncedCount).toBe(0);
+    });
+
+    it('should sync study materials', async () => {
+      const result = await backgroundSync(client);
+
+      expect(result.studyMaterials).toBeDefined();
+      expect(result.studyMaterials?.success).toBe(true);
+      expect(result.studyMaterials?.syncedCount).toBe(0);
     });
   });
 

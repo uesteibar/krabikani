@@ -2413,8 +2413,8 @@ describe('Database CRUD Operations', () => {
 
         const result = await runMigrations();
 
-        // For fresh database, should set to DATABASE_VERSION (5)
-        expect(result.currentVersion).toBe(5);
+        // For fresh database, should set to DATABASE_VERSION (6)
+        expect(result.currentVersion).toBe(6);
         expect(result.applied).toEqual([]);
       });
 

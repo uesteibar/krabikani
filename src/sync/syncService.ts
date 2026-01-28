@@ -26,11 +26,15 @@ import {
   deletePendingSynonymBySubjectAndSynonym,
   deleteAllPendingSynonyms,
   markSynonymSynced,
+  addUserSynonym,
+  getUserSynonymsBySubjectId,
+  deleteUserSynonym,
   type SubjectInput,
   type AssignmentInput,
   type PendingLessonInput,
   type PendingReviewInput,
 } from '../storage/database';
+import type { StudyMaterialData } from '../api/types';
 
 // ============================================
 // Types
@@ -394,6 +398,200 @@ export async function getUserLevel(client: WaniKaniClient): Promise<number> {
   await saveCachedUserLevel(level);
 
   return level;
+}
+
+// ============================================
+// Study Materials Sync Types
+// ============================================
+
+export interface SyncStudyMaterialsOptions {
+  /** Progress callback for UI updates */
+  onProgress?: SyncProgressCallback;
+  /** Updated after timestamp for incremental sync */
+  updatedAfter?: string;
+}
+
+export interface SyncStudyMaterialsResult {
+  success: boolean;
+  syncedCount: number;
+  error?: string;
+}
+
+// ============================================
+// Study Materials Sync Functions
+// ============================================
+
+/**
+ * Converts a WaniKani API study material to a map of subject_id -> synonyms.
+ */
+function extractSynonymsFromStudyMaterial(
+  resource: { id: number; data: StudyMaterialData },
+): { subjectId: number; synonyms: string[] } {
+  return {
+    subjectId: resource.data.subject_id,
+    synonyms: resource.data.meaning_synonyms || [],
+  };
+}
+
+/**
+ * Syncs study materials (meaning synonyms) from WaniKani API.
+ *
+ * Behavior:
+ * - Fetches study materials from WaniKani API with pagination support
+ * - Extracts meaning_synonyms from each study material
+ * - For each synonym from WaniKani:
+ *   - If it already exists locally, the WaniKani version takes precedence (overwrite)
+ *   - New synonyms are inserted with synced_at set (they don't need re-uploading)
+ * - Local-only synonyms (not in WaniKani) are preserved for the existing upload flow
+ * - Supports incremental sync using updated_after parameter
+ *
+ * @param client WaniKani API client
+ * @param options Sync options including progress callback and updatedAfter
+ * @returns Result of the sync operation
+ */
+export async function syncStudyMaterials(
+  client: WaniKaniClient,
+  options: SyncStudyMaterialsOptions = {},
+): Promise<SyncStudyMaterialsResult> {
+  const { onProgress, updatedAfter } = options;
+
+  console.log('[syncStudyMaterials] Starting sync', { updatedAfter });
+
+  try {
+    // Fetch first page to get total count
+    console.log('[syncStudyMaterials] Calling API getStudyMaterials...');
+    const firstPage = await client.getStudyMaterials({
+      updated_after: updatedAfter,
+    });
+    console.log('[syncStudyMaterials] First page received', {
+      totalCount: firstPage.total_count,
+      dataLength: firstPage.data.length,
+    });
+
+    const totalCount = firstPage.total_count;
+    let syncedCount = 0;
+
+    // Process first page
+    for (const material of firstPage.data) {
+      await processStudyMaterial(material);
+      syncedCount++;
+    }
+    console.log('[syncStudyMaterials] Progress:', syncedCount, '/', totalCount);
+    onProgress?.(syncedCount, totalCount);
+
+    // Fetch remaining pages
+    let currentPage = firstPage;
+    console.log('[syncStudyMaterials] Fetching remaining pages...');
+    while (currentPage.pages.next_url) {
+      console.log(
+        '[syncStudyMaterials] Fetching next page:',
+        currentPage.pages.next_url,
+      );
+      const nextPage = await client.getNextPage(currentPage);
+      if (!nextPage) break;
+
+      for (const material of nextPage.data) {
+        await processStudyMaterial(material);
+        syncedCount++;
+      }
+      console.log(
+        '[syncStudyMaterials] Progress:',
+        syncedCount,
+        '/',
+        totalCount,
+      );
+      onProgress?.(syncedCount, totalCount);
+
+      currentPage = nextPage;
+    }
+
+    // Update sync status
+    console.log('[syncStudyMaterials] Updating sync status...');
+    await updateSyncStatus({
+      last_study_materials_sync: new Date().toISOString(),
+    });
+
+    console.log(
+      '[syncStudyMaterials] Sync complete! Total synced:',
+      syncedCount,
+    );
+    return {
+      success: true,
+      syncedCount,
+    };
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error during sync';
+    console.error('[syncStudyMaterials] Error:', errorMessage, error);
+    return {
+      success: false,
+      syncedCount: 0,
+      error: errorMessage,
+    };
+  }
+}
+
+/**
+ * Processes a single study material from WaniKani.
+ *
+ * For each synonym in the material:
+ * - If it exists locally with synced_at set, overwrite it (WaniKani takes precedence)
+ * - If it exists locally without synced_at (local-only), leave it alone
+ * - If it's new, insert with synced_at set
+ */
+async function processStudyMaterial(material: {
+  id: number;
+  data: StudyMaterialData;
+}): Promise<void> {
+  const { subjectId, synonyms } = extractSynonymsFromStudyMaterial(material);
+
+  if (synonyms.length === 0) {
+    return;
+  }
+
+  // Get existing local synonyms for this subject
+  const existingLocalSynonyms = await getUserSynonymsBySubjectId(subjectId);
+
+  // Create a map of existing synonyms by their text (lowercase for comparison)
+  const existingMap = new Map<
+    string,
+    { id: number; synonym: string; synced_at: string | null }
+  >();
+  for (const existing of existingLocalSynonyms) {
+    existingMap.set(existing.synonym.toLowerCase(), {
+      id: existing.id,
+      synonym: existing.synonym,
+      synced_at: existing.synced_at,
+    });
+  }
+
+  // Process each synonym from WaniKani
+  for (const synonym of synonyms) {
+    const key = synonym.toLowerCase();
+    const existing = existingMap.get(key);
+
+    if (existing) {
+      // Synonym exists locally
+      if (existing.synced_at !== null) {
+        // It was previously synced - WaniKani version takes precedence
+        // Delete old synonym and insert new one with WaniKani's casing
+        await deleteUserSynonym(existing.id);
+        await addUserSynonym({
+          subject_id: subjectId,
+          synonym: synonym, // Use WaniKani's casing
+          synced_at: new Date().toISOString(),
+        });
+      }
+      // If synced_at is null, it's a local-only synonym - preserve it
+    } else {
+      // New synonym from WaniKani - insert with synced_at set
+      await addUserSynonym({
+        subject_id: subjectId,
+        synonym: synonym,
+        synced_at: new Date().toISOString(),
+      });
+    }
+  }
 }
 
 // ============================================
@@ -1041,6 +1239,8 @@ export interface BackgroundSyncResult {
   subjects?: SyncSubjectsResult;
   /** Results from syncing assignments */
   assignments?: SyncAssignmentsResult;
+  /** Results from syncing study materials (synonyms) */
+  studyMaterials?: SyncStudyMaterialsResult;
   error?: string;
 }
 
@@ -1058,7 +1258,8 @@ export interface BackgroundSyncOptions {
  * 1. Syncs any pending review/lesson submissions
  * 2. Fetches new assignments and reviews from WaniKani API
  * 3. Fetches any new subjects unlocked since last sync
- * 4. Can be configured to skip sync during active sessions
+ * 4. Fetches study materials (synonyms) from WaniKani
+ * 5. Can be configured to skip sync during active sessions
  *
  * @param client WaniKani API client
  * @param options Configuration options
@@ -1096,15 +1297,22 @@ export async function backgroundSync(
     // Step 4: Sync assignments (will use last_assignments_sync for incremental sync)
     const assignmentsResult = await syncAssignments(client);
 
+    // Step 5: Sync study materials (synonyms from WaniKani)
+    const studyMaterialsResult = await syncStudyMaterials(client, {
+      updatedAfter: syncStatus?.last_study_materials_sync ?? undefined,
+    });
+
     return {
       success:
         pendingResult.success &&
         subjectsResult.success &&
-        assignmentsResult.success,
+        assignmentsResult.success &&
+        studyMaterialsResult.success,
       skipped: false,
       pendingData: pendingResult,
       subjects: subjectsResult,
       assignments: assignmentsResult,
+      studyMaterials: studyMaterialsResult,
     };
   } catch (error) {
     const errorMessage =

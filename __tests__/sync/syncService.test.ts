@@ -13,6 +13,7 @@ import {
   syncPendingData,
   syncPendingSynonyms,
   clearPendingSynonyms,
+  syncStudyMaterials,
 } from '../../src/sync/syncService';
 import { WaniKaniClient, WaniKaniApiError } from '../../src/api/wanikaniApi';
 import type {
@@ -2355,6 +2356,344 @@ describe('syncService', () => {
 
       pendingCount = await getPendingSynonymCount();
       expect(pendingCount).toBe(0);
+    });
+  });
+
+  describe('syncStudyMaterials', () => {
+    // Helper to create a mock study material API response
+    function createMockStudyMaterialsCollection(
+      materials: Array<{
+        id: number;
+        subject_id: number;
+        meaning_synonyms: string[];
+      }>,
+      nextUrl: string | null = null,
+    ) {
+      return {
+        object: 'collection',
+        url: 'https://api.wanikani.com/v2/study_materials',
+        pages: { per_page: 500, next_url: nextUrl, previous_url: null },
+        total_count: materials.length,
+        data_updated_at: '2024-01-01T00:00:00.000000Z',
+        data: materials.map(m => ({
+          id: m.id,
+          object: 'study_material',
+          url: `https://api.wanikani.com/v2/study_materials/${m.id}`,
+          data_updated_at: '2024-01-01T00:00:00.000000Z',
+          data: {
+            created_at: '2024-01-01T00:00:00.000000Z',
+            hidden: false,
+            meaning_note: null,
+            meaning_synonyms: m.meaning_synonyms,
+            reading_note: null,
+            subject_id: m.subject_id,
+            subject_type: 'vocabulary',
+          },
+        })),
+      };
+    }
+
+    it('should fetch study materials and insert synonyms', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () =>
+          createMockStudyMaterialsCollection([
+            { id: 1, subject_id: 42, meaning_synonyms: ['hello', 'hi'] },
+            { id: 2, subject_id: 43, meaning_synonyms: ['goodbye'] },
+          ]),
+      });
+
+      const result = await syncStudyMaterials(client);
+
+      expect(result.success).toBe(true);
+      expect(result.syncedCount).toBe(2);
+
+      // Verify synonyms were inserted
+      const synonyms42 = await getUserSynonymsBySubjectId(42);
+      expect(synonyms42).toHaveLength(2);
+      expect(synonyms42.map(s => s.synonym)).toContain('hello');
+      expect(synonyms42.map(s => s.synonym)).toContain('hi');
+      // synced_at should be set (not null) for remote synonyms
+      expect(synonyms42[0].synced_at).not.toBeNull();
+
+      const synonyms43 = await getUserSynonymsBySubjectId(43);
+      expect(synonyms43).toHaveLength(1);
+      expect(synonyms43[0].synonym).toBe('goodbye');
+    });
+
+    it('should handle pagination', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      // First page
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () =>
+          createMockStudyMaterialsCollection(
+            [{ id: 1, subject_id: 42, meaning_synonyms: ['one'] }],
+            'https://api.wanikani.com/v2/study_materials?page_after_id=1',
+          ),
+      });
+
+      // Second page
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () =>
+          createMockStudyMaterialsCollection([
+            { id: 2, subject_id: 43, meaning_synonyms: ['two'] },
+          ]),
+      });
+
+      const result = await syncStudyMaterials(client);
+
+      expect(result.success).toBe(true);
+      expect(result.syncedCount).toBe(2);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('should support incremental sync with updatedAfter', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+      const updatedAfter = '2024-06-01T00:00:00.000000Z';
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => createMockStudyMaterialsCollection([]),
+      });
+
+      await syncStudyMaterials(client, { updatedAfter });
+
+      const calledUrl = mockFetch.mock.calls[0][0] as string;
+      expect(calledUrl).toContain('updated_after=');
+    });
+
+    it('should update sync status after successful sync', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => createMockStudyMaterialsCollection([]),
+      });
+
+      const beforeSync = await getSyncStatus();
+      expect(beforeSync?.last_study_materials_sync).toBeNull();
+
+      await syncStudyMaterials(client);
+
+      const afterSync = await getSyncStatus();
+      expect(afterSync?.last_study_materials_sync).not.toBeNull();
+    });
+
+    it('should overwrite existing synced synonym with WaniKani version', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      // Add an existing synonym that was previously synced
+      await addUserSynonym({
+        subject_id: 42,
+        synonym: 'Hello',
+        synced_at: '2024-01-01T00:00:00.000000Z',
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () =>
+          createMockStudyMaterialsCollection([
+            { id: 1, subject_id: 42, meaning_synonyms: ['hello'] }, // lowercase from WaniKani
+          ]),
+      });
+
+      await syncStudyMaterials(client);
+
+      const synonyms = await getUserSynonymsBySubjectId(42);
+      // Should have one synonym (the WaniKani version replaced the local one)
+      expect(synonyms).toHaveLength(1);
+      expect(synonyms[0].synonym).toBe('hello'); // WaniKani's casing
+    });
+
+    it('should preserve local-only synonyms (synced_at is null)', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      // Add a local-only synonym (synced_at is null)
+      await addUserSynonym({
+        subject_id: 42,
+        synonym: 'my local synonym',
+      });
+
+      // WaniKani returns a different synonym for the same subject
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () =>
+          createMockStudyMaterialsCollection([
+            { id: 1, subject_id: 42, meaning_synonyms: ['remote synonym'] },
+          ]),
+      });
+
+      await syncStudyMaterials(client);
+
+      const synonyms = await getUserSynonymsBySubjectId(42);
+      // Should have both synonyms
+      expect(synonyms).toHaveLength(2);
+      expect(synonyms.map(s => s.synonym)).toContain('my local synonym');
+      expect(synonyms.map(s => s.synonym)).toContain('remote synonym');
+    });
+
+    it('should handle empty study materials gracefully', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => createMockStudyMaterialsCollection([]),
+      });
+
+      const result = await syncStudyMaterials(client);
+
+      expect(result.success).toBe(true);
+      expect(result.syncedCount).toBe(0);
+    });
+
+    it('should handle study materials with empty meaning_synonyms', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () =>
+          createMockStudyMaterialsCollection([
+            { id: 1, subject_id: 42, meaning_synonyms: [] },
+          ]),
+      });
+
+      const result = await syncStudyMaterials(client);
+
+      expect(result.success).toBe(true);
+      expect(result.syncedCount).toBe(1);
+
+      // No synonyms should be inserted
+      const synonyms = await getUserSynonymsBySubjectId(42);
+      expect(synonyms).toHaveLength(0);
+    });
+
+    it('should return error result on API failure', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+      });
+
+      const result = await syncStudyMaterials(client);
+
+      expect(result.success).toBe(false);
+      expect(result.syncedCount).toBe(0);
+      expect(result.error).toBe('Invalid API key');
+    });
+
+    it('should return error result on network failure', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      mockFetch.mockRejectedValueOnce(new Error('Network unavailable'));
+
+      const result = await syncStudyMaterials(client);
+
+      expect(result.success).toBe(false);
+      expect(result.syncedCount).toBe(0);
+      expect(result.error).toBe('Network unavailable');
+    });
+
+    it('should call progress callback with correct values', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+      const onProgress = jest.fn();
+
+      // First page
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          object: 'collection',
+          url: 'https://api.wanikani.com/v2/study_materials',
+          pages: {
+            per_page: 2,
+            next_url:
+              'https://api.wanikani.com/v2/study_materials?page_after_id=2',
+            previous_url: null,
+          },
+          total_count: 3,
+          data_updated_at: '2024-01-01T00:00:00.000000Z',
+          data: [
+            {
+              id: 1,
+              object: 'study_material',
+              data: { subject_id: 42, meaning_synonyms: ['one'] },
+            },
+            {
+              id: 2,
+              object: 'study_material',
+              data: { subject_id: 43, meaning_synonyms: ['two'] },
+            },
+          ],
+        }),
+      });
+
+      // Second page
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          object: 'collection',
+          url: 'https://api.wanikani.com/v2/study_materials?page_after_id=2',
+          pages: { per_page: 1, next_url: null, previous_url: null },
+          total_count: 3,
+          data_updated_at: '2024-01-01T00:00:00.000000Z',
+          data: [
+            {
+              id: 3,
+              object: 'study_material',
+              data: { subject_id: 44, meaning_synonyms: ['three'] },
+            },
+          ],
+        }),
+      });
+
+      await syncStudyMaterials(client, { onProgress });
+
+      expect(onProgress).toHaveBeenCalledTimes(2);
+      expect(onProgress).toHaveBeenNthCalledWith(1, 2, 3);
+      expect(onProgress).toHaveBeenNthCalledWith(2, 3, 3);
+    });
+
+    it('should handle case-insensitive synonym matching', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      // Add an existing synced synonym with different casing
+      await addUserSynonym({
+        subject_id: 42,
+        synonym: 'HELLO',
+        synced_at: '2024-01-01T00:00:00.000000Z',
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () =>
+          createMockStudyMaterialsCollection([
+            { id: 1, subject_id: 42, meaning_synonyms: ['hello'] },
+          ]),
+      });
+
+      await syncStudyMaterials(client);
+
+      const synonyms = await getUserSynonymsBySubjectId(42);
+      // Should have one synonym (matched case-insensitively)
+      expect(synonyms).toHaveLength(1);
+      expect(synonyms[0].synonym).toBe('hello'); // Updated to WaniKani's casing
     });
   });
 });
