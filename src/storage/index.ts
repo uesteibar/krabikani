@@ -74,6 +74,8 @@ export {
   deleteAllSettings,
   // Learned counts
   getLearnedCount,
+  getKanjiPassedAtLevel,
+  getTotalKanjiAtLevel,
   // Upcoming reviews
   getUpcomingReviewsByHour,
   // User Synonyms

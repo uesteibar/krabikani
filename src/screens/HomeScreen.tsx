@@ -54,6 +54,8 @@ import {
   getPendingLessonCount,
   getCachedUserLevel,
   getLearnedCount,
+  getKanjiPassedAtLevel,
+  getTotalKanjiAtLevel,
   getUpcomingReviewsByHour,
   type UpcomingReviewsHourBucket,
 } from '../storage';
@@ -147,6 +149,10 @@ export function HomeScreen() {
     pendingReviewsCount: 0,
   });
   const [userLevel, setUserLevel] = useState<number | null>(null);
+  const [kanjiProgress, setKanjiProgress] = useState<{
+    passed: number;
+    total: number;
+  } | null>(null);
   const [learnedData, setLearnedData] = useState<LearnedData>({
     kanjiLearned: 0,
     vocabularyLearned: 0,
@@ -201,6 +207,15 @@ export function HomeScreen() {
         pendingReviewsCount,
       });
       setUserLevel(cachedLevel);
+      if (cachedLevel !== null) {
+        const [passed, total] = await Promise.all([
+          getKanjiPassedAtLevel(cachedLevel),
+          getTotalKanjiAtLevel(cachedLevel),
+        ]);
+        setKanjiProgress({ passed, total });
+      } else {
+        setKanjiProgress(null);
+      }
       setLearnedData({
         kanjiLearned,
         vocabularyLearned,
@@ -388,12 +403,16 @@ export function HomeScreen() {
             />
           </Pressable>
           <View style={styles.dashboardContainer}>
-            <LevelIndicator level={userLevel} />
             <DashboardStats
               lessonsCount={dashboardData.lessonsCount}
               reviewsCount={dashboardData.reviewsCount}
               onLessonsPress={handleLessonsPress}
               onReviewsPress={handleReviewsPress}
+            />
+            <LevelIndicator
+              level={userLevel}
+              kanjiPassed={kanjiProgress?.passed ?? null}
+              kanjiTotal={kanjiProgress?.total ?? null}
             />
             <LearnedCounts
               kanjiCount={learnedData.kanjiLearned}
@@ -429,6 +448,14 @@ export function HomeScreen() {
               >
                 Search
               </Text>
+              <Text
+                style={[
+                  styles.outlineButtonChevron,
+                  { color: theme.colors.text.tertiary },
+                ]}
+              >
+                ›
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -447,6 +474,14 @@ export function HomeScreen() {
               >
                 Practice
               </Text>
+              <Text
+                style={[
+                  styles.outlineButtonChevron,
+                  { color: theme.colors.text.tertiary },
+                ]}
+              >
+                ›
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -464,6 +499,14 @@ export function HomeScreen() {
                 ]}
               >
                 Settings
+              </Text>
+              <Text
+                style={[
+                  styles.outlineButtonChevron,
+                  { color: theme.colors.text.tertiary },
+                ]}
+              >
+                ›
               </Text>
             </TouchableOpacity>
           </View>
@@ -516,17 +559,23 @@ const styles = StyleSheet.create({
   },
   outlineButton: {
     width: '100%',
-    paddingVertical: SPACING.md,
-    minHeight: MIN_TOUCH_TARGET,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.xl,
     backgroundColor: 'transparent',
     borderWidth: 1,
     borderRadius: BORDER_RADIUS.md,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
   outlineButtonText: {
-    fontSize: FONT_SIZES.base,
+    fontSize: FONT_SIZES.lg,
     fontWeight: '600',
+  },
+  outlineButtonChevron: {
+    fontSize: FONT_SIZES.xxxl,
+    lineHeight: FONT_SIZES.xxxl,
+    fontWeight: '300',
   },
   errorContainer: {
     flex: 1,

@@ -1046,6 +1046,30 @@ export async function getLearnedCount(
   return (result.rows[0] as { count: number }).count;
 }
 
+export async function getKanjiPassedAtLevel(level: number): Promise<number> {
+  const result = await executeSql(
+    `SELECT COUNT(*) as count
+     FROM assignments a
+     JOIN subjects s ON a.subject_id = s.id
+     WHERE s.level = ?
+       AND s.object_type = 'kanji'
+       AND a.srs_stage >= 5`,
+    [level],
+  );
+  return (result.rows[0] as { count: number }).count;
+}
+
+export async function getTotalKanjiAtLevel(level: number): Promise<number> {
+  const result = await executeSql(
+    `SELECT COUNT(*) as count
+     FROM subjects
+     WHERE level = ?
+       AND object_type = 'kanji'`,
+    [level],
+  );
+  return (result.rows[0] as { count: number }).count;
+}
+
 /**
  * Gets upcoming reviews grouped by hour for the next N hours.
  * Returns an array of hourly buckets with the count of reviews available in each hour.

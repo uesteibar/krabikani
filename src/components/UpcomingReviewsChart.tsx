@@ -123,23 +123,15 @@ export function UpcomingReviewsChart({
             row.newCount > 0 ? (row.newCount / maxNew) * 100 : 0;
 
           return (
-            <View
-              key={index}
-              style={styles.row}
-              testID={`review-row-${index}`}
-            >
+            <View key={index} style={styles.row} testID={`review-row-${index}`}>
               {/* Time column */}
-              <Text style={styles.timeText}>
-                {row.label}
-              </Text>
+              <Text style={styles.timeText}>{row.label}</Text>
 
               {/* Count column */}
               <View style={styles.countColumn}>
                 {row.newCount > 0 ? (
                   <Text style={styles.countText}>
-                    <Text style={styles.newCount}>
-                      +{row.newCount}
-                    </Text>
+                    <Text style={styles.newCount}>+{row.newCount}</Text>
                     <Text style={styles.totalCount}> ({row.totalCount})</Text>
                   </Text>
                 ) : (
@@ -179,7 +171,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.text.secondary,
     marginBottom: SPACING.sm,
-    textAlign: 'center',
+    marginLeft: SPACING.sm + SPACING.sm,
   },
   gridContainer: {
     backgroundColor: COLORS.background.secondary,
