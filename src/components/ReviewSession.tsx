@@ -175,6 +175,8 @@ export interface ReviewSessionProps {
   syncedOnline?: boolean;
   /** Callback when a component is pressed (for navigation to item detail) */
   onComponentPress?: (subjectId: number) => void;
+  /** Callback when item progress changes (for exit handling) */
+  onProgressChange?: (itemProgress: Map<number, ItemProgress>) => void;
 }
 
 /**
@@ -290,6 +292,7 @@ export function ReviewSession({
   onReturnToDashboard,
   syncedOnline = false,
   onComponentPress,
+  onProgressChange,
 }: ReviewSessionProps) {
   // Generate initial questions once when items change
   const initialQuestions = useMemo(
@@ -409,6 +412,11 @@ export function ReviewSession({
     setIntroducedItemIds(new Set());
     answeredQuestionsCount.current = 0;
   }, [items]);
+
+  // Notify parent of progress changes (for exit handling)
+  useEffect(() => {
+    onProgressChange?.(_itemProgress);
+  }, [_itemProgress, onProgressChange]);
 
   const currentQuestion = questionQueue[currentQuestionIndex];
 

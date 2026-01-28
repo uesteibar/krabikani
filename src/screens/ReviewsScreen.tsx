@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -135,6 +135,12 @@ export function ReviewsScreen() {
     ItemProgress
   > | null>(null);
   const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
+
+  // Ref to store current item progress for exit handling
+  const currentProgressRef = useRef<Map<number, ItemProgress>>(new Map());
+
+  // Track if exit sync is in progress to prevent duplicate submissions
+  const exitSyncInProgressRef = useRef(false);
 
   const loadReviews = useCallback(async () => {
     try {
@@ -320,6 +326,67 @@ export function ReviewsScreen() {
     updateBadge();
   }, [phase]);
 
+  // Handle progress changes from ReviewSession (for exit handling)
+  const handleProgressChange = useCallback(
+    (itemProgress: Map<number, ItemProgress>) => {
+      currentProgressRef.current = itemProgress;
+    },
+    [],
+  );
+
+  // Handle exit from review session - sync completed items
+  useEffect(() => {
+    // Only set up exit handling when we're in the reviewing phase
+    if (phase !== 'reviewing' || !sessionData) return;
+
+    const unsubscribe = navigation.addListener('beforeRemove', async _e => {
+      // Prevent duplicate exit syncs
+      if (exitSyncInProgressRef.current) return;
+
+      // Get current progress
+      const itemProgress = currentProgressRef.current;
+      if (itemProgress.size === 0) return;
+
+      // Find completed items (both meaning and reading answered correctly)
+      const reviewsToSubmit: ReviewToSubmit[] = [];
+      for (const [subjectId, progress] of itemProgress) {
+        // Only sync items that are fully completed (both meaning and reading correct)
+        if (progress.meaningCorrect && progress.readingCorrect) {
+          const assignment = sessionData.assignments.find(
+            a => a.subject_id === subjectId,
+          );
+          if (assignment) {
+            reviewsToSubmit.push({
+              assignmentId: assignment.id,
+              subjectId,
+              incorrectMeaningAnswers: progress.incorrectMeaningAnswers,
+              incorrectReadingAnswers: progress.incorrectReadingAnswers,
+            });
+          }
+        }
+      }
+
+      // If no completed items to sync, allow navigation immediately
+      if (reviewsToSubmit.length === 0) return;
+
+      // Mark exit sync as in progress
+      exitSyncInProgressRef.current = true;
+
+      // Submit completed reviews (async, but don't block navigation)
+      try {
+        const online = await isOnline();
+        const apiKey = await getApiKey();
+        const client = online && apiKey ? new WaniKaniClient(apiKey) : null;
+        await submitReviews(client, reviewsToSubmit);
+      } catch {
+        // Silently fail - reviews will be lost, but we don't want to block exit
+        console.warn('[ReviewsScreen] Failed to sync completed reviews on exit');
+      }
+    });
+
+    return unsubscribe;
+  }, [phase, sessionData, navigation]);
+
   // Convert session data to review items
   const reviewItems = useMemo(() => {
     if (!sessionData) return [];
@@ -464,6 +531,7 @@ export function ReviewsScreen() {
           onReturnToDashboard={handleReturnToDashboard}
           syncedOnline={syncResult?.wasOnline ?? false}
           onComponentPress={handleComponentPress}
+          onProgressChange={handleProgressChange}
         />
       </View>
     );

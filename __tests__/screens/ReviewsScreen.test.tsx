@@ -10,7 +10,23 @@ jest.mock('../../src/storage', () => ({
   getAvailableReviews: jest.fn(),
   getSubjectsByIds: jest.fn(),
   getUserSynonymsBySubjectId: jest.fn().mockResolvedValue([]),
+  getApiKey: jest.fn().mockResolvedValue('test-api-key'),
 }));
+
+// Mock sync service
+jest.mock('../../src/sync', () => ({
+  submitReviews: jest.fn().mockResolvedValue({ success: true, submittedCount: 0, queuedCount: 0 }),
+}));
+
+// Mock utils
+jest.mock('../../src/utils', () => ({
+  isOnline: jest.fn().mockResolvedValue(true),
+  startSession: jest.fn(),
+  endSession: jest.fn(),
+}));
+
+import * as sync from '../../src/sync';
+import * as utils from '../../src/utils';
 
 // Mock notification services
 jest.mock('../../src/services', () => ({
@@ -25,12 +41,30 @@ import * as notificationServices from '../../src/services';
 
 // Mock navigation
 const mockGoBack = jest.fn();
+const mockPush = jest.fn();
+const mockAddListener = jest.fn();
+
+// Store beforeRemove listeners so tests can trigger them (prefixed with mock for jest)
+let mockBeforeRemoveListeners: Array<(e: { preventDefault: () => void }) => void> = [];
+
 jest.mock('@react-navigation/native', () => {
   const actualNav = jest.requireActual('@react-navigation/native');
   return {
     ...actualNav,
     useNavigation: () => ({
       goBack: mockGoBack,
+      push: mockPush,
+      addListener: mockAddListener.mockImplementation(
+        (event: string, callback: (e: { preventDefault: () => void }) => void) => {
+          if (event === 'beforeRemove') {
+            mockBeforeRemoveListeners.push(callback);
+          }
+          // Return unsubscribe function
+          return () => {
+            mockBeforeRemoveListeners = mockBeforeRemoveListeners.filter(l => l !== callback);
+          };
+        },
+      ),
     }),
   };
 });
@@ -104,9 +138,12 @@ describe('ReviewsScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockRandom.mockImplementation(() => 0.1); // Deterministic random
+    mockBeforeRemoveListeners = []; // Clear any leftover listeners
     // Default mocks
     (storage.getAvailableReviews as jest.Mock).mockResolvedValue([]);
     (storage.getSubjectsByIds as jest.Mock).mockResolvedValue([]);
+    (sync.submitReviews as jest.Mock).mockResolvedValue({ success: true, submittedCount: 0, queuedCount: 0 });
+    (utils.isOnline as jest.Mock).mockResolvedValue(true);
   });
 
   afterEach(() => {
@@ -574,6 +611,253 @@ describe('ReviewsScreen', () => {
       });
       expect(notificationServices.setBadgeCount).not.toHaveBeenCalled();
       expect(notificationServices.clearBadge).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('exit sync behavior', () => {
+    // Sample kanji subject with readings for testing exit sync
+    const kanjiSubjectWithReadings = {
+      id: 2,
+      object_type: 'kanji',
+      characters: '大',
+      meanings: JSON.stringify([
+        { meaning: 'Big', primary: true, accepted_answer: true },
+      ]),
+      readings: JSON.stringify([
+        { reading: 'おお', primary: true, accepted_answer: true, type: 'kunyomi' },
+      ]),
+      meaning_mnemonic: 'This is the meaning mnemonic for big.',
+      reading_mnemonic: 'This is the reading mnemonic for big.',
+      level: 1,
+      component_subject_ids: null,
+      auxiliary_meanings: null,
+      data_updated_at: '2026-01-01T00:00:00.000Z',
+      created_at: '2026-01-01T00:00:00.000Z',
+    };
+
+    const kanjiAssignment = {
+      id: 1002,
+      subject_id: 2,
+      srs_stage: 2,
+      available_at: '2026-01-01T00:00:00.000Z',
+      started_at: '2026-01-01T00:00:00.000Z',
+      unlocked_at: '2026-01-01T00:00:00.000Z',
+      data_updated_at: '2026-01-01T00:00:00.000Z',
+      created_at: '2026-01-01T00:00:00.000Z',
+    };
+
+    beforeEach(() => {
+      mockBeforeRemoveListeners = [];
+      (sync.submitReviews as jest.Mock).mockClear();
+      // Reset storage mocks that may have been cleared by previous test suites
+      (storage.getAvailableReviews as jest.Mock).mockReset();
+      (storage.getSubjectsByIds as jest.Mock).mockReset();
+      (storage.getUserSynonymsBySubjectId as jest.Mock).mockReset();
+    });
+
+    it('should sync completed items when user navigates away', async () => {
+      // Set up with kanji (has both meaning and reading)
+      (storage.getAvailableReviews as jest.Mock).mockResolvedValue([kanjiAssignment]);
+      (storage.getSubjectsByIds as jest.Mock).mockResolvedValue([kanjiSubjectWithReadings]);
+      (storage.getUserSynonymsBySubjectId as jest.Mock).mockResolvedValue([]);
+
+      const { getByTestId } = renderWithNavigation(<ReviewsScreen />);
+
+      // Wait for reviews to load
+      await waitFor(() => {
+        expect(getByTestId('review-session')).toBeTruthy();
+      });
+
+      // Determine question order based on what's shown
+      const firstQuestionType = getByTestId('review-session-question-type').props.children;
+
+      if (firstQuestionType === 'MEANING') {
+        // Meaning first
+        fireEvent.changeText(getByTestId('review-session-input'), 'Big');
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        // Wait for next question (reading)
+        await waitFor(() => {
+          expect(getByTestId('review-session-question-type').props.children).toBe('READING');
+        });
+
+        // Answer reading correctly
+        fireEvent.changeText(getByTestId('review-session-input'), 'oo');
+        fireEvent.press(getByTestId('review-session-submit'));
+      } else {
+        // Reading first
+        fireEvent.changeText(getByTestId('review-session-input'), 'oo');
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        // Wait for next question (meaning)
+        await waitFor(() => {
+          expect(getByTestId('review-session-question-type').props.children).toBe('MEANING');
+        });
+
+        // Answer meaning correctly
+        fireEvent.changeText(getByTestId('review-session-input'), 'Big');
+        fireEvent.press(getByTestId('review-session-submit'));
+      }
+
+      // The item is now complete (both meaning and reading correct)
+      // Wait for the correct feedback to show and process
+      await waitFor(() => {
+        // The beforeRemove listener should be registered
+        expect(mockBeforeRemoveListeners.length).toBeGreaterThan(0);
+      });
+
+      // Trigger beforeRemove (simulate user navigating away)
+      const mockPreventDefault = jest.fn();
+      mockBeforeRemoveListeners.forEach(listener => listener({ preventDefault: mockPreventDefault }));
+
+      // Wait for async exit sync to complete
+      await waitFor(() => {
+        expect(sync.submitReviews).toHaveBeenCalled();
+      });
+
+      // Verify submitReviews was called with the completed item
+      expect(sync.submitReviews).toHaveBeenCalledWith(
+        expect.anything(), // client
+        expect.arrayContaining([
+          expect.objectContaining({
+            assignmentId: 1002,
+            subjectId: 2,
+            incorrectMeaningAnswers: 0,
+            incorrectReadingAnswers: 0,
+          }),
+        ]),
+      );
+    });
+
+    it('should not sync incomplete items when user navigates away', async () => {
+      // Use only the kanji (incomplete after answering one question)
+      // We trigger beforeRemove before answering any questions to ensure no items are complete
+      (storage.getAvailableReviews as jest.Mock).mockResolvedValue([kanjiAssignment]);
+      (storage.getSubjectsByIds as jest.Mock).mockResolvedValue([kanjiSubjectWithReadings]);
+      (storage.getUserSynonymsBySubjectId as jest.Mock).mockResolvedValue([]);
+
+      const { getByTestId } = renderWithNavigation(<ReviewsScreen />);
+
+      // Wait for reviews to load
+      await waitFor(() => {
+        expect(getByTestId('review-session')).toBeTruthy();
+      });
+
+      // Don't answer any questions - just trigger exit immediately
+      // This ensures no items are complete
+
+      // Trigger beforeRemove before answering ANY question
+      const mockPreventDefault = jest.fn();
+      mockBeforeRemoveListeners.forEach(listener => listener({ preventDefault: mockPreventDefault }));
+
+      // Wait a bit for any async operations
+      await new Promise<void>(resolve => setTimeout(resolve, 100));
+
+      // submitReviews should NOT have been called because no item is fully complete
+      expect(sync.submitReviews).not.toHaveBeenCalled();
+    });
+
+    it('should include correct incorrect counts when syncing on exit', async () => {
+      // Set up with radical (only meaning question)
+      const radicalSubject = {
+        ...sampleRadicalSubject,
+        auxiliary_meanings: null,
+      };
+
+      (storage.getAvailableReviews as jest.Mock).mockResolvedValue([sampleAssignments[0]]);
+      (storage.getSubjectsByIds as jest.Mock).mockResolvedValue([radicalSubject]);
+      (storage.getUserSynonymsBySubjectId as jest.Mock).mockResolvedValue([]);
+
+      const { getByTestId } = renderWithNavigation(<ReviewsScreen />);
+
+      // Wait for reviews to load
+      await waitFor(() => {
+        expect(getByTestId('review-session')).toBeTruthy();
+      });
+
+      // Answer incorrectly first
+      fireEvent.changeText(getByTestId('review-session-input'), 'Wrong');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Press continue to dismiss incorrect feedback
+      await waitFor(() => {
+        expect(getByTestId('review-session-continue')).toBeTruthy();
+      });
+      fireEvent.press(getByTestId('review-session-continue'));
+
+      // Answer correctly
+      await waitFor(() => {
+        expect(getByTestId('review-session-input')).toBeTruthy();
+      });
+      fireEvent.changeText(getByTestId('review-session-input'), 'Ground');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Wait for the item to be marked as complete
+      await waitFor(() => {
+        expect(mockBeforeRemoveListeners.length).toBeGreaterThan(0);
+      });
+
+      // Trigger beforeRemove
+      const mockPreventDefault = jest.fn();
+      mockBeforeRemoveListeners.forEach(listener => listener({ preventDefault: mockPreventDefault }));
+
+      // Wait for async exit sync
+      await waitFor(() => {
+        expect(sync.submitReviews).toHaveBeenCalled();
+      });
+
+      // Verify submitReviews was called with correct incorrect counts
+      expect(sync.submitReviews).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.arrayContaining([
+          expect.objectContaining({
+            assignmentId: 1001,
+            subjectId: 1,
+            incorrectMeaningAnswers: 1, // 1 incorrect answer
+            incorrectReadingAnswers: 0,
+          }),
+        ]),
+      );
+    });
+
+    it('should work offline by queuing reviews', async () => {
+      (utils.isOnline as jest.Mock).mockResolvedValue(false);
+      (storage.getAvailableReviews as jest.Mock).mockResolvedValue([sampleAssignments[0]]);
+      (storage.getSubjectsByIds as jest.Mock).mockResolvedValue([
+        { ...sampleRadicalSubject, auxiliary_meanings: null },
+      ]);
+      (storage.getUserSynonymsBySubjectId as jest.Mock).mockResolvedValue([]);
+
+      const { getByTestId } = renderWithNavigation(<ReviewsScreen />);
+
+      // Wait for reviews to load
+      await waitFor(() => {
+        expect(getByTestId('review-session')).toBeTruthy();
+      });
+
+      // Answer correctly
+      fireEvent.changeText(getByTestId('review-session-input'), 'Ground');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Wait for state to update
+      await waitFor(() => {
+        expect(mockBeforeRemoveListeners.length).toBeGreaterThan(0);
+      });
+
+      // Trigger beforeRemove
+      const mockPreventDefault = jest.fn();
+      mockBeforeRemoveListeners.forEach(listener => listener({ preventDefault: mockPreventDefault }));
+
+      // Wait for async exit sync
+      await waitFor(() => {
+        expect(sync.submitReviews).toHaveBeenCalled();
+      });
+
+      // submitReviews should be called with null client (offline)
+      expect(sync.submitReviews).toHaveBeenCalledWith(
+        null,
+        expect.any(Array),
+      );
     });
   });
 });
