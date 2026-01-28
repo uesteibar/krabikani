@@ -3,17 +3,44 @@ import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { AccessibilityInfo } from 'react-native';
 
 import { LessonCompletion } from '../../src/components/LessonCompletion';
+import type { LessonResultItem } from '../../src/components/LessonCompletion';
 
 // Mock AccessibilityInfo
 const mockIsReduceMotionEnabled = jest.fn(() => Promise.resolve(false));
 const mockAddEventListener = jest.fn(() => ({ remove: jest.fn() }));
 
-jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockImplementation(
-  mockIsReduceMotionEnabled,
-);
-jest.spyOn(AccessibilityInfo, 'addEventListener').mockImplementation(
-  mockAddEventListener as unknown as typeof AccessibilityInfo.addEventListener,
-);
+jest
+  .spyOn(AccessibilityInfo, 'isReduceMotionEnabled')
+  .mockImplementation(mockIsReduceMotionEnabled);
+jest
+  .spyOn(AccessibilityInfo, 'addEventListener')
+  .mockImplementation(
+    mockAddEventListener as unknown as typeof AccessibilityInfo.addEventListener,
+  );
+
+const sampleResultItems: LessonResultItem[] = [
+  {
+    id: 100,
+    characters: '一',
+    primaryMeaning: 'Ground',
+    primaryReading: '',
+    subjectType: 'radical',
+  },
+  {
+    id: 101,
+    characters: '大',
+    primaryMeaning: 'Big',
+    primaryReading: 'おお',
+    subjectType: 'kanji',
+  },
+  {
+    id: 102,
+    characters: '大きい',
+    primaryMeaning: 'Big',
+    primaryReading: 'おおきい',
+    subjectType: 'vocabulary',
+  },
+];
 
 describe('LessonCompletion', () => {
   const defaultProps = {
@@ -40,9 +67,7 @@ describe('LessonCompletion', () => {
     });
 
     it('should render the success icon', () => {
-      const { getByTestId } = render(
-        <LessonCompletion {...defaultProps} />,
-      );
+      const { getByTestId } = render(<LessonCompletion {...defaultProps} />);
 
       expect(getByTestId('lesson-completion-icon')).toBeTruthy();
     });
@@ -80,6 +105,44 @@ describe('LessonCompletion', () => {
       );
 
       expect(getByText('Queued')).toBeTruthy();
+    });
+  });
+
+  describe('results list', () => {
+    it('should render result items when provided', () => {
+      const { getByTestId } = render(
+        <LessonCompletion {...defaultProps} resultItems={sampleResultItems} />,
+      );
+
+      expect(getByTestId('lesson-completion-results-list')).toBeTruthy();
+      expect(getByTestId('lesson-result-100')).toBeTruthy();
+      expect(getByTestId('lesson-result-101')).toBeTruthy();
+      expect(getByTestId('lesson-result-102')).toBeTruthy();
+    });
+
+    it('should show characters and meanings for each item', () => {
+      const { getByText } = render(
+        <LessonCompletion {...defaultProps} resultItems={sampleResultItems} />,
+      );
+
+      expect(getByText('一')).toBeTruthy();
+      expect(getByText('Ground')).toBeTruthy();
+      expect(getByText('大')).toBeTruthy();
+      expect(getByText('おお')).toBeTruthy();
+    });
+
+    it('should not render results list when no items provided', () => {
+      const { queryByTestId } = render(<LessonCompletion {...defaultProps} />);
+
+      expect(queryByTestId('lesson-completion-results-list')).toBeNull();
+    });
+
+    it('should not render results list when empty array provided', () => {
+      const { queryByTestId } = render(
+        <LessonCompletion {...defaultProps} resultItems={[]} />,
+      );
+
+      expect(queryByTestId('lesson-completion-results-list')).toBeNull();
     });
   });
 
@@ -167,9 +230,7 @@ describe('LessonCompletion', () => {
 
   describe('accessibility', () => {
     it('should have appropriate testIDs', () => {
-      const { getByTestId } = render(
-        <LessonCompletion {...defaultProps} />,
-      );
+      const { getByTestId } = render(<LessonCompletion {...defaultProps} />);
 
       expect(getByTestId('lesson-completion')).toBeTruthy();
       expect(getByTestId('lesson-completion-icon')).toBeTruthy();
@@ -333,9 +394,7 @@ describe('LessonCompletion', () => {
     });
 
     it('should not show confetti particles by default (perfectQuiz not passed)', () => {
-      const { queryByTestId } = render(
-        <LessonCompletion {...defaultProps} />,
-      );
+      const { queryByTestId } = render(<LessonCompletion {...defaultProps} />);
 
       expect(queryByTestId('confetti-particle-0')).toBeNull();
     });

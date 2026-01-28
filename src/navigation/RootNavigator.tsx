@@ -40,8 +40,9 @@ const screenOptions = {
 export function RootNavigator() {
   const theme = useTheme();
   const { colors, isDark } = theme;
-  const [initialRoute, setInitialRoute] =
-    useState<keyof RootStackParamList | null>(null);
+  const [initialRoute, setInitialRoute] = useState<
+    keyof RootStackParamList | null
+  >(null);
 
   useEffect(() => {
     hasApiKey().then(keyExists => {

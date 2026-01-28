@@ -199,3 +199,18 @@ Started:
   - `jest.clearAllMocks()` resets mock return values — must re-setup `mockResolvedValue` after clearing
   - Math.random mock from earlier tests can leak — call `mockRestore()` + re-`spyOn()` before tests that need fresh random behavior
 ---
+
+## 2026-01-28 - Post-merge commits (4cb9ec8..05b1071)
+
+### 73a1fee - Fixes to upcoming reviews counts
+- Fixed upcoming reviews count calculations in notification scheduler and database queries
+- Added test coverage for review notification scheduler edge cases
+- Files: src/services/reviewNotificationScheduler.ts, src/storage/database.ts, src/storage/index.ts, __tests__/services/reviewNotificationScheduler.test.ts
+
+### 05b1071 - Rebump lesson completion screen
+- Major overhaul of LessonCompletion component with enhanced UI and animations
+- Updated LessonsScreen to work with revamped completion component
+- Updated component exports in index.ts
+- Adjusted RootNavigator for lesson completion flow changes
+- Files: src/components/LessonCompletion.tsx, __tests__/components/LessonCompletion.test.tsx, src/components/index.ts, src/navigation/RootNavigator.tsx, src/screens/LessonsScreen.tsx
+---

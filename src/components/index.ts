@@ -9,10 +9,7 @@ export {
   type LastSyncedIndicatorProps,
 } from './LastSyncedIndicator';
 
-export {
-  DashboardStats,
-  type DashboardStatsProps,
-} from './DashboardStats';
+export { DashboardStats, type DashboardStatsProps } from './DashboardStats';
 
 export {
   LessonCard,
@@ -44,6 +41,7 @@ export {
 export {
   LessonCompletion,
   type LessonCompletionProps,
+  type LessonResultItem,
 } from './LessonCompletion';
 
 export {
@@ -71,10 +69,7 @@ export {
   type SyncingIndicatorProps,
 } from './SyncingIndicator';
 
-export {
-  LoadingSpinner,
-  type LoadingSpinnerProps,
-} from './LoadingSpinner';
+export { LoadingSpinner, type LoadingSpinnerProps } from './LoadingSpinner';
 
 export {
   AnimatedFeedback,
@@ -82,10 +77,7 @@ export {
   type FeedbackType,
 } from './AnimatedFeedback';
 
-export {
-  FocusableInput,
-  type FocusableInputProps,
-} from './FocusableInput';
+export { FocusableInput, type FocusableInputProps } from './FocusableInput';
 
 export { RadicalImage, type RadicalImageProps } from './RadicalImage';
 
@@ -116,15 +108,9 @@ export {
   type ExpandableDetailsProps,
 } from './ExpandableDetails';
 
-export {
-  ItemDetails,
-  type ItemDetailsProps,
-} from './ItemDetails';
+export { ItemDetails, type ItemDetailsProps } from './ItemDetails';
 
-export {
-  LearnedCounts,
-  type LearnedCountsProps,
-} from './LearnedCounts';
+export { LearnedCounts, type LearnedCountsProps } from './LearnedCounts';
 
 export {
   UpcomingReviewsChart,

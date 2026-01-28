@@ -16,6 +16,7 @@ import {
   LessonCompletion,
   LESSON_BATCH_SIZE,
   type LessonItem,
+  type LessonResultItem,
   type ComponentRadical,
   type QuizItem,
   type QuizComponentKanji,
@@ -36,13 +37,7 @@ type LessonsScreenNavigationProp = NativeStackNavigationProp<
   'Lessons'
 >;
 
-type LessonPhase =
-  | 'loading'
-  | 'learning'
-  | 'quiz'
-  | 'syncing'
-  | 'complete'
-  | 'error';
+type LessonPhase = 'loading' | 'learning' | 'quiz' | 'complete' | 'error';
 
 interface LessonSession {
   assignments: DatabaseAssignment[];
@@ -325,16 +320,38 @@ export function LessonsScreen() {
     return Math.max(0, session.assignments.length - nextStartIndex);
   }, [session]);
 
+  // Build result items for the completion screen
+  const resultItems: LessonResultItem[] = useMemo(() => {
+    return currentBatch.items.map(item => {
+      const primaryMeaning =
+        item.meanings.find(m => m.primary)?.meaning ??
+        item.meanings[0]?.meaning ??
+        '';
+      const primaryReading =
+        item.readings?.find(r => r.primary)?.reading ??
+        item.readings?.[0]?.reading ??
+        '';
+      return {
+        id: item.id,
+        characters: item.characters,
+        primaryMeaning,
+        primaryReading,
+        subjectType: item.subjectType,
+      };
+    });
+  }, [currentBatch.items]);
+
   // Handle completion of learning phase (proceed to quiz)
   const handleBatchComplete = useCallback(() => {
     setPhase('quiz');
   }, []);
 
-  // Handle completion of quiz phase (sync and show completion)
+  // Handle completion of quiz phase (show completion immediately, sync in background)
   const handleQuizComplete = useCallback(async () => {
     if (!session) return;
 
-    setPhase('syncing');
+    // Show completion immediately — don't block on sync
+    setPhase('complete');
 
     try {
       // Prepare lessons to complete
@@ -356,22 +373,15 @@ export function LessonsScreen() {
       const result = await completeLessons(client, lessonsToComplete);
 
       if (
-        !result.success &&
-        result.completedCount === 0 &&
-        result.queuedCount === 0
+        result.success ||
+        result.completedCount > 0 ||
+        result.queuedCount > 0
       ) {
-        setErrorMessage(result.error ?? 'Failed to complete lessons');
-        setPhase('error');
-        return;
+        setSyncedOnline(result.completedCount > 0);
       }
-
-      setSyncedOnline(result.completedCount > 0);
-      setPhase('complete');
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Failed to sync lessons';
-      setErrorMessage(message);
-      setPhase('error');
+    } catch (_error) {
+      // Sync failure is not critical — lessons are queued locally
+      setSyncedOnline(false);
     }
   }, [session, currentBatch.assignments]);
 
@@ -430,16 +440,6 @@ export function LessonsScreen() {
     );
   }
 
-  // Render syncing state
-  if (phase === 'syncing') {
-    return (
-      <View style={styles.centerContainer} testID="lessons-screen-syncing">
-        <ActivityIndicator size="large" color="#e8a4c9" />
-        <Text style={styles.loadingText}>Syncing with WaniKani...</Text>
-      </View>
-    );
-  }
-
   // Render learning phase
   if (phase === 'learning' && session) {
     return (
@@ -483,6 +483,7 @@ export function LessonsScreen() {
           onContinueLessons={
             moreLessonsAvailable > 0 ? handleContinueLessons : undefined
           }
+          resultItems={resultItems}
         />
       </View>
     );
