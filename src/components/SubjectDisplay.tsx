@@ -27,6 +27,7 @@ export interface SubjectDisplayProps {
   subjectType: SubjectType;
   displayMode: 'characters' | 'meaning';
   displayText: string;
+  displaySubtitle?: string;
   feedbackState?: FeedbackState;
   srsBadge?: SrsBadge;
   subjectTypeLabel?: string;
@@ -50,6 +51,7 @@ export function SubjectDisplay({
   subjectType,
   displayMode,
   displayText,
+  displaySubtitle,
   feedbackState,
   srsBadge,
   subjectTypeLabel,
@@ -75,6 +77,15 @@ export function SubjectDisplay({
       >
         {displayText}
       </Text>
+
+      {displaySubtitle ? (
+        <Text
+          style={styles.subtitleText}
+          testID="subject-display-subtitle"
+        >
+          {displaySubtitle}
+        </Text>
+      ) : null}
 
       {feedbackState && (
         <Text
@@ -132,6 +143,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.text.inverse,
     textAlign: 'center',
+  },
+  subtitleText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.inverse,
+    textAlign: 'center',
+    opacity: 0.7,
+    marginTop: SPACING.xs,
   },
   feedbackLabel: {
     position: 'absolute',

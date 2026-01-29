@@ -498,6 +498,7 @@ export function QuizEngine({ config }: QuizEngineProps) {
         subjectType={currentQuestion.subjectType}
         displayMode={currentQuestion.displayMode}
         displayText={currentQuestion.displayText}
+        displaySubtitle={currentQuestion.displaySubtitle}
         feedbackState={feedbackState}
         srsBadge={srsBadge}
         subjectTypeLabel={
