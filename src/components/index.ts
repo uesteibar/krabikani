@@ -28,6 +28,11 @@ export {
 } from './CorrectFeedbackView';
 
 export {
+  ProgressHeader,
+  type ProgressHeaderProps,
+} from './ProgressHeader';
+
+export {
   OfflineIndicator,
   type OfflineIndicatorProps,
 } from './OfflineIndicator';
