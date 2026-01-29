@@ -270,3 +270,15 @@ Started:
   - ReviewQuestion→Question conversion uses `key` as `id` (e.g., "42-meaning") and stores the question map in a ref for reverse lookup in callbacks
   - Pre-existing test failures: 3 suites (syncService, database x2) — unchanged
 ---
+
+## 2026-01-29 - US-018
+- What was implemented: Migrated LessonQuiz to use QuizEngine internally, reducing the component from 804 lines to 517 lines
+- Files changed:
+  - `src/components/LessonQuiz.tsx` — replaced manual quiz loop, input handling, feedback views with QuizEngine wrapper
+- **Learnings for future iterations:**
+  - LessonQuiz migration follows the exact same pattern as ReviewSession migration (US-017): convert domain questions to Question type, build QuizEngineConfig, map callbacks
+  - Use `resultsRef` (ref) instead of `useState` for accumulated results to avoid stale closure in `onComplete` callback — QuizEngine calls `onComplete` synchronously after `onMarkCorrect` in the same render cycle
+  - LessonQuiz config differences from ReviewSession: `completionMode: 'allQuestions'`, `allowAddSynonym: false`, `showSubjectTypeLabel: true`, `showSrsBadge: false`, no `shouldSkipQuestion`/`onContinueDelay`/`renderExtraButtons`
+  - All 110 existing LessonQuiz tests passed without any test file modifications — seamless migration
+  - `renderCompletion` should NOT include a `testID` prop since QuizEngine already wraps it in `<View testID="${testID}-complete">` — duplicate testIDs cause test failures
+---
