@@ -313,3 +313,19 @@ Started:
   - All 26 existing ReversePracticeScreen tests pass with testID updates (from `reverse-practice-*` to `reverse-practice-session-*` for QuizEngine-generated elements)
   - Pre-existing test failures: 3 suites (syncService, database x2) — unchanged
 ---
+
+## 2026-01-29 - US-021
+- Removed dead code left behind after QuizEngine migration: unused exported types, unused interfaces, dead re-exports from barrel file
+- Removed `export` from internally-used types: `ReviewQuestion`, `ReviewQuestionType`, `ReviewAnswerResult` in ReviewSession.tsx; `QuizQuestion`, `QuestionType`, `AnswerResult` in LessonQuiz.tsx; `ReversePracticeItem` in ReversePracticeScreen.tsx
+- Deleted unused `IncorrectFeedback` interface from both ReviewSession.tsx and LessonQuiz.tsx
+- Cleaned up `src/components/index.ts` barrel exports: removed `ReviewQuestion`, `ReviewQuestionType`, `ReviewAnswerResult`, `ReviewIncorrectFeedback`, `QuizQuestion`, `QuestionType`, `AnswerResult`, `IncorrectFeedback`
+- Files changed: src/components/ReviewSession.tsx, src/components/LessonQuiz.tsx, src/screens/ReversePracticeScreen.tsx, src/components/index.ts
+- File size reductions from original (pre-shared-components): ReviewSession 1932→1093 (43%), LessonQuiz 1124→509 (55%), PracticeScreen 976→485 (50%), ReversePracticeScreen 839→415 (51%)
+- No duplicated styles remain — all remaining styles in each file are actively used
+- No TypeScript errors, no lint errors, all tests pass (3 pre-existing failures in syncService/database unchanged)
+- **Learnings for future iterations:**
+  - Line count targets in PRD (< 200, < 100) were aspirational — actual irreducible size includes types, data loading, question generation, and domain logic that legitimately belongs in wrapper screens
+  - ReviewSession is the largest wrapper because it has complex domain logic: SRS tracking (level-up/down animations), item progress (meaning+reading per item), wrap-up mode, buffer cap, zen mode, session completion detection
+  - The other 3 screens are simpler but still need data loading functions (loadPracticeItems, loadReversePracticeItems) which account for ~150 lines each
+  - All dead code was limited to unused type exports and interfaces that were previously consumed by inline rendering code but became internal-only after QuizEngine migration
+---
