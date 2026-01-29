@@ -87,10 +87,10 @@ export interface QuizItem {
 }
 
 /** Type of question being asked */
-export type QuestionType = 'meaning' | 'reading';
+type QuestionType = 'meaning' | 'reading';
 
 /** A single quiz question */
-export interface QuizQuestion {
+interface QuizQuestion {
   /** The item being quizzed */
   item: QuizItem;
   /** The type of question (meaning or reading) */
@@ -100,19 +100,11 @@ export interface QuizQuestion {
 }
 
 /** Result of answering a question */
-export interface AnswerResult {
+interface AnswerResult {
   question: QuizQuestion;
   userAnswer: string;
   isCorrect: boolean;
   correctAnswer: string;
-}
-
-/** Feedback state when showing incorrect answer */
-export interface IncorrectFeedback {
-  question: QuizQuestion;
-  userAnswer: string;
-  correctAnswer: string;
-  mnemonic: string;
 }
 
 export interface LessonQuizProps {

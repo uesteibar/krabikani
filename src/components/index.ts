@@ -66,10 +66,6 @@ export {
   type QuizItem,
   type QuizComponentRadical,
   type QuizComponentKanji,
-  type QuizQuestion,
-  type QuestionType,
-  type AnswerResult,
-  type IncorrectFeedback,
 } from './LessonQuiz';
 
 export {
@@ -86,11 +82,7 @@ export {
   type ReviewItem,
   type ReviewComponentRadical,
   type ReviewComponentKanji,
-  type ReviewQuestion,
-  type ReviewQuestionType,
-  type ReviewAnswerResult,
   type ItemProgress,
-  type IncorrectFeedback as ReviewIncorrectFeedback,
 } from './ReviewSession';
 
 export {

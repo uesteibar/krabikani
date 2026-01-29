@@ -103,10 +103,10 @@ export interface ReviewItem {
 }
 
 /** Type of question being asked */
-export type ReviewQuestionType = 'meaning' | 'reading';
+type ReviewQuestionType = 'meaning' | 'reading';
 
 /** A single review question */
-export interface ReviewQuestion {
+interface ReviewQuestion {
   /** The item being reviewed */
   item: ReviewItem;
   /** The type of question (meaning or reading) */
@@ -116,20 +116,13 @@ export interface ReviewQuestion {
 }
 
 /** Result of answering a question */
-export interface ReviewAnswerResult {
+interface ReviewAnswerResult {
   question: ReviewQuestion;
   userAnswer: string;
   isCorrect: boolean;
   correctAnswer: string;
 }
 
-/** Feedback state when showing incorrect answer */
-export interface IncorrectFeedback {
-  question: ReviewQuestion;
-  userAnswer: string;
-  correctAnswer: string;
-  mnemonic: string;
-}
 
 /** Tracks completion status and incorrect counts for each item */
 export interface ItemProgress {

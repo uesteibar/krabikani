@@ -37,7 +37,7 @@ import type {
   ProgressMode,
 } from '../components/quiz/types';
 
-export interface ReversePracticeItem {
+interface ReversePracticeItem {
   id: number;
   assignmentId: number;
   subjectType: 'vocabulary' | 'kana_vocabulary';
