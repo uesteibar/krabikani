@@ -1,4 +1,10 @@
 export {
+  Button,
+  type ButtonProps,
+  type ButtonVariant,
+} from './Button';
+
+export {
   OfflineIndicator,
   type OfflineIndicatorProps,
 } from './OfflineIndicator';
