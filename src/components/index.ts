@@ -105,6 +105,8 @@ export {
 
 export { LoadingSpinner, type LoadingSpinnerProps } from './LoadingSpinner';
 
+export { LoadingView, type LoadingViewProps } from './LoadingView';
+
 export {
   AnimatedFeedback,
   type AnimatedFeedbackProps,
