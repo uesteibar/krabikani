@@ -1,19 +1,22 @@
 {
   "project": "Krabikani",
-  "branchName": "ralph/secondary-meanings-reverse-practice",
-  "description": "Show Secondary Meanings in Reverse Practice Session - Display secondary accepted meanings below the primary meaning on reverse practice question and incorrect feedback screens",
+  "branchName": "ralph/ci-automations",
+  "description": "Set Up CI Automations - GitHub Actions workflow to run quality checks (lint, typecheck, tests) on every push and PR",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Add helper function to extract secondary accepted meanings",
-      "description": "As a developer, I need a helper function to extract secondary accepted meanings from a Meaning[] array so that both the question and incorrect feedback screens can reuse it.",
+      "title": "Create GitHub Actions CI workflow with all quality checks",
+      "description": "As a developer, I want a GitHub Actions workflow that runs lint, typecheck, and tests on every push and PR so that I get automatic feedback on code quality.",
       "acceptanceCriteria": [
-        "Add a `getSecondaryMeanings` function in ReversePracticeScreen.tsx alongside the existing `getPrimaryMeaning` function (around line 216-219)",
-        "The function filters meanings where `accepted_answer: true` and `primary: false`",
-        "Returns a comma-separated string of secondary meaning texts (e.g., 'to consume, to have')",
-        "Returns an empty string when there are no secondary meanings",
-        "Function is covered by unit tests",
-        "All tests pass",
+        "Create `.github/workflows/ci.yml` workflow file",
+        "Workflow triggers on `push` to any branch",
+        "Workflow triggers on `pull_request` to any branch",
+        "Workflow uses `ubuntu-latest` runner",
+        "Workflow sets up Node.js 20 using `actions/setup-node` with `cache: 'npm'`",
+        "Workflow installs dependencies with `npm ci`",
+        "Workflow runs `npm run lint` as a separate step and fails on errors",
+        "Workflow runs `npm run typecheck` as a separate step and fails on errors",
+        "Workflow runs `npm test` as a separate step and fails on test failures",
         "All quality checks pass"
       ],
       "priority": 1,
@@ -22,41 +25,17 @@
     },
     {
       "id": "US-002",
-      "title": "Show secondary meanings on reverse practice question screen",
-      "description": "As a learner, I want to see secondary meanings below the primary meaning during reverse practice so that I have full context about which word is being asked.",
+      "title": "Add branch protection documentation to PR description",
+      "description": "As a repository maintainer, I want documentation on how to configure branch protection rules so that the main branch requires CI checks to pass before merging.",
       "acceptanceCriteria": [
-        "Primary meaning continues to display in large, bold text as it does today",
-        "Secondary accepted meanings display below the primary meaning in smaller text (e.g., FONT_SIZES.md or FONT_SIZES.sm)",
-        "Secondary meanings text has reduced opacity (e.g., 0.7) or lighter weight to create clear visual hierarchy",
-        "Secondary meanings are comma-separated on a single line",
-        "When there are no secondary meanings, nothing extra is shown (no visual change for single-meaning items)",
-        "Text does not overflow or clip within the meaningContainer for items with many meanings",
-        "Add new styles to the existing StyleSheet.create() block",
-        "Changes are covered by unit/integration tests",
-        "All tests pass",
-        "All quality checks pass",
-        "Verify in browser using dev-browser skill"
+        "PR description includes instructions for enabling branch protection on `main`",
+        "Instructions specify requiring the CI workflow status check to pass before merging",
+        "Instructions mention requiring PR reviews (recommended but optional)",
+        "All quality checks pass"
       ],
       "priority": 2,
       "passes": false,
-      "notes": "Depends on US-001"
-    },
-    {
-      "id": "US-003",
-      "title": "Show secondary meanings on incorrect feedback screen",
-      "description": "As a learner, when I answer incorrectly during reverse practice, I want to see the secondary meanings alongside the primary meaning so I understand the full scope of the word I got wrong.",
-      "acceptanceCriteria": [
-        "Incorrect feedback header shows primary meaning in the existing style",
-        "Secondary accepted meanings display below the primary meaning in smaller text, matching the style from US-002",
-        "When there are no secondary meanings, nothing extra is shown",
-        "Changes are covered by unit/integration tests",
-        "All tests pass",
-        "All quality checks pass",
-        "Verify in browser using dev-browser skill"
-      ],
-      "priority": 3,
-      "passes": false,
-      "notes": "Depends on US-001 and US-002 (reuses same helper and styles)"
+      "notes": "This story is documentation-only in the PR description, no code changes needed"
     }
   ]
 }
