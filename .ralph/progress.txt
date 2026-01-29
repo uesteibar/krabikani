@@ -26,6 +26,10 @@
 - Custom hooks live in src/hooks/, tests in __tests__/hooks/
 - When refactoring to use shared components, testIDs change: ProgressHeader uses `progress-header-*`, SubjectDisplay uses `subject-display-*`, IncorrectFeedbackView prefixes all testIDs with the `testID` prop value
 - ReviewSession tests now use ProgressHeader testIDs (progress-header-count, progress-header-remaining, progress-header-wrap-up, progress-header-progress) and SubjectDisplay testIDs (subject-display-text, subject-display-feedback-label, srs-badge)
+- Quiz engine types live in src/components/quiz/types.ts; answer validation in src/components/quiz/answerValidation.ts — use `validateInput` for pre-submission checks and `validateAnswer` for correctness evaluation
+- Unified Question type has questionType: 'meaning' | 'reading' | 'reverse' — reverse mode uses exact displayText match with no fuzzy matching
+- QuizEngine component lives in src/components/quiz/QuizEngine.tsx — config-driven via QuizEngineConfig, wrapper screens handle domain logic (SRS, navigation, data loading) via callbacks
+- QuizEngine tests: don't mock useQuestionInput with React.useState in jest.mock factory — use the real hook or require('react') inside the factory
 
 Started:
 ---
@@ -217,4 +221,36 @@ Started:
   - IncorrectFeedbackView `testID="practice-session"` auto-prefixes child testIDs (practice-session-continue, practice-session-correct-answer, practice-session-mnemonic)
   - The refill logic (REFILL_THRESHOLD=3, PRACTICE_BATCH_SIZE=10) stays in PracticeScreen, not in shared components
   - Pre-existing test failures: 3 suites (syncService, database) — unchanged
+---
+
+## 2026-01-29 - US-015
+- Created unified Question type in src/components/quiz/types.ts with fields: id, subjectId, subjectType, displayText, displayMode, correctAnswers, questionType, mnemonic, mnemonicLabel, meanings, readings, auxiliaryMeanings, userSynonyms
+- Created src/components/quiz/answerValidation.ts consolidating meaning validation (with fuzzy match), reading validation, and reverse validation (no fuzzy match, rejects romaji)
+- Exported validateInput (pre-submission input validation with shake trigger) and validateAnswer (answer correctness evaluation returning AnswerResult with status/userAnswer/correctAnswer)
+- Files changed: src/components/quiz/types.ts (new), src/components/quiz/answerValidation.ts (new), __tests__/components/quiz/answerValidation.test.ts (new, 23 tests)
+- **Learnings for future iterations:**
+  - Answer validation was already centralized in src/utils/answerValidation.ts — the quiz module wraps it with a unified Question-based API
+  - Reverse validation is fundamentally different: exact character match against displayText, no fuzzy match, containsRomaji rejection
+  - validateInput handles pre-submission checks (empty input, invalid romaji, romaji in reverse mode) — returns { valid, reason } so callers know whether to shake
+  - validateAnswer handles post-validation: converts romaji for readings, delegates to existing validateMeaningAnswer/validateReadingAnswer, maps results to unified AnswerResult with 'correct'/'incorrect'/'fuzzyMatch' status
+  - getAcceptedMeaningsDisplay/getAcceptedReadingsDisplay were duplicated across 3 screens — now consolidated in answerValidation.ts
+  - QuestionType includes 'reverse' as a distinct type (not just 'meaning' or 'reading')
+  - Pre-existing test failures: 4 suites (syncService, database x2, ReviewsScreen) — unchanged
+---
+
+## 2026-01-29 - US-016
+- Created QuizEngine component with configuration-driven API (QuizEngineConfig type)
+- Extended src/components/quiz/types.ts with QuizEngineConfig, QuizAnswerEvent, ProgressMode, CompletionMode, AutoRefillConfig types
+- Created src/components/quiz/QuizEngine.tsx implementing the full quiz loop: question display, input handling, answer validation, correct/incorrect feedback, queue management, auto-refill, mark-as-correct, add-as-synonym
+- Created __tests__/components/quiz/QuizEngine.test.tsx with 28 tests covering: rendering, answer submission, re-queuing, completion, mark-as-correct, auto-refill, SRS badge, fuzzy match, details content, empty state
+- Files changed: src/components/quiz/types.ts (extended with config types), src/components/quiz/QuizEngine.tsx (new), __tests__/components/quiz/QuizEngine.test.tsx (new, 28 tests)
+- **Learnings for future iterations:**
+  - QuizEngine is a pure component that receives all config via props — no internal data loading, SRS tracking, or navigation. Wrapper screens handle domain-specific logic via callbacks (onAnswer, onMarkCorrect, onAddSynonym, renderCompletion, renderDetailsContent, getSrsBadge, renderExtraButtons)
+  - completionMode 'allQuestions' tracks completed question IDs; 'never' is for infinite practice modes
+  - autoRefill config (threshold + loadMore) triggers queue extension when remaining questions drop below threshold
+  - QuizEngine uses the unified Question type and answer validation from quiz/types.ts and quiz/answerValidation.ts — no direct dependency on legacy per-screen validation code
+  - Don't mock useQuestionInput with useState in jest.mock — use the real hook or a simple object mock. jest.mock factories cannot reference out-of-scope variables like React
+  - progressMode is a discriminated union passed through to ProgressHeader; the wrapper screen is responsible for computing progress values (current/total/wrapUpRemaining)
+  - QuestionLabelType defaults to mapping questionType directly (meaning→meaning, reading→reading, reverse→kanji) but can be overridden via questionLabelType prop
+  - Pre-existing test failures: 4 suites (syncService, database x2, ReviewsScreen) — unchanged
 ---
