@@ -13,7 +13,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
-  ScrollView,
   Animated,
   type TextInput as TextInputType,
 } from 'react-native';
@@ -26,7 +25,6 @@ import type {
   AuxiliaryMeaning,
 } from '../api/types';
 import {
-  processRomajiInput,
   romajiToHiragana,
   isValidReadingInput,
 } from '../utils/romajiToHiragana';
@@ -42,22 +40,25 @@ import {
 import {
   getSubjectColor,
   COLORS,
-  SHADOW,
   BORDER_RADIUS,
   SPACING,
   FONT_SIZES,
-  PROGRESS_COLORS,
   MIN_TOUCH_TARGET,
-  TEXT_STYLES,
 } from '../theme';
-import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
-import { MnemonicText } from './MnemonicText';
-import { SrsLevelBadge } from './SrsLevelBadge';
-import { AnimatedSrsLevelBadge } from './AnimatedSrsLevelBadge';
 import { ReviewCompletion, type ReviewResultItem } from './ReviewCompletion';
 import { ExpandableDetails } from './ExpandableDetails';
 import { ItemDetails } from './ItemDetails';
 import { getSrsLevelInfo, calculateSrsStageAfterIncorrect } from '../theme';
+import { SubjectDisplay, type SrsBadge } from './SubjectDisplay';
+import { QuestionTypeLabel } from './QuestionTypeLabel';
+import { IncorrectFeedbackView } from './IncorrectFeedbackView';
+import { CorrectFeedbackView } from './CorrectFeedbackView';
+import { ProgressHeader } from './ProgressHeader';
+import { LoadingView } from './LoadingView';
+import { Button } from './Button';
+import { useShakeAnimation } from '../hooks/useShakeAnimation';
+import { useAutoFocus } from '../hooks/useAutoFocus';
+import { useQuestionInput } from '../hooks/useQuestionInput';
 
 // ============================================
 // Types
@@ -318,9 +319,6 @@ export function ReviewSession({
   const [questionQueue, setQuestionQueue] =
     useState<ReviewQuestion[]>(initialQuestions);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [inputValue, setInputValue] = useState('');
-  const [displayValue, setDisplayValue] = useState('');
-  const [pendingRomaji, setPendingRomaji] = useState('');
   const [_itemProgress, setItemProgress] =
     useState<Map<number, ItemProgress>>(initialItemProgress);
   const [showCorrectFeedback, setShowCorrectFeedback] = useState(false);
@@ -370,8 +368,23 @@ export function ReviewSession({
   // Ref for TextInput to enable auto-focus
   const inputRef = useRef<TextInputType>(null);
 
-  // Shake animation for invalid reading submission
-  const shakeAnimation = useRef(new Animated.Value(0)).current;
+  // Use shared shake animation hook
+  const { shakeStyle, triggerShake } = useShakeAnimation();
+
+  // Current question for determining input type
+  const currentQuestion = questionQueue[currentQuestionIndex];
+
+  // Use shared question input hook
+  const questionInputType = currentQuestion?.type === 'reading' ? 'reading' : 'meaning';
+  const { inputValue, displayValue, clearInput, handleTextChange } =
+    useQuestionInput(questionInputType);
+
+  // Use shared auto-focus hook
+  useAutoFocus(inputRef, [
+    currentQuestionIndex,
+    incorrectFeedback,
+    showCorrectFeedback,
+  ]);
 
   // Fetch zen mode setting on mount
   useEffect(() => {
@@ -396,9 +409,7 @@ export function ReviewSession({
     }
     setQuestionQueue(newQuestions);
     setCurrentQuestionIndex(0);
-    setInputValue('');
-    setDisplayValue('');
-    setPendingRomaji('');
+    clearInput();
     setItemProgress(newProgress);
     setCompletedItemCount(0);
     setShowCorrectFeedback(false);
@@ -411,14 +422,12 @@ export function ReviewSession({
     setIsWrappingUp(false);
     setIntroducedItemIds(new Set());
     answeredQuestionsCount.current = 0;
-  }, [items]);
+  }, [items, clearInput]);
 
   // Notify parent of progress changes (for exit handling)
   useEffect(() => {
     onProgressChange?.(_itemProgress);
   }, [_itemProgress, onProgressChange]);
-
-  const currentQuestion = questionQueue[currentQuestionIndex];
 
   // Session is complete when:
   // - Normal mode: all items are completed
@@ -469,23 +478,6 @@ export function ReviewSession({
   // Calculate wrap-up state: count of introduced items that are not yet complete
   const wrapUpRemainingCount = isWrappingUp ? incompleteItemCount : 0;
 
-  // Auto-focus input when question changes or during correct feedback
-  useEffect(() => {
-    // Don't focus if showing incorrect feedback (user needs to tap Continue) or session is complete
-    if (!incorrectFeedback && !isComplete) {
-      // Small delay to ensure the input is rendered and ready
-      const timer = setTimeout(() => {
-        inputRef.current?.focus();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [
-    currentQuestionIndex,
-    incorrectFeedback,
-    showCorrectFeedback,
-    isComplete,
-  ]);
-
   // Handle wrap-up button press
   const handleWrapUpToggle = useCallback(() => {
     setIsWrappingUp(prev => {
@@ -494,27 +486,6 @@ export function ReviewSession({
       return newValue;
     });
   }, [onWrapUpToggle]);
-
-  // Handle input change for reading questions (romaji to hiragana)
-  const handleReadingInputChange = useCallback((text: string) => {
-    const state = processRomajiInput(text, false);
-    setInputValue(text);
-    setDisplayValue(state.hiragana);
-    setPendingRomaji(state.pending);
-  }, []);
-
-  // Handle input change for meaning questions (direct text)
-  const handleMeaningInputChange = useCallback((text: string) => {
-    setInputValue(text);
-    setDisplayValue(text);
-    setPendingRomaji('');
-  }, []);
-
-  // Get the current input handler based on question type
-  const handleInputChange =
-    currentQuestion?.type === 'reading'
-      ? handleReadingInputChange
-      : handleMeaningInputChange;
 
   // Find the next valid question index, considering wrap-up mode and buffer cap
   const findNextQuestionIndex = useCallback(
@@ -570,9 +541,7 @@ export function ReviewSession({
         incompleteItemCount,
       );
     });
-    setInputValue('');
-    setDisplayValue('');
-    setPendingRomaji('');
+    clearInput();
     setIncorrectFeedback(null);
     setShowCorrectFeedback(false);
     setIsFuzzyMatch(false);
@@ -586,6 +555,7 @@ export function ReviewSession({
     introducedItemIds,
     _itemProgress,
     incompleteItemCount,
+    clearInput,
   ]);
 
   // Handle tap to continue after incorrect answer
@@ -779,38 +749,6 @@ export function ReviewSession({
       setSynonymAddState(null);
     }
   }, [incorrectFeedback, synonymAddState, handleMarkAsCorrect]);
-
-  // Trigger shake animation for invalid input
-  const triggerShake = useCallback(() => {
-    shakeAnimation.setValue(0);
-    Animated.sequence([
-      Animated.timing(shakeAnimation, {
-        toValue: 10,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnimation, {
-        toValue: -10,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnimation, {
-        toValue: 10,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnimation, {
-        toValue: -10,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnimation, {
-        toValue: 0,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [shakeAnimation]);
 
   // Check if an item is fully completed (both meaning and reading correct)
   const isItemComplete = useCallback((progress: ItemProgress): boolean => {
@@ -1151,11 +1089,7 @@ export function ReviewSession({
 
   // Handle case where we've gone past the queue (shouldn't happen, but be safe)
   if (!currentQuestion) {
-    return (
-      <View style={styles.container} testID="review-session-empty">
-        <Text style={styles.emptyText}>Loading...</Text>
-      </View>
-    );
+    return <LoadingView testID="review-session-empty" />;
   }
 
   const { item, type } = currentQuestion;
@@ -1163,255 +1097,173 @@ export function ReviewSession({
   // Show progress stats when zen mode is OFF, or when wrap-up mode is active (even if zen mode is ON)
   const showProgressStats = !zenModeEnabled || isWrappingUp;
 
-  // If showing incorrect feedback, render the feedback view
-  if (incorrectFeedback) {
-    // Calculate progress: In wrap-up mode, use introduced items count
-    const displayTotalCount = isWrappingUp
-      ? introducedItemIds.size
-      : totalItemCount;
-    const displayCompletedCount = isWrappingUp
-      ? introducedItemIds.size - wrapUpRemainingCount
-      : completedItemCount;
-    const progressPercentage =
-      displayTotalCount > 0
-        ? (displayCompletedCount / displayTotalCount) * 100
-        : 0;
-    const remainingCount = isWrappingUp
-      ? wrapUpRemainingCount
-      : totalItemCount - completedItemCount;
+  // Build SRS badge prop for SubjectDisplay
+  const buildSrsBadge = (): SrsBadge | undefined => {
+    if (zenModeEnabled) return undefined;
 
-    return (
-      <View style={styles.container} testID="review-session-incorrect-feedback">
-        {/* Progress indicator - hidden in zen mode unless wrap-up is active */}
-        {showProgressStats ? (
-          <View
-            style={styles.progressContainer}
-            testID="review-session-progress"
-          >
-            <View style={styles.progressTextRow}>
-              <Text
-                style={styles.progressText}
-                testID="review-session-progress-text"
-              >
-                {displayCompletedCount} / {displayTotalCount}
-              </Text>
-              {isWrappingUp ? (
-                <Text
-                  style={styles.wrapUpText}
-                  testID="review-session-wrapping-up-text"
-                >
-                  Wrapping up: {wrapUpRemainingCount} remaining
-                </Text>
-              ) : (
-                <Text
-                  style={styles.remainingText}
-                  testID="review-session-remaining-text"
-                >
-                  {remainingCount} remaining
-                </Text>
-              )}
-            </View>
-            <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressFill,
-                  isWrappingUp && styles.wrapUpProgressFill,
-                  { width: `${progressPercentage}%` },
-                ]}
-                testID="review-session-progress-fill"
-              />
-            </View>
-          </View>
-        ) : (
-          <View style={styles.modeBanner} testID="review-session-zen-banner">
-            <MaterialDesignIcons
-              name="meditation"
-              size={FONT_SIZES.base}
-              color={COLORS.text.tertiary}
-            />
-            <Text style={styles.modeBannerText}>Zen Mode</Text>
-          </View>
-        )}
+    if (incorrectFeedback && levelDownAnimation) {
+      return {
+        type: 'animated',
+        stage: levelDownAnimation.toStage,
+        fromStage: levelDownAnimation.fromStage,
+        animateLevelDown: true,
+      };
+    }
 
-        {/* Character display with red tint for incorrect */}
-        <View
-          style={[styles.characterContainer, styles.incorrectHeader]}
-          testID="review-session-character-container"
-        >
-          {/* SRS badge - always hidden in zen mode */}
-          {!zenModeEnabled && (
-            <View style={styles.srsLevelBadgeContainer}>
-              {levelDownAnimation ? (
-                <AnimatedSrsLevelBadge
-                  stage={levelDownAnimation.toStage}
-                  fromStage={levelDownAnimation.fromStage}
-                  animateLevelDown={true}
-                  testID="review-session-srs-badge"
-                />
-              ) : (
-                <SrsLevelBadge
-                  stage={incorrectFeedback.question.item.srsStage}
-                  testID="review-session-srs-badge"
-                />
-              )}
-            </View>
-          )}
-          <Text style={styles.characters} testID="review-session-characters">
-            {incorrectFeedback.question.item.characters ?? '?'}
-          </Text>
-          <Text
-            style={styles.incorrectLabel}
-            testID="review-session-incorrect-label"
-          >
-            Incorrect
-          </Text>
-        </View>
+    if (showCorrectFeedback && levelUpAnimation) {
+      return {
+        type: 'animated',
+        stage: levelUpAnimation.toStage,
+        fromStage: levelUpAnimation.fromStage,
+        animateLevelUp: true,
+      };
+    }
 
-        {/* Feedback content */}
-        <ScrollView
-          style={styles.feedbackContainer}
-          contentContainerStyle={styles.feedbackContent}
-        >
-          {/* User's answer */}
-          <View style={styles.feedbackSection}>
-            <Text
-              style={styles.feedbackLabel}
-              testID="review-session-your-answer-label"
-            >
-              Your Answer:
-            </Text>
-            <Text style={styles.userAnswer} testID="review-session-your-answer">
-              {incorrectFeedback.userAnswer || '(empty)'}
-            </Text>
-          </View>
+    const currentItem = incorrectFeedback
+      ? incorrectFeedback.question.item
+      : item;
+    return { type: 'static', stage: currentItem.srsStage };
+  };
 
-          {/* Correct answer */}
-          <View style={styles.feedbackSection}>
-            <Text
-              style={styles.feedbackLabel}
-              testID="review-session-correct-answer-label"
-            >
-              Correct Answer:
-            </Text>
-            <Text
-              style={styles.correctAnswerText}
-              testID="review-session-correct-answer"
-            >
-              {incorrectFeedback.correctAnswer}
-            </Text>
-          </View>
-
-          {/* Mnemonic */}
-          <View style={styles.feedbackSection}>
-            <Text
-              style={styles.feedbackLabel}
-              testID="review-session-mnemonic-label"
-            >
-              {incorrectFeedback.question.type === 'meaning'
-                ? 'Meaning Mnemonic:'
-                : 'Reading Mnemonic:'}
-            </Text>
-            <MnemonicText
-              text={incorrectFeedback.mnemonic}
-              style={styles.mnemonicText}
-              testID="review-session-mnemonic"
-            />
-          </View>
-
-          {/* Expandable full details section */}
-          <ExpandableDetails
-            resetKey={incorrectFeedback.question.key}
-            testID="review-session-expandable-details"
-          >
-            <ItemDetails
-              subjectType={incorrectFeedback.question.item.subjectType}
-              meanings={incorrectFeedback.question.item.meanings}
-              readings={incorrectFeedback.question.item.readings}
-              meaningMnemonic={incorrectFeedback.question.item.meaningMnemonic}
-              readingMnemonic={incorrectFeedback.question.item.readingMnemonic}
-              componentRadicals={
-                incorrectFeedback.question.item.componentRadicals
-              }
-              componentKanji={incorrectFeedback.question.item.componentKanji}
-              onComponentPress={onComponentPress}
-              hideMnemonicType={incorrectFeedback.question.type}
-              testID="review-session-item-details"
-            />
-          </ExpandableDetails>
-        </ScrollView>
-
-        {/* Button row: Mark as Correct + Continue */}
-        <View style={styles.incorrectButtonRow}>
-          <TouchableOpacity
-            style={styles.markCorrectButton}
-            onPress={handleMarkAsCorrect}
-            activeOpacity={0.8}
-            testID="review-session-mark-correct"
-          >
-            <Text style={styles.markCorrectButtonText}>Mark as Correct</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.submitButton,
-              styles.continueButton,
-              styles.continueButtonFlex,
-            ]}
-            onPress={handleContinue}
-            activeOpacity={0.8}
-            testID="review-session-continue"
-          >
-            <Text style={styles.submitButtonText}>Continue</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Add as Synonym link - only for meaning questions */}
-        {incorrectFeedback.question.type === 'meaning' && (
-          <TouchableOpacity
-            style={styles.addSynonymContainer}
-            onPress={handleAddAsSynonym}
-            disabled={synonymAddState !== null}
-            activeOpacity={0.6}
-            testID="review-session-add-synonym"
-          >
-            <Text
-              style={[
-                styles.addSynonymText,
-                synonymAddState === 'adding' && styles.addSynonymTextPulse,
-                synonymAddState === 'added' && styles.addSynonymTextSuccess,
-              ]}
-              testID="review-session-add-synonym-text"
-            >
-              {synonymAddState === null && 'Add as Synonym'}
-              {synonymAddState === 'adding' && 'Adding...'}
-              {synonymAddState === 'added' && 'Synonym added ✓'}
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    );
-  }
-  const backgroundColor = getSubjectColor(item.subjectType);
-  const placeholder =
-    type === 'meaning' ? 'Enter meaning...' : 'Type reading (romaji)...';
-
-  // For reading input, show the converted hiragana + any pending romaji
-  const displayText =
-    type === 'reading' ? displayValue + pendingRomaji : displayValue;
-
-  // Calculate progress: In wrap-up mode, use introduced items count
+  // Calculate progress values
   const displayTotalCount = isWrappingUp
     ? introducedItemIds.size
     : totalItemCount;
   const displayCompletedCount = isWrappingUp
     ? introducedItemIds.size - wrapUpRemainingCount
     : completedItemCount;
-  const progressPercentage =
-    displayTotalCount > 0
-      ? (displayCompletedCount / displayTotalCount) * 100
-      : 0;
-  const remainingCount = isWrappingUp
-    ? wrapUpRemainingCount
-    : totalItemCount - completedItemCount;
+
+  // Render ProgressHeader based on mode
+  const renderProgressHeader = () => {
+    if (showProgressStats) {
+      return (
+        <ProgressHeader
+          mode="progress"
+          current={displayCompletedCount}
+          total={displayTotalCount}
+          wrapUpRemaining={isWrappingUp ? wrapUpRemainingCount : undefined}
+        />
+      );
+    }
+    return <ProgressHeader mode="zen" />;
+  };
+
+  // If showing incorrect feedback, render the feedback view
+  if (incorrectFeedback) {
+    const feedbackItem = incorrectFeedback.question.item;
+
+    return (
+      <View style={styles.container} testID="review-session-incorrect-feedback">
+        {renderProgressHeader()}
+
+        <IncorrectFeedbackView
+          subjectType={feedbackItem.subjectType}
+          displayText={feedbackItem.characters ?? '?'}
+          displayMode="characters"
+          userAnswer={incorrectFeedback.userAnswer}
+          correctAnswer={incorrectFeedback.correctAnswer}
+          mnemonic={incorrectFeedback.mnemonic}
+          mnemonicLabel={
+            incorrectFeedback.question.type === 'meaning'
+              ? 'Meaning Mnemonic:'
+              : 'Reading Mnemonic:'
+          }
+          onContinue={handleContinue}
+          onMarkCorrect={handleMarkAsCorrect}
+          onAddSynonym={
+            incorrectFeedback.question.type === 'meaning'
+              ? handleAddAsSynonym
+              : undefined
+          }
+          synonymAddState={synonymAddState}
+          srsBadge={buildSrsBadge()}
+          detailsContent={
+            <ExpandableDetails
+              resetKey={incorrectFeedback.question.key}
+              testID="review-session-expandable-details"
+            >
+              <ItemDetails
+                subjectType={feedbackItem.subjectType}
+                meanings={feedbackItem.meanings}
+                readings={feedbackItem.readings}
+                meaningMnemonic={feedbackItem.meaningMnemonic}
+                readingMnemonic={feedbackItem.readingMnemonic}
+                componentRadicals={feedbackItem.componentRadicals}
+                componentKanji={feedbackItem.componentKanji}
+                onComponentPress={onComponentPress}
+                hideMnemonicType={incorrectFeedback.question.type}
+                testID="review-session-item-details"
+              />
+            </ExpandableDetails>
+          }
+          testID="review-session"
+        />
+      </View>
+    );
+  }
+
+  const backgroundColor = getSubjectColor(item.subjectType);
+  const placeholder =
+    type === 'meaning' ? 'Enter meaning...' : 'Type reading (romaji)...';
+
+  // For reading input, show the converted hiragana + any pending romaji
+  const inputDisplayText = type === 'reading' ? displayValue : inputValue;
+
+  // If showing correct feedback, render CorrectFeedbackView
+  if (showCorrectFeedback) {
+    return (
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        testID="review-session"
+      >
+        {renderProgressHeader()}
+
+        <CorrectFeedbackView
+          subjectType={item.subjectType}
+          displayText={item.characters ?? '?'}
+          displayMode="characters"
+          feedbackState={isFuzzyMatch ? 'fuzzyMatch' : 'correct'}
+          srsBadge={buildSrsBadge()}
+          questionType={type}
+          inputValue={inputDisplayText}
+        />
+
+        {/* Spacer to push buttons to bottom */}
+        <View style={styles.spacer} />
+
+        {/* Button row: Submit + Wrap Up */}
+        <View style={styles.buttonRow}>
+          <Button
+            label="Submit"
+            onPress={handleSubmit}
+            disabled={showCorrectFeedback}
+            style={[styles.submitButtonFlex, { backgroundColor }]}
+            testID="review-session-submit"
+          />
+          <TouchableOpacity
+            style={[
+              styles.wrapUpButton,
+              isWrappingUp && styles.wrapUpButtonActive,
+            ]}
+            onPress={handleWrapUpToggle}
+            disabled={showCorrectFeedback}
+            activeOpacity={0.8}
+            testID="review-session-wrap-up"
+          >
+            <Text
+              style={[
+                styles.wrapUpButtonText,
+                isWrappingUp && styles.wrapUpButtonTextActive,
+              ]}
+            >
+              {isWrappingUp ? 'Cancel' : 'Wrap Up'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -1419,135 +1271,33 @@ export function ReviewSession({
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       testID="review-session"
     >
-      {/* Progress indicator - hidden in zen mode unless wrap-up is active */}
-      {showProgressStats ? (
-        <View style={styles.progressContainer} testID="review-session-progress">
-          <View style={styles.progressTextRow}>
-            <Text
-              style={styles.progressText}
-              testID="review-session-progress-text"
-            >
-              {displayCompletedCount} / {displayTotalCount}
-            </Text>
-            {isWrappingUp ? (
-              <Text
-                style={styles.wrapUpText}
-                testID="review-session-wrapping-up-text"
-              >
-                Wrapping up: {wrapUpRemainingCount} remaining
-              </Text>
-            ) : (
-              <Text
-                style={styles.remainingText}
-                testID="review-session-remaining-text"
-              >
-                {remainingCount} remaining
-              </Text>
-            )}
-          </View>
-          <View style={styles.progressBar}>
-            <View
-              style={[
-                styles.progressFill,
-                isWrappingUp && styles.wrapUpProgressFill,
-                { width: `${progressPercentage}%` },
-              ]}
-              testID="review-session-progress-fill"
-            />
-          </View>
-        </View>
-      ) : (
-        <View style={styles.modeBanner} testID="review-session-zen-banner">
-          <MaterialDesignIcons
-            name="meditation"
-            size={FONT_SIZES.base}
-            color={COLORS.text.tertiary}
-          />
-          <Text style={styles.modeBannerText}>Zen Mode</Text>
-        </View>
-      )}
+      {renderProgressHeader()}
 
-      {/* Character display - with green/yellow tint if showing correct feedback */}
-      <View
-        style={[
-          styles.characterContainer,
-
-          showCorrectFeedback
-            ? isFuzzyMatch
-              ? styles.fuzzyMatchHeader
-              : styles.correctHeader
-            : { backgroundColor },
-        ]}
+      {/* Character display */}
+      <SubjectDisplay
+        subjectType={item.subjectType}
+        displayMode="characters"
+        displayText={item.characters ?? '?'}
+        srsBadge={buildSrsBadge()}
         testID="review-session-character-container"
-      >
-        {/* SRS badge - always hidden in zen mode */}
-        {!zenModeEnabled && (
-          <View style={styles.srsLevelBadgeContainer}>
-            {showCorrectFeedback && levelUpAnimation ? (
-              <AnimatedSrsLevelBadge
-                stage={levelUpAnimation.toStage}
-                fromStage={levelUpAnimation.fromStage}
-                animateLevelUp={true}
-                testID="review-session-srs-badge"
-              />
-            ) : (
-              <SrsLevelBadge
-                stage={item.srsStage}
-                testID="review-session-srs-badge"
-              />
-            )}
-          </View>
-        )}
-        <Text style={styles.characters} testID="review-session-characters">
-          {item.characters ?? '?'}
-        </Text>
-        {showCorrectFeedback && (
-          <Text
-            style={styles.correctLabel}
-            testID={
-              isFuzzyMatch
-                ? 'review-session-fuzzy-match-label'
-                : 'review-session-correct-label'
-            }
-          >
-            {isFuzzyMatch ? 'Close enough!' : 'Correct!'}
-          </Text>
-        )}
-      </View>
+      />
 
       {/* Question type label */}
-      <View
-        style={[
-          styles.questionContainer,
-          type === 'reading'
-            ? styles.questionContainerReading
-            : styles.questionContainerMeaning,
-        ]}
-      >
-        <Text
-          style={[
-            styles.questionType,
-            type === 'reading' && styles.questionTypeReading,
-          ]}
-          testID="review-session-question-type"
-        >
-          {type === 'meaning' ? 'MEANING' : 'READING'}
-        </Text>
-      </View>
+      <QuestionTypeLabel
+        type={type}
+        testID="review-session-question-type"
+      />
 
       {/* Input area */}
       <Animated.View
-        style={[
-          styles.inputContainer,
-          { transform: [{ translateX: shakeAnimation }] },
-        ]}
+        style={[styles.inputContainer, shakeStyle]}
         testID="review-session-input-container"
       >
         <TextInput
           ref={inputRef}
           style={[styles.input, { borderColor: backgroundColor }]}
-          value={type === 'reading' ? displayText : inputValue}
-          onChangeText={handleInputChange}
+          value={inputDisplayText}
+          onChangeText={handleTextChange}
           onSubmitEditing={handleSubmit}
           placeholder={placeholder}
           placeholderTextColor="#999"
@@ -1567,22 +1317,13 @@ export function ReviewSession({
 
       {/* Button row: Submit + Wrap Up */}
       <View style={styles.buttonRow}>
-        {/* Submit button */}
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            styles.submitButtonFlex,
-            { backgroundColor },
-          ]}
+        <Button
+          label="Submit"
           onPress={handleSubmit}
           disabled={showCorrectFeedback}
-          activeOpacity={0.8}
+          style={[styles.submitButtonFlex, { backgroundColor }]}
           testID="review-session-submit"
-        >
-          <Text style={styles.submitButtonText}>Submit</Text>
-        </TouchableOpacity>
-
-        {/* Wrap Up button */}
+        />
         <TouchableOpacity
           style={[
             styles.wrapUpButton,
@@ -1616,121 +1357,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background.primary,
   },
-  questionTypeBar: {
-    height: 10,
-    width: '100%',
-  },
-  questionTypeBarReading: {
-    backgroundColor: COLORS.neutral.black,
-  },
-  questionTypeBarMeaning: {
-    backgroundColor: COLORS.neutral.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border.medium,
-  },
-  modeBanner: {
-    height: 50,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    backgroundColor: COLORS.background.secondary,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border.light,
-  },
-
-  modeBannerText: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.text.secondary,
-    fontWeight: '600',
-  },
-  progressContainer: {
-    height: 50,
-    justifyContent: 'center',
-    paddingHorizontal: SPACING.lg,
-    backgroundColor: COLORS.background.secondary,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border.light,
-  },
-  progressTextRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.sm,
-  },
-  progressText: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.text.secondary,
-    fontWeight: '500',
-  },
-  remainingText: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.text.tertiary,
-  },
-  progressBar: {
-    height: 4,
-    backgroundColor: PROGRESS_COLORS.background,
-    borderRadius: BORDER_RADIUS.sm,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: PROGRESS_COLORS.fill,
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  characterContainer: {
-    paddingVertical: 64,
-    paddingHorizontal: SPACING.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  srsLevelBadgeContainer: {
-    position: 'absolute',
-    top: SPACING.md,
-    right: SPACING.lg,
-  },
-  characters: {
-    fontSize: FONT_SIZES.display,
-    ...TEXT_STYLES.japaneseDisplay,
-    color: COLORS.text.inverse,
-    textAlign: 'center',
-  },
-  // Correct feedback styles
-  correctHeader: {
-    backgroundColor: COLORS.feedback.correct,
-  },
-  // Fuzzy match (typo-forgiven) feedback styles
-  fuzzyMatchHeader: {
-    backgroundColor: COLORS.feedback.fuzzyMatch,
-  },
-  correctLabel: {
-    position: 'absolute',
-    bottom: SPACING.md,
-    fontSize: FONT_SIZES.sm,
-    fontWeight: 'bold',
-    color: COLORS.text.inverse,
-  },
-  questionContainer: {
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    alignItems: 'center',
-  },
-  questionContainerReading: {
-    backgroundColor: COLORS.neutral.black,
-  },
-  questionContainerMeaning: {
-    backgroundColor: COLORS.neutral.white,
-  },
-  questionType: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: '700',
-    color: COLORS.text.tertiary,
-    letterSpacing: 2,
-  },
-  questionTypeReading: {
-    color: COLORS.text.inverse,
-  },
   inputContainer: {
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.md,
@@ -1738,14 +1364,6 @@ const styles = StyleSheet.create({
   },
   spacer: {
     flex: 1,
-  },
-  convertedDisplay: {
-    fontSize: FONT_SIZES.xxxl,
-    fontWeight: '500',
-    color: COLORS.text.primary,
-    textAlign: 'center',
-    marginBottom: SPACING.lg,
-    minHeight: 40,
   },
   input: {
     borderWidth: 2,
@@ -1757,97 +1375,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     backgroundColor: COLORS.background.input,
   },
-  submitButton: {
-    margin: SPACING.lg,
-    paddingVertical: SPACING.lg,
-    minHeight: MIN_TOUCH_TARGET,
-    borderRadius: BORDER_RADIUS.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: SHADOW.color,
-    shadowOffset: SHADOW.offset,
-    shadowOpacity: SHADOW.opacity,
-    shadowRadius: SHADOW.radius,
-    elevation: SHADOW.elevation,
-  },
-  submitButtonText: {
-    fontSize: FONT_SIZES.lg,
-    fontWeight: 'bold',
-    color: COLORS.text.inverse,
-  },
   emptyText: {
     fontSize: FONT_SIZES.base,
     color: COLORS.text.secondary,
     textAlign: 'center',
     marginTop: SPACING.xxxl,
-  },
-  completeText: {
-    fontSize: FONT_SIZES.xxl,
-    fontWeight: 'bold',
-    color: COLORS.text.primary,
-    textAlign: 'center',
-    marginTop: SPACING.xxxl,
-  },
-  completeSubtext: {
-    fontSize: FONT_SIZES.base,
-    color: COLORS.text.secondary,
-    textAlign: 'center',
-    marginTop: SPACING.sm,
-  },
-  // Incorrect feedback styles
-  incorrectHeader: {
-    backgroundColor: COLORS.feedback.incorrect,
-  },
-  incorrectLabel: {
-    position: 'absolute',
-    bottom: SPACING.md,
-    fontSize: FONT_SIZES.lg,
-    fontWeight: 'bold',
-    color: COLORS.text.inverse,
-  },
-  feedbackContainer: {
-    flex: 1,
-  },
-  feedbackContent: {
-    padding: SPACING.lg,
-  },
-  feedbackSection: {
-    marginBottom: SPACING.xl,
-  },
-  feedbackLabel: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: '600',
-    color: COLORS.text.secondary,
-    marginBottom: SPACING.xs,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  userAnswer: {
-    fontSize: FONT_SIZES.xl,
-    color: COLORS.feedback.incorrect,
-    fontWeight: '500',
-  },
-  correctAnswerText: {
-    fontSize: FONT_SIZES.xxl,
-    color: COLORS.feedback.correct,
-    fontWeight: 'bold',
-  },
-  mnemonicText: {
-    fontSize: FONT_SIZES.base,
-    color: COLORS.text.primary,
-    lineHeight: FONT_SIZES.xxl,
-  },
-  continueButton: {
-    backgroundColor: COLORS.neutral.gray600,
-  },
-  // Wrap-up mode styles
-  wrapUpText: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.feedback.warning,
-    fontWeight: '600',
-  },
-  wrapUpProgressFill: {
-    backgroundColor: PROGRESS_COLORS.wrapUpFill,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -1857,7 +1389,6 @@ const styles = StyleSheet.create({
   },
   submitButtonFlex: {
     flex: 1,
-    margin: 0,
   },
   wrapUpButton: {
     minWidth: 100,
@@ -1881,52 +1412,5 @@ const styles = StyleSheet.create({
   },
   wrapUpButtonTextActive: {
     color: COLORS.text.inverse,
-  },
-  // Incorrect feedback button row
-  incorrectButtonRow: {
-    flexDirection: 'row',
-    paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.lg,
-    paddingBottom: SPACING.lg,
-    gap: SPACING.md,
-  },
-  continueButtonFlex: {
-    flex: 1,
-    margin: 0,
-  },
-  markCorrectButton: {
-    paddingVertical: SPACING.lg,
-    paddingHorizontal: SPACING.xl,
-    minHeight: MIN_TOUCH_TARGET,
-    borderRadius: BORDER_RADIUS.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.neutral.gray100,
-    borderWidth: 2,
-    borderColor: COLORS.neutral.gray400,
-  },
-  markCorrectButtonText: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: 'bold',
-    color: COLORS.text.secondary,
-  },
-  // Add as Synonym link styles
-  addSynonymContainer: {
-    alignItems: 'center',
-    paddingBottom: SPACING.lg,
-    paddingHorizontal: SPACING.lg,
-  },
-  addSynonymText: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.text.tertiary,
-    textDecorationLine: 'underline',
-  },
-  addSynonymTextPulse: {
-    color: COLORS.text.secondary,
-    opacity: 0.7,
-  },
-  addSynonymTextSuccess: {
-    color: COLORS.feedback.correct,
-    textDecorationLine: 'none',
   },
 });

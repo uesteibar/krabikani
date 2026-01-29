@@ -2,6 +2,7 @@
 
 ## Codebase Patterns
 
+- Import icons as `{ MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons'` (named export, NOT default from @expo/vector-icons)
 - Custom fonts go in `assets/fonts/` and are linked via `react-native.config.js`
 - Theme exports are centralized in `src/theme/index.ts`
 - Use Platform.select() for platform-specific font family names (iOS uses font family name, Android uses file name without extension)
@@ -23,6 +24,8 @@
 - `addUserSynonym` uses `INSERT OR REPLACE` but SQLite UNIQUE is case-sensitive — for case-insensitive updates, delete existing row first then insert
 - Background sync functions return result objects with `success`, `syncedCount`, etc. and are composed in `backgroundSync()` function
 - Custom hooks live in src/hooks/, tests in __tests__/hooks/
+- When refactoring to use shared components, testIDs change: ProgressHeader uses `progress-header-*`, SubjectDisplay uses `subject-display-*`, IncorrectFeedbackView prefixes all testIDs with the `testID` prop value
+- ReviewSession tests now use ProgressHeader testIDs (progress-header-count, progress-header-remaining, progress-header-wrap-up, progress-header-progress) and SubjectDisplay testIDs (subject-display-text, subject-display-feedback-label, srs-badge)
 
 Started:
 ---
@@ -123,4 +126,68 @@ Started:
   - Hook resets state automatically when questionType changes (tracked via useRef to avoid clearing on every render)
   - Pre-existing test failures unchanged
 >>>>>>> 3d53bed (feat: Create useQuestionInput hook)
+---
+
+## 2026-01-29 - US-007
+- Implemented shared IncorrectFeedbackView component consolidating incorrect answer feedback from all 4 quiz screens
+- Files changed: src/components/IncorrectFeedbackView.tsx (new), __tests__/components/IncorrectFeedbackView.test.tsx (new), src/components/index.ts (added export)
+- **Learnings for future iterations:**
+  - Component uses SubjectDisplay (US-002) with feedbackState='incorrect' for the header — no need to duplicate character container + incorrect label
+  - Button component (US-001) replaces inline TouchableOpacity for Continue/Mark as Correct — secondary variant matches markCorrectButton styling
+  - Continue button uses `style={{ flex: 1 }}` to fill remaining space, whether alone or beside Mark as Correct
+  - onAddSynonym is optional with synonymAddState tracking (null → 'adding' → 'added') — uses Text.onPress for the link
+  - detailsContent is a ReactNode prop for expandable details (ExpandableDetails + ItemDetails) — kept as render prop to avoid coupling to specific item shape
+  - mnemonicLabel is passed as a string (e.g., 'Meaning Mnemonic:' or 'Reading Mnemonic:') rather than deriving from question type — keeps component generic
+  - MnemonicText text containing tagged content like `<radical>big</radical>` renders "big" as visible text — tests should use testID instead of getByText when correctAnswer could collide with mnemonic content
+  - Pre-existing test failures: 3 suites (syncService, database) — unchanged
+---
+
+## 2026-01-29 - US-008
+- Implemented shared CorrectFeedbackView component for brief correct/fuzzy-match feedback
+- Files changed: src/components/CorrectFeedbackView.tsx (new), __tests__/components/CorrectFeedbackView.test.tsx (new), src/components/index.ts (added export)
+- **Learnings for future iterations:**
+  - CorrectFeedbackView is simpler than IncorrectFeedbackView — just SubjectDisplay + QuestionTypeLabel + disabled TextInput
+  - Input uses `editable={false}` rather than `disabled` prop (React Native TextInput doesn't have a `disabled` prop)
+  - Border color on the input matches the subject type color via `getSubjectColor(subjectType)`
+  - Input styling (borderWidth, borderRadius, padding, fontSize, fontWeight, textAlign, backgroundColor) matches the inline input styles from ReviewSession/LessonQuiz
+  - SRS badge support is delegated entirely to SubjectDisplay's `srsBadge` prop — no extra logic needed
+  - Pre-existing test failures: 3 suites (syncService, database) — unchanged
+---
+
+## 2026-01-29 - US-009
+- Implemented shared ProgressHeader component with 4 modes: progress (bar + count), zen (meditation icon + label), practice (icon + phrase), none (renders null)
+- Files changed: src/components/ProgressHeader.tsx (new), __tests__/components/ProgressHeader.test.tsx (new), src/components/index.ts (added export)
+- **Learnings for future iterations:**
+  - Icon import is `{ MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons'` (named export, NOT default from @expo/vector-icons)
+  - Icon name prop type: `React.ComponentProps<typeof MaterialDesignIcons>['name']` — strongly typed union of ~7400 icon names
+  - Progress bar uses discriminated union types (mode field) for type-safe props across 4 modes
+  - ReviewSession progress has both "remaining" count and "wrapping up" variant; LessonQuiz only has simple count
+  - Practice banner uses italic fontStyle to differentiate from zen mode banner
+  - Pre-existing test failures: 3 suites (syncService, database) — unchanged
+---
+
+## 2026-01-29 - US-010
+- Implemented shared LoadingView component with centered ActivityIndicator and message text
+- Files changed: src/components/LoadingView.tsx (new), __tests__/components/LoadingView.test.tsx (new), src/components/index.ts (added export)
+- **Learnings for future iterations:**
+  - LoadingView is intentionally simpler than existing LoadingSpinner — no size/color props, just message and testID
+  - Default message is "Loading...", default testID is "loading-view"
+  - Uses COLORS.subject.vocabulary (#AA00FF) for spinner color, matching the most common loading pattern in the codebase
+  - Existing LoadingSpinner remains for non-quiz loading states that need custom size/color
+  - Pre-existing test failures: 3 suites (syncService, database) — unchanged
+---
+
+## 2026-01-29 - US-011
+- Refactored ReviewSession to use shared components: SubjectDisplay, QuestionTypeLabel, IncorrectFeedbackView, CorrectFeedbackView, ProgressHeader, LoadingView, Button, useShakeAnimation, useAutoFocus, useQuestionInput
+- Reduced ReviewSession.tsx from ~1930 lines to ~1420 lines by removing duplicated UI rendering code
+- Updated test files with new shared component testIDs (minimal adjustments as per acceptance criteria)
+- Files changed: src/components/ReviewSession.tsx (refactored), __tests__/components/ReviewSession.test.tsx (testID updates), __tests__/screens/ReviewsScreen.test.tsx (testID updates)
+- **Learnings for future iterations:**
+  - IncorrectFeedbackView with `testID="review-session"` auto-prefixes all child testIDs correctly (review-session-continue, review-session-mark-correct, etc.)
+  - SubjectDisplay uses hardcoded internal testIDs: `subject-display-text`, `subject-display-feedback-label`, `srs-badge` — these don't get prefixed by the parent testID prop
+  - CorrectFeedbackView uses `correct-feedback-*` prefix for its internal elements (correct-feedback-subject-display, correct-feedback-input, correct-feedback-question-type)
+  - When fuzzy match and correct label used separate testIDs, they now share `subject-display-feedback-label` — tests must check text content ("Correct!" vs "Close Enough!") instead of checking separate testID presence
+  - SubjectDisplay uses "Close Enough!" (capital E) vs original code "Close enough!" — keep consistent
+  - The wrap-up button has custom styling so it's kept as inline TouchableOpacity rather than using Button component (unique border color and active styling)
+  - Pre-existing test failures: 3 suites (syncService, database) — unchanged
 ---

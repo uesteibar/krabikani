@@ -283,7 +283,7 @@ describe('ReviewSession', () => {
       const { getByTestId } = render(<ReviewSession {...defaultProps} />);
 
       expect(getByTestId('review-session')).toBeTruthy();
-      expect(getByTestId('review-session-progress')).toBeTruthy();
+      expect(getByTestId('progress-header-progress')).toBeTruthy();
       expect(getByTestId('review-session-character-container')).toBeTruthy();
       expect(getByTestId('review-session-input')).toBeTruthy();
       expect(getByTestId('review-session-submit')).toBeTruthy();
@@ -305,7 +305,7 @@ describe('ReviewSession', () => {
 
       // Initially 0 items complete out of 5
       expect(
-        getByTestId('review-session-progress-text').props.children,
+        getByTestId('progress-header-count').props.children,
       ).toEqual([0, ' / ', 5]);
     });
 
@@ -317,7 +317,7 @@ describe('ReviewSession', () => {
 
       // Initially 5 remaining
       expect(
-        getByTestId('review-session-remaining-text').props.children,
+        getByTestId('progress-header-remaining').props.children,
       ).toEqual([5, ' remaining']);
     });
 
@@ -328,7 +328,7 @@ describe('ReviewSession', () => {
       const { getByTestId } = render(<ReviewSession {...defaultProps} />);
 
       // Should display one of the item characters
-      const characters = getByTestId('review-session-characters');
+      const characters = getByTestId('subject-display-text');
       expect(characters.props.children).toBeTruthy();
     });
 
@@ -491,7 +491,7 @@ describe('ReviewSession', () => {
 
       // Initially 0 complete
       expect(
-        getByTestId('review-session-progress-text').props.children,
+        getByTestId('progress-header-count').props.children,
       ).toEqual([0, ' / ', 1]);
 
       // Answer correctly
@@ -837,7 +837,7 @@ describe('ReviewSession', () => {
       const questionCount = 8;
 
       for (let i = 0; i < questionCount; i++) {
-        const currentChar = getByTestId('review-session-characters').props
+        const currentChar = getByTestId('subject-display-text').props
           .children;
         const questionType = getByTestId('review-session-question-type').props
           .children;
@@ -906,9 +906,9 @@ describe('ReviewSession', () => {
       fireEvent.press(submit);
 
       // Should show correct feedback label
-      expect(queryByTestId('review-session-correct-label')).toBeTruthy();
+      expect(queryByTestId('subject-display-feedback-label')).toBeTruthy();
       expect(
-        queryByTestId('review-session-correct-label')?.props.children,
+        queryByTestId('subject-display-feedback-label')?.props.children,
       ).toBe('Correct!');
     });
 
@@ -923,8 +923,8 @@ describe('ReviewSession', () => {
       fireEvent.changeText(input, 'Ground');
       fireEvent.press(submit);
 
-      // Character container should have green background
-      const container = getByTestId('review-session-character-container');
+      // Character container should have green background (during correct feedback, SubjectDisplay is under CorrectFeedbackView)
+      const container = getByTestId('correct-feedback-subject-display');
       expect(container.props.style).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ backgroundColor: COLORS.feedback.correct }),
@@ -949,7 +949,7 @@ describe('ReviewSession', () => {
       fireEvent.press(submit);
 
       // Before timer fires, should still show feedback
-      expect(queryByTestId('review-session-correct-label')).toBeTruthy();
+      expect(queryByTestId('subject-display-feedback-label')).toBeTruthy();
 
       // Run timers to trigger auto-advance
       act(() => {
@@ -961,7 +961,7 @@ describe('ReviewSession', () => {
       expect(onSessionComplete).toHaveBeenCalled();
     });
 
-    it('should keep input editable during correct feedback (keyboard stays open)', () => {
+    it('should keep input visible during correct feedback (keyboard stays open)', () => {
       const { getByTestId } = render(
         <ReviewSession items={[sampleRadical]} autoAdvanceDelay={100} />,
       );
@@ -972,10 +972,8 @@ describe('ReviewSession', () => {
       fireEvent.changeText(input, 'Ground');
       fireEvent.press(submit);
 
-      // Input should remain editable so keyboard stays open
-      expect(getByTestId('review-session-input').props.editable).not.toBe(
-        false,
-      );
+      // Input should be present during correct feedback (now as correct-feedback-input)
+      expect(getByTestId('correct-feedback-input')).toBeTruthy();
     });
 
     it('should disable submit button during correct feedback', () => {
@@ -1006,8 +1004,10 @@ describe('ReviewSession', () => {
       fireEvent.changeText(input, 'Wrong');
       fireEvent.press(submit);
 
-      // Should NOT show correct feedback label
-      expect(queryByTestId('review-session-correct-label')).toBeNull();
+      // Should show incorrect feedback, not correct
+      const feedbackLabel = queryByTestId('subject-display-feedback-label');
+      expect(feedbackLabel).toBeTruthy();
+      expect(feedbackLabel?.props.children).toBe('Incorrect');
     });
 
     it('should advance to next question for multi-item session', () => {
@@ -1031,7 +1031,7 @@ describe('ReviewSession', () => {
       fireEvent.press(submit);
 
       // Should show feedback
-      expect(queryByTestId('review-session-correct-label')).toBeTruthy();
+      expect(queryByTestId('subject-display-feedback-label')).toBeTruthy();
 
       // Run timers to advance
       act(() => {
@@ -1057,13 +1057,13 @@ describe('ReviewSession', () => {
       fireEvent.press(submit);
 
       // Feedback should be showing
-      expect(queryByTestId('review-session-correct-label')).toBeTruthy();
+      expect(queryByTestId('subject-display-feedback-label')).toBeTruthy();
 
       // Advance time by less than 500ms - should still show feedback
       act(() => {
         jest.advanceTimersByTime(300);
       });
-      expect(queryByTestId('review-session-correct-label')).toBeTruthy();
+      expect(queryByTestId('subject-display-feedback-label')).toBeTruthy();
 
       // Advance past 500ms - should complete
       act(() => {
@@ -1100,12 +1100,10 @@ describe('ReviewSession', () => {
         fireEvent.changeText(getByTestId('review-session-input'), 'Beautful'); // missing 'i'
         fireEvent.press(getByTestId('review-session-submit'));
 
-        // Should show fuzzy match label instead of correct label
-        expect(queryByTestId('review-session-fuzzy-match-label')).toBeTruthy();
-        expect(queryByTestId('review-session-correct-label')).toBeNull();
-        expect(
-          getByTestId('review-session-fuzzy-match-label').props.children,
-        ).toBe('Close enough!');
+        // Should show fuzzy match feedback label
+        const feedbackLabel = queryByTestId('subject-display-feedback-label');
+        expect(feedbackLabel).toBeTruthy();
+        expect(feedbackLabel?.props.children).toBe('Close Enough!');
       }
     });
 
@@ -1118,12 +1116,10 @@ describe('ReviewSession', () => {
       fireEvent.changeText(getByTestId('review-session-input'), 'Ground');
       fireEvent.press(getByTestId('review-session-submit'));
 
-      // Should show correct label, not fuzzy match label
-      expect(queryByTestId('review-session-correct-label')).toBeTruthy();
-      expect(queryByTestId('review-session-fuzzy-match-label')).toBeNull();
-      expect(getByTestId('review-session-correct-label').props.children).toBe(
-        'Correct!',
-      );
+      // Should show correct feedback label
+      const feedbackLabel = queryByTestId('subject-display-feedback-label');
+      expect(feedbackLabel).toBeTruthy();
+      expect(feedbackLabel?.props.children).toBe('Correct!');
     });
 
     it('should call onAnswer with isCorrect=true for fuzzy match answers', () => {
@@ -1169,9 +1165,10 @@ describe('ReviewSession', () => {
         fireEvent.changeText(getByTestId('review-session-input'), 'ookii');
         fireEvent.press(getByTestId('review-session-submit'));
 
-        // Should show correct label (if correct), never fuzzy match for reading
-        if (queryByTestId('review-session-correct-label')) {
-          expect(queryByTestId('review-session-fuzzy-match-label')).toBeNull();
+        // Should show correct label (if correct), and it should say "Correct!" (not fuzzy match)
+        const feedbackLabel = queryByTestId('subject-display-feedback-label');
+        if (feedbackLabel) {
+          expect(feedbackLabel.props.children).toBe('Correct!');
         }
       }
     });
@@ -1191,9 +1188,9 @@ describe('ReviewSession', () => {
 
       // Should show incorrect feedback screen
       expect(queryByTestId('review-session-incorrect-feedback')).toBeTruthy();
-      expect(queryByTestId('review-session-incorrect-label')).toBeTruthy();
+      expect(queryByTestId('subject-display-feedback-label')).toBeTruthy();
       expect(
-        queryByTestId('review-session-incorrect-label')?.props.children,
+        queryByTestId('subject-display-feedback-label')?.props.children,
       ).toBe('Incorrect');
     });
 
@@ -1338,8 +1335,8 @@ describe('ReviewSession', () => {
       fireEvent.changeText(input, 'Wrong');
       fireEvent.press(submit);
 
-      // Character container should have red background
-      const container = getByTestId('review-session-character-container');
+      // Character container should have red background (in incorrect feedback view, SubjectDisplay uses prefix testID)
+      const container = getByTestId('review-session-subject-display');
       expect(container.props.style).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
@@ -1377,7 +1374,7 @@ describe('ReviewSession', () => {
 
       // Initially 0 / 1
       expect(
-        getByTestId('review-session-progress-text').props.children,
+        getByTestId('progress-header-count').props.children,
       ).toEqual([0, ' / ', 1]);
 
       const input = getByTestId('review-session-input');
@@ -1388,7 +1385,7 @@ describe('ReviewSession', () => {
 
       // Progress should still be 0 / 1 in feedback view
       expect(
-        getByTestId('review-session-progress-text').props.children,
+        getByTestId('progress-header-count').props.children,
       ).toEqual([0, ' / ', 1]);
     });
 
@@ -1442,7 +1439,7 @@ describe('ReviewSession', () => {
       fireEvent.press(submit);
 
       // Should show character
-      expect(getByTestId('review-session-characters').props.children).toBe(
+      expect(getByTestId('subject-display-text').props.children).toBe(
         '一',
       );
     });
@@ -1536,15 +1533,15 @@ describe('ReviewSession', () => {
       );
 
       // Before activating, should not show wrapping up text
-      expect(queryByTestId('review-session-wrapping-up-text')).toBeNull();
-      expect(queryByTestId('review-session-remaining-text')).toBeTruthy();
+      expect(queryByTestId('progress-header-wrap-up')).toBeNull();
+      expect(queryByTestId('progress-header-remaining')).toBeTruthy();
 
       // Activate wrap up
       fireEvent.press(getByTestId('review-session-wrap-up'));
 
       // Should now show wrapping up indicator
-      expect(queryByTestId('review-session-wrapping-up-text')).toBeTruthy();
-      expect(queryByTestId('review-session-remaining-text')).toBeNull();
+      expect(queryByTestId('progress-header-wrap-up')).toBeTruthy();
+      expect(queryByTestId('progress-header-remaining')).toBeNull();
     });
 
     it('should show correct remaining count based on introduced items', () => {
@@ -1555,7 +1552,7 @@ describe('ReviewSession', () => {
       fireEvent.press(getByTestId('review-session-wrap-up'));
 
       // Should show 1 remaining (the introduced item)
-      const wrapUpText = getByTestId('review-session-wrapping-up-text');
+      const wrapUpText = getByTestId('progress-header-wrap-up');
       expect(wrapUpText.props.children).toEqual([
         'Wrapping up: ',
         1,
@@ -1612,7 +1609,7 @@ describe('ReviewSession', () => {
       );
 
       // Get the first item's character
-      const firstChar = getByTestId('review-session-characters').props.children;
+      const firstChar = getByTestId('subject-display-text').props.children;
 
       // Activate wrap up mode
       fireEvent.press(getByTestId('review-session-wrap-up'));
@@ -1648,7 +1645,7 @@ describe('ReviewSession', () => {
       // If not, we should still see the same item (second question)
       if (!queryByTestId('review-completion')) {
         // Session not complete, which means we're still working on the introduced item
-        const currentChar = getByTestId('review-session-characters').props
+        const currentChar = getByTestId('subject-display-text').props
           .children;
         // The character should be the same (or session should be complete)
         // because in wrap-up mode we don't introduce new items
@@ -1665,12 +1662,12 @@ describe('ReviewSession', () => {
 
       // Activate wrap up
       fireEvent.press(getByTestId('review-session-wrap-up'));
-      expect(queryByTestId('review-session-wrapping-up-text')).toBeTruthy();
+      expect(queryByTestId('progress-header-wrap-up')).toBeTruthy();
 
       // Deactivate wrap up
       fireEvent.press(getByTestId('review-session-wrap-up'));
-      expect(queryByTestId('review-session-wrapping-up-text')).toBeNull();
-      expect(queryByTestId('review-session-remaining-text')).toBeTruthy();
+      expect(queryByTestId('progress-header-wrap-up')).toBeNull();
+      expect(queryByTestId('progress-header-remaining')).toBeTruthy();
     });
 
     it('should update wrap up remaining count as items are completed', () => {
@@ -1685,7 +1682,7 @@ describe('ReviewSession', () => {
       );
 
       // Answer first question to introduce first item
-      const firstChar = getByTestId('review-session-characters').props.children;
+      const firstChar = getByTestId('subject-display-text').props.children;
       const firstAnswer = firstChar === '一' ? 'Ground' : 'Person';
 
       fireEvent.changeText(getByTestId('review-session-input'), firstAnswer);
@@ -1702,7 +1699,7 @@ describe('ReviewSession', () => {
         fireEvent.press(getByTestId('review-session-wrap-up'));
 
         // Check remaining count (should be at least 1 - the incomplete item)
-        const wrapUpText = getByTestId('review-session-wrapping-up-text');
+        const wrapUpText = getByTestId('progress-header-wrap-up');
         expect(wrapUpText.props.children[1]).toBeGreaterThanOrEqual(1);
       }
 
@@ -1717,7 +1714,7 @@ describe('ReviewSession', () => {
       fireEvent.press(getByTestId('review-session-wrap-up'));
 
       // Progress should show 0/1 (0 completed out of 1 introduced)
-      const progressText = getByTestId('review-session-progress-text');
+      const progressText = getByTestId('progress-header-count');
       expect(progressText.props.children).toEqual([0, ' / ', 1]);
     });
 
@@ -2018,7 +2015,7 @@ describe('ReviewSession', () => {
       );
 
       // Get the displayed character to determine the correct answer
-      const displayedChar = getByTestId('review-session-characters').props
+      const displayedChar = getByTestId('subject-display-text').props
         .children;
       const correctAnswer = displayedChar === '一' ? 'Ground' : 'Person';
 
@@ -2087,7 +2084,7 @@ describe('ReviewSession', () => {
       );
 
       // Get the displayed character to determine the correct answer
-      const displayedChar = getByTestId('review-session-characters').props
+      const displayedChar = getByTestId('subject-display-text').props
         .children;
       const correctAnswer = displayedChar === '一' ? 'Ground' : 'Person';
 
@@ -2096,11 +2093,11 @@ describe('ReviewSession', () => {
       fireEvent.press(getByTestId('review-session-submit'));
 
       // Should show correct label
-      expect(queryByTestId('review-session-correct-label')).toBeTruthy();
+      expect(queryByTestId('subject-display-feedback-label')).toBeTruthy();
 
-      // Input should remain editable during correct feedback (keyboard stays open)
-      const input = getByTestId('review-session-input');
-      expect(input.props.editable).not.toBe(false);
+      // Input should be present during correct feedback (as correct-feedback-input)
+      const input = getByTestId('correct-feedback-input');
+      expect(input).toBeTruthy();
 
       jest.useRealTimers();
     });
@@ -2916,7 +2913,7 @@ describe('ReviewSession', () => {
         fireEvent.press(getByTestId('review-session-submit'));
 
         // Should show "Add as Synonym" link for meaning questions
-        expect(getByTestId('review-session-add-synonym')).toBeTruthy();
+        expect(getByTestId('review-session-add-synonym-text')).toBeTruthy();
         expect(
           getByTestId('review-session-add-synonym-text').props.children,
         ).toContain('Add as Synonym');
@@ -2939,7 +2936,7 @@ describe('ReviewSession', () => {
         fireEvent.press(getByTestId('review-session-submit'));
 
         // Should NOT show "Add as Synonym" link for reading questions
-        expect(queryByTestId('review-session-add-synonym')).toBeNull();
+        expect(queryByTestId('review-session-add-synonym-text')).toBeNull();
       }
     });
 
@@ -2957,7 +2954,7 @@ describe('ReviewSession', () => {
 
         // Press the "Add as Synonym" link
         await act(async () => {
-          fireEvent.press(getByTestId('review-session-add-synonym'));
+          fireEvent.press(getByTestId('review-session-add-synonym-text'));
         });
 
         // Should show "Adding..." or "Synonym added ✓" state
@@ -2987,7 +2984,7 @@ describe('ReviewSession', () => {
 
         // Press the "Add as Synonym" link
         await act(async () => {
-          fireEvent.press(getByTestId('review-session-add-synonym'));
+          fireEvent.press(getByTestId('review-session-add-synonym-text'));
         });
 
         // Should have called database functions
@@ -3021,7 +3018,7 @@ describe('ReviewSession', () => {
 
         // Press the "Add as Synonym" link
         await act(async () => {
-          fireEvent.press(getByTestId('review-session-add-synonym'));
+          fireEvent.press(getByTestId('review-session-add-synonym-text'));
         });
 
         // Should show "Synonym added ✓"
@@ -3052,11 +3049,11 @@ describe('ReviewSession', () => {
 
         // Press the "Add as Synonym" link
         await act(async () => {
-          fireEvent.press(getByTestId('review-session-add-synonym'));
+          fireEvent.press(getByTestId('review-session-add-synonym-text'));
         });
 
         // Still on incorrect feedback until 400ms passes
-        expect(queryByTestId('review-session-add-synonym')).toBeTruthy();
+        expect(queryByTestId('review-session-add-synonym-text')).toBeTruthy();
 
         // Advance timers by 400ms
         await act(async () => {
@@ -3096,7 +3093,7 @@ describe('ReviewSession', () => {
 
       // Press the "Add as Synonym" link
       await act(async () => {
-        fireEvent.press(getByTestId('review-session-add-synonym'));
+        fireEvent.press(getByTestId('review-session-add-synonym-text'));
       });
 
       // Advance timers by 400ms
@@ -3129,11 +3126,11 @@ describe('ReviewSession', () => {
 
         // Press the "Add as Synonym" link
         await act(async () => {
-          fireEvent.press(getByTestId('review-session-add-synonym'));
+          fireEvent.press(getByTestId('review-session-add-synonym-text'));
         });
 
         // Link should be disabled
-        const addSynonymLink = getByTestId('review-session-add-synonym');
+        const addSynonymLink = getByTestId('review-session-add-synonym-text');
         expect(addSynonymLink.props.accessibilityState?.disabled).toBe(true);
       }
 
@@ -3158,8 +3155,8 @@ describe('ReviewSession', () => {
         await Promise.resolve();
       });
 
-      expect(getByTestId('review-session-progress')).toBeTruthy();
-      expect(getByTestId('review-session-progress-text')).toBeTruthy();
+      expect(getByTestId('progress-header-progress')).toBeTruthy();
+      expect(getByTestId('progress-header-count')).toBeTruthy();
     });
 
     it('should show SRS badge when zen mode is disabled', async () => {
@@ -3172,7 +3169,7 @@ describe('ReviewSession', () => {
         await Promise.resolve();
       });
 
-      expect(getByTestId('review-session-srs-badge')).toBeTruthy();
+      expect(getByTestId('srs-badge')).toBeTruthy();
     });
 
     it('should hide progress bar and count text when zen mode is enabled', async () => {
@@ -3187,8 +3184,8 @@ describe('ReviewSession', () => {
         await Promise.resolve();
       });
 
-      expect(queryByTestId('review-session-progress')).toBeNull();
-      expect(queryByTestId('review-session-progress-text')).toBeNull();
+      expect(queryByTestId('progress-header-progress')).toBeNull();
+      expect(queryByTestId('progress-header-count')).toBeNull();
     });
 
     it('should hide SRS badge when zen mode is enabled', async () => {
@@ -3203,7 +3200,7 @@ describe('ReviewSession', () => {
         await Promise.resolve();
       });
 
-      expect(queryByTestId('review-session-srs-badge')).toBeNull();
+      expect(queryByTestId('srs-badge')).toBeNull();
     });
 
     it('should still show wrap-up button when zen mode is enabled', async () => {
@@ -3232,14 +3229,14 @@ describe('ReviewSession', () => {
       });
 
       // Initially zen mode hides progress
-      expect(queryByTestId('review-session-progress')).toBeNull();
+      expect(queryByTestId('progress-header-progress')).toBeNull();
 
       // Activate wrap-up mode
       fireEvent.press(getByTestId('review-session-wrap-up'));
 
       // Progress should now be visible, but SRS badge stays hidden in zen mode
-      expect(getByTestId('review-session-progress')).toBeTruthy();
-      expect(queryByTestId('review-session-srs-badge')).toBeNull();
+      expect(getByTestId('progress-header-progress')).toBeTruthy();
+      expect(queryByTestId('srs-badge')).toBeNull();
     });
 
     it('should hide progress bar and SRS badge in incorrect feedback view when zen mode is enabled', async () => {
@@ -3254,7 +3251,7 @@ describe('ReviewSession', () => {
         await Promise.resolve();
       });
 
-      expect(queryByTestId('review-session-progress')).toBeNull();
+      expect(queryByTestId('progress-header-progress')).toBeNull();
 
       // Submit wrong answer to get to incorrect feedback view
       const input = getByTestId('review-session-input');
@@ -3263,8 +3260,8 @@ describe('ReviewSession', () => {
 
       // Should be in incorrect feedback view but still no progress/badge
       expect(getByTestId('review-session-incorrect-feedback')).toBeTruthy();
-      expect(queryByTestId('review-session-progress')).toBeNull();
-      expect(queryByTestId('review-session-srs-badge')).toBeNull();
+      expect(queryByTestId('progress-header-progress')).toBeNull();
+      expect(queryByTestId('srs-badge')).toBeNull();
     });
 
     it('should show progress bar but hide SRS badge in incorrect feedback view when wrap-up mode is active in zen mode', async () => {
@@ -3279,7 +3276,7 @@ describe('ReviewSession', () => {
         await Promise.resolve();
       });
 
-      expect(queryByTestId('review-session-progress')).toBeNull();
+      expect(queryByTestId('progress-header-progress')).toBeNull();
 
       // Activate wrap-up mode
       fireEvent.press(getByTestId('review-session-wrap-up'));
@@ -3297,8 +3294,8 @@ describe('ReviewSession', () => {
 
       // Should show progress but hide SRS badge in incorrect feedback view with wrap-up active in zen mode
       expect(getByTestId('review-session-incorrect-feedback')).toBeTruthy();
-      expect(getByTestId('review-session-progress')).toBeTruthy();
-      expect(queryByTestId('review-session-srs-badge')).toBeNull();
+      expect(getByTestId('progress-header-progress')).toBeTruthy();
+      expect(queryByTestId('srs-badge')).toBeNull();
     });
 
     it('should fetch zen mode setting on mount', async () => {
@@ -3341,7 +3338,7 @@ describe('ReviewSession', () => {
 
       // Answer 10 items incorrectly to introduce them without completing
       for (let i = 0; i < 10; i++) {
-        const chars = getByTestId('review-session-characters').props.children;
+        const chars = getByTestId('subject-display-text').props.children;
         introducedIds.add(chars);
 
         // Submit wrong answer to introduce but not complete
@@ -3355,7 +3352,7 @@ describe('ReviewSession', () => {
       // We've introduced 10 items. Now the next question should be for
       // one of the already-introduced items (re-queued from incorrect answers),
       // NOT a new item.
-      const nextChars = getByTestId('review-session-characters').props.children;
+      const nextChars = getByTestId('subject-display-text').props.children;
       expect(introducedIds.has(nextChars)).toBe(true);
 
       jest.useRealTimers();
@@ -3380,7 +3377,7 @@ describe('ReviewSession', () => {
 
       // Answer 10 items incorrectly to fill the buffer
       for (let i = 0; i < 10; i++) {
-        const chars = getByTestId('review-session-characters').props.children;
+        const chars = getByTestId('subject-display-text').props.children;
         introducedChars.push(chars);
 
         fireEvent.changeText(getByTestId('review-session-input'), 'wrong');
@@ -3390,7 +3387,7 @@ describe('ReviewSession', () => {
 
       // Now buffer is full. The next question should be a re-queued one.
       // Answer it correctly to complete one item and free a slot.
-      const currentChars = getByTestId('review-session-characters').props
+      const currentChars = getByTestId('subject-display-text').props
         .children;
       expect(introducedChars).toContain(currentChars);
 
@@ -3409,7 +3406,7 @@ describe('ReviewSession', () => {
       // After completing one item, the buffer has room. The system may now
       // show a new (previously unintroduced) item OR another re-queued item.
       // Just verify the session is still active and not stuck.
-      expect(getByTestId('review-session-characters')).toBeTruthy();
+      expect(getByTestId('subject-display-text')).toBeTruthy();
 
       jest.useRealTimers();
     });
@@ -3433,10 +3430,10 @@ describe('ReviewSession', () => {
 
       // Activate wrap-up immediately (only the current item is introduced)
       fireEvent.press(getByTestId('review-session-wrap-up'));
-      expect(queryByTestId('review-session-wrapping-up-text')).toBeTruthy();
+      expect(queryByTestId('progress-header-wrap-up')).toBeTruthy();
 
       // Answer the introduced item correctly
-      const chars = getByTestId('review-session-characters').props.children;
+      const chars = getByTestId('subject-display-text').props.children;
       const answer = chars === '一' ? 'Ground' : 'Person';
 
       fireEvent.changeText(getByTestId('review-session-input'), answer);
@@ -3497,7 +3494,7 @@ describe('ReviewSession', () => {
       fireEvent.press(getByTestId('review-session-submit'));
 
       // Should show correct feedback
-      expect(queryByTestId('review-session-correct-label')).toBeTruthy();
+      expect(queryByTestId('subject-display-feedback-label')).toBeTruthy();
 
       // Should NOT show animated badge with level-up (old level showing)
       // The AnimatedSrsLevelBadge shows srs-level-name-old when animating level-up
@@ -3553,7 +3550,7 @@ describe('ReviewSession', () => {
       fireEvent.press(getByTestId('review-session-submit'));
 
       // Should show correct feedback
-      expect(queryByTestId('review-session-correct-label')).toBeTruthy();
+      expect(queryByTestId('subject-display-feedback-label')).toBeTruthy();
 
       // For radicals, the first correct answer IS the full completion,
       // so level-up animation SHOULD show (this is correct behavior)

@@ -280,7 +280,7 @@ describe('ReviewsScreen', () => {
       const { getByTestId } = renderWithNavigation(<ReviewsScreen />);
 
       await waitFor(() => {
-        expect(getByTestId('review-session-characters').props.children).toBe(
+        expect(getByTestId('subject-display-text').props.children).toBe(
           '一',
         );
       });
@@ -472,7 +472,7 @@ describe('ReviewsScreen', () => {
 
       // Progress should show 0/2 items
       expect(
-        getByTestId('review-session-progress-text').props.children,
+        getByTestId('progress-header-count').props.children,
       ).toEqual([0, ' / ', 2]);
 
       // Remaining should show 2
