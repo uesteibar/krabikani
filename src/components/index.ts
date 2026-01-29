@@ -12,6 +12,12 @@ export {
 } from './SubjectDisplay';
 
 export {
+  QuestionTypeLabel,
+  type QuestionTypeLabelProps,
+  type QuestionTypeLabelType,
+} from './QuestionTypeLabel';
+
+export {
   OfflineIndicator,
   type OfflineIndicatorProps,
 } from './OfflineIndicator';
