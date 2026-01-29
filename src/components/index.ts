@@ -18,6 +18,11 @@ export {
 } from './QuestionTypeLabel';
 
 export {
+  IncorrectFeedbackView,
+  type IncorrectFeedbackViewProps,
+} from './IncorrectFeedbackView';
+
+export {
   OfflineIndicator,
   type OfflineIndicatorProps,
 } from './OfflineIndicator';
