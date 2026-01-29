@@ -5,6 +5,13 @@ export {
 } from './Button';
 
 export {
+  SubjectDisplay,
+  type SubjectDisplayProps,
+  type FeedbackState,
+  type SrsBadge,
+} from './SubjectDisplay';
+
+export {
   OfflineIndicator,
   type OfflineIndicatorProps,
 } from './OfflineIndicator';
