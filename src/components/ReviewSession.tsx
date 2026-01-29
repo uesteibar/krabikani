@@ -8,13 +8,8 @@ import React, {
 import {
   StyleSheet,
   Text,
-  TextInput,
   View,
-  KeyboardAvoidingView,
-  Platform,
   TouchableOpacity,
-  Animated,
-  type TextInput as TextInputType,
 } from 'react-native';
 
 import type {
@@ -25,20 +20,11 @@ import type {
   AuxiliaryMeaning,
 } from '../api/types';
 import {
-  romajiToHiragana,
-  isValidReadingInput,
-} from '../utils/romajiToHiragana';
-import {
-  validateMeaningAnswer,
-  validateReadingAnswer,
-} from '../utils/answerValidation';
-import {
   addUserSynonym,
   insertPendingSynonym,
   getSetting,
 } from '../storage/database';
 import {
-  getSubjectColor,
   COLORS,
   BORDER_RADIUS,
   SPACING,
@@ -49,16 +35,14 @@ import { ReviewCompletion, type ReviewResultItem } from './ReviewCompletion';
 import { ExpandableDetails } from './ExpandableDetails';
 import { ItemDetails } from './ItemDetails';
 import { getSrsLevelInfo, calculateSrsStageAfterIncorrect } from '../theme';
-import { SubjectDisplay, type SrsBadge } from './SubjectDisplay';
-import { QuestionTypeLabel } from './QuestionTypeLabel';
-import { IncorrectFeedbackView } from './IncorrectFeedbackView';
-import { CorrectFeedbackView } from './CorrectFeedbackView';
-import { ProgressHeader } from './ProgressHeader';
-import { LoadingView } from './LoadingView';
-import { Button } from './Button';
-import { useShakeAnimation } from '../hooks/useShakeAnimation';
-import { useAutoFocus } from '../hooks/useAutoFocus';
-import { useQuestionInput } from '../hooks/useQuestionInput';
+import type { SrsBadge } from './SubjectDisplay';
+import { QuizEngine } from './quiz/QuizEngine';
+import type {
+  Question,
+  QuizEngineConfig,
+  QuizAnswerEvent,
+  ProgressMode,
+} from './quiz/types';
 
 // ============================================
 // Types
@@ -181,25 +165,6 @@ export interface ReviewSessionProps {
 }
 
 /**
- * Get all accepted meanings as a string for display.
- */
-function getAcceptedMeaningsDisplay(meanings: Meaning[]): string {
-  const accepted = meanings.filter(m => m.accepted_answer);
-  return accepted.map(m => m.meaning).join(', ');
-}
-
-/**
- * Get all accepted readings as a string for display.
- */
-function getAcceptedReadingsDisplay(
-  readings: Reading[] | KanjiReading[] | null,
-): string {
-  if (!readings) return '';
-  const accepted = readings.filter(r => r.accepted_answer);
-  return accepted.map(r => r.reading).join(', ');
-}
-
-/**
  * Fisher-Yates shuffle algorithm for randomizing array order.
  */
 export function shuffleArray<T>(array: T[]): T[] {
@@ -218,24 +183,19 @@ export function shuffleArray<T>(array: T[]): T[] {
  * or reading comes first is also randomized.
  */
 export function generateReviewQuestions(items: ReviewItem[]): ReviewQuestion[] {
-  // First, shuffle the items
   const shuffledItems = shuffleArray(items);
-
   const questions: ReviewQuestion[] = [];
 
   for (const item of shuffledItems) {
-    // Determine question order for this item
     const meaningFirst = Math.random() < 0.5;
 
     if (item.subjectType === 'radical') {
-      // Radicals only have meaning questions
       questions.push({
         item,
         type: 'meaning',
         key: `${item.id}-meaning`,
       });
     } else if (meaningFirst) {
-      // Meaning first, then reading
       questions.push({
         item,
         type: 'meaning',
@@ -247,7 +207,6 @@ export function generateReviewQuestions(items: ReviewItem[]): ReviewQuestion[] {
         key: `${item.id}-reading`,
       });
     } else {
-      // Reading first, then meaning
       questions.push({
         item,
         type: 'reading',
@@ -261,29 +220,58 @@ export function generateReviewQuestions(items: ReviewItem[]): ReviewQuestion[] {
     }
   }
 
-  // Shuffle the entire question list for even more randomization
   return shuffleArray(questions);
+}
+
+/** Maximum number of incomplete (initiated but not finished) items allowed at once */
+export const MAX_INCOMPLETE_ITEMS = 10;
+
+/**
+ * Convert a ReviewQuestion to a unified Question for QuizEngine.
+ */
+function reviewQuestionToQuestion(rq: ReviewQuestion): Question {
+  const { item, type, key } = rq;
+  const mnemonic =
+    type === 'meaning'
+      ? item.meaningMnemonic
+      : item.readingMnemonic ?? item.meaningMnemonic;
+  const mnemonicLabel =
+    type === 'meaning' ? 'Meaning Mnemonic:' : 'Reading Mnemonic:';
+
+  return {
+    id: key,
+    subjectId: item.id,
+    subjectType: item.subjectType,
+    displayText: item.characters ?? '?',
+    displayMode: 'characters',
+    correctAnswers: [],
+    questionType: type,
+    mnemonic,
+    mnemonicLabel,
+    meanings: item.meanings,
+    readings: item.readings ?? [],
+    auxiliaryMeanings: item.auxiliaryMeanings ?? [],
+    userSynonyms: item.userSynonyms ?? [],
+  };
+}
+
+/**
+ * Build a lookup map from question ID back to ReviewQuestion.
+ */
+function buildQuestionMap(
+  reviewQuestions: ReviewQuestion[],
+): Map<string, ReviewQuestion> {
+  const map = new Map<string, ReviewQuestion>();
+  for (const rq of reviewQuestions) {
+    map.set(rq.key, rq);
+  }
+  return map;
 }
 
 // ============================================
 // Component
 // ============================================
 
-/** Maximum number of incomplete (initiated but not finished) items allowed at once */
-export const MAX_INCOMPLETE_ITEMS = 10;
-
-/**
- * ReviewSession presents review questions for items that are due for review.
- * Shows characters prominently with an input field for answers.
- * Meaning questions expect English text; reading questions use romaji-to-hiragana conversion.
- *
- * Features:
- * - Progress bar showing completion (items fully completed / total items)
- * - Remaining count display
- * - Randomized item and question order
- * - Each item requires correct answers for both meaning and reading (except radicals)
- * - Buffer cap: limits in-progress items to MAX_INCOMPLETE_ITEMS to prevent backlog
- */
 export function ReviewSession({
   items,
   onAnswer,
@@ -295,36 +283,37 @@ export function ReviewSession({
   onComponentPress,
   onProgressChange,
 }: ReviewSessionProps) {
-  // Generate initial questions once when items change
-  const initialQuestions = useMemo(
+  // Generate initial review questions
+  const initialReviewQuestions = useMemo(
     () => generateReviewQuestions(items),
     [items],
   );
 
+  // Convert to unified Questions for QuizEngine
+  const initialQuestions = useMemo(
+    () => initialReviewQuestions.map(reviewQuestionToQuestion),
+    [initialReviewQuestions],
+  );
+
+  // Build lookup map from question ID to ReviewQuestion
+  const questionMapRef = useRef(buildQuestionMap(initialReviewQuestions));
+  useEffect(() => {
+    questionMapRef.current = buildQuestionMap(initialReviewQuestions);
+  }, [initialReviewQuestions]);
+
   // Initialize item progress tracking
-  const initialItemProgress = useMemo(() => {
+  const [_itemProgress, setItemProgress] = useState<Map<number, ItemProgress>>(() => {
     const progress = new Map<number, ItemProgress>();
     for (const item of items) {
       progress.set(item.id, {
         meaningCorrect: false,
-        readingCorrect: item.subjectType === 'radical', // Radicals have no reading
+        readingCorrect: item.subjectType === 'radical',
         incorrectMeaningAnswers: 0,
         incorrectReadingAnswers: 0,
       });
     }
     return progress;
-  }, [items]);
-
-  // Question queue: includes initial questions + re-queued incorrect ones
-  const [questionQueue, setQuestionQueue] =
-    useState<ReviewQuestion[]>(initialQuestions);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [_itemProgress, setItemProgress] =
-    useState<Map<number, ItemProgress>>(initialItemProgress);
-  const [showCorrectFeedback, setShowCorrectFeedback] = useState(false);
-  const [isFuzzyMatch, setIsFuzzyMatch] = useState(false);
-  const [incorrectFeedback, setIncorrectFeedback] =
-    useState<IncorrectFeedback | null>(null);
+  });
 
   // Level-up animation state
   const [levelUpAnimation, setLevelUpAnimation] = useState<{
@@ -344,47 +333,28 @@ export function ReviewSession({
     toStage: number;
   } | null>(null);
 
-  // Synonym addition state: null | 'adding' | 'added'
-  const [synonymAddState, setSynonymAddState] = useState<
-    null | 'adding' | 'added'
-  >(null);
-
   // Wrap-up mode state
   const [isWrappingUp, setIsWrappingUp] = useState(false);
   // Track which items have been introduced (at least one question shown)
   const [introducedItemIds, setIntroducedItemIds] = useState<Set<number>>(
     new Set(),
   );
-  // Zen mode state (hide progress bar, count, and SRS badge during reviews)
+  // Zen mode state
   const [zenModeEnabled, setZenModeEnabled] = useState(false);
 
-  // Track completed questions for session progress
+  // Track completed items
   const [completedItemCount, setCompletedItemCount] = useState(0);
   const totalItemCount = items.length;
 
-  // Track answer counts to report
-  const answeredQuestionsCount = useRef(0);
+  // Track the current question for SRS badge and introduced tracking
+  const [currentQuestionId, setCurrentQuestionId] = useState<string | null>(null);
 
-  // Ref for TextInput to enable auto-focus
-  const inputRef = useRef<TextInputType>(null);
+  // Whether onSessionComplete has been called for the current session
+  const sessionCompleteCalledRef = useRef(false);
 
-  // Use shared shake animation hook
-  const { shakeStyle, triggerShake } = useShakeAnimation();
-
-  // Current question for determining input type
-  const currentQuestion = questionQueue[currentQuestionIndex];
-
-  // Use shared question input hook
-  const questionInputType = currentQuestion?.type === 'reading' ? 'reading' : 'meaning';
-  const { inputValue, displayValue, clearInput, handleTextChange } =
-    useQuestionInput(questionInputType);
-
-  // Use shared auto-focus hook
-  useAutoFocus(inputRef, [
-    currentQuestionIndex,
-    incorrectFeedback,
-    showCorrectFeedback,
-  ]);
+  // Track whether we are showing incorrect feedback (for SRS badge)
+  const [showingIncorrectFeedback, setShowingIncorrectFeedback] = useState(false);
+  const [feedbackQuestionId, setFeedbackQuestionId] = useState<string | null>(null);
 
   // Fetch zen mode setting on mount
   useEffect(() => {
@@ -397,7 +367,6 @@ export function ReviewSession({
 
   // Reset state when items change
   useEffect(() => {
-    const newQuestions = generateReviewQuestions(items);
     const newProgress = new Map<number, ItemProgress>();
     for (const item of items) {
       newProgress.set(item.id, {
@@ -407,34 +376,27 @@ export function ReviewSession({
         incorrectReadingAnswers: 0,
       });
     }
-    setQuestionQueue(newQuestions);
-    setCurrentQuestionIndex(0);
-    clearInput();
     setItemProgress(newProgress);
     setCompletedItemCount(0);
-    setShowCorrectFeedback(false);
-    setIsFuzzyMatch(false);
-    setIncorrectFeedback(null);
     setLevelUpAnimation(null);
     setLevelDownAnimation(null);
     setPendingLevelDown(null);
-    setSynonymAddState(null);
     setIsWrappingUp(false);
     setIntroducedItemIds(new Set());
-    answeredQuestionsCount.current = 0;
-  }, [items, clearInput]);
+    setCurrentQuestionId(null);
+    setShowingIncorrectFeedback(false);
+    setFeedbackQuestionId(null);
+    sessionCompleteCalledRef.current = false;
+  }, [items]);
 
-  // Notify parent of progress changes (for exit handling)
+  // Notify parent of progress changes
   useEffect(() => {
     onProgressChange?.(_itemProgress);
   }, [_itemProgress, onProgressChange]);
 
-  // Session is complete when:
-  // - Normal mode: all items are completed
-  // - Wrap-up mode: all introduced items are completed
+  // Session completion detection
   const isComplete = useMemo(() => {
     if (isWrappingUp) {
-      // In wrap-up mode, complete when all introduced items have both answers correct
       if (introducedItemIds.size === 0) return false;
       for (const itemId of introducedItemIds) {
         const progress = _itemProgress.get(itemId);
@@ -456,14 +418,7 @@ export function ReviewSession({
     totalItemCount,
   ]);
 
-  // Track introduced items when showing a new question
-  useEffect(() => {
-    if (currentQuestion && !introducedItemIds.has(currentQuestion.item.id)) {
-      setIntroducedItemIds(prev => new Set(prev).add(currentQuestion.item.id));
-    }
-  }, [currentQuestion, introducedItemIds]);
-
-  // Count of introduced items that are not yet complete (used for buffer cap and wrap-up)
+  // Count of introduced items that are not yet complete
   const incompleteItemCount = useMemo(() => {
     let count = 0;
     for (const itemId of introducedItemIds) {
@@ -475,7 +430,6 @@ export function ReviewSession({
     return count;
   }, [introducedItemIds, _itemProgress]);
 
-  // Calculate wrap-up state: count of introduced items that are not yet complete
   const wrapUpRemainingCount = isWrappingUp ? incompleteItemCount : 0;
 
   // Handle wrap-up button press
@@ -487,541 +441,447 @@ export function ReviewSession({
     });
   }, [onWrapUpToggle]);
 
-  // Find the next valid question index, considering wrap-up mode and buffer cap
-  const findNextQuestionIndex = useCallback(
-    (
-      startIndex: number,
-      queue: ReviewQuestion[],
-      wrappingUp: boolean,
-      introduced: Set<number>,
-      progress: Map<number, ItemProgress>,
-      currentIncompleteCount: number,
-    ): number => {
-      let nextIndex = startIndex;
-
-      // Determine whether we should block new items from being introduced
-      const blockNewItems =
-        wrappingUp || currentIncompleteCount >= MAX_INCOMPLETE_ITEMS;
-
-      // When blocking new items, skip questions for items that haven't been
-      // introduced yet or items that are already complete
-      while (nextIndex < queue.length && blockNewItems) {
-        const question = queue[nextIndex];
-        const itemId = question.item.id;
-        const itemProgress = progress.get(itemId);
-        const isIntroduced = introduced.has(itemId);
-        const isItemDone =
-          itemProgress &&
-          itemProgress.meaningCorrect &&
-          itemProgress.readingCorrect;
-
-        // Skip if not introduced or already complete
-        if (!isIntroduced || isItemDone) {
-          nextIndex++;
-        } else {
-          break;
-        }
+  // Track introduced items when question is shown
+  const handleQuestionChange = useCallback(
+    (question: Question) => {
+      const itemId = question.subjectId;
+      if (!introducedItemIds.has(itemId)) {
+        setIntroducedItemIds(prev => new Set(prev).add(itemId));
       }
-
-      return nextIndex;
     },
-    [],
+    [introducedItemIds],
   );
 
-  // Advance to next question (clearing input and feedback)
-  const advanceToNextQuestion = useCallback(() => {
-    setCurrentQuestionIndex(prev => {
-      const nextIndex = prev + 1;
-      return findNextQuestionIndex(
-        nextIndex,
-        questionQueue,
-        isWrappingUp,
-        introducedItemIds,
-        _itemProgress,
-        incompleteItemCount,
-      );
-    });
-    clearInput();
-    setIncorrectFeedback(null);
-    setShowCorrectFeedback(false);
-    setIsFuzzyMatch(false);
-    setLevelDownAnimation(null);
-    setPendingLevelDown(null);
-    setSynonymAddState(null);
-  }, [
-    findNextQuestionIndex,
-    questionQueue,
-    isWrappingUp,
-    introducedItemIds,
-    _itemProgress,
-    incompleteItemCount,
-    clearInput,
-  ]);
+  // Handle answer from QuizEngine
+  const handleAnswer = useCallback(
+    (event: QuizAnswerEvent) => {
+      const { question, result } = event;
+      const rq = questionMapRef.current.get(question.id);
+      if (!rq) return;
 
-  // Handle tap to continue after incorrect answer
-  const handleContinue = useCallback(() => {
-    if (pendingLevelDown) {
-      // Show the level-down animation briefly before advancing
-      setLevelDownAnimation(pendingLevelDown);
-      setPendingLevelDown(null);
-      setTimeout(() => {
-        advanceToNextQuestion();
-      }, 800);
-    } else {
-      advanceToNextQuestion();
-    }
-  }, [advanceToNextQuestion, pendingLevelDown]);
+      const { item, type } = rq;
+      const isCorrect = result.status === 'correct' || result.status === 'fuzzyMatch';
 
-  // Handle "Mark as Correct" - treat incorrect answer as correct
-  const handleMarkAsCorrect = useCallback(() => {
-    if (!incorrectFeedback) return;
+      // Track current question for SRS badge
+      setCurrentQuestionId(question.id);
 
-    // Clear pending level-down since user is overriding the incorrect answer
-    setPendingLevelDown(null);
+      // Notify parent
+      onAnswer?.({
+        question: rq,
+        userAnswer: result.userAnswer,
+        isCorrect,
+        correctAnswer: result.correctAnswer,
+      });
 
-    const question = incorrectFeedback.question;
-    const { item, type } = question;
-
-    // Create result as if it were correct
-    const result: ReviewAnswerResult = {
-      question,
-      userAnswer: incorrectFeedback.userAnswer,
-      isCorrect: true,
-      correctAnswer: incorrectFeedback.correctAnswer,
-    };
-
-    // Notify parent of the corrected result
-    onAnswer?.(result);
-
-    // Remove the re-queued question (it was added when marked incorrect)
-    setQuestionQueue(prev => {
-      const newQueue = [...prev];
-      // Find and remove the last occurrence of this question
-      for (let i = newQueue.length - 1; i >= 0; i--) {
-        if (newQueue[i].key === question.key) {
-          newQueue.splice(i, 1);
-          break;
-        }
-      }
-      return newQueue;
-    });
-
-    // Update item progress - mark as correct and decrement incorrect count
-    const currentProgress = _itemProgress.get(item.id)!;
-    const wasComplete =
-      currentProgress.meaningCorrect && currentProgress.readingCorrect;
-
-    setItemProgress(prev => {
-      const newProgress = new Map(prev);
-      const itemProgress = { ...newProgress.get(item.id)! };
-
-      // Mark this question type as correct
-      if (type === 'meaning') {
-        itemProgress.meaningCorrect = true;
-        // Decrement incorrect count since we're overriding
-        if (itemProgress.incorrectMeaningAnswers > 0) {
-          itemProgress.incorrectMeaningAnswers--;
-        }
-      } else {
-        itemProgress.readingCorrect = true;
-        if (itemProgress.incorrectReadingAnswers > 0) {
-          itemProgress.incorrectReadingAnswers--;
-        }
-      }
-
-      newProgress.set(item.id, itemProgress);
-      return newProgress;
-    });
-
-    // Check if item is now complete
-    const willMeaningBeCorrect =
-      type === 'meaning' ? true : currentProgress.meaningCorrect;
-    const willReadingBeCorrect =
-      type === 'reading' ? true : currentProgress.readingCorrect;
-    const willBeComplete = willMeaningBeCorrect && willReadingBeCorrect;
-    const itemJustCompleted = willBeComplete && !wasComplete;
-
-    if (itemJustCompleted) {
-      const newCompletedCount = completedItemCount + 1;
-      setCompletedItemCount(newCompletedCount);
+      // Compute item completion state before update
+      const currentProgress = _itemProgress.get(item.id)!;
+      const willMeaningBeCorrect =
+        type === 'meaning' && isCorrect ? true : currentProgress.meaningCorrect;
+      const willReadingBeCorrect =
+        type === 'reading' && isCorrect ? true : currentProgress.readingCorrect;
+      const itemWillBeComplete = willMeaningBeCorrect && willReadingBeCorrect;
+      const itemWasComplete =
+        currentProgress.meaningCorrect && currentProgress.readingCorrect;
+      const itemJustCompleted = itemWillBeComplete && !itemWasComplete;
+      const newCompletedCount = itemJustCompleted
+        ? completedItemCount + 1
+        : completedItemCount;
 
       // Check session completion
-      let sessionComplete: boolean;
+      let sessionWillComplete: boolean;
       if (isWrappingUp) {
-        // In wrap-up mode: complete when all introduced items are done
-        sessionComplete = (() => {
-          for (const itemId of introducedItemIds) {
-            if (itemId === item.id) continue;
-            const progress = _itemProgress.get(itemId);
-            if (
-              !progress ||
-              !(progress.meaningCorrect && progress.readingCorrect)
-            ) {
-              return false;
+        sessionWillComplete =
+          itemJustCompleted &&
+          (() => {
+            for (const itemId of introducedItemIds) {
+              if (itemId === item.id) continue;
+              const progress = _itemProgress.get(itemId);
+              if (
+                !progress ||
+                !(progress.meaningCorrect && progress.readingCorrect)
+              ) {
+                return false;
+              }
             }
-          }
-          return true;
-        })();
+            return true;
+          })();
       } else {
-        sessionComplete = newCompletedCount >= totalItemCount;
+        sessionWillComplete = newCompletedCount >= totalItemCount;
       }
 
-      if (sessionComplete) {
-        // Build the final progress map for the callback
-        const finalProgress = new Map<number, ItemProgress>();
-        const itemsToInclude = isWrappingUp
-          ? introducedItemIds
-          : new Set(_itemProgress.keys());
-        for (const itemId of itemsToInclude) {
-          const progress = _itemProgress.get(itemId)!;
-          if (itemId === item.id) {
-            // Include the update for the current item
-            const updatedProgress = { ...progress };
-            if (type === 'meaning') {
-              updatedProgress.meaningCorrect = true;
-              if (updatedProgress.incorrectMeaningAnswers > 0) {
-                updatedProgress.incorrectMeaningAnswers--;
+      // Build new progress for callback
+      let newProgressForCallback: Map<number, ItemProgress> | null = null;
+      if (sessionWillComplete && isCorrect) {
+        if (isWrappingUp) {
+          newProgressForCallback = new Map<number, ItemProgress>();
+          for (const itemId of introducedItemIds) {
+            const progress = _itemProgress.get(itemId)!;
+            if (itemId === item.id) {
+              const updatedProgress = { ...progress };
+              if (type === 'meaning') {
+                updatedProgress.meaningCorrect = true;
+              } else {
+                updatedProgress.readingCorrect = true;
               }
+              newProgressForCallback.set(itemId, updatedProgress);
             } else {
-              updatedProgress.readingCorrect = true;
-              if (updatedProgress.incorrectReadingAnswers > 0) {
-                updatedProgress.incorrectReadingAnswers--;
-              }
+              newProgressForCallback.set(itemId, progress);
             }
-            finalProgress.set(itemId, updatedProgress);
+          }
+        } else {
+          newProgressForCallback = new Map(_itemProgress);
+          const updatedItemProgress = { ...newProgressForCallback.get(item.id)! };
+          if (type === 'meaning') {
+            updatedItemProgress.meaningCorrect = true;
           } else {
-            finalProgress.set(itemId, progress);
+            updatedItemProgress.readingCorrect = true;
+          }
+          newProgressForCallback.set(item.id, updatedItemProgress);
+        }
+      }
+
+      // Update item progress
+      setItemProgress(prev => {
+        const newProgress = new Map(prev);
+        const currentItemProgress = { ...newProgress.get(item.id)! };
+
+        if (isCorrect) {
+          if (type === 'meaning') {
+            currentItemProgress.meaningCorrect = true;
+          } else {
+            currentItemProgress.readingCorrect = true;
+          }
+        } else {
+          if (type === 'meaning') {
+            currentItemProgress.incorrectMeaningAnswers++;
+          } else {
+            currentItemProgress.incorrectReadingAnswers++;
           }
         }
-        onSessionComplete?.(finalProgress);
+
+        newProgress.set(item.id, currentItemProgress);
+        return newProgress;
+      });
+
+      if (isCorrect) {
+        // Check SRS level-up
+        const currentStage = item.srsStage;
+        const newStage = Math.min(currentStage + 1, 9);
+        const currentLevel = getSrsLevelInfo(currentStage);
+        const newLevel = getSrsLevelInfo(newStage);
+        const isLevelUp =
+          currentLevel && newLevel && currentLevel.key !== newLevel.key;
+
+        if (isLevelUp && itemJustCompleted) {
+          setLevelUpAnimation({
+            fromStage: currentStage,
+            toStage: newStage,
+          });
+        }
+
+        // Schedule post-feedback updates
+        setTimeout(() => {
+          setLevelUpAnimation(null);
+
+          if (itemJustCompleted) {
+            setCompletedItemCount(newCompletedCount);
+          }
+
+          if (newProgressForCallback) {
+            onSessionComplete?.(newProgressForCallback);
+            sessionCompleteCalledRef.current = true;
+          }
+        }, autoAdvanceDelay);
+      } else {
+        // Incorrect — set up feedback tracking and SRS level-down
+        setShowingIncorrectFeedback(true);
+        setFeedbackQuestionId(question.id);
+
+        const currentStage = item.srsStage;
+        const newStage = calculateSrsStageAfterIncorrect(currentStage);
+        const currentLevel = getSrsLevelInfo(currentStage);
+        const newLevel = getSrsLevelInfo(newStage);
+        const isLevelDown =
+          currentLevel && newLevel && currentLevel.key !== newLevel.key;
+
+        if (isLevelDown) {
+          setPendingLevelDown({
+            fromStage: currentStage,
+            toStage: newStage,
+          });
+        }
       }
-    }
+    },
+    [
+      _itemProgress,
+      onAnswer,
+      onSessionComplete,
+      completedItemCount,
+      totalItemCount,
+      isWrappingUp,
+      introducedItemIds,
+      autoAdvanceDelay,
+    ],
+  );
 
-    // Advance to next question
-    advanceToNextQuestion();
-  }, [
-    incorrectFeedback,
-    onAnswer,
-    onSessionComplete,
-    _itemProgress,
-    completedItemCount,
-    totalItemCount,
-    isWrappingUp,
-    introducedItemIds,
-    advanceToNextQuestion,
-  ]);
+  // Handle Mark as Correct from QuizEngine
+  const handleMarkCorrect = useCallback(
+    (question: Question, userAnswer: string) => {
+      const rq = questionMapRef.current.get(question.id);
+      if (!rq) return;
 
-  // Handle "Add as Synonym" - save the user's answer as a synonym and mark correct
-  const handleAddAsSynonym = useCallback(async () => {
-    if (!incorrectFeedback || synonymAddState !== null) return;
-    if (incorrectFeedback.question.type !== 'meaning') return;
+      const { item, type } = rq;
 
-    const { item } = incorrectFeedback.question;
-    const userAnswer = incorrectFeedback.userAnswer;
+      // Clear pending level-down
+      setPendingLevelDown(null);
+      setShowingIncorrectFeedback(false);
+      setFeedbackQuestionId(null);
 
-    // Show "Adding..." state with pulse animation
-    setSynonymAddState('adding');
+      // Notify parent
+      onAnswer?.({
+        question: rq,
+        userAnswer,
+        isCorrect: true,
+        correctAnswer: '',
+      });
 
-    try {
-      // Save synonym to user_synonyms table (local storage)
+      // Update item progress
+      const currentProgress = _itemProgress.get(item.id)!;
+      const wasComplete =
+        currentProgress.meaningCorrect && currentProgress.readingCorrect;
+
+      setItemProgress(prev => {
+        const newProgress = new Map(prev);
+        const itemProgress = { ...newProgress.get(item.id)! };
+
+        if (type === 'meaning') {
+          itemProgress.meaningCorrect = true;
+          if (itemProgress.incorrectMeaningAnswers > 0) {
+            itemProgress.incorrectMeaningAnswers--;
+          }
+        } else {
+          itemProgress.readingCorrect = true;
+          if (itemProgress.incorrectReadingAnswers > 0) {
+            itemProgress.incorrectReadingAnswers--;
+          }
+        }
+
+        newProgress.set(item.id, itemProgress);
+        return newProgress;
+      });
+
+      // Check if item just completed
+      const willMeaningBeCorrect =
+        type === 'meaning' ? true : currentProgress.meaningCorrect;
+      const willReadingBeCorrect =
+        type === 'reading' ? true : currentProgress.readingCorrect;
+      const willBeComplete = willMeaningBeCorrect && willReadingBeCorrect;
+      const itemJustCompleted = willBeComplete && !wasComplete;
+
+      if (itemJustCompleted) {
+        const newCompletedCount = completedItemCount + 1;
+        setCompletedItemCount(newCompletedCount);
+
+        // Check session completion
+        let sessionComplete: boolean;
+        if (isWrappingUp) {
+          sessionComplete = (() => {
+            for (const itemId of introducedItemIds) {
+              if (itemId === item.id) continue;
+              const progress = _itemProgress.get(itemId);
+              if (
+                !progress ||
+                !(progress.meaningCorrect && progress.readingCorrect)
+              ) {
+                return false;
+              }
+            }
+            return true;
+          })();
+        } else {
+          sessionComplete = newCompletedCount >= totalItemCount;
+        }
+
+        if (sessionComplete) {
+          const finalProgress = new Map<number, ItemProgress>();
+          const itemsToInclude = isWrappingUp
+            ? introducedItemIds
+            : new Set(_itemProgress.keys());
+          for (const itemId of itemsToInclude) {
+            const progress = _itemProgress.get(itemId)!;
+            if (itemId === item.id) {
+              const updatedProgress = { ...progress };
+              if (type === 'meaning') {
+                updatedProgress.meaningCorrect = true;
+                if (updatedProgress.incorrectMeaningAnswers > 0) {
+                  updatedProgress.incorrectMeaningAnswers--;
+                }
+              } else {
+                updatedProgress.readingCorrect = true;
+                if (updatedProgress.incorrectReadingAnswers > 0) {
+                  updatedProgress.incorrectReadingAnswers--;
+                }
+              }
+              finalProgress.set(itemId, updatedProgress);
+            } else {
+              finalProgress.set(itemId, progress);
+            }
+          }
+          onSessionComplete?.(finalProgress);
+          sessionCompleteCalledRef.current = true;
+        }
+      }
+    },
+    [
+      _itemProgress,
+      onAnswer,
+      onSessionComplete,
+      completedItemCount,
+      totalItemCount,
+      isWrappingUp,
+      introducedItemIds,
+    ],
+  );
+
+  // Handle Add as Synonym from QuizEngine
+  const handleAddSynonym = useCallback(
+    async (question: Question, userAnswer: string) => {
+      const rq = questionMapRef.current.get(question.id);
+      if (!rq) return;
+
+      const { item } = rq;
+
+      // Save synonym to database
       await addUserSynonym({
         subject_id: item.id,
         synonym: userAnswer,
-        synced_at: null, // Not synced yet
+        synced_at: null,
       });
 
-      // Queue for sync to WaniKani
+      // Queue for sync
       await insertPendingSynonym({
         subject_id: item.id,
         synonym: userAnswer,
       });
+    },
+    [],
+  );
 
-      // Show "Synonym added ✓" state
-      setSynonymAddState('added');
-
-      // After 400ms, mark as correct and advance
+  // onContinueDelay — trigger level-down animation
+  const handleContinueDelay = useCallback((): number => {
+    if (pendingLevelDown) {
+      setLevelDownAnimation(pendingLevelDown);
+      setPendingLevelDown(null);
+      // After this delay, QuizEngine will advance
+      // We need to clean up level-down state
       setTimeout(() => {
-        handleMarkAsCorrect();
-      }, 400);
-    } catch (error) {
-      // On error, reset state (user can try again)
-      console.error('Failed to add synonym:', error);
-      setSynonymAddState(null);
+        setLevelDownAnimation(null);
+        setShowingIncorrectFeedback(false);
+        setFeedbackQuestionId(null);
+      }, 800);
+      return 800;
     }
-  }, [incorrectFeedback, synonymAddState, handleMarkAsCorrect]);
+    setShowingIncorrectFeedback(false);
+    setFeedbackQuestionId(null);
+    return 0;
+  }, [pendingLevelDown]);
 
-  // Check if an item is fully completed (both meaning and reading correct)
-  const isItemComplete = useCallback((progress: ItemProgress): boolean => {
-    return progress.meaningCorrect && progress.readingCorrect;
-  }, []);
+  // shouldSkipQuestion — buffer cap + wrap-up logic
+  const shouldSkipQuestion = useCallback(
+    (question: Question): boolean => {
+      const itemId = question.subjectId;
+      const isIntroduced = introducedItemIds.has(itemId);
+      const itemProgress = _itemProgress.get(itemId);
+      const isItemDone =
+        itemProgress &&
+        itemProgress.meaningCorrect &&
+        itemProgress.readingCorrect;
 
-  // Handle answer submission
-  const handleSubmit = useCallback(() => {
-    if (!currentQuestion || showCorrectFeedback || incorrectFeedback) return;
+      const blockNewItems =
+        isWrappingUp || incompleteItemCount >= MAX_INCOMPLETE_ITEMS;
 
-    const { item, type } = currentQuestion;
-
-    // For reading questions, validate that input is non-empty and valid hiragana
-    if (type === 'reading') {
-      if (!isValidReadingInput(inputValue)) {
-        // Input is empty or contains invalid characters - shake and reject
-        triggerShake();
-        return;
+      if (blockNewItems && (!isIntroduced || isItemDone)) {
+        return true;
       }
-    }
 
-    // Get the final answer
-    const answer =
-      type === 'reading' ? romajiToHiragana(inputValue) : inputValue.trim();
+      return false;
+    },
+    [isWrappingUp, incompleteItemCount, introducedItemIds, _itemProgress],
+  );
 
-    // Validate the answer
-    let isCorrect = false;
-    let fuzzyMatch = false;
-    if (type === 'meaning') {
-      const validationResult = validateMeaningAnswer(
-        answer,
-        item.meanings,
-        item.auxiliaryMeanings ?? [],
-        item.userSynonyms ?? [],
+  // getSrsBadge — compute SRS badge based on current state
+  const getSrsBadge = useCallback(
+    (question: Question): SrsBadge | undefined => {
+      if (zenModeEnabled) return undefined;
+
+      const rq = questionMapRef.current.get(question.id);
+      if (!rq) return undefined;
+
+      // During incorrect feedback with level-down animation
+      if (showingIncorrectFeedback && feedbackQuestionId === question.id && levelDownAnimation) {
+        return {
+          type: 'animated',
+          stage: levelDownAnimation.toStage,
+          fromStage: levelDownAnimation.fromStage,
+          animateLevelDown: true,
+        };
+      }
+
+      // During correct feedback with level-up animation
+      if (levelUpAnimation && currentQuestionId === question.id) {
+        return {
+          type: 'animated',
+          stage: levelUpAnimation.toStage,
+          fromStage: levelUpAnimation.fromStage,
+          animateLevelUp: true,
+        };
+      }
+
+      return { type: 'static', stage: rq.item.srsStage };
+    },
+    [
+      zenModeEnabled,
+      showingIncorrectFeedback,
+      feedbackQuestionId,
+      levelDownAnimation,
+      levelUpAnimation,
+      currentQuestionId,
+    ],
+  );
+
+  // renderDetailsContent
+  const renderDetailsContent = useCallback(
+    (question: Question): React.ReactNode | undefined => {
+      const rq = questionMapRef.current.get(question.id);
+      if (!rq) return undefined;
+
+      const feedbackItem = rq.item;
+
+      return (
+        <ExpandableDetails
+          resetKey={rq.key}
+          testID="review-session-expandable-details"
+        >
+          <ItemDetails
+            subjectType={feedbackItem.subjectType}
+            meanings={feedbackItem.meanings}
+            readings={feedbackItem.readings}
+            meaningMnemonic={feedbackItem.meaningMnemonic}
+            readingMnemonic={feedbackItem.readingMnemonic}
+            componentRadicals={feedbackItem.componentRadicals}
+            componentKanji={feedbackItem.componentKanji}
+            onComponentPress={onComponentPress}
+            hideMnemonicType={rq.type}
+            testID="review-session-item-details"
+          />
+        </ExpandableDetails>
       );
-      isCorrect = validationResult.isCorrect;
-      fuzzyMatch = validationResult.isFuzzyMatch ?? false;
-    } else {
-      const validationResult = validateReadingAnswer(
-        answer,
-        item.readings ?? [],
-      );
-      isCorrect = validationResult.isCorrect;
-    }
+    },
+    [onComponentPress],
+  );
 
-    // Get correct answer for display
-    const correctAnswer =
-      type === 'meaning'
-        ? getAcceptedMeaningsDisplay(item.meanings)
-        : getAcceptedReadingsDisplay(item.readings);
-
-    const result: ReviewAnswerResult = {
-      question: currentQuestion,
-      userAnswer: answer,
-      isCorrect,
-      correctAnswer,
-    };
-
-    // Notify parent
-    onAnswer?.(result);
-    answeredQuestionsCount.current++;
-
-    // Compute whether session will complete after this answer
-    // We need to read current state to predict the outcome
-    const currentProgress = _itemProgress.get(item.id)!;
-    const willMeaningBeCorrect =
-      type === 'meaning' && isCorrect ? true : currentProgress.meaningCorrect;
-    const willReadingBeCorrect =
-      type === 'reading' && isCorrect ? true : currentProgress.readingCorrect;
-    const itemWillBeComplete = willMeaningBeCorrect && willReadingBeCorrect;
-    const itemWasComplete = isItemComplete(currentProgress);
-    const itemJustCompleted = itemWillBeComplete && !itemWasComplete;
-    const newCompletedCount = itemJustCompleted
-      ? completedItemCount + 1
-      : completedItemCount;
-
-    // Check session completion differently for wrap-up mode vs normal mode
-    let sessionWillComplete: boolean;
-    if (isWrappingUp) {
-      // In wrap-up mode: complete when all introduced items are done
-      sessionWillComplete =
-        itemJustCompleted &&
-        (() => {
-          // Check if all introduced items will be complete after this answer
-          for (const itemId of introducedItemIds) {
-            if (itemId === item.id) {
-              // This item will be complete
-              continue;
-            }
-            const progress = _itemProgress.get(itemId);
-            if (
-              !progress ||
-              !(progress.meaningCorrect && progress.readingCorrect)
-            ) {
-              return false;
-            }
-          }
-          return true;
-        })();
-    } else {
-      sessionWillComplete = newCompletedCount >= totalItemCount;
-    }
-
-    // Build the new progress for callback (needs to be done before state update for proper value)
-    let newProgressForCallback: Map<number, ItemProgress> | null = null;
-    if (sessionWillComplete && isCorrect) {
-      // Pre-compute the new progress map for the callback
-      // In wrap-up mode, only include introduced items
-      if (isWrappingUp) {
-        newProgressForCallback = new Map<number, ItemProgress>();
-        for (const itemId of introducedItemIds) {
-          const progress = _itemProgress.get(itemId)!;
-          if (itemId === item.id) {
-            // Update the current item's progress
-            const updatedProgress = { ...progress };
-            if (type === 'meaning') {
-              updatedProgress.meaningCorrect = true;
-            } else {
-              updatedProgress.readingCorrect = true;
-            }
-            newProgressForCallback.set(itemId, updatedProgress);
-          } else {
-            newProgressForCallback.set(itemId, progress);
-          }
-        }
-      } else {
-        newProgressForCallback = new Map(_itemProgress);
-        const updatedItemProgress = { ...newProgressForCallback.get(item.id)! };
-        if (type === 'meaning') {
-          updatedItemProgress.meaningCorrect = true;
-        } else {
-          updatedItemProgress.readingCorrect = true;
-        }
-        newProgressForCallback.set(item.id, updatedItemProgress);
-      }
-    }
-
-    // Update item progress
-    setItemProgress(prev => {
-      const newProgress = new Map(prev);
-      const currentItemProgress = newProgress.get(item.id)!;
-
-      if (isCorrect) {
-        // Mark this question type as correct
-        if (type === 'meaning') {
-          currentItemProgress.meaningCorrect = true;
-        } else {
-          currentItemProgress.readingCorrect = true;
-        }
-      } else {
-        // Increment incorrect count
-        if (type === 'meaning') {
-          currentItemProgress.incorrectMeaningAnswers++;
-        } else {
-          currentItemProgress.incorrectReadingAnswers++;
-        }
-
-        // Re-queue the question
-        setQuestionQueue(prevQueue => [...prevQueue, currentQuestion]);
-      }
-
-      newProgress.set(item.id, currentItemProgress);
-
-      return newProgress;
-    });
-
-    if (isCorrect) {
-      // Check if this correct answer causes a level-up
-      // WaniKani SRS: correct = +1 stage (capped at 9 for burned)
-      // IMPORTANT: Only show level-up animation when item is FULLY completed
-      // (both meaning and reading answered correctly), not on partial completion
-      const currentStage = item.srsStage;
-      const newStage = Math.min(currentStage + 1, 9);
-      const currentLevel = getSrsLevelInfo(currentStage);
-      const newLevel = getSrsLevelInfo(newStage);
-      const isLevelUp =
-        currentLevel && newLevel && currentLevel.key !== newLevel.key;
-
-      // Set level-up animation state only if level changed AND item just completed
-      if (isLevelUp && itemJustCompleted) {
-        setLevelUpAnimation({
-          fromStage: currentStage,
-          toStage: newStage,
-        });
-      }
-
-      // Show brief correct feedback then auto-advance
-      setShowCorrectFeedback(true);
-      setIsFuzzyMatch(fuzzyMatch);
-      setTimeout(() => {
-        setShowCorrectFeedback(false);
-        setIsFuzzyMatch(false);
-        setLevelUpAnimation(null);
-
-        // Update completed count if item just completed (deferred so feedback shows first)
-        if (itemJustCompleted) {
-          setCompletedItemCount(newCompletedCount);
-        }
-
-        // Call onSessionComplete if session is complete
-        if (newProgressForCallback) {
-          onSessionComplete?.(newProgressForCallback);
-        }
-
-        // Only advance to next question if session is not complete
-        if (!sessionWillComplete) {
-          advanceToNextQuestion();
-        }
-      }, autoAdvanceDelay);
-    } else {
-      // Show incorrect feedback - user must tap to continue
-      const mnemonic =
-        type === 'meaning'
-          ? item.meaningMnemonic
-          : item.readingMnemonic ?? item.meaningMnemonic;
-
-      // Check if this incorrect answer causes a level-down
-      // WaniKani SRS: incorrect = penalty based on current stage
-      const currentStage = item.srsStage;
-      const newStage = calculateSrsStageAfterIncorrect(currentStage);
-      const currentLevel = getSrsLevelInfo(currentStage);
-      const newLevel = getSrsLevelInfo(newStage);
-      const isLevelDown =
-        currentLevel && newLevel && currentLevel.key !== newLevel.key;
-
-      // Store pending level-down (animation triggers on Continue)
-      if (isLevelDown) {
-        setPendingLevelDown({
-          fromStage: currentStage,
-          toStage: newStage,
-        });
-      }
-
-      setIncorrectFeedback({
-        question: currentQuestion,
-        userAnswer: answer,
-        correctAnswer,
-        mnemonic,
-      });
-
-      // Note: Completed count update and session completion callbacks are not triggered
-      // for incorrect answers since the question is re-queued and not yet completed
-    }
-  }, [
-    currentQuestion,
-    inputValue,
-    showCorrectFeedback,
-    incorrectFeedback,
-    onAnswer,
-    onSessionComplete,
-    totalItemCount,
-    completedItemCount,
-    _itemProgress,
-    advanceToNextQuestion,
-    isItemComplete,
-    autoAdvanceDelay,
-    isWrappingUp,
-    introducedItemIds,
-    triggerShake,
-  ]);
-
-  // Handle edge case of empty items array
-  if (items.length === 0) {
-    return (
-      <View style={styles.container} testID="review-session-empty">
-        <Text style={styles.emptyText}>No reviews available</Text>
-      </View>
-    );
-  }
-
-  // Handle session completion
-  if (isComplete) {
-    // Calculate total incorrect count from item progress
+  // renderCompletion
+  const renderCompletion = useCallback((): React.ReactNode => {
     const itemsToCount = isWrappingUp
       ? introducedItemIds
       : new Set(_itemProgress.keys());
@@ -1034,15 +894,12 @@ export function ReviewSession({
       }
     }
 
-    // Number of unique items reviewed
     const itemsReviewedCount = isWrappingUp
       ? introducedItemIds.size
       : completedItemCount;
 
-    // Build result items for the results list
     const resultItems: ReviewResultItem[] = [];
     for (const item of items) {
-      // In wrap-up mode, only include introduced items
       if (isWrappingUp && !introducedItemIds.has(item.id)) continue;
 
       const progress = _itemProgress.get(item.id);
@@ -1085,267 +942,121 @@ export function ReviewSession({
         resultItems={resultItems}
       />
     );
-  }
+  }, [
+    isWrappingUp,
+    introducedItemIds,
+    _itemProgress,
+    completedItemCount,
+    items,
+    syncedOnline,
+    onReturnToDashboard,
+  ]);
 
-  // Handle case where we've gone past the queue (shouldn't happen, but be safe)
-  if (!currentQuestion) {
-    return <LoadingView testID="review-session-empty" />;
-  }
-
-  const { item, type } = currentQuestion;
-
-  // Show progress stats when zen mode is OFF, or when wrap-up mode is active (even if zen mode is ON)
-  const showProgressStats = !zenModeEnabled || isWrappingUp;
-
-  // Build SRS badge prop for SubjectDisplay
-  const buildSrsBadge = (): SrsBadge | undefined => {
-    if (zenModeEnabled) return undefined;
-
-    if (incorrectFeedback && levelDownAnimation) {
-      return {
-        type: 'animated',
-        stage: levelDownAnimation.toStage,
-        fromStage: levelDownAnimation.fromStage,
-        animateLevelDown: true,
-      };
-    }
-
-    if (showCorrectFeedback && levelUpAnimation) {
-      return {
-        type: 'animated',
-        stage: levelUpAnimation.toStage,
-        fromStage: levelUpAnimation.fromStage,
-        animateLevelUp: true,
-      };
-    }
-
-    const currentItem = incorrectFeedback
-      ? incorrectFeedback.question.item
-      : item;
-    return { type: 'static', stage: currentItem.srsStage };
-  };
-
-  // Calculate progress values
-  const displayTotalCount = isWrappingUp
-    ? introducedItemIds.size
-    : totalItemCount;
-  const displayCompletedCount = isWrappingUp
-    ? introducedItemIds.size - wrapUpRemainingCount
-    : completedItemCount;
-
-  // Render ProgressHeader based on mode
-  const renderProgressHeader = () => {
-    if (showProgressStats) {
-      return (
-        <ProgressHeader
-          mode="progress"
-          current={displayCompletedCount}
-          total={displayTotalCount}
-          wrapUpRemaining={isWrappingUp ? wrapUpRemainingCount : undefined}
-        />
-      );
-    }
-    return <ProgressHeader mode="zen" />;
-  };
-
-  // If showing incorrect feedback, render the feedback view
-  if (incorrectFeedback) {
-    const feedbackItem = incorrectFeedback.question.item;
-
+  // renderEmpty
+  const renderEmpty = useCallback((): React.ReactNode => {
     return (
-      <View style={styles.container} testID="review-session-incorrect-feedback">
-        {renderProgressHeader()}
-
-        <IncorrectFeedbackView
-          subjectType={feedbackItem.subjectType}
-          displayText={feedbackItem.characters ?? '?'}
-          displayMode="characters"
-          userAnswer={incorrectFeedback.userAnswer}
-          correctAnswer={incorrectFeedback.correctAnswer}
-          mnemonic={incorrectFeedback.mnemonic}
-          mnemonicLabel={
-            incorrectFeedback.question.type === 'meaning'
-              ? 'Meaning Mnemonic:'
-              : 'Reading Mnemonic:'
-          }
-          onContinue={handleContinue}
-          onMarkCorrect={handleMarkAsCorrect}
-          onAddSynonym={
-            incorrectFeedback.question.type === 'meaning'
-              ? handleAddAsSynonym
-              : undefined
-          }
-          synonymAddState={synonymAddState}
-          srsBadge={buildSrsBadge()}
-          detailsContent={
-            <ExpandableDetails
-              resetKey={incorrectFeedback.question.key}
-              testID="review-session-expandable-details"
-            >
-              <ItemDetails
-                subjectType={feedbackItem.subjectType}
-                meanings={feedbackItem.meanings}
-                readings={feedbackItem.readings}
-                meaningMnemonic={feedbackItem.meaningMnemonic}
-                readingMnemonic={feedbackItem.readingMnemonic}
-                componentRadicals={feedbackItem.componentRadicals}
-                componentKanji={feedbackItem.componentKanji}
-                onComponentPress={onComponentPress}
-                hideMnemonicType={incorrectFeedback.question.type}
-                testID="review-session-item-details"
-              />
-            </ExpandableDetails>
-          }
-          testID="review-session"
-        />
+      <View style={styles.container} testID="review-session-empty">
+        <Text style={styles.emptyText}>No reviews available</Text>
       </View>
     );
-  }
+  }, []);
 
-  const backgroundColor = getSubjectColor(item.subjectType);
-  const placeholder =
-    type === 'meaning' ? 'Enter meaning...' : 'Type reading (romaji)...';
-
-  // For reading input, show the converted hiragana + any pending romaji
-  const inputDisplayText = type === 'reading' ? displayValue : inputValue;
-
-  // If showing correct feedback, render CorrectFeedbackView
-  if (showCorrectFeedback) {
+  // renderExtraButtons — wrap-up toggle
+  const renderExtraButtons = useCallback((isShowingFeedback: boolean): React.ReactNode => {
     return (
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        testID="review-session"
+      <TouchableOpacity
+        style={[
+          styles.wrapUpButton,
+          isWrappingUp && styles.wrapUpButtonActive,
+        ]}
+        onPress={handleWrapUpToggle}
+        disabled={isShowingFeedback}
+        activeOpacity={0.8}
+        testID="review-session-wrap-up"
       >
-        {renderProgressHeader()}
-
-        <CorrectFeedbackView
-          subjectType={item.subjectType}
-          displayText={item.characters ?? '?'}
-          displayMode="characters"
-          feedbackState={isFuzzyMatch ? 'fuzzyMatch' : 'correct'}
-          srsBadge={buildSrsBadge()}
-          questionType={type}
-          inputValue={inputDisplayText}
-        />
-
-        {/* Spacer to push buttons to bottom */}
-        <View style={styles.spacer} />
-
-        {/* Button row: Submit + Wrap Up */}
-        <View style={styles.buttonRow}>
-          <Button
-            label="Submit"
-            onPress={handleSubmit}
-            disabled={showCorrectFeedback}
-            style={[styles.submitButtonFlex, { backgroundColor }]}
-            testID="review-session-submit"
-          />
-          <TouchableOpacity
-            style={[
-              styles.wrapUpButton,
-              isWrappingUp && styles.wrapUpButtonActive,
-            ]}
-            onPress={handleWrapUpToggle}
-            disabled={showCorrectFeedback}
-            activeOpacity={0.8}
-            testID="review-session-wrap-up"
-          >
-            <Text
-              style={[
-                styles.wrapUpButtonText,
-                isWrappingUp && styles.wrapUpButtonTextActive,
-              ]}
-            >
-              {isWrappingUp ? 'Cancel' : 'Wrap Up'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-    );
-  }
-
-  return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      testID="review-session"
-    >
-      {renderProgressHeader()}
-
-      {/* Character display */}
-      <SubjectDisplay
-        subjectType={item.subjectType}
-        displayMode="characters"
-        displayText={item.characters ?? '?'}
-        srsBadge={buildSrsBadge()}
-        testID="review-session-character-container"
-      />
-
-      {/* Question type label */}
-      <QuestionTypeLabel
-        type={type}
-        testID="review-session-question-type"
-      />
-
-      {/* Input area */}
-      <Animated.View
-        style={[styles.inputContainer, shakeStyle]}
-        testID="review-session-input-container"
-      >
-        <TextInput
-          ref={inputRef}
-          style={[styles.input, { borderColor: backgroundColor }]}
-          value={inputDisplayText}
-          onChangeText={handleTextChange}
-          onSubmitEditing={handleSubmit}
-          placeholder={placeholder}
-          placeholderTextColor="#999"
-          autoCapitalize="none"
-          autoCorrect={false}
-          autoComplete="off"
-          keyboardType={type === 'reading' ? 'ascii-capable' : 'default'}
-          returnKeyType="done"
-          blurOnSubmit={false}
-          caretHidden={true}
-          testID="review-session-input"
-        />
-      </Animated.View>
-
-      {/* Spacer to push buttons to bottom */}
-      <View style={styles.spacer} />
-
-      {/* Button row: Submit + Wrap Up */}
-      <View style={styles.buttonRow}>
-        <Button
-          label="Submit"
-          onPress={handleSubmit}
-          disabled={showCorrectFeedback}
-          style={[styles.submitButtonFlex, { backgroundColor }]}
-          testID="review-session-submit"
-        />
-        <TouchableOpacity
+        <Text
           style={[
-            styles.wrapUpButton,
-            isWrappingUp && styles.wrapUpButtonActive,
+            styles.wrapUpButtonText,
+            isWrappingUp && styles.wrapUpButtonTextActive,
           ]}
-          onPress={handleWrapUpToggle}
-          disabled={showCorrectFeedback}
-          activeOpacity={0.8}
-          testID="review-session-wrap-up"
         >
-          <Text
-            style={[
-              styles.wrapUpButtonText,
-              isWrappingUp && styles.wrapUpButtonTextActive,
-            ]}
-          >
-            {isWrappingUp ? 'Cancel' : 'Wrap Up'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+          {isWrappingUp ? 'Cancel' : 'Wrap Up'}
+        </Text>
+      </TouchableOpacity>
+    );
+  }, [isWrappingUp, handleWrapUpToggle]);
+
+  // Build QuizEngine config
+  const quizConfig: QuizEngineConfig = useMemo(
+    () => {
+      const showProgressStats = !zenModeEnabled || isWrappingUp;
+      const displayTotalCount = isWrappingUp
+        ? introducedItemIds.size
+        : totalItemCount;
+      const displayCompletedCount = isWrappingUp
+        ? introducedItemIds.size - wrapUpRemainingCount
+        : completedItemCount;
+
+      const progressMode: ProgressMode = showProgressStats
+        ? {
+            mode: 'progress',
+            current: displayCompletedCount,
+            total: displayTotalCount,
+            wrapUpRemaining: isWrappingUp ? wrapUpRemainingCount : undefined,
+          }
+        : { mode: 'zen' };
+
+      return {
+      questions: initialQuestions,
+      progressMode,
+      completionMode: 'never',
+      isComplete,
+      allowMarkCorrect: true,
+      allowAddSynonym: true,
+      requeueIncorrect: true,
+      showSrsBadge: true,
+      showSubjectTypeLabel: false,
+      onAnswer: handleAnswer,
+      onMarkCorrect: handleMarkCorrect,
+      onAddSynonym: handleAddSynonym,
+      getSrsBadge,
+      shouldSkipQuestion,
+      onContinueDelay: handleContinueDelay,
+      renderCompletion,
+      renderDetailsContent,
+      renderExtraButtons,
+      renderEmpty,
+      autoAdvanceDelay,
+      testID: 'review-session',
+      subjectDisplayTestIDSuffix: 'character-container',
+      onQuestionChange: handleQuestionChange,
+    };
+    },
+    [
+      initialQuestions,
+      zenModeEnabled,
+      isWrappingUp,
+      introducedItemIds.size,
+      totalItemCount,
+      wrapUpRemainingCount,
+      completedItemCount,
+      isComplete,
+      handleAnswer,
+      handleMarkCorrect,
+      handleAddSynonym,
+      getSrsBadge,
+      shouldSkipQuestion,
+      handleContinueDelay,
+      renderCompletion,
+      renderDetailsContent,
+      renderExtraButtons,
+      renderEmpty,
+      autoAdvanceDelay,
+      handleQuestionChange,
+    ],
   );
+
+  return <QuizEngine config={quizConfig} />;
 }
 
 // ============================================
@@ -1357,38 +1068,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background.primary,
   },
-  inputContainer: {
-    paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.md,
-    paddingBottom: SPACING.sm,
-  },
-  spacer: {
-    flex: 1,
-  },
-  input: {
-    borderWidth: 2,
-    borderRadius: BORDER_RADIUS.md,
-    paddingVertical: SPACING.lg,
-    paddingHorizontal: SPACING.lg,
-    fontSize: FONT_SIZES.lg,
-    fontWeight: '600',
-    textAlign: 'center',
-    backgroundColor: COLORS.background.input,
-  },
   emptyText: {
     fontSize: FONT_SIZES.base,
     color: COLORS.text.secondary,
     textAlign: 'center',
     marginTop: SPACING.xxxl,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.lg,
-    gap: SPACING.md,
-  },
-  submitButtonFlex: {
-    flex: 1,
   },
   wrapUpButton: {
     minWidth: 100,

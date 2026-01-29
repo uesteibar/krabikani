@@ -33,11 +33,8 @@ describe('quiz answerValidation', () => {
         expect(validateInput(question, 'dog')).toEqual({ valid: true });
       });
 
-      it('rejects empty input', () => {
-        expect(validateInput(question, '  ')).toEqual({
-          valid: false,
-          reason: 'shake',
-        });
+      it('allows empty input (processed as incorrect)', () => {
+        expect(validateInput(question, '  ')).toEqual({ valid: true });
       });
     });
 

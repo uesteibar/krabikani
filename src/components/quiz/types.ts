@@ -100,10 +100,41 @@ export interface QuizEngineConfig {
   onMarkCorrect?: (question: Question, userAnswer: string) => void;
   /** Callback for Add as Synonym action */
   onAddSynonym?: (question: Question, userAnswer: string) => Promise<void>;
-  /** Render additional buttons (e.g., wrap-up button) */
-  renderExtraButtons?: () => React.ReactNode;
+  /** Render additional buttons (e.g., wrap-up button). isShowingFeedback is true during correct feedback. */
+  renderExtraButtons?: (isShowingFeedback: boolean) => React.ReactNode;
   /** Delay in ms before auto-advancing after correct answer */
   autoAdvanceDelay?: number;
   /** testID prefix for the component */
   testID?: string;
+  /**
+   * Filter to skip questions during advance. Return true to skip.
+   * Used by ReviewSession for buffer cap and wrap-up mode.
+   */
+  shouldSkipQuestion?: (question: Question) => boolean;
+  /**
+   * External completion flag — overrides internal completion detection.
+   * When provided, QuizEngine uses this instead of its own tracking.
+   */
+  isComplete?: boolean;
+  /**
+   * Custom delay before advancing after incorrect feedback continue.
+   * Used by ReviewSession for level-down animation timing.
+   * Return the delay in ms, or 0 for immediate advance.
+   */
+  onContinueDelay?: () => number;
+  /**
+   * Render function for empty state (no questions).
+   * Used by ReviewSession for custom empty message.
+   */
+  renderEmpty?: () => React.ReactNode;
+  /**
+   * Custom testID suffix for the subject display container.
+   * Defaults to 'subject-display'. Set to match existing testIDs during migration.
+   */
+  subjectDisplayTestIDSuffix?: string;
+  /**
+   * Callback when the current question changes.
+   * Used by ReviewSession for tracking introduced items.
+   */
+  onQuestionChange?: (question: Question) => void;
 }

@@ -71,6 +71,12 @@ export function QuizEngine({ config }: QuizEngineProps) {
     renderExtraButtons,
     autoAdvanceDelay = 500,
     testID = 'quiz-engine',
+    shouldSkipQuestion,
+    isComplete: externalIsComplete,
+    onContinueDelay,
+    renderEmpty,
+    subjectDisplayTestIDSuffix = 'subject-display',
+    onQuestionChange,
   } = config;
 
   // Question queue state
@@ -110,6 +116,13 @@ export function QuizEngine({ config }: QuizEngineProps) {
   const { inputValue, displayValue, handleTextChange, clearInput } =
     useQuestionInput(inputType);
 
+  // Notify parent when current question changes
+  useEffect(() => {
+    if (currentQuestion) {
+      onQuestionChange?.(currentQuestion);
+    }
+  }, [currentQuestion, onQuestionChange]);
+
   // Auto-focus on question change
   useAutoFocus(inputRef, [
     currentQuestionIndex,
@@ -117,12 +130,14 @@ export function QuizEngine({ config }: QuizEngineProps) {
     showCorrectFeedback,
   ]);
 
-  // Completion detection
-  const isComplete = useMemo(() => {
+  // Completion detection — external override takes precedence
+  const internalIsComplete = useMemo(() => {
     if (completionMode === 'never') return false;
     if (originalQuestionCount === 0) return false;
     return completedQuestionIds.size >= originalQuestionCount;
   }, [completionMode, completedQuestionIds.size, originalQuestionCount]);
+
+  const isComplete = externalIsComplete !== undefined ? externalIsComplete : internalIsComplete;
 
   // Reset state when initial questions change
   useEffect(() => {
@@ -156,9 +171,23 @@ export function QuizEngine({ config }: QuizEngineProps) {
     [autoRefill],
   );
 
+  // Find the next valid question index, skipping filtered questions
+  const findNextValidIndex = useCallback(
+    (startIndex: number, queue: Question[]): number => {
+      if (!shouldSkipQuestion) return startIndex;
+      let idx = startIndex;
+      while (idx < queue.length && shouldSkipQuestion(queue[idx])) {
+        idx++;
+      }
+      return idx;
+    },
+    [shouldSkipQuestion],
+  );
+
   // Advance to next question
   const advanceToNextQuestion = useCallback(() => {
-    const nextIndex = currentQuestionIndex + 1;
+    const rawNextIndex = currentQuestionIndex + 1;
+    const nextIndex = findNextValidIndex(rawNextIndex, questionQueue);
     setCurrentQuestionIndex(nextIndex);
     clearInput();
     setIncorrectFeedback(null);
@@ -166,12 +195,19 @@ export function QuizEngine({ config }: QuizEngineProps) {
     setIsFuzzyMatch(false);
     setSynonymAddState(null);
     maybeRefillQueue(nextIndex, questionQueue);
-  }, [currentQuestionIndex, questionQueue, maybeRefillQueue, clearInput]);
+  }, [currentQuestionIndex, questionQueue, maybeRefillQueue, clearInput, findNextValidIndex]);
 
   // Handle continue after incorrect feedback
   const handleContinue = useCallback(() => {
-    advanceToNextQuestion();
-  }, [advanceToNextQuestion]);
+    const delay = onContinueDelay?.() ?? 0;
+    if (delay > 0) {
+      setTimeout(() => {
+        advanceToNextQuestion();
+      }, delay);
+    } else {
+      advanceToNextQuestion();
+    }
+  }, [advanceToNextQuestion, onContinueDelay]);
 
   // Handle mark as correct
   const handleMarkAsCorrect = useCallback(() => {
@@ -345,6 +381,7 @@ export function QuizEngine({ config }: QuizEngineProps) {
 
   // Empty state
   if (initialQuestions.length === 0) {
+    if (renderEmpty) return <>{renderEmpty()}</>;
     return <LoadingView testID={`${testID}-empty`} />;
   }
 
@@ -458,7 +495,7 @@ export function QuizEngine({ config }: QuizEngineProps) {
             style={[styles.submitButtonFlex, { backgroundColor }]}
             testID={`${testID}-submit`}
           />
-          {renderExtraButtons?.()}
+          {renderExtraButtons?.(showCorrectFeedback)}
         </View>
       </KeyboardAvoidingView>
     );
@@ -479,7 +516,7 @@ export function QuizEngine({ config }: QuizEngineProps) {
         displayText={currentQuestion.displayText}
         srsBadge={srsBadge}
         subjectTypeLabel={showSubjectTypeLabel ? currentQuestion.subjectType.replace('_', ' ') : undefined}
-        testID={`${testID}-subject-display`}
+        testID={`${testID}-${subjectDisplayTestIDSuffix}`}
       />
 
       <QuestionTypeLabel
@@ -520,7 +557,7 @@ export function QuizEngine({ config }: QuizEngineProps) {
           style={[styles.submitButtonFlex, { backgroundColor }]}
           testID={`${testID}-submit`}
         />
-        {renderExtraButtons?.()}
+        {renderExtraButtons?.(showCorrectFeedback)}
       </View>
     </KeyboardAvoidingView>
   );

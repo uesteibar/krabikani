@@ -254,3 +254,19 @@ Started:
   - QuestionLabelType defaults to mapping questionType directly (meaning→meaning, reading→reading, reverse→kanji) but can be overridden via questionLabelType prop
   - Pre-existing test failures: 4 suites (syncService, database x2, ReviewsScreen) — unchanged
 ---
+
+## 2026-01-29 - US-017
+- Migrated ReviewSession to use QuizEngine internally — ReviewSession is now a thin wrapper (~1095 lines, down from ~1420) that delegates rendering to QuizEngine while keeping all domain logic (SRS level tracking, item progress, wrap-up mode, buffer cap, zen mode)
+- Enhanced QuizEngine with new config options: shouldSkipQuestion, isComplete (external override), onContinueDelay, renderEmpty, subjectDisplayTestIDSuffix, onQuestionChange, renderExtraButtons(isShowingFeedback)
+- Fixed answerValidation.validateInput to allow empty meaning submissions (original ReviewSession allowed them, treated as incorrect)
+- All 141 ReviewSession tests pass, all 30 ReviewsScreen tests pass, all 51 QuizEngine+answerValidation tests pass
+- Files changed: src/components/ReviewSession.tsx (refactored to use QuizEngine), src/components/quiz/QuizEngine.tsx (enhanced), src/components/quiz/types.ts (new config props), src/components/quiz/answerValidation.ts (empty meaning fix), __tests__/components/quiz/answerValidation.test.ts (updated test)
+- **Learnings for future iterations:**
+  - QuizEngine needs `onQuestionChange` callback for tracking introduced items — ReviewSession tracks items when they first appear on screen, not when the user answers. Without this callback, wrap-up mode tests fail because items aren't counted as introduced until submission
+  - `renderExtraButtons` receives `isShowingFeedback` boolean parameter — ReviewSession's wrap-up button needs to be disabled during correct feedback, which is internal QuizEngine state
+  - ReviewSession uses `completionMode: 'never'` with external `isComplete` prop because its completion logic is complex (wrap-up mode, per-item two-question tracking)
+  - `subjectDisplayTestIDSuffix` enables testID compatibility — ReviewSession uses 'character-container' while default is 'subject-display'
+  - `progressMode` must be computed inside `useMemo` to avoid lint error about unstable dependencies that change on every render
+  - ReviewQuestion→Question conversion uses `key` as `id` (e.g., "42-meaning") and stores the question map in a ref for reverse lookup in callbacks
+  - Pre-existing test failures: 3 suites (syncService, database x2) — unchanged
+---
