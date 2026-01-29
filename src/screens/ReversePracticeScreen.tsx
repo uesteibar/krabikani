@@ -12,8 +12,6 @@ import {
   View,
   KeyboardAvoidingView,
   Platform,
-  TouchableOpacity,
-  ScrollView,
   Animated,
   type TextInput as TextInputType,
 } from 'react-native';
@@ -21,9 +19,6 @@ import {
 import type { Meaning, Reading, AuxiliaryMeaning } from '../api/types';
 import type { ReviewComponentKanji } from '../components/ReviewSession';
 import { shuffleArray } from '../components/ReviewSession';
-import { MnemonicText } from '../components/MnemonicText';
-import { ExpandableDetails } from '../components/ExpandableDetails';
-import { ItemDetails } from '../components/ItemDetails';
 import {
   getReversePracticeItems,
   getReversePracticeItemCount,
@@ -35,14 +30,24 @@ import {
 import {
   getSubjectColor,
   COLORS,
-  SHADOW,
-  BORDER_RADIUS,
   SPACING,
   FONT_SIZES,
-  MIN_TOUCH_TARGET,
-  TEXT_STYLES,
+  BORDER_RADIUS,
 } from '../theme';
-import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
+import {
+  SubjectDisplay,
+  CorrectFeedbackView,
+  IncorrectFeedbackView,
+  ProgressHeader,
+  LoadingView,
+  Button,
+} from '../components';
+import { ExpandableDetails } from '../components/ExpandableDetails';
+import { ItemDetails } from '../components/ItemDetails';
+import { QuestionTypeLabel } from '../components/QuestionTypeLabel';
+import { useShakeAnimation } from '../hooks/useShakeAnimation';
+import { useAutoFocus } from '../hooks/useAutoFocus';
+import { useQuestionInput } from '../hooks/useQuestionInput';
 
 export interface ReversePracticeItem {
   id: number;
@@ -226,13 +231,15 @@ export function ReversePracticeScreen() {
     [],
   );
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [inputValue, setInputValue] = useState('');
   const [showCorrectFeedback, setShowCorrectFeedback] = useState(false);
   const [incorrectFeedback, setIncorrectFeedback] =
     useState<ReverseIncorrectFeedback | null>(null);
   const isRefilling = useRef(false);
   const inputRef = useRef<TextInputType>(null);
-  const shakeAnimation = useRef(new Animated.Value(0)).current;
+
+  const { shakeStyle, triggerShake } = useShakeAnimation();
+  const { inputValue, displayValue, handleTextChange, clearInput } =
+    useQuestionInput('reverse');
 
   const practicePhrase = useMemo(() => {
     const phrases = [
@@ -272,14 +279,12 @@ export function ReversePracticeScreen() {
   }, []);
 
   // Auto-focus input
-  useEffect(() => {
-    if (!incorrectFeedback && phase === 'practicing') {
-      const timer = setTimeout(() => {
-        inputRef.current?.focus();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [currentQuestionIndex, incorrectFeedback, showCorrectFeedback, phase]);
+  useAutoFocus(inputRef, [
+    currentQuestionIndex,
+    incorrectFeedback,
+    showCorrectFeedback,
+    phase,
+  ]);
 
   // Refill queue when running low
   const maybeRefillQueue = useCallback(
@@ -303,54 +308,18 @@ export function ReversePracticeScreen() {
 
   const currentQuestion = questionQueue[currentQuestionIndex];
 
-  const handleInputChange = useCallback((text: string) => {
-    setInputValue(text);
-  }, []);
-
   const advanceToNextQuestion = useCallback(() => {
     const nextIndex = currentQuestionIndex + 1;
     setCurrentQuestionIndex(nextIndex);
-    setInputValue('');
+    clearInput();
     setIncorrectFeedback(null);
     setShowCorrectFeedback(false);
     maybeRefillQueue(nextIndex, questionQueue);
-  }, [currentQuestionIndex, questionQueue, maybeRefillQueue]);
+  }, [currentQuestionIndex, questionQueue, maybeRefillQueue, clearInput]);
 
   const handleContinue = useCallback(() => {
     advanceToNextQuestion();
   }, [advanceToNextQuestion]);
-
-  // Trigger shake animation for invalid input (romaji)
-  const triggerShake = useCallback(() => {
-    shakeAnimation.setValue(0);
-    Animated.sequence([
-      Animated.timing(shakeAnimation, {
-        toValue: 10,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnimation, {
-        toValue: -10,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnimation, {
-        toValue: 10,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnimation, {
-        toValue: -10,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnimation, {
-        toValue: 0,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [shakeAnimation]);
 
   // Check if input contains latin letters (romaji)
   const containsRomaji = (text: string): boolean => {
@@ -416,12 +385,10 @@ export function ReversePracticeScreen() {
   // Loading state
   if (phase === 'loading' || !currentQuestion) {
     return (
-      <View
-        style={styles.centerContainer}
+      <LoadingView
+        message="Loading vocabulary items..."
         testID="reverse-practice-screen-loading"
-      >
-        <Text style={styles.loadingText}>Loading vocabulary items...</Text>
-      </View>
+      />
     );
   }
 
@@ -432,113 +399,48 @@ export function ReversePracticeScreen() {
         style={styles.container}
         testID="reverse-practice-incorrect-feedback"
       >
-        <View style={styles.modeBanner} testID="reverse-practice-banner">
-          <MaterialDesignIcons
-            name="swap-horizontal"
-            size={FONT_SIZES.base}
-            color={COLORS.text.tertiary}
-          />
-          <Text style={styles.modeBannerText}>{practicePhrase}</Text>
-        </View>
+        <ProgressHeader
+          mode="practice"
+          phrase={practicePhrase}
+          icon="swap-horizontal"
+        />
 
-        <View
-          style={[styles.meaningContainer, styles.incorrectHeader]}
-          testID="reverse-practice-character-container"
-        >
-          <Text style={styles.meaningText} testID="reverse-practice-characters">
-            {getPrimaryMeaning(incorrectFeedback.question.item.meanings)}
-          </Text>
-          <Text
-            style={styles.incorrectLabel}
-            testID="reverse-practice-incorrect-label"
-          >
-            Incorrect
-          </Text>
-        </View>
-
-        <View style={styles.questionContainerKanji}>
-          <Text style={styles.questionTypeKanji}>KANJI</Text>
-        </View>
-
-        <ScrollView
-          style={styles.feedbackContainer}
-          contentContainerStyle={styles.feedbackContent}
-        >
-          <View style={styles.feedbackSection}>
-            <Text
-              style={styles.feedbackLabel}
-              testID="reverse-practice-your-answer-label"
+        <IncorrectFeedbackView
+          subjectType={incorrectFeedback.question.item.subjectType}
+          displayText={getPrimaryMeaning(
+            incorrectFeedback.question.item.meanings,
+          )}
+          displayMode="meaning"
+          userAnswer={incorrectFeedback.userAnswer}
+          correctAnswer={incorrectFeedback.correctAnswer}
+          mnemonic={incorrectFeedback.mnemonic}
+          mnemonicLabel="Meaning Mnemonic:"
+          onContinue={handleContinue}
+          detailsContent={
+            <ExpandableDetails
+              resetKey={incorrectFeedback.question.key}
+              testID="reverse-practice-expandable-details"
             >
-              Your Answer:
-            </Text>
-            <Text
-              style={styles.userAnswer}
-              testID="reverse-practice-your-answer"
-            >
-              {incorrectFeedback.userAnswer || '(empty)'}
-            </Text>
-          </View>
-
-          <View style={styles.feedbackSection}>
-            <Text
-              style={styles.feedbackLabel}
-              testID="reverse-practice-correct-answer-label"
-            >
-              Correct Answer:
-            </Text>
-            <Text
-              style={[styles.correctAnswerText, TEXT_STYLES.japaneseDisplay]}
-              testID="reverse-practice-correct-answer"
-            >
-              {incorrectFeedback.correctAnswer}
-            </Text>
-          </View>
-
-          <View style={styles.feedbackSection}>
-            <Text
-              style={styles.feedbackLabel}
-              testID="reverse-practice-mnemonic-label"
-            >
-              Meaning Mnemonic:
-            </Text>
-            <MnemonicText
-              text={incorrectFeedback.mnemonic}
-              style={styles.mnemonicText}
-              testID="reverse-practice-mnemonic"
-            />
-          </View>
-
-          <ExpandableDetails
-            resetKey={incorrectFeedback.question.key}
-            testID="reverse-practice-expandable-details"
-          >
-            <ItemDetails
-              subjectType={incorrectFeedback.question.item.subjectType}
-              meanings={incorrectFeedback.question.item.meanings}
-              readings={incorrectFeedback.question.item.readings}
-              meaningMnemonic={incorrectFeedback.question.item.meaningMnemonic}
-              readingMnemonic={incorrectFeedback.question.item.readingMnemonic}
-              componentKanji={incorrectFeedback.question.item.componentKanji}
-              hideMnemonicType="meaning"
-              testID="reverse-practice-item-details"
-            />
-          </ExpandableDetails>
-        </ScrollView>
-
-        <View style={styles.buttonRow}>
-          <TouchableOpacity
-            style={[
-              styles.submitButton,
-              styles.continueButton,
-              styles.submitButtonFlex,
-            ]}
-            onPress={handleContinue}
-            activeOpacity={0.8}
-            testID="reverse-practice-continue"
-          >
-            <Text style={styles.submitButtonText}>Continue</Text>
-          </TouchableOpacity>
-        </View>
+              <ItemDetails
+                subjectType={incorrectFeedback.question.item.subjectType}
+                meanings={incorrectFeedback.question.item.meanings}
+                readings={incorrectFeedback.question.item.readings}
+                meaningMnemonic={
+                  incorrectFeedback.question.item.meaningMnemonic
+                }
+                readingMnemonic={
+                  incorrectFeedback.question.item.readingMnemonic
+                }
+                componentKanji={
+                  incorrectFeedback.question.item.componentKanji
+                }
+                hideMnemonicType="meaning"
+                testID="reverse-practice-item-details"
+              />
+            </ExpandableDetails>
+          }
+          testID="reverse-practice"
+        />
       </View>
     );
   }
@@ -548,62 +450,66 @@ export function ReversePracticeScreen() {
   const backgroundColor = getSubjectColor(item.subjectType);
   const primaryMeaning = getPrimaryMeaning(item.meanings);
 
+  // Correct feedback overlay
+  if (showCorrectFeedback) {
+    return (
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        testID="reverse-practice-session"
+      >
+        <ProgressHeader
+          mode="practice"
+          phrase={practicePhrase}
+          icon="swap-horizontal"
+        />
+
+        <CorrectFeedbackView
+          subjectType={item.subjectType}
+          displayText={primaryMeaning}
+          displayMode="meaning"
+          feedbackState="correct"
+          questionType="kanji"
+          inputValue={displayValue}
+          testID="reverse-practice-correct-feedback"
+        />
+      </KeyboardAvoidingView>
+    );
+  }
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       testID="reverse-practice-session"
     >
-      <View style={styles.modeBanner} testID="reverse-practice-banner">
-        <MaterialDesignIcons
-          name="swap-horizontal"
-          size={FONT_SIZES.base}
-          color={COLORS.text.tertiary}
-        />
-        <Text style={styles.modeBannerText}>{practicePhrase}</Text>
-      </View>
+      <ProgressHeader
+        mode="practice"
+        phrase={practicePhrase}
+        icon="swap-horizontal"
+      />
 
-      <View
-        style={[
-          styles.meaningContainer,
-          showCorrectFeedback ? styles.correctHeader : { backgroundColor },
-        ]}
-        testID="reverse-practice-meaning-container"
-      >
-        <Text style={styles.meaningText} testID="reverse-practice-meaning">
-          {primaryMeaning}
-        </Text>
-        {showCorrectFeedback && (
-          <Text
-            style={styles.correctLabel}
-            testID="reverse-practice-correct-label"
-          >
-            Correct!
-          </Text>
-        )}
-      </View>
+      <SubjectDisplay
+        subjectType={item.subjectType}
+        displayMode="meaning"
+        displayText={primaryMeaning}
+        testID="reverse-practice-subject-display"
+      />
 
-      <View style={styles.questionContainerKanji}>
-        <Text
-          style={styles.questionTypeKanji}
-          testID="reverse-practice-question-type"
-        >
-          KANJI
-        </Text>
-      </View>
+      <QuestionTypeLabel
+        type="kanji"
+        testID="reverse-practice-question-type"
+      />
 
       <Animated.View
-        style={[
-          styles.inputContainer,
-          { transform: [{ translateX: shakeAnimation }] },
-        ]}
+        style={[styles.inputContainer, shakeStyle]}
         testID="reverse-practice-input-container"
       >
         <TextInput
           ref={inputRef}
           style={[styles.input, { borderColor: backgroundColor }]}
-          value={inputValue}
-          onChangeText={handleInputChange}
+          value={displayValue}
+          onChangeText={handleTextChange}
           onSubmitEditing={handleSubmit}
           placeholder="Enter Japanese..."
           placeholderTextColor="#999"
@@ -621,19 +527,13 @@ export function ReversePracticeScreen() {
       <View style={styles.spacer} />
 
       <View style={styles.buttonRow}>
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            styles.submitButtonFlex,
-            { backgroundColor },
-          ]}
+        <Button
+          label="Submit"
           onPress={handleSubmit}
           disabled={showCorrectFeedback}
-          activeOpacity={0.8}
+          style={[styles.submitButtonFlex, { backgroundColor }]}
           testID="reverse-practice-submit"
-        >
-          <Text style={styles.submitButtonText}>Submit</Text>
-        </TouchableOpacity>
+        />
       </View>
     </KeyboardAvoidingView>
   );
@@ -651,11 +551,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: SPACING.xxxl,
   },
-  loadingText: {
-    fontSize: FONT_SIZES.base,
-    color: COLORS.text.secondary,
-    marginTop: SPACING.lg,
-  },
   emptyTitle: {
     fontSize: FONT_SIZES.xxl,
     fontWeight: 'bold',
@@ -667,91 +562,6 @@ const styles = StyleSheet.create({
     color: COLORS.text.secondary,
     textAlign: 'center',
     lineHeight: FONT_SIZES.xxl,
-  },
-  modeBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    paddingTop: SPACING.md,
-    paddingBottom: SPACING.sm,
-    minHeight: 50,
-    backgroundColor: COLORS.background.secondary,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border.light,
-  },
-  modeBannerText: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.text.secondary,
-    fontWeight: '600',
-    fontStyle: 'italic',
-  },
-  meaningContainer: {
-    height: 232,
-    paddingHorizontal: SPACING.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  characterContainer: {
-    paddingVertical: 64,
-    paddingHorizontal: SPACING.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  meaningText: {
-    fontSize: FONT_SIZES.xxl,
-    fontWeight: 'bold',
-    color: COLORS.text.inverse,
-    textAlign: 'center',
-  },
-  characters: {
-    fontSize: FONT_SIZES.display,
-    ...TEXT_STYLES.japaneseDisplay,
-    color: COLORS.text.inverse,
-    textAlign: 'center',
-  },
-  correctHeader: {
-    backgroundColor: COLORS.feedback.correct,
-  },
-  correctLabel: {
-    position: 'absolute',
-    bottom: SPACING.md,
-    fontSize: FONT_SIZES.sm,
-    fontWeight: 'bold',
-    color: COLORS.text.inverse,
-  },
-  incorrectHeader: {
-    backgroundColor: COLORS.feedback.incorrect,
-  },
-  incorrectLabel: {
-    fontSize: FONT_SIZES.lg,
-    fontWeight: 'bold',
-    color: COLORS.text.inverse,
-    marginTop: SPACING.sm,
-  },
-  questionContainer: {
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    alignItems: 'center',
-    backgroundColor: COLORS.neutral.white,
-  },
-  questionContainerKanji: {
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    alignItems: 'center',
-    backgroundColor: COLORS.neutral.white,
-  },
-  questionType: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: '700',
-    color: COLORS.text.tertiary,
-    letterSpacing: 2,
-  },
-  questionTypeKanji: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: '700',
-    color: COLORS.text.tertiary,
-    letterSpacing: 2,
   },
   inputContainer: {
     paddingHorizontal: SPACING.lg,
@@ -774,66 +584,10 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: 'row',
     paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.lg,
     paddingBottom: SPACING.lg,
     gap: SPACING.md,
-    backgroundColor: COLORS.background.primary,
-  },
-  submitButton: {
-    margin: SPACING.lg,
-    paddingVertical: SPACING.lg,
-    minHeight: MIN_TOUCH_TARGET,
-    borderRadius: BORDER_RADIUS.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: SHADOW.color,
-    shadowOffset: SHADOW.offset,
-    shadowOpacity: SHADOW.opacity,
-    shadowRadius: SHADOW.radius,
-    elevation: SHADOW.elevation,
   },
   submitButtonFlex: {
     flex: 1,
-    margin: 0,
-  },
-  submitButtonText: {
-    fontSize: FONT_SIZES.lg,
-    fontWeight: 'bold',
-    color: COLORS.text.inverse,
-  },
-  continueButton: {
-    backgroundColor: COLORS.neutral.gray600,
-  },
-  feedbackContainer: {
-    flex: 1,
-  },
-  feedbackContent: {
-    padding: SPACING.lg,
-  },
-  feedbackSection: {
-    marginBottom: SPACING.xl,
-  },
-  feedbackLabel: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: '600',
-    color: COLORS.text.secondary,
-    marginBottom: SPACING.xs,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  userAnswer: {
-    fontSize: FONT_SIZES.xl,
-    color: COLORS.feedback.incorrect,
-    fontWeight: '500',
-  },
-  correctAnswerText: {
-    fontSize: FONT_SIZES.xxl,
-    color: COLORS.feedback.correct,
-    fontWeight: 'bold',
-  },
-  mnemonicText: {
-    fontSize: FONT_SIZES.base,
-    color: COLORS.text.primary,
-    lineHeight: FONT_SIZES.xxl,
   },
 });
