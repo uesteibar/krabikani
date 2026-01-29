@@ -178,3 +178,21 @@ Started:
   - Skip confirmation dialogs when there's nothing to confirm (lostItemCount === 0) for better UX
   - Fixed height containers are better than minHeight when content size varies (e.g., multi-line English vs single kanji)
 ---
+
+## 2026-01-29 - US-001, US-002, US-003
+- Implemented secondary meanings display in reverse practice
+- Added `getSecondaryMeanings()` exported helper function that filters meanings where `accepted_answer: true` and `primary: false`, returns comma-separated string
+- Added secondary meanings display below primary meaning on question screen with `FONT_SIZES.sm`, `opacity: 0.7`, and `marginTop: SPACING.xs`
+- Added secondary meanings display on incorrect feedback screen using same styling
+- Both displays conditionally render only when secondary meanings exist
+- Updated test subject data to include secondary meanings for testing
+- Added 4 unit tests for `getSecondaryMeanings()` and 3 integration tests for UI display
+- Files changed:
+  - src/screens/ReversePracticeScreen.tsx: Added `getSecondaryMeanings()` function, secondary meanings Text components in question and incorrect views, `secondaryMeaningsText` style
+  - __tests__/screens/ReversePracticeScreen.test.tsx: Updated sample data with secondary meanings, added `getSecondaryMeanings` and `secondary meanings display` test sections
+- **Learnings for future iterations:**
+  - The `Meaning` type has `primary`, `accepted_answer`, and `meaning` fields - secondary meanings are `accepted_answer: true` and `primary: false`
+  - To run tests from the worktree, use: `cd /path/to/main && ./node_modules/.bin/jest --roots /path/to/worktree --config /path/to/worktree/jest.config.js --testPathIgnorePatterns '[]'`
+  - GPG signing may not be available - use `git -c commit.gpgSign=false commit` to bypass
+  - `npm install` must be run from the main project root, not the worktree
+---
