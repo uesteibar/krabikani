@@ -191,3 +191,30 @@ Started:
   - The wrap-up button has custom styling so it's kept as inline TouchableOpacity rather than using Button component (unique border color and active styling)
   - Pre-existing test failures: 3 suites (syncService, database) — unchanged
 ---
+
+## 2026-01-29 - US-012
+- Refactored LessonQuiz to use shared components: SubjectDisplay, QuestionTypeLabel, IncorrectFeedbackView, CorrectFeedbackView, ProgressHeader, Button, useShakeAnimation, useAutoFocus, useQuestionInput
+- Reduced LessonQuiz.tsx from ~1124 lines to ~803 lines by removing duplicated UI rendering code
+- Updated test file with new shared component testIDs and fixed stale element ref in reading answer test
+- Files changed: src/components/LessonQuiz.tsx (refactored), __tests__/components/LessonQuiz.test.tsx (testID updates + stale ref fix)
+- **Learnings for future iterations:**
+  - IncorrectFeedbackView with `testID="lesson-quiz"` auto-prefixes child testIDs (lesson-quiz-continue, lesson-quiz-mark-correct, etc.) — but container testID is just "lesson-quiz", not "lesson-quiz-incorrect-feedback". Need a wrapper View with the original testID for backward compatibility
+  - Component radicals/kanji are passed as `detailsContent` ReactNode prop to IncorrectFeedbackView, keeping the rendering logic in LessonQuiz
+  - SubjectDisplay `subjectTypeLabel` prop replaces inline subject type Text — use `item.subjectType.replace('_', ' ')` for kana_vocabulary → "kana vocabulary"
+  - After answering a question and component re-renders (via useQuestionInput/clearInput), tests must re-query the input element via `getByTestId('lesson-quiz-input')` — stale refs cause fireEvent to silently fail
+  - Tests that submit direct hiragana for reading answers must be changed to romaji since useQuestionInput processes romaji input
+  - Pre-existing test failures: 3 suites (syncService, database) — unchanged
+---
+
+## 2026-01-29 - US-013
+- Verified and committed PracticeScreen refactor to use all shared components: SubjectDisplay, QuestionTypeLabel, Button, IncorrectFeedbackView (without onMarkCorrect), CorrectFeedbackView, ProgressHeader (practice mode), LoadingView, useShakeAnimation, useAutoFocus, useQuestionInput
+- Reduced PracticeScreen from ~1100 lines to ~710 lines by removing duplicated UI rendering code
+- Files changed: src/screens/PracticeScreen.tsx (refactored), __tests__/screens/PracticeScreen.test.tsx (testID updates)
+- **Learnings for future iterations:**
+  - PracticeScreen uses ProgressHeader in `mode="practice"` with `phrase` and `icon="weight-lifter"` props
+  - PracticeScreen does NOT use onMarkCorrect on IncorrectFeedbackView (practice mode doesn't allow marking correct)
+  - PracticeScreen does NOT show SRS badges or subject type labels
+  - IncorrectFeedbackView `testID="practice-session"` auto-prefixes child testIDs (practice-session-continue, practice-session-correct-answer, practice-session-mnemonic)
+  - The refill logic (REFILL_THRESHOLD=3, PRACTICE_BATCH_SIZE=10) stays in PracticeScreen, not in shared components
+  - Pre-existing test failures: 3 suites (syncService, database) — unchanged
+---
