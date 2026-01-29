@@ -12,8 +12,6 @@ import {
   View,
   KeyboardAvoidingView,
   Platform,
-  TouchableOpacity,
-  ScrollView,
   Animated,
   type TextInput as TextInputType,
 } from 'react-native';
@@ -26,7 +24,6 @@ import type {
   AuxiliaryMeaning,
 } from '../api/types';
 import {
-  processRomajiInput,
   romajiToHiragana,
   isValidReadingInput,
 } from '../utils/romajiToHiragana';
@@ -37,15 +34,20 @@ import {
 import {
   getSubjectColor,
   COLORS,
-  SHADOW,
   BORDER_RADIUS,
   SPACING,
   FONT_SIZES,
-  PROGRESS_COLORS,
-  MIN_TOUCH_TARGET,
 } from '../theme';
-import { MnemonicText } from './MnemonicText';
 import { ComponentDisplay } from './ComponentDisplay';
+import { SubjectDisplay } from './SubjectDisplay';
+import { QuestionTypeLabel } from './QuestionTypeLabel';
+import { IncorrectFeedbackView } from './IncorrectFeedbackView';
+import { CorrectFeedbackView } from './CorrectFeedbackView';
+import { ProgressHeader } from './ProgressHeader';
+import { Button } from './Button';
+import { useShakeAnimation } from '../hooks/useShakeAnimation';
+import { useAutoFocus } from '../hooks/useAutoFocus';
+import { useQuestionInput } from '../hooks/useQuestionInput';
 
 // ============================================
 // Types
@@ -231,9 +233,6 @@ export function LessonQuiz({
   const [questionQueue, setQuestionQueue] =
     useState<QuizQuestion[]>(initialQuestions);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [inputValue, setInputValue] = useState('');
-  const [displayValue, setDisplayValue] = useState('');
-  const [pendingRomaji, setPendingRomaji] = useState('');
   const [results, setResults] = useState<AnswerResult[]>([]);
   const [incorrectFeedback, setIncorrectFeedback] =
     useState<IncorrectFeedback | null>(null);
@@ -252,77 +251,51 @@ export function LessonQuiz({
   // Ref for TextInput to enable auto-focus
   const inputRef = useRef<TextInputType>(null);
 
-  // Shake animation for invalid reading submission
-  const shakeAnimation = useRef(new Animated.Value(0)).current;
-
-  // Reset state when items change
-  useEffect(() => {
-    const newQuestions = generateQuizQuestions(items);
-    setQuestionQueue(newQuestions);
-    setCurrentQuestionIndex(0);
-    setInputValue('');
-    setDisplayValue('');
-    setPendingRomaji('');
-    setResults([]);
-    setIncorrectFeedback(null);
-    setShowCorrectFeedback(false);
-    setIsFuzzyMatch(false);
-    setCompletedQuestionKeys(new Set());
-    answeredQuestionsCount.current = 0;
-  }, [items]);
+  // Shared hooks
+  const { shakeStyle, triggerShake } = useShakeAnimation();
 
   const currentQuestion = questionQueue[currentQuestionIndex];
   const totalOriginalQuestions = initialQuestions.length;
   const isComplete = completedQuestionKeys.size >= totalOriginalQuestions;
 
+  // Use shared input hook
+  const { inputValue, displayValue, clearInput, handleTextChange } =
+    useQuestionInput(currentQuestion?.type ?? 'meaning');
+
   // Auto-focus input when question changes or during correct feedback
-  useEffect(() => {
-    // Don't focus if showing incorrect feedback (user needs to tap Continue) or quiz is complete
-    if (!incorrectFeedback && !isComplete) {
-      // Small delay to ensure the input is rendered and ready
-      const timer = setTimeout(() => {
-        inputRef.current?.focus();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [
+  useAutoFocus(inputRef, [
     currentQuestionIndex,
     incorrectFeedback,
     showCorrectFeedback,
     isComplete,
   ]);
 
-  // Handle input change for reading questions (romaji to hiragana)
-  const handleReadingInputChange = useCallback((text: string) => {
-    const state = processRomajiInput(text, false);
-    setInputValue(text);
-    setDisplayValue(state.hiragana);
-    setPendingRomaji(state.pending);
-  }, []);
+  // Disable auto-focus during incorrect feedback or completion
+  // The useAutoFocus hook runs on dependency changes, but we prevent focus
+  // in the component by conditionally rendering the input only when appropriate
 
-  // Handle input change for meaning questions (direct text)
-  const handleMeaningInputChange = useCallback((text: string) => {
-    setInputValue(text);
-    setDisplayValue(text);
-    setPendingRomaji('');
-  }, []);
-
-  // Get the current input handler based on question type
-  const handleInputChange =
-    currentQuestion?.type === 'reading'
-      ? handleReadingInputChange
-      : handleMeaningInputChange;
+  // Reset state when items change
+  useEffect(() => {
+    const newQuestions = generateQuizQuestions(items);
+    setQuestionQueue(newQuestions);
+    setCurrentQuestionIndex(0);
+    clearInput();
+    setResults([]);
+    setIncorrectFeedback(null);
+    setShowCorrectFeedback(false);
+    setIsFuzzyMatch(false);
+    setCompletedQuestionKeys(new Set());
+    answeredQuestionsCount.current = 0;
+  }, [items, clearInput]);
 
   // Advance to next question (clearing input and feedback)
   const advanceToNextQuestion = useCallback(() => {
     setCurrentQuestionIndex(prev => prev + 1);
-    setInputValue('');
-    setDisplayValue('');
-    setPendingRomaji('');
+    clearInput();
     setIncorrectFeedback(null);
     setShowCorrectFeedback(false);
     setIsFuzzyMatch(false);
-  }, []);
+  }, [clearInput]);
 
   // Handle tap to continue after incorrect answer
   const handleContinue = useCallback(() => {
@@ -382,38 +355,6 @@ export function LessonQuiz({
     totalOriginalQuestions,
     advanceToNextQuestion,
   ]);
-
-  // Trigger shake animation for invalid input
-  const triggerShake = useCallback(() => {
-    shakeAnimation.setValue(0);
-    Animated.sequence([
-      Animated.timing(shakeAnimation, {
-        toValue: 10,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnimation, {
-        toValue: -10,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnimation, {
-        toValue: 10,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnimation, {
-        toValue: -10,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnimation, {
-        toValue: 0,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [shakeAnimation]);
 
   // Handle answer submission
   const handleSubmit = useCallback(() => {
@@ -563,194 +504,164 @@ export function LessonQuiz({
     type === 'meaning' ? 'Enter meaning...' : 'Type reading (romaji)...';
 
   // For reading input, show the converted hiragana + any pending romaji
-  const displayText =
-    type === 'reading' ? displayValue + pendingRomaji : displayValue;
+  const inputDisplayText = type === 'reading' ? displayValue : inputValue;
 
   // Calculate progress: completed questions out of total original questions
   const progressCount = completedQuestionKeys.size + 1; // +1 for current question being worked on
 
+  // Build details content for incorrect feedback (component radicals/kanji)
+  const renderIncorrectDetailsContent = () => {
+    if (!incorrectFeedback) return undefined;
+    const feedbackItem = incorrectFeedback.question.item;
+    const feedbackType = incorrectFeedback.question.type;
+
+    const sections: React.ReactNode[] = [];
+
+    // Component radicals for kanji items
+    if (
+      feedbackItem.subjectType === 'kanji' &&
+      feedbackItem.componentRadicals &&
+      feedbackItem.componentRadicals.length > 0
+    ) {
+      sections.push(
+        <View
+          key="component-radicals"
+          style={styles.feedbackSection}
+          testID="lesson-quiz-component-radicals"
+        >
+          <Text style={styles.feedbackLabel}>Made up of:</Text>
+          <View style={styles.componentsRow}>
+            {feedbackItem.componentRadicals.map(radical => (
+              <ComponentDisplay
+                key={radical.id}
+                subjectType="radical"
+                characters={radical.characters}
+                meaning={radical.meaning}
+                characterImages={radical.characterImages}
+                onPress={
+                  onComponentPress
+                    ? () => onComponentPress(radical.id)
+                    : undefined
+                }
+                testID={`lesson-quiz-component-${radical.id}`}
+              />
+            ))}
+          </View>
+        </View>,
+      );
+    }
+
+    // Component kanji for vocabulary items
+    if (
+      (feedbackItem.subjectType === 'vocabulary' ||
+        feedbackItem.subjectType === 'kana_vocabulary') &&
+      feedbackItem.componentKanji &&
+      feedbackItem.componentKanji.length > 0
+    ) {
+      sections.push(
+        <View
+          key="component-kanji"
+          style={styles.feedbackSection}
+          testID="lesson-quiz-component-kanji"
+        >
+          <Text style={styles.feedbackLabel}>Made up of:</Text>
+          <View style={styles.componentsRow}>
+            {feedbackItem.componentKanji.map(kanji => (
+              <ComponentDisplay
+                key={kanji.id}
+                subjectType="kanji"
+                characters={kanji.characters}
+                meaning={kanji.meaning}
+                displayText={
+                  feedbackType === 'reading' ? kanji.reading : undefined
+                }
+                onPress={
+                  onComponentPress
+                    ? () => onComponentPress(kanji.id)
+                    : undefined
+                }
+                testID={`lesson-quiz-component-kanji-${kanji.id}`}
+              />
+            ))}
+          </View>
+        </View>,
+      );
+    }
+
+    return sections.length > 0 ? <>{sections}</> : undefined;
+  };
+
   // If showing incorrect feedback, render the feedback view
   if (incorrectFeedback) {
+    const feedbackItem = incorrectFeedback.question.item;
+
     return (
       <View style={styles.container} testID="lesson-quiz-incorrect-feedback">
-        {/* Progress indicator */}
-        <View style={styles.progressContainer} testID="lesson-quiz-progress">
-          <Text style={styles.progressText} testID="lesson-quiz-progress-text">
-            {completedQuestionKeys.size} / {totalOriginalQuestions}
-          </Text>
-          <View style={styles.progressBar}>
-            <View
-              style={[
-                styles.progressFill,
-                {
-                  width: `${
-                    (completedQuestionKeys.size / totalOriginalQuestions) * 100
-                  }%`,
-                },
-              ]}
-              testID="lesson-quiz-progress-fill"
-            />
-          </View>
-        </View>
+        <ProgressHeader
+          mode="progress"
+          current={completedQuestionKeys.size}
+          total={totalOriginalQuestions}
+        />
 
-        {/* Character display with red tint for incorrect */}
-        <View
-          style={[styles.characterContainer, styles.incorrectHeader]}
-          testID="lesson-quiz-character-container"
-        >
-          <Text style={styles.characters} testID="lesson-quiz-characters">
-            {incorrectFeedback.question.item.characters ?? '?'}
-          </Text>
-          <Text
-            style={styles.incorrectLabel}
-            testID="lesson-quiz-incorrect-label"
-          >
-            Incorrect
-          </Text>
-        </View>
-
-        {/* Feedback content */}
-        <ScrollView
-          style={styles.feedbackContainer}
-          contentContainerStyle={styles.feedbackContent}
-        >
-          {/* User's answer */}
-          <View style={styles.feedbackSection}>
-            <Text
-              style={styles.feedbackLabel}
-              testID="lesson-quiz-your-answer-label"
-            >
-              Your Answer:
-            </Text>
-            <Text style={styles.userAnswer} testID="lesson-quiz-your-answer">
-              {incorrectFeedback.userAnswer || '(empty)'}
-            </Text>
-          </View>
-
-          {/* Correct answer */}
-          <View style={styles.feedbackSection}>
-            <Text
-              style={styles.feedbackLabel}
-              testID="lesson-quiz-correct-answer-label"
-            >
-              Correct Answer:
-            </Text>
-            <Text
-              style={styles.correctAnswerText}
-              testID="lesson-quiz-correct-answer"
-            >
-              {incorrectFeedback.correctAnswer}
-            </Text>
-          </View>
-
-          {/* Mnemonic */}
-          <View style={styles.feedbackSection}>
-            <Text
-              style={styles.feedbackLabel}
-              testID="lesson-quiz-mnemonic-label"
-            >
-              {incorrectFeedback.question.type === 'meaning'
-                ? 'Meaning Mnemonic:'
-                : 'Reading Mnemonic:'}
-            </Text>
-            <MnemonicText
-              text={incorrectFeedback.mnemonic}
-              style={styles.mnemonicText}
-              testID="lesson-quiz-mnemonic"
-            />
-          </View>
-
-          {/* Component radicals for kanji items */}
-          {incorrectFeedback.question.item.subjectType === 'kanji' &&
-            incorrectFeedback.question.item.componentRadicals &&
-            incorrectFeedback.question.item.componentRadicals.length > 0 && (
-              <View
-                style={styles.feedbackSection}
-                testID="lesson-quiz-component-radicals"
-              >
-                <Text style={styles.feedbackLabel}>Made up of:</Text>
-                <View style={styles.componentsRow}>
-                  {incorrectFeedback.question.item.componentRadicals.map(
-                    radical => (
-                      <ComponentDisplay
-                        key={radical.id}
-                        subjectType="radical"
-                        characters={radical.characters}
-                        meaning={radical.meaning}
-                        characterImages={radical.characterImages}
-                        onPress={
-                          onComponentPress
-                            ? () => onComponentPress(radical.id)
-                            : undefined
-                        }
-                        testID={`lesson-quiz-component-${radical.id}`}
-                      />
-                    ),
-                  )}
-                </View>
-              </View>
-            )}
-
-          {/* Component kanji for vocabulary items */}
-          {(incorrectFeedback.question.item.subjectType === 'vocabulary' ||
-            incorrectFeedback.question.item.subjectType ===
-              'kana_vocabulary') &&
-            incorrectFeedback.question.item.componentKanji &&
-            incorrectFeedback.question.item.componentKanji.length > 0 && (
-              <View
-                style={styles.feedbackSection}
-                testID="lesson-quiz-component-kanji"
-              >
-                <Text style={styles.feedbackLabel}>Made up of:</Text>
-                <View style={styles.componentsRow}>
-                  {incorrectFeedback.question.item.componentKanji.map(kanji => (
-                    <ComponentDisplay
-                      key={kanji.id}
-                      subjectType="kanji"
-                      characters={kanji.characters}
-                      meaning={kanji.meaning}
-                      displayText={
-                        incorrectFeedback.question.type === 'reading'
-                          ? kanji.reading
-                          : undefined
-                      }
-                      onPress={
-                        onComponentPress
-                          ? () => onComponentPress(kanji.id)
-                          : undefined
-                      }
-                      testID={`lesson-quiz-component-kanji-${kanji.id}`}
-                    />
-                  ))}
-                </View>
-              </View>
-            )}
-        </ScrollView>
-
-        {/* Button row: Mark as Correct + Continue */}
-        <View style={styles.incorrectButtonRow}>
-          <TouchableOpacity
-            style={styles.markCorrectButton}
-            onPress={handleMarkAsCorrect}
-            activeOpacity={0.8}
-            testID="lesson-quiz-mark-correct"
-          >
-            <Text style={styles.markCorrectButtonText}>Mark as Correct</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.submitButton,
-              styles.continueButton,
-              styles.continueButtonFlex,
-            ]}
-            onPress={handleContinue}
-            activeOpacity={0.8}
-            testID="lesson-quiz-continue"
-          >
-            <Text style={styles.submitButtonText}>Continue</Text>
-          </TouchableOpacity>
-        </View>
+        <IncorrectFeedbackView
+          subjectType={feedbackItem.subjectType}
+          displayText={feedbackItem.characters ?? '?'}
+          displayMode="characters"
+          userAnswer={incorrectFeedback.userAnswer}
+          correctAnswer={incorrectFeedback.correctAnswer}
+          mnemonic={incorrectFeedback.mnemonic}
+          mnemonicLabel={
+            incorrectFeedback.question.type === 'meaning'
+              ? 'Meaning Mnemonic:'
+              : 'Reading Mnemonic:'
+          }
+          onContinue={handleContinue}
+          onMarkCorrect={handleMarkAsCorrect}
+          detailsContent={renderIncorrectDetailsContent()}
+          testID="lesson-quiz"
+        />
       </View>
+    );
+  }
+
+  // If showing correct feedback, render CorrectFeedbackView
+  if (showCorrectFeedback) {
+    return (
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        testID="lesson-quiz"
+      >
+        <ProgressHeader
+          mode="progress"
+          current={
+            progressCount > totalOriginalQuestions
+              ? totalOriginalQuestions
+              : progressCount
+          }
+          total={totalOriginalQuestions}
+        />
+
+        <CorrectFeedbackView
+          subjectType={item.subjectType}
+          displayText={item.characters ?? '?'}
+          displayMode="characters"
+          feedbackState={isFuzzyMatch ? 'fuzzyMatch' : 'correct'}
+          questionType={type}
+          inputValue={inputDisplayText}
+        />
+
+        {/* Spacer to push submit button to bottom */}
+        <View style={styles.spacer} />
+
+        <Button
+          label="Submit"
+          onPress={handleSubmit}
+          disabled={true}
+          style={[styles.submitButtonStyle, { backgroundColor }]}
+          testID="lesson-quiz-submit"
+        />
+      </KeyboardAvoidingView>
     );
   }
 
@@ -760,101 +671,45 @@ export function LessonQuiz({
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       testID="lesson-quiz"
     >
-      {/* Progress indicator */}
-      <View style={styles.progressContainer} testID="lesson-quiz-progress">
-        <Text style={styles.progressText} testID="lesson-quiz-progress-text">
-          {progressCount > totalOriginalQuestions
+      <ProgressHeader
+        mode="progress"
+        current={
+          progressCount > totalOriginalQuestions
             ? totalOriginalQuestions
-            : progressCount}{' '}
-          / {totalOriginalQuestions}
-        </Text>
-        <View style={styles.progressBar}>
-          <View
-            style={[
-              styles.progressFill,
-              {
-                width: `${
-                  (Math.min(progressCount, totalOriginalQuestions) /
-                    totalOriginalQuestions) *
-                  100
-                }%`,
-              },
-            ]}
-            testID="lesson-quiz-progress-fill"
-          />
-        </View>
-      </View>
+            : progressCount
+        }
+        total={totalOriginalQuestions}
+      />
 
-      {/* Character display - with green/yellow tint if showing correct feedback */}
-      <View
-        style={[
-          styles.characterContainer,
-          showCorrectFeedback
-            ? isFuzzyMatch
-              ? styles.fuzzyMatchHeader
-              : styles.correctHeader
-            : { backgroundColor },
-        ]}
+      {/* Character display */}
+      <SubjectDisplay
+        subjectType={item.subjectType}
+        displayMode="characters"
+        displayText={item.characters ?? '?'}
+        subjectTypeLabel={item.subjectType.replace('_', ' ')}
         testID="lesson-quiz-character-container"
-      >
-        <Text style={styles.characters} testID="lesson-quiz-characters">
-          {item.characters ?? '?'}
-        </Text>
-        {showCorrectFeedback ? (
-          <Text
-            style={styles.correctLabel}
-            testID={
-              isFuzzyMatch
-                ? 'lesson-quiz-fuzzy-match-label'
-                : 'lesson-quiz-correct-label'
-            }
-          >
-            {isFuzzyMatch ? 'Close enough!' : 'Correct!'}
-          </Text>
-        ) : (
-          <Text style={styles.subjectType} testID="lesson-quiz-subject-type">
-            {item.subjectType.replace('_', ' ')}
-          </Text>
-        )}
-      </View>
+      />
 
       {/* Question type label */}
-      <View
-        style={[
-          styles.questionContainer,
-          type === 'reading'
-            ? styles.questionContainerReading
-            : styles.questionContainerMeaning,
-        ]}
-      >
-        <Text
-          style={[
-            styles.questionType,
-            type === 'reading' && styles.questionTypeReading,
-          ]}
-          testID="lesson-quiz-question-type"
-        >
-          {type === 'meaning' ? 'MEANING' : 'READING'}
-        </Text>
-      </View>
+      <QuestionTypeLabel
+        type={type}
+        testID="lesson-quiz-question-type"
+      />
 
-      {/* Input area - no flex to keep it near the question prompt */}
+      {/* Input area */}
       <Animated.View
-        style={[
-          styles.inputContainer,
-          { transform: [{ translateX: shakeAnimation }] },
-        ]}
+        style={[styles.inputContainer, shakeStyle]}
         testID="lesson-quiz-input-container"
       >
         <TextInput
           ref={inputRef}
           style={[styles.input, { borderColor: backgroundColor }]}
-          value={type === 'reading' ? displayText : inputValue}
-          onChangeText={handleInputChange}
+          value={inputDisplayText}
+          onChangeText={handleTextChange}
           onSubmitEditing={handleSubmit}
           placeholder={placeholder}
           placeholderTextColor="#999"
-          autoCapitalize={type === 'meaning' ? 'none' : 'none'}
+          autoCapitalize="none"
           autoCorrect={false}
           autoComplete="off"
           keyboardType={type === 'reading' ? 'ascii-capable' : 'default'}
@@ -869,15 +724,13 @@ export function LessonQuiz({
       <View style={styles.spacer} />
 
       {/* Submit button */}
-      <TouchableOpacity
-        style={[styles.submitButton, { backgroundColor }]}
+      <Button
+        label="Submit"
         onPress={handleSubmit}
         disabled={showCorrectFeedback || isSubmitting}
-        activeOpacity={0.8}
+        style={[styles.submitButtonStyle, { backgroundColor }]}
         testID="lesson-quiz-submit"
-      >
-        <Text style={styles.submitButtonText}>Submit</Text>
-      </TouchableOpacity>
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -891,82 +744,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background.primary,
   },
-  questionTypeBar: {
-    height: 10,
-    width: '100%',
-  },
-  questionTypeBarReading: {
-    backgroundColor: COLORS.neutral.black,
-  },
-  questionTypeBarMeaning: {
-    backgroundColor: COLORS.neutral.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border.medium,
-  },
-  progressContainer: {
-    paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.md,
-    paddingBottom: SPACING.sm,
-    backgroundColor: COLORS.background.secondary,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border.light,
-  },
-  progressText: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.text.secondary,
-    fontWeight: '500',
-    marginBottom: SPACING.sm,
-    textAlign: 'center',
-  },
-  progressBar: {
-    height: 4,
-    backgroundColor: PROGRESS_COLORS.background,
-    borderRadius: BORDER_RADIUS.sm,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: PROGRESS_COLORS.fill,
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  characterContainer: {
-    paddingVertical: 48,
-    paddingHorizontal: SPACING.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  characters: {
-    fontSize: FONT_SIZES.display,
-    fontWeight: 'bold',
-    color: COLORS.text.inverse,
-    textAlign: 'center',
-  },
-  subjectType: {
-    fontSize: FONT_SIZES.sm,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginTop: SPACING.sm,
-    textTransform: 'capitalize',
-  },
-  questionContainer: {
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    alignItems: 'center',
-  },
-  questionContainerReading: {
-    backgroundColor: COLORS.neutral.black,
-  },
-  questionContainerMeaning: {
-    backgroundColor: COLORS.neutral.white,
-  },
-  questionType: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: '700',
-    color: COLORS.text.tertiary,
-    letterSpacing: 2,
-  },
-  questionTypeReading: {
-    color: COLORS.text.inverse,
-  },
   inputContainer: {
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.md,
@@ -974,14 +751,6 @@ const styles = StyleSheet.create({
   },
   spacer: {
     flex: 1,
-  },
-  convertedDisplay: {
-    fontSize: FONT_SIZES.xxxl,
-    fontWeight: '500',
-    color: COLORS.text.primary,
-    textAlign: 'center',
-    marginBottom: SPACING.lg,
-    minHeight: 40,
   },
   input: {
     borderWidth: 2,
@@ -993,23 +762,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     backgroundColor: COLORS.background.input,
   },
-  submitButton: {
+  submitButtonStyle: {
     margin: SPACING.lg,
-    paddingVertical: SPACING.lg,
-    minHeight: MIN_TOUCH_TARGET,
-    borderRadius: BORDER_RADIUS.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: SHADOW.color,
-    shadowOffset: SHADOW.offset,
-    shadowOpacity: SHADOW.opacity,
-    shadowRadius: SHADOW.radius,
-    elevation: SHADOW.elevation,
-  },
-  submitButtonText: {
-    fontSize: FONT_SIZES.lg,
-    fontWeight: 'bold',
-    color: COLORS.text.inverse,
   },
   emptyText: {
     fontSize: FONT_SIZES.base,
@@ -1030,36 +784,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: SPACING.sm,
   },
-  // Correct feedback styles
-  correctHeader: {
-    backgroundColor: COLORS.feedback.correct,
-  },
-  // Fuzzy match (typo-forgiven) feedback styles
-  fuzzyMatchHeader: {
-    backgroundColor: COLORS.feedback.fuzzyMatch,
-  },
-  correctLabel: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: 'bold',
-    color: COLORS.text.inverse,
-    marginTop: SPACING.sm,
-  },
-  // Incorrect feedback styles
-  incorrectHeader: {
-    backgroundColor: COLORS.feedback.incorrect,
-  },
-  incorrectLabel: {
-    fontSize: FONT_SIZES.lg,
-    fontWeight: 'bold',
-    color: COLORS.text.inverse,
-    marginTop: SPACING.sm,
-  },
-  feedbackContainer: {
-    flex: 1,
-  },
-  feedbackContent: {
-    padding: SPACING.lg,
-  },
   feedbackSection: {
     marginBottom: SPACING.xl,
   },
@@ -1071,54 +795,9 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
-  userAnswer: {
-    fontSize: FONT_SIZES.xl,
-    color: COLORS.feedback.incorrect,
-    fontWeight: '500',
-  },
-  correctAnswerText: {
-    fontSize: FONT_SIZES.xxl,
-    color: COLORS.feedback.correct,
-    fontWeight: 'bold',
-  },
-  mnemonicText: {
-    fontSize: FONT_SIZES.base,
-    color: COLORS.text.primary,
-    lineHeight: FONT_SIZES.xxl,
-  },
   componentsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: SPACING.md,
-  },
-  continueButton: {
-    backgroundColor: COLORS.neutral.gray600,
-  },
-  // Incorrect feedback button row
-  incorrectButtonRow: {
-    flexDirection: 'row',
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.lg,
-    gap: SPACING.md,
-  },
-  continueButtonFlex: {
-    flex: 1,
-    margin: 0,
-  },
-  markCorrectButton: {
-    paddingVertical: SPACING.lg,
-    paddingHorizontal: SPACING.xl,
-    minHeight: MIN_TOUCH_TARGET,
-    borderRadius: BORDER_RADIUS.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.neutral.gray100,
-    borderWidth: 2,
-    borderColor: COLORS.neutral.gray400,
-  },
-  markCorrectButtonText: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: 'bold',
-    color: COLORS.text.secondary,
   },
 });
