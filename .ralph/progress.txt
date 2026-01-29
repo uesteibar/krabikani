@@ -22,6 +22,7 @@
 - jest.config.js has `testPathIgnorePatterns` for `.ralph/.worktrees/` to exclude old worktree copies from test discovery
 - `addUserSynonym` uses `INSERT OR REPLACE` but SQLite UNIQUE is case-sensitive — for case-insensitive updates, delete existing row first then insert
 - Background sync functions return result objects with `success`, `syncedCount`, etc. and are composed in `backgroundSync()` function
+- Custom hooks live in src/hooks/, tests in __tests__/hooks/
 
 Started:
 ---
@@ -63,4 +64,63 @@ Started:
   - The CI workflow job name is `ci` — this is the status check name to search for in branch protection settings
   - Documentation-only stories that target PR descriptions don't require code changes or commits
   - Use `gh pr create` with `--body` flag and heredoc for multi-line PR descriptions
+
+## 2026-01-29 - US-002
+- Implemented shared SubjectDisplay component with characters/meaning display modes, feedback states, SRS badge support, and subject type label
+- Files changed: src/components/SubjectDisplay.tsx (new), __tests__/components/SubjectDisplay.test.tsx (new), src/components/index.ts (added export)
+- **Learnings for future iterations:**
+  - Subject display height is normalized to 232px (was inconsistent: ReviewSession/LessonQuiz/Practice used padding, ReversePractice used explicit height)
+  - Feedback colors: correct=#4CAF50, incorrect=#F44336, fuzzyMatch=#F59E0B — all in COLORS.feedback
+  - Characters mode uses TEXT_STYLES.japaneseDisplay (Noto Sans JP, weight 300) at FONT_SIZES.display (72px)
+  - Meaning mode uses bold weight at FONT_SIZES.xxl (24px)
+  - SRS badge is positioned absolute top-right; supports both static (SrsLevelBadge) and animated (AnimatedSrsLevelBadge) variants
+  - Feedback label "Incorrect" uses larger font (lg=18px) vs "Correct!"/"Close Enough!" (sm=14px)
+---
+
+## 2026-01-29 - US-003
+- Implemented shared QuestionTypeLabel component with meaning, reading, and kanji types
+- Files changed: src/components/QuestionTypeLabel.tsx (new), __tests__/components/QuestionTypeLabel.test.tsx (new), src/components/index.ts (added export)
+- **Learnings for future iterations:**
+  - MEANING and KANJI types share same styling: white background, tertiary text color
+  - READING type is distinct: black background, inverse (white) text color
+  - Style flattening in tests requires `.flat(Infinity).filter(Boolean)` because StyleSheet.create returns numeric IDs
+  - Use testID on container View to assert background color in tests (avoid navigating parent from text element)
+  - 4 pre-existing test failures remain (database, databaseCrud, syncService, ReviewsScreen)
+---
+
+## 2026-01-29 - US-004
+- Implemented useShakeAnimation hook extracting the duplicated shake animation pattern from 4 screens
+- Files changed: src/hooks/useShakeAnimation.ts (new), __tests__/hooks/useShakeAnimation.test.ts (new)
+- **Learnings for future iterations:**
+  - The src/hooks/ directory did not exist previously — created it for this story
+  - Test directory __tests__/hooks/ also created
+  - Shake animation is identical across ReviewSession, LessonQuiz, PracticeScreen, ReversePracticeScreen: 5-step sequence (10, -10, 10, -10, 0) at 50ms each with useNativeDriver
+  - AnimatedFeedback.tsx has a different shake variant (smaller amplitude: -4, 4, -2, 2) — not extracted into this hook
+  - Hook returns { shakeStyle, triggerShake } — shakeStyle is applied to Animated.View style, triggerShake called on invalid input
+  - 4 pre-existing test failures remain unchanged
+---
+
+## 2026-01-29 - US-005
+- Implemented useAutoFocus hook extracting the duplicated auto-focus-on-input pattern from 4 screens
+- Files changed: src/hooks/useAutoFocus.ts (new), __tests__/hooks/useAutoFocus.test.ts (new)
+- **Learnings for future iterations:**
+  - Auto-focus pattern is identical across all 4 quiz screens: 100ms setTimeout + ref.current?.focus() with cleanup
+  - Hook accepts a RefObject<TextInput | null> and a readonly unknown[] dependencies array
+  - The eslint-disable for react-hooks/exhaustive-deps is necessary since dependencies are passed dynamically
+  - Practice screens guard focus with `phase === 'practicing'`, Review/Lesson guard with `!isComplete` — this guard logic stays in the calling component, not in the hook
+  - Pre-existing test failures: database.test.ts, databaseCrud.test.ts, syncService.test.ts (unchanged)
+---
+
+## 2026-01-29 - US-006
+- Implemented useQuestionInput hook extracting duplicated text input handling from 4 quiz screens
+- Files changed: src/hooks/useQuestionInput.ts (new), __tests__/hooks/useQuestionInput.test.ts (new)
+- **Learnings for future iterations:**
+  - Input handling is identical across ReviewSession, LessonQuiz, PracticeScreen: 3 state vars (inputValue, displayValue, pendingRomaji)
+  - ReversePracticeScreen is simpler: only inputValue with direct passthrough (no romaji conversion)
+  - Hook combines hiragana + pending into displayValue directly, eliminating the need for separate pendingRomaji state in consumers
+  - Reading mode: inputValue holds raw romaji (for submission via romajiToHiragana), displayValue holds converted hiragana + pending romaji (for TextInput display)
+  - Meaning/reverse modes: inputValue and displayValue are identical (direct passthrough)
+  - Hook resets state automatically when questionType changes (tracked via useRef to avoid clearing on every render)
+  - Pre-existing test failures unchanged
+>>>>>>> 3d53bed (feat: Create useQuestionInput hook)
 ---
