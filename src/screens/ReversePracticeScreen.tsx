@@ -218,6 +218,13 @@ function getPrimaryMeaning(meanings: Meaning[]): string {
   return primary?.meaning ?? meanings[0]?.meaning ?? '';
 }
 
+export function getSecondaryMeanings(meanings: Meaning[]): string {
+  return meanings
+    .filter(m => m.accepted_answer && !m.primary)
+    .map(m => m.meaning)
+    .join(', ');
+}
+
 export function ReversePracticeScreen() {
   const [phase, setPhase] = useState<'loading' | 'practicing' | 'empty'>(
     'loading',
@@ -448,6 +455,14 @@ export function ReversePracticeScreen() {
           <Text style={styles.meaningText} testID="reverse-practice-characters">
             {getPrimaryMeaning(incorrectFeedback.question.item.meanings)}
           </Text>
+          {getSecondaryMeanings(incorrectFeedback.question.item.meanings) !== '' && (
+            <Text
+              style={styles.secondaryMeaningsText}
+              testID="reverse-practice-incorrect-secondary-meanings"
+            >
+              {getSecondaryMeanings(incorrectFeedback.question.item.meanings)}
+            </Text>
+          )}
           <Text
             style={styles.incorrectLabel}
             testID="reverse-practice-incorrect-label"
@@ -573,6 +588,14 @@ export function ReversePracticeScreen() {
         <Text style={styles.meaningText} testID="reverse-practice-meaning">
           {primaryMeaning}
         </Text>
+        {getSecondaryMeanings(item.meanings) !== '' && (
+          <Text
+            style={styles.secondaryMeaningsText}
+            testID="reverse-practice-secondary-meanings"
+          >
+            {getSecondaryMeanings(item.meanings)}
+          </Text>
+        )}
         {showCorrectFeedback && (
           <Text
             style={styles.correctLabel}
@@ -703,6 +726,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.text.inverse,
     textAlign: 'center',
+  },
+  secondaryMeaningsText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.inverse,
+    textAlign: 'center',
+    opacity: 0.7,
+    marginTop: SPACING.xs,
   },
   characters: {
     fontSize: FONT_SIZES.display,

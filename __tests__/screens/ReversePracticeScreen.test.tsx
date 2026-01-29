@@ -2,7 +2,10 @@ import React from 'react';
 import { render, waitFor, fireEvent } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
 
-import { ReversePracticeScreen } from '../../src/screens/ReversePracticeScreen';
+import {
+  ReversePracticeScreen,
+  getSecondaryMeanings,
+} from '../../src/screens/ReversePracticeScreen';
 import * as storage from '../../src/storage';
 
 // Mock dependencies
@@ -64,6 +67,8 @@ const sampleVocabularySubject = {
   characters: '大人',
   meanings: JSON.stringify([
     { meaning: 'Adult', primary: true, accepted_answer: true },
+    { meaning: 'Grown-up', primary: false, accepted_answer: true },
+    { meaning: 'Mature Person', primary: false, accepted_answer: true },
   ]),
   readings: JSON.stringify([
     { reading: 'おとな', primary: true, accepted_answer: true },
@@ -449,6 +454,102 @@ describe('ReversePracticeScreen', () => {
       // Should show empty state since no valid items
       const emptyScreen = await findByTestId('reverse-practice-screen-empty');
       expect(emptyScreen).toBeTruthy();
+    });
+  });
+
+  describe('getSecondaryMeanings', () => {
+    it('should return comma-separated secondary accepted meanings', () => {
+      const meanings = [
+        { meaning: 'Adult', primary: true, accepted_answer: true },
+        { meaning: 'Grown-up', primary: false, accepted_answer: true },
+        { meaning: 'Mature Person', primary: false, accepted_answer: true },
+      ];
+      expect(getSecondaryMeanings(meanings)).toBe('Grown-up, Mature Person');
+    });
+
+    it('should return empty string when no secondary meanings exist', () => {
+      const meanings = [
+        { meaning: 'Hello', primary: true, accepted_answer: true },
+      ];
+      expect(getSecondaryMeanings(meanings)).toBe('');
+    });
+
+    it('should exclude non-accepted secondary meanings', () => {
+      const meanings = [
+        { meaning: 'Adult', primary: true, accepted_answer: true },
+        { meaning: 'Grown-up', primary: false, accepted_answer: true },
+        { meaning: 'Big Person', primary: false, accepted_answer: false },
+      ];
+      expect(getSecondaryMeanings(meanings)).toBe('Grown-up');
+    });
+
+    it('should return empty string for empty array', () => {
+      expect(getSecondaryMeanings([])).toBe('');
+    });
+  });
+
+  describe('secondary meanings display', () => {
+    beforeEach(() => {
+      // Use the vocabulary subject which has secondary meanings
+      (storage.getReversePracticeItemCount as jest.Mock).mockResolvedValue(1);
+      (storage.getReversePracticeItems as jest.Mock).mockResolvedValue([
+        sampleVocabularyAssignments[0],
+      ]);
+      (storage.getSubjectsByIds as jest.Mock).mockImplementation(
+        async (ids: number[]) => {
+          if (ids.includes(1)) return [sampleVocabularySubject];
+          if (ids.includes(100)) return [sampleKanjiComponent];
+          return [];
+        },
+      );
+    });
+
+    it('should display secondary meanings on question screen', async () => {
+      const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
+
+      const secondaryMeanings = await findByTestId(
+        'reverse-practice-secondary-meanings',
+      );
+      expect(secondaryMeanings.props.children).toBe(
+        'Grown-up, Mature Person',
+      );
+    });
+
+    it('should display secondary meanings on incorrect feedback screen', async () => {
+      const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
+
+      const input = await findByTestId('reverse-practice-input');
+      fireEvent.changeText(input, 'あ');
+      fireEvent(input, 'submitEditing');
+
+      const secondaryMeanings = await findByTestId(
+        'reverse-practice-incorrect-secondary-meanings',
+      );
+      expect(secondaryMeanings.props.children).toBe(
+        'Grown-up, Mature Person',
+      );
+    });
+
+    it('should not display secondary meanings when there are none', async () => {
+      // Use kana vocabulary subject with no secondary meanings
+      (storage.getReversePracticeItems as jest.Mock).mockResolvedValue([
+        sampleVocabularyAssignments[1],
+      ]);
+      (storage.getSubjectsByIds as jest.Mock).mockImplementation(
+        async (ids: number[]) => {
+          if (ids.includes(2)) return [sampleKanaVocabularySubject];
+          return [];
+        },
+      );
+
+      const { findByTestId, queryByTestId } = renderWithNavigation(
+        <ReversePracticeScreen />,
+      );
+
+      await findByTestId('reverse-practice-session');
+      expect(
+        queryByTestId('reverse-practice-secondary-meanings'),
+      ).toBeNull();
     });
   });
 });
