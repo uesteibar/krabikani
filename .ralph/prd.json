@@ -20,7 +20,7 @@
         "All quality checks pass"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -34,7 +34,7 @@
         "All quality checks pass"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "This story is documentation-only in the PR description, no code changes needed"
     }
   ]

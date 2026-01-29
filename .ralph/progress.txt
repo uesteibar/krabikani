@@ -178,3 +178,31 @@ Started:
   - Skip confirmation dialogs when there's nothing to confirm (lostItemCount === 0) for better UX
   - Fixed height containers are better than minHeight when content size varies (e.g., multi-line English vs single kanji)
 ---
+
+## 2026-01-29 - US-001
+- Created GitHub Actions CI workflow at `.github/workflows/ci.yml`
+- Workflow triggers on push and pull_request to any branch
+- Uses ubuntu-latest runner with Node.js 20 and npm cache
+- Runs lint, typecheck, and test as separate steps
+- Files changed:
+  - .github/workflows/ci.yml: New CI workflow file
+- **Learnings for future iterations:**
+  - The `testPathIgnorePatterns` in jest.config.js excludes `.ralph/.worktrees/` paths, so tests won't run locally from a worktree - they will run correctly in CI where checkout is at repo root
+  - GPG signing may not be available in worktree environments - use `git -c commit.gpgsign=false commit` as fallback
+  - Lint warnings (not errors) don't cause non-zero exit code, so CI will still pass with warnings
+---
+
+## 2026-01-29 - US-002
+- Created PR #9 with branch protection documentation in the description
+- PR description includes:
+  - Step-by-step instructions for enabling branch protection on `main`
+  - Instructions for requiring the `ci` status check to pass before merging
+  - Instructions for requiring PR reviews (noted as recommended but optional)
+  - Notes about GitHub Free limitations and additional settings
+- No code changes — documentation-only story
+- Files changed: none (PR description only)
+- **Learnings for future iterations:**
+  - The CI workflow job name is `ci` — this is the status check name to search for in branch protection settings
+  - Documentation-only stories that target PR descriptions don't require code changes or commits
+  - Use `gh pr create` with `--body` flag and heredoc for multi-line PR descriptions
+---
