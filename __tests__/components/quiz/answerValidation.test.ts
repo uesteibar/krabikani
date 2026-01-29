@@ -64,7 +64,8 @@ describe('quiz answerValidation', () => {
       const question = makeQuestion({
         questionType: 'reverse',
         displayMode: 'meaning',
-        displayText: '犬',
+        displayText: 'Dog',
+        correctAnswers: ['犬'],
       });
 
       it('accepts Japanese input', () => {
@@ -196,8 +197,9 @@ describe('quiz answerValidation', () => {
     describe('reverse validation', () => {
       const question = makeQuestion({
         questionType: 'reverse',
-        displayText: '犬',
+        displayText: 'Dog',
         displayMode: 'meaning',
+        correctAnswers: ['犬'],
       });
 
       it('returns correct for exact character match', () => {
@@ -216,14 +218,15 @@ describe('quiz answerValidation', () => {
       it('does not apply fuzzy matching', () => {
         const q = makeQuestion({
           questionType: 'reverse',
-          displayText: '食べる',
+          displayText: 'To Eat',
           displayMode: 'meaning',
+          correctAnswers: ['食べる'],
         });
         const result = validateAnswer(q, '食べた');
         expect(result.status).toBe('incorrect');
       });
 
-      it('uses displayText as correctAnswer', () => {
+      it('uses correctAnswers as correctAnswer', () => {
         const result = validateAnswer(question, '猫');
         expect(result.correctAnswer).toBe('犬');
       });

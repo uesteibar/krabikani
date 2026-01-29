@@ -212,21 +212,23 @@ describe('ReversePracticeScreen', () => {
     it('should show question type as KANJI', async () => {
       const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
 
-      const questionType = await findByTestId('reverse-practice-question-type');
+      const questionType = await findByTestId(
+        'reverse-practice-session-question-type',
+      );
       expect(questionType).toBeTruthy();
     });
 
     it('should have an input field', async () => {
       const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
 
-      const input = await findByTestId('reverse-practice-input');
+      const input = await findByTestId('reverse-practice-session-input');
       expect(input).toBeTruthy();
     });
 
     it('should have a submit button', async () => {
       const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
 
-      const submit = await findByTestId('reverse-practice-submit');
+      const submit = await findByTestId('reverse-practice-session-submit');
       expect(submit).toBeTruthy();
     });
 
@@ -286,7 +288,7 @@ describe('ReversePracticeScreen', () => {
     it('should show correct feedback after exact match', async () => {
       const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
 
-      const input = await findByTestId('reverse-practice-input');
+      const input = await findByTestId('reverse-practice-session-input');
       fireEvent.changeText(input, '大人');
       fireEvent(input, 'submitEditing');
 
@@ -297,12 +299,12 @@ describe('ReversePracticeScreen', () => {
     it('should show incorrect feedback when answer is wrong', async () => {
       const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
 
-      const input = await findByTestId('reverse-practice-input');
+      const input = await findByTestId('reverse-practice-session-input');
       fireEvent.changeText(input, '大');
       fireEvent(input, 'submitEditing');
 
       const incorrectFeedback = await findByTestId(
-        'reverse-practice-incorrect-feedback',
+        'reverse-practice-session-incorrect-feedback',
       );
       expect(incorrectFeedback).toBeTruthy();
     });
@@ -310,23 +312,25 @@ describe('ReversePracticeScreen', () => {
     it('should display user answer in incorrect feedback', async () => {
       const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
 
-      const input = await findByTestId('reverse-practice-input');
+      const input = await findByTestId('reverse-practice-session-input');
       fireEvent.changeText(input, 'あ');
       fireEvent(input, 'submitEditing');
 
-      const userAnswer = await findByTestId('reverse-practice-your-answer');
+      const userAnswer = await findByTestId(
+        'reverse-practice-session-your-answer',
+      );
       expect(userAnswer.props.children).toBe('あ');
     });
 
     it('should display correct answer (kanji) in incorrect feedback', async () => {
       const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
 
-      const input = await findByTestId('reverse-practice-input');
+      const input = await findByTestId('reverse-practice-session-input');
       fireEvent.changeText(input, 'あ');
       fireEvent(input, 'submitEditing');
 
       const correctAnswer = await findByTestId(
-        'reverse-practice-correct-answer',
+        'reverse-practice-session-correct-answer',
       );
       expect(correctAnswer.props.children).toBe('大人');
     });
@@ -334,18 +338,18 @@ describe('ReversePracticeScreen', () => {
     it('should display meaning mnemonic in incorrect feedback', async () => {
       const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
 
-      const input = await findByTestId('reverse-practice-input');
+      const input = await findByTestId('reverse-practice-session-input');
       fireEvent.changeText(input, 'あ');
       fireEvent(input, 'submitEditing');
 
-      const mnemonic = await findByTestId('reverse-practice-mnemonic');
+      const mnemonic = await findByTestId('reverse-practice-session-mnemonic');
       expect(mnemonic).toBeTruthy();
     });
 
     it('should show meaning in header when incorrect', async () => {
       const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
 
-      const input = await findByTestId('reverse-practice-input');
+      const input = await findByTestId('reverse-practice-session-input');
       fireEvent.changeText(input, 'あ');
       fireEvent(input, 'submitEditing');
 
@@ -359,23 +363,27 @@ describe('ReversePracticeScreen', () => {
         <ReversePracticeScreen />,
       );
 
-      const input = await findByTestId('reverse-practice-input');
+      const input = await findByTestId('reverse-practice-session-input');
       fireEvent.changeText(input, '');
       fireEvent(input, 'submitEditing');
 
       // Empty input triggers shake, not incorrect feedback
       await new Promise<void>(resolve => setTimeout(resolve, 100));
-      expect(queryByTestId('reverse-practice-incorrect-feedback')).toBeNull();
+      expect(
+        queryByTestId('reverse-practice-session-incorrect-feedback'),
+      ).toBeNull();
     });
 
     it('should have continue button in incorrect feedback', async () => {
       const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
 
-      const input = await findByTestId('reverse-practice-input');
+      const input = await findByTestId('reverse-practice-session-input');
       fireEvent.changeText(input, 'あ');
       fireEvent(input, 'submitEditing');
 
-      const continueButton = await findByTestId('reverse-practice-continue');
+      const continueButton = await findByTestId(
+        'reverse-practice-session-continue',
+      );
       expect(continueButton).toBeTruthy();
     });
 
@@ -384,16 +392,20 @@ describe('ReversePracticeScreen', () => {
         <ReversePracticeScreen />,
       );
 
-      const input = await findByTestId('reverse-practice-input');
+      const input = await findByTestId('reverse-practice-session-input');
       fireEvent.changeText(input, 'あ');
       fireEvent(input, 'submitEditing');
 
-      const continueButton = await findByTestId('reverse-practice-continue');
+      const continueButton = await findByTestId(
+        'reverse-practice-session-continue',
+      );
       fireEvent.press(continueButton);
 
       // After continuing, incorrect feedback should be gone
       await waitFor(() => {
-        expect(queryByTestId('reverse-practice-incorrect-feedback')).toBeNull();
+        expect(
+          queryByTestId('reverse-practice-session-incorrect-feedback'),
+        ).toBeNull();
       });
     });
 
@@ -402,13 +414,15 @@ describe('ReversePracticeScreen', () => {
         <ReversePracticeScreen />,
       );
 
-      const input = await findByTestId('reverse-practice-input');
+      const input = await findByTestId('reverse-practice-session-input');
       fireEvent.changeText(input, 'wrong');
       fireEvent(input, 'submitEditing');
 
       // Romaji input triggers shake, not incorrect feedback
       await new Promise<void>(resolve => setTimeout(resolve, 100));
-      expect(queryByTestId('reverse-practice-incorrect-feedback')).toBeNull();
+      expect(
+        queryByTestId('reverse-practice-session-incorrect-feedback'),
+      ).toBeNull();
       // Should still be on the question screen
       expect(queryByTestId('reverse-practice-session')).toBeTruthy();
     });
@@ -416,7 +430,7 @@ describe('ReversePracticeScreen', () => {
     it('should trim whitespace when validating answer', async () => {
       const { findByTestId } = renderWithNavigation(<ReversePracticeScreen />);
 
-      const input = await findByTestId('reverse-practice-input');
+      const input = await findByTestId('reverse-practice-session-input');
       fireEvent.changeText(input, '  大人  ');
       fireEvent(input, 'submitEditing');
 

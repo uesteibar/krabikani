@@ -8,12 +8,7 @@ import React, {
 import {
   StyleSheet,
   Text,
-  TextInput,
   View,
-  KeyboardAvoidingView,
-  Platform,
-  Animated,
-  type TextInput as TextInputType,
 } from 'react-native';
 
 import type { Meaning, Reading, AuxiliaryMeaning } from '../api/types';
@@ -28,26 +23,19 @@ import {
   type DatabaseSubject,
 } from '../storage';
 import {
-  getSubjectColor,
   COLORS,
   SPACING,
   FONT_SIZES,
-  BORDER_RADIUS,
 } from '../theme';
-import {
-  SubjectDisplay,
-  CorrectFeedbackView,
-  IncorrectFeedbackView,
-  ProgressHeader,
-  LoadingView,
-  Button,
-} from '../components';
+import { LoadingView } from '../components';
 import { ExpandableDetails } from '../components/ExpandableDetails';
 import { ItemDetails } from '../components/ItemDetails';
-import { QuestionTypeLabel } from '../components/QuestionTypeLabel';
-import { useShakeAnimation } from '../hooks/useShakeAnimation';
-import { useAutoFocus } from '../hooks/useAutoFocus';
-import { useQuestionInput } from '../hooks/useQuestionInput';
+import { QuizEngine } from '../components/quiz/QuizEngine';
+import type {
+  Question,
+  QuizEngineConfig,
+  ProgressMode,
+} from '../components/quiz/types';
 
 export interface ReversePracticeItem {
   id: number;
@@ -67,13 +55,6 @@ export interface ReversePracticeItem {
 interface ReversePracticeQuestion {
   item: ReversePracticeItem;
   key: string;
-}
-
-interface ReverseIncorrectFeedback {
-  question: ReversePracticeQuestion;
-  userAnswer: string;
-  correctAnswer: string;
-  mnemonic: string;
 }
 
 const REVERSE_PRACTICE_BATCH_SIZE = 10;
@@ -223,23 +204,48 @@ function getPrimaryMeaning(meanings: Meaning[]): string {
   return primary?.meaning ?? meanings[0]?.meaning ?? '';
 }
 
+function reversePracticeQuestionToQuestion(
+  rpq: ReversePracticeQuestion,
+): Question {
+  const { item, key } = rpq;
+  return {
+    id: key,
+    subjectId: item.id,
+    subjectType: item.subjectType,
+    displayText: getPrimaryMeaning(item.meanings),
+    displayMode: 'meaning',
+    correctAnswers: [item.characters],
+    questionType: 'reverse',
+    mnemonic: item.meaningMnemonic,
+    mnemonicLabel: 'Meaning Mnemonic:',
+    meanings: item.meanings,
+    readings: item.readings,
+    auxiliaryMeanings: item.auxiliaryMeanings,
+    userSynonyms: item.userSynonyms,
+  };
+}
+
+function buildQuestionMap(
+  reverseQuestions: ReversePracticeQuestion[],
+): Map<string, ReversePracticeQuestion> {
+  const map = new Map<string, ReversePracticeQuestion>();
+  for (const rq of reverseQuestions) {
+    map.set(rq.key, rq);
+  }
+  return map;
+}
+
 export function ReversePracticeScreen() {
   const [phase, setPhase] = useState<'loading' | 'practicing' | 'empty'>(
     'loading',
   );
-  const [questionQueue, setQuestionQueue] = useState<ReversePracticeQuestion[]>(
-    [],
-  );
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [showCorrectFeedback, setShowCorrectFeedback] = useState(false);
-  const [incorrectFeedback, setIncorrectFeedback] =
-    useState<ReverseIncorrectFeedback | null>(null);
-  const isRefilling = useRef(false);
-  const inputRef = useRef<TextInputType>(null);
+  const [reverseQuestions, setReverseQuestions] = useState<
+    ReversePracticeQuestion[]
+  >([]);
 
-  const { shakeStyle, triggerShake } = useShakeAnimation();
-  const { inputValue, displayValue, handleTextChange, clearInput } =
-    useQuestionInput('reverse');
+  const questionMapRef = useRef<Map<string, ReversePracticeQuestion>>(
+    new Map(),
+  );
 
   const practicePhrase = useMemo(() => {
     const phrases = [
@@ -271,100 +277,91 @@ export function ReversePracticeScreen() {
       }
 
       const questions = generateReverseQuestions(loadedItems);
-      setQuestionQueue(questions);
+      questionMapRef.current = buildQuestionMap(questions);
+      setReverseQuestions(questions);
       setPhase('practicing');
     };
 
     init();
   }, []);
 
-  // Auto-focus input
-  useAutoFocus(inputRef, [
-    currentQuestionIndex,
-    incorrectFeedback,
-    showCorrectFeedback,
-    phase,
-  ]);
+  // Convert reverse practice questions to unified Questions for QuizEngine
+  const initialQuestions = useMemo(
+    () => reverseQuestions.map(reversePracticeQuestionToQuestion),
+    [reverseQuestions],
+  );
 
-  // Refill queue when running low
-  const maybeRefillQueue = useCallback(
-    async (currentIndex: number, queue: ReversePracticeQuestion[]) => {
-      const remaining = queue.length - currentIndex;
-      if (remaining <= REFILL_THRESHOLD && !isRefilling.current) {
-        isRefilling.current = true;
-        try {
-          const newItems = await loadReversePracticeItems();
-          if (newItems.length > 0) {
-            const newQuestions = generateReverseQuestions(newItems);
-            setQuestionQueue(prev => [...prev, ...newQuestions]);
-          }
-        } finally {
-          isRefilling.current = false;
-        }
-      }
+  // Auto-refill: load more questions when queue runs low
+  const loadMoreQuestions = useCallback(async (): Promise<Question[]> => {
+    const newItems = await loadReversePracticeItems();
+    if (newItems.length === 0) return [];
+    const newReverseQuestions = generateReverseQuestions(newItems);
+    // Update the question map with new questions
+    for (const rq of newReverseQuestions) {
+      questionMapRef.current.set(rq.key, rq);
+    }
+    return newReverseQuestions.map(reversePracticeQuestionToQuestion);
+  }, []);
+
+  // Render details content for incorrect feedback
+  const renderDetailsContent = useCallback(
+    (question: Question): React.ReactNode | undefined => {
+      const rq = questionMapRef.current.get(question.id);
+      if (!rq) return undefined;
+
+      const feedbackItem = rq.item;
+
+      return (
+        <ExpandableDetails
+          resetKey={question.id}
+          testID="reverse-practice-expandable-details"
+        >
+          <ItemDetails
+            subjectType={feedbackItem.subjectType}
+            meanings={feedbackItem.meanings}
+            readings={feedbackItem.readings}
+            meaningMnemonic={feedbackItem.meaningMnemonic}
+            readingMnemonic={feedbackItem.readingMnemonic}
+            componentKanji={feedbackItem.componentKanji}
+            hideMnemonicType="meaning"
+            testID="reverse-practice-item-details"
+          />
+        </ExpandableDetails>
+      );
     },
     [],
   );
 
-  const currentQuestion = questionQueue[currentQuestionIndex];
+  // Progress mode
+  const progressMode: ProgressMode = useMemo(
+    () => ({
+      mode: 'practice' as const,
+      phrase: practicePhrase,
+      icon: 'swap-horizontal' as const,
+    }),
+    [practicePhrase],
+  );
 
-  const advanceToNextQuestion = useCallback(() => {
-    const nextIndex = currentQuestionIndex + 1;
-    setCurrentQuestionIndex(nextIndex);
-    clearInput();
-    setIncorrectFeedback(null);
-    setShowCorrectFeedback(false);
-    maybeRefillQueue(nextIndex, questionQueue);
-  }, [currentQuestionIndex, questionQueue, maybeRefillQueue, clearInput]);
-
-  const handleContinue = useCallback(() => {
-    advanceToNextQuestion();
-  }, [advanceToNextQuestion]);
-
-  // Check if input contains latin letters (romaji)
-  const containsRomaji = (text: string): boolean => {
-    return /[a-zA-Z]/.test(text);
-  };
-
-  const handleSubmit = useCallback(() => {
-    if (!currentQuestion || showCorrectFeedback || incorrectFeedback) return;
-
-    const { item } = currentQuestion;
-    const answer = inputValue.trim();
-
-    // Reject if input contains romaji
-    if (containsRomaji(answer) || answer.length === 0) {
-      triggerShake();
-      return;
-    }
-
-    const correctAnswer = item.characters;
-
-    // Exact match required
-    const isCorrect = answer === correctAnswer;
-
-    if (isCorrect) {
-      setShowCorrectFeedback(true);
-      setTimeout(() => {
-        setShowCorrectFeedback(false);
-        advanceToNextQuestion();
-      }, 500);
-    } else {
-      setIncorrectFeedback({
-        question: currentQuestion,
-        userAnswer: answer,
-        correctAnswer,
-        mnemonic: item.meaningMnemonic,
-      });
-    }
-  }, [
-    currentQuestion,
-    inputValue,
-    showCorrectFeedback,
-    incorrectFeedback,
-    advanceToNextQuestion,
-    triggerShake,
-  ]);
+  // Build QuizEngine config
+  const quizConfig: QuizEngineConfig = useMemo(
+    () => ({
+      questions: initialQuestions,
+      progressMode,
+      completionMode: 'never',
+      allowMarkCorrect: false,
+      allowAddSynonym: false,
+      requeueIncorrect: false,
+      showSrsBadge: false,
+      showSubjectTypeLabel: false,
+      autoRefill: {
+        threshold: REFILL_THRESHOLD,
+        loadMore: loadMoreQuestions,
+      },
+      renderDetailsContent,
+      testID: 'reverse-practice-session',
+    }),
+    [initialQuestions, progressMode, loadMoreQuestions, renderDetailsContent],
+  );
 
   // Empty state
   if (phase === 'empty') {
@@ -383,7 +380,7 @@ export function ReversePracticeScreen() {
   }
 
   // Loading state
-  if (phase === 'loading' || !currentQuestion) {
+  if (phase === 'loading' || initialQuestions.length === 0) {
     return (
       <LoadingView
         message="Loading vocabulary items..."
@@ -392,158 +389,10 @@ export function ReversePracticeScreen() {
     );
   }
 
-  // Incorrect feedback view
-  if (incorrectFeedback) {
-    return (
-      <View
-        style={styles.container}
-        testID="reverse-practice-incorrect-feedback"
-      >
-        <ProgressHeader
-          mode="practice"
-          phrase={practicePhrase}
-          icon="swap-horizontal"
-        />
-
-        <IncorrectFeedbackView
-          subjectType={incorrectFeedback.question.item.subjectType}
-          displayText={getPrimaryMeaning(
-            incorrectFeedback.question.item.meanings,
-          )}
-          displayMode="meaning"
-          userAnswer={incorrectFeedback.userAnswer}
-          correctAnswer={incorrectFeedback.correctAnswer}
-          mnemonic={incorrectFeedback.mnemonic}
-          mnemonicLabel="Meaning Mnemonic:"
-          onContinue={handleContinue}
-          detailsContent={
-            <ExpandableDetails
-              resetKey={incorrectFeedback.question.key}
-              testID="reverse-practice-expandable-details"
-            >
-              <ItemDetails
-                subjectType={incorrectFeedback.question.item.subjectType}
-                meanings={incorrectFeedback.question.item.meanings}
-                readings={incorrectFeedback.question.item.readings}
-                meaningMnemonic={
-                  incorrectFeedback.question.item.meaningMnemonic
-                }
-                readingMnemonic={
-                  incorrectFeedback.question.item.readingMnemonic
-                }
-                componentKanji={
-                  incorrectFeedback.question.item.componentKanji
-                }
-                hideMnemonicType="meaning"
-                testID="reverse-practice-item-details"
-              />
-            </ExpandableDetails>
-          }
-          testID="reverse-practice"
-        />
-      </View>
-    );
-  }
-
-  // Active question view
-  const { item } = currentQuestion;
-  const backgroundColor = getSubjectColor(item.subjectType);
-  const primaryMeaning = getPrimaryMeaning(item.meanings);
-
-  // Correct feedback overlay
-  if (showCorrectFeedback) {
-    return (
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        testID="reverse-practice-session"
-      >
-        <ProgressHeader
-          mode="practice"
-          phrase={practicePhrase}
-          icon="swap-horizontal"
-        />
-
-        <CorrectFeedbackView
-          subjectType={item.subjectType}
-          displayText={primaryMeaning}
-          displayMode="meaning"
-          feedbackState="correct"
-          questionType="kanji"
-          inputValue={displayValue}
-          testID="reverse-practice-correct-feedback"
-        />
-      </KeyboardAvoidingView>
-    );
-  }
-
-  return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      testID="reverse-practice-session"
-    >
-      <ProgressHeader
-        mode="practice"
-        phrase={practicePhrase}
-        icon="swap-horizontal"
-      />
-
-      <SubjectDisplay
-        subjectType={item.subjectType}
-        displayMode="meaning"
-        displayText={primaryMeaning}
-        testID="reverse-practice-subject-display"
-      />
-
-      <QuestionTypeLabel
-        type="kanji"
-        testID="reverse-practice-question-type"
-      />
-
-      <Animated.View
-        style={[styles.inputContainer, shakeStyle]}
-        testID="reverse-practice-input-container"
-      >
-        <TextInput
-          ref={inputRef}
-          style={[styles.input, { borderColor: backgroundColor }]}
-          value={displayValue}
-          onChangeText={handleTextChange}
-          onSubmitEditing={handleSubmit}
-          placeholder="Enter Japanese..."
-          placeholderTextColor="#999"
-          autoCapitalize="none"
-          autoCorrect={false}
-          spellCheck={false}
-          autoComplete="off"
-          returnKeyType="done"
-          blurOnSubmit={false}
-          caretHidden={true}
-          testID="reverse-practice-input"
-        />
-      </Animated.View>
-
-      <View style={styles.spacer} />
-
-      <View style={styles.buttonRow}>
-        <Button
-          label="Submit"
-          onPress={handleSubmit}
-          disabled={showCorrectFeedback}
-          style={[styles.submitButtonFlex, { backgroundColor }]}
-          testID="reverse-practice-submit"
-        />
-      </View>
-    </KeyboardAvoidingView>
-  );
+  return <QuizEngine config={quizConfig} />;
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background.primary,
-  },
   centerContainer: {
     flex: 1,
     backgroundColor: COLORS.background.primary,
@@ -562,32 +411,5 @@ const styles = StyleSheet.create({
     color: COLORS.text.secondary,
     textAlign: 'center',
     lineHeight: FONT_SIZES.xxl,
-  },
-  inputContainer: {
-    paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.md,
-    paddingBottom: SPACING.sm,
-  },
-  input: {
-    borderWidth: 2,
-    borderRadius: BORDER_RADIUS.md,
-    paddingVertical: SPACING.lg,
-    paddingHorizontal: SPACING.lg,
-    fontSize: FONT_SIZES.lg,
-    fontWeight: '600',
-    textAlign: 'center',
-    backgroundColor: COLORS.background.input,
-  },
-  spacer: {
-    flex: 1,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.lg,
-    gap: SPACING.md,
-  },
-  submitButtonFlex: {
-    flex: 1,
   },
 });

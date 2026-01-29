@@ -77,6 +77,7 @@ function makeReverseQuestion(overrides: Partial<Question> = {}): Question {
     displayText: 'big',
     displayMode: 'meaning',
     questionType: 'reverse',
+    correctAnswers: ['大'],
     mnemonicLabel: 'Meaning Mnemonic:',
     ...overrides,
   });

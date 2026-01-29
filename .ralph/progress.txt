@@ -30,6 +30,7 @@
 - Unified Question type has questionType: 'meaning' | 'reading' | 'reverse' — reverse mode uses exact displayText match with no fuzzy matching
 - QuizEngine component lives in src/components/quiz/QuizEngine.tsx — config-driven via QuizEngineConfig, wrapper screens handle domain logic (SRS, navigation, data loading) via callbacks
 - QuizEngine tests: don't mock useQuestionInput with React.useState in jest.mock factory — use the real hook or require('react') inside the factory
+- Reverse mode Question: `displayText` = English meaning (shown on screen), `correctAnswers` = [Japanese characters] — answerValidation uses `correctAnswers[0]` for comparison, NOT `displayText`
 
 Started:
 ---
@@ -281,4 +282,34 @@ Started:
   - LessonQuiz config differences from ReviewSession: `completionMode: 'allQuestions'`, `allowAddSynonym: false`, `showSubjectTypeLabel: true`, `showSrsBadge: false`, no `shouldSkipQuestion`/`onContinueDelay`/`renderExtraButtons`
   - All 110 existing LessonQuiz tests passed without any test file modifications — seamless migration
   - `renderCompletion` should NOT include a `testID` prop since QuizEngine already wraps it in `<View testID="${testID}-complete">` — duplicate testIDs cause test failures
+---
+
+## 2026-01-29 - US-019
+- Migrated PracticeScreen to use QuizEngine internally — PracticeScreen reduced from 710 lines to 486 lines
+- PracticeScreen is now a thin wrapper: loads practice items, generates questions, converts to unified Question type, configures QuizEngine with practice-specific settings
+- Files changed: src/screens/PracticeScreen.tsx (refactored to use QuizEngine)
+- **Learnings for future iterations:**
+  - PracticeScreen migration is simpler than ReviewSession/LessonQuiz — no completion tracking, no mark-correct, no SRS badges, no progress bar
+  - PracticeScreen config: `completionMode: 'never'`, `allowMarkCorrect: false`, `requeueIncorrect: false`, `showSrsBadge: false`, `showSubjectTypeLabel: false`
+  - Auto-refill handled entirely by QuizEngine's `autoRefill` config — no need for manual refill logic in PracticeScreen
+  - `questionMapRef` pattern (Map from question ID to PracticeQuestion) is reused for `renderDetailsContent` callback — same pattern as LessonQuiz and ReviewSession
+  - `loadMoreQuestions` callback must update `questionMapRef` with new questions so `renderDetailsContent` can look up items for newly-loaded questions
+  - All 14 existing PracticeScreen tests passed without any test file modifications — seamless migration
+  - Pre-existing test failures: 3 suites (syncService, database x2) — unchanged
+---
+
+## 2026-01-29 - US-020
+- Migrated ReversePracticeScreen to use QuizEngine internally — reduced from 594 lines to 416 lines
+- ReversePracticeScreen is now a thin wrapper: loads reverse practice items, generates questions, converts to unified Question type, configures QuizEngine with reverse-specific settings
+- Fixed answerValidation.ts to use `correctAnswers[0]` instead of `displayText` for reverse mode — displayText is the English meaning shown on screen, correctAnswers contains the Japanese characters the user must type
+- Updated answerValidation tests and QuizEngine tests to set `correctAnswers` properly for reverse questions
+- Files changed: src/screens/ReversePracticeScreen.tsx (refactored to use QuizEngine), __tests__/screens/ReversePracticeScreen.test.tsx (testID updates), src/components/quiz/answerValidation.ts (reverse correctAnswer fix), __tests__/components/quiz/answerValidation.test.ts (updated reverse tests), __tests__/components/quiz/QuizEngine.test.tsx (updated makeReverseQuestion)
+- **Learnings for future iterations:**
+  - ReversePracticeScreen migration follows same pattern as PracticeScreen (US-019): no completion tracking, no mark-correct, no SRS badges
+  - ReversePracticeScreen config: `completionMode: 'never'`, `allowMarkCorrect: false`, `requeueIncorrect: false`, `showSrsBadge: false`, `showSubjectTypeLabel: false`, icon is `swap-horizontal` (not `weight-lifter` like PracticeScreen)
+  - Reverse mode Question type: `displayText` = English meaning (shown on screen), `displayMode: 'meaning'`, `correctAnswers` = [Japanese characters], `questionType: 'reverse'`
+  - answerValidation had a bug where reverse mode used `displayText` as the correct answer — this worked before because reverse mode wasn't using QuizEngine. Fixed to use `correctAnswers[0]` which is the proper field for the expected answer
+  - `questionMapRef` pattern reused from PracticeScreen for `renderDetailsContent` callback lookup
+  - All 26 existing ReversePracticeScreen tests pass with testID updates (from `reverse-practice-*` to `reverse-practice-session-*` for QuizEngine-generated elements)
+  - Pre-existing test failures: 3 suites (syncService, database x2) — unchanged
 ---

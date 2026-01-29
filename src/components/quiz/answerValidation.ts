@@ -65,7 +65,7 @@ export function validateAnswer(
 
   if (questionType === 'reverse') {
     const answer = rawInput.trim();
-    const correctAnswer = question.displayText;
+    const correctAnswer = question.correctAnswers[0] ?? question.displayText;
     const isCorrect = answer === correctAnswer;
     return {
       status: isCorrect ? 'correct' : 'incorrect',
