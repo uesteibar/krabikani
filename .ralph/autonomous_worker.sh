@@ -143,6 +143,11 @@ echo "$ISSUES_TO_PROCESS" | while IFS= read -r item; do
     continue
   fi
   
+  # Commit PRD files so they're available in the worktree
+  echo "Committing PRD files..."
+  git -c commit.gpgsign=false add .ralph/tasks/prd-issue-"$ISSUE_NUMBER".md .ralph/prd.json
+  git -c commit.gpgsign=false commit -m "chore: add PRD for issue #$ISSUE_NUMBER" || true
+  
   # Step 3: Run Ralph (creates worktree, implements stories)
   echo "Step 3: Starting Ralph with $MAX_ITERATIONS iterations..."
   if .ralph/ralph.sh "$MAX_ITERATIONS" 2>&1; then
