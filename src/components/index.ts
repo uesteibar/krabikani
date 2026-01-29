@@ -23,6 +23,11 @@ export {
 } from './IncorrectFeedbackView';
 
 export {
+  CorrectFeedbackView,
+  type CorrectFeedbackViewProps,
+} from './CorrectFeedbackView';
+
+export {
   OfflineIndicator,
   type OfflineIndicatorProps,
 } from './OfflineIndicator';
