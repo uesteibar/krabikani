@@ -161,7 +161,7 @@ describe('PracticeScreen', () => {
     it('should show characters for the current question', async () => {
       const { findByTestId } = renderWithNavigation(<PracticeScreen />);
 
-      const characters = await findByTestId('practice-session-characters');
+      const characters = await findByTestId('subject-display-text');
       expect(characters).toBeTruthy();
     });
 
@@ -197,9 +197,9 @@ describe('PracticeScreen', () => {
       await findByTestId('practice-session');
 
       // These elements should NOT be present in practice mode
-      expect(queryByTestId('review-session-progress')).toBeNull();
-      expect(queryByTestId('review-session-srs-badge')).toBeNull();
-      expect(queryByTestId('review-session-remaining-text')).toBeNull();
+      expect(queryByTestId('progress-header-progress')).toBeNull();
+      expect(queryByTestId('srs-badge')).toBeNull();
+      expect(queryByTestId('progress-header-remaining')).toBeNull();
     });
 
     it('should NOT show subject type text label', async () => {
@@ -211,7 +211,7 @@ describe('PracticeScreen', () => {
       await findByTestId('practice-session');
 
       // Subject type label should NOT be present
-      expect(queryByTestId('review-session-subject-type')).toBeNull();
+      expect(queryByTestId('subject-display-type-label')).toBeNull();
     });
 
     it('should show correct feedback after correct answer', async () => {
@@ -294,7 +294,7 @@ describe('PracticeScreen', () => {
       );
 
       await findByTestId('practice-session');
-      expect(queryByTestId('review-session-wrap-up')).toBeNull();
+      expect(queryByTestId('progress-header-wrap-up')).toBeNull();
     });
   });
 });

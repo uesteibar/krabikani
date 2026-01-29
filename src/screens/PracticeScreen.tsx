@@ -12,8 +12,6 @@ import {
   View,
   KeyboardAvoidingView,
   Platform,
-  TouchableOpacity,
-  ScrollView,
   Animated,
   type TextInput as TextInputType,
 } from 'react-native';
@@ -41,7 +39,6 @@ import {
   type DatabaseSubject,
 } from '../storage';
 import {
-  processRomajiInput,
   romajiToHiragana,
   isValidReadingInput,
 } from '../utils/romajiToHiragana';
@@ -52,18 +49,25 @@ import {
 import {
   getSubjectColor,
   COLORS,
-  SHADOW,
-  BORDER_RADIUS,
   SPACING,
   FONT_SIZES,
-  MIN_TOUCH_TARGET,
-  TEXT_STYLES,
+  BORDER_RADIUS,
 } from '../theme';
-import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
-import { MnemonicText } from '../components/MnemonicText';
+import {
+  SubjectDisplay,
+  CorrectFeedbackView,
+  IncorrectFeedbackView,
+  ProgressHeader,
+  LoadingView,
+  Button,
+} from '../components';
 import { ExpandableDetails } from '../components/ExpandableDetails';
 import { ItemDetails } from '../components/ItemDetails';
 import { shuffleArray } from '../components/ReviewSession';
+import { useShakeAnimation } from '../hooks/useShakeAnimation';
+import { useAutoFocus } from '../hooks/useAutoFocus';
+import { useQuestionInput } from '../hooks/useQuestionInput';
+import { QuestionTypeLabel } from '../components/QuestionTypeLabel';
 
 type PracticeScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -119,7 +123,6 @@ function subjectToReviewItem(
           .filter((k): k is ReviewComponentKanji => k !== undefined)
       : undefined;
 
-  // Parse auxiliary_meanings from stored JSON
   const auxiliaryMeanings: AuxiliaryMeaning[] = subject.auxiliary_meanings
     ? JSON.parse(subject.auxiliary_meanings)
     : [];
@@ -210,7 +213,6 @@ async function loadPracticeItems(): Promise<ReviewItem[]> {
     a => subjectMap.get(a.subject_id)!,
   );
 
-  // Collect component IDs
   const radicalComponentIds = new Set<number>();
   const kanjiComponentIds = new Set<number>();
 
@@ -279,7 +281,6 @@ async function loadPracticeItems(): Promise<ReviewItem[]> {
     }
   }
 
-  // Load user synonyms
   const synonymsMap = new Map<number, string[]>();
   for (const subject of validSubjects) {
     const synonyms = await getUserSynonymsBySubjectId(subject.id);
@@ -310,16 +311,25 @@ export function PracticeScreen() {
   );
   const [questionQueue, setQuestionQueue] = useState<PracticeQuestion[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [inputValue, setInputValue] = useState('');
-  const [displayValue, setDisplayValue] = useState('');
-  const [pendingRomaji, setPendingRomaji] = useState('');
   const [showCorrectFeedback, setShowCorrectFeedback] = useState(false);
   const [isFuzzyMatch, setIsFuzzyMatch] = useState(false);
   const [incorrectFeedback, setIncorrectFeedback] =
     useState<PracticeIncorrectFeedback | null>(null);
   const isRefilling = useRef(false);
   const inputRef = useRef<TextInputType>(null);
-  const shakeAnimation = useRef(new Animated.Value(0)).current;
+
+  const currentQuestion = questionQueue[currentQuestionIndex];
+
+  const { shakeStyle, triggerShake } = useShakeAnimation();
+  const { inputValue, displayValue, handleTextChange, clearInput } =
+    useQuestionInput(currentQuestion?.type ?? 'meaning');
+
+  useAutoFocus(inputRef, [
+    currentQuestionIndex,
+    incorrectFeedback,
+    showCorrectFeedback,
+    phase,
+  ]);
 
   const practicePhrase = useMemo(() => {
     const phrases = [
@@ -358,16 +368,6 @@ export function PracticeScreen() {
     init();
   }, []);
 
-  // Auto-focus input
-  useEffect(() => {
-    if (!incorrectFeedback && phase === 'practicing') {
-      const timer = setTimeout(() => {
-        inputRef.current?.focus();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [currentQuestionIndex, incorrectFeedback, showCorrectFeedback, phase]);
-
   // Refill queue when running low
   const maybeRefillQueue = useCallback(
     async (currentIndex: number, queue: PracticeQuestion[]) => {
@@ -388,68 +388,15 @@ export function PracticeScreen() {
     [],
   );
 
-  const currentQuestion = questionQueue[currentQuestionIndex];
-
-  const handleReadingInputChange = useCallback((text: string) => {
-    const state = processRomajiInput(text, false);
-    setInputValue(text);
-    setDisplayValue(state.hiragana);
-    setPendingRomaji(state.pending);
-  }, []);
-
-  const handleMeaningInputChange = useCallback((text: string) => {
-    setInputValue(text);
-    setDisplayValue(text);
-    setPendingRomaji('');
-  }, []);
-
-  const handleInputChange =
-    currentQuestion?.type === 'reading'
-      ? handleReadingInputChange
-      : handleMeaningInputChange;
-
-  const triggerShake = useCallback(() => {
-    shakeAnimation.setValue(0);
-    Animated.sequence([
-      Animated.timing(shakeAnimation, {
-        toValue: 10,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnimation, {
-        toValue: -10,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnimation, {
-        toValue: 10,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnimation, {
-        toValue: -10,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnimation, {
-        toValue: 0,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [shakeAnimation]);
-
   const advanceToNextQuestion = useCallback(() => {
     const nextIndex = currentQuestionIndex + 1;
     setCurrentQuestionIndex(nextIndex);
-    setInputValue('');
-    setDisplayValue('');
-    setPendingRomaji('');
+    clearInput();
     setIncorrectFeedback(null);
     setShowCorrectFeedback(false);
     setIsFuzzyMatch(false);
     maybeRefillQueue(nextIndex, questionQueue);
-  }, [currentQuestionIndex, questionQueue, maybeRefillQueue]);
+  }, [currentQuestionIndex, questionQueue, maybeRefillQueue, clearInput]);
 
   const handleContinue = useCallback(() => {
     advanceToNextQuestion();
@@ -547,9 +494,10 @@ export function PracticeScreen() {
   // Loading
   if (phase === 'loading' || !currentQuestion) {
     return (
-      <View style={styles.centerContainer} testID="practice-screen-loading">
-        <Text style={styles.loadingText}>Loading practice items...</Text>
-      </View>
+      <LoadingView
+        message="Loading practice items..."
+        testID="practice-screen-loading"
+      />
     );
   }
 
@@ -560,115 +508,54 @@ export function PracticeScreen() {
         style={styles.container}
         testID="practice-session-incorrect-feedback"
       >
-        <View style={styles.modeBanner} testID="practice-session-banner">
-          <MaterialDesignIcons
-            name="weight-lifter"
-            size={FONT_SIZES.base}
-            color={COLORS.text.tertiary}
-          />
-          <Text style={styles.modeBannerText}>{practicePhrase}</Text>
-        </View>
+        <ProgressHeader
+          mode="practice"
+          phrase={practicePhrase}
+          icon="weight-lifter"
+        />
 
-        <View
-          style={[styles.characterContainer, styles.incorrectHeader]}
-          testID="practice-session-character-container"
-        >
-          <Text style={styles.characters} testID="practice-session-characters">
-            {incorrectFeedback.question.item.characters ?? '?'}
-          </Text>
-          <Text
-            style={styles.incorrectLabel}
-            testID="practice-session-incorrect-label"
-          >
-            Incorrect
-          </Text>
-        </View>
-
-        <ScrollView
-          style={styles.feedbackContainer}
-          contentContainerStyle={styles.feedbackContent}
-        >
-          <View style={styles.feedbackSection}>
-            <Text
-              style={styles.feedbackLabel}
-              testID="practice-session-your-answer-label"
+        <IncorrectFeedbackView
+          subjectType={incorrectFeedback.question.item.subjectType}
+          displayText={incorrectFeedback.question.item.characters ?? '?'}
+          displayMode="characters"
+          userAnswer={incorrectFeedback.userAnswer}
+          correctAnswer={incorrectFeedback.correctAnswer}
+          mnemonic={incorrectFeedback.mnemonic}
+          mnemonicLabel={
+            incorrectFeedback.question.type === 'meaning'
+              ? 'Meaning Mnemonic:'
+              : 'Reading Mnemonic:'
+          }
+          onContinue={handleContinue}
+          detailsContent={
+            <ExpandableDetails
+              resetKey={incorrectFeedback.question.key}
+              testID="practice-session-expandable-details"
             >
-              Your Answer:
-            </Text>
-            <Text
-              style={styles.userAnswer}
-              testID="practice-session-your-answer"
-            >
-              {incorrectFeedback.userAnswer || '(empty)'}
-            </Text>
-          </View>
-
-          <View style={styles.feedbackSection}>
-            <Text
-              style={styles.feedbackLabel}
-              testID="practice-session-correct-answer-label"
-            >
-              Correct Answer:
-            </Text>
-            <Text
-              style={styles.correctAnswerText}
-              testID="practice-session-correct-answer"
-            >
-              {incorrectFeedback.correctAnswer}
-            </Text>
-          </View>
-
-          <View style={styles.feedbackSection}>
-            <Text
-              style={styles.feedbackLabel}
-              testID="practice-session-mnemonic-label"
-            >
-              {incorrectFeedback.question.type === 'meaning'
-                ? 'Meaning Mnemonic:'
-                : 'Reading Mnemonic:'}
-            </Text>
-            <MnemonicText
-              text={incorrectFeedback.mnemonic}
-              style={styles.mnemonicText}
-              testID="practice-session-mnemonic"
-            />
-          </View>
-
-          <ExpandableDetails
-            resetKey={incorrectFeedback.question.key}
-            testID="practice-session-expandable-details"
-          >
-            <ItemDetails
-              subjectType={incorrectFeedback.question.item.subjectType}
-              meanings={incorrectFeedback.question.item.meanings}
-              readings={incorrectFeedback.question.item.readings}
-              meaningMnemonic={incorrectFeedback.question.item.meaningMnemonic}
-              readingMnemonic={incorrectFeedback.question.item.readingMnemonic}
-              componentRadicals={
-                incorrectFeedback.question.item.componentRadicals
-              }
-              componentKanji={incorrectFeedback.question.item.componentKanji}
-              onComponentPress={handleComponentPress}
-              hideMnemonicType={incorrectFeedback.question.type}
-              testID="practice-session-item-details"
-            />
-          </ExpandableDetails>
-        </ScrollView>
-
-        <View style={styles.buttonRow}>
-          <TouchableOpacity
-            style={[
-              styles.submitButton,
-              styles.continueButton,
-              styles.submitButtonFlex,
-            ]}
-            onPress={handleContinue}
-            activeOpacity={0.8}
-            testID="practice-session-continue"
-          >
-            <Text style={styles.submitButtonText}>Continue</Text>
-          </TouchableOpacity>
-        </View>
+              <ItemDetails
+                subjectType={incorrectFeedback.question.item.subjectType}
+                meanings={incorrectFeedback.question.item.meanings}
+                readings={incorrectFeedback.question.item.readings}
+                meaningMnemonic={
+                  incorrectFeedback.question.item.meaningMnemonic
+                }
+                readingMnemonic={
+                  incorrectFeedback.question.item.readingMnemonic
+                }
+                componentRadicals={
+                  incorrectFeedback.question.item.componentRadicals
+                }
+                componentKanji={
+                  incorrectFeedback.question.item.componentKanji
+                }
+                onComponentPress={handleComponentPress}
+                hideMnemonicType={incorrectFeedback.question.type}
+                testID="practice-session-item-details"
+              />
+            </ExpandableDetails>
+          }
+          testID="practice-session"
+        />
       </View>
     );
   }
@@ -678,8 +565,33 @@ export function PracticeScreen() {
   const backgroundColor = getSubjectColor(item.subjectType);
   const placeholder =
     type === 'meaning' ? 'Enter meaning...' : 'Type reading (romaji)...';
-  const displayText =
-    type === 'reading' ? displayValue + pendingRomaji : displayValue;
+
+  // Correct feedback overlay
+  if (showCorrectFeedback) {
+    return (
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        testID="practice-session"
+      >
+        <ProgressHeader
+          mode="practice"
+          phrase={practicePhrase}
+          icon="weight-lifter"
+        />
+
+        <CorrectFeedbackView
+          subjectType={item.subjectType}
+          displayText={item.characters ?? '?'}
+          displayMode="characters"
+          feedbackState={isFuzzyMatch ? 'fuzzyMatch' : 'correct'}
+          questionType={type}
+          inputValue={displayValue}
+          testID="practice-session-correct-feedback"
+        />
+      </KeyboardAvoidingView>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -687,74 +599,33 @@ export function PracticeScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       testID="practice-session"
     >
-      <View style={styles.modeBanner} testID="practice-session-banner">
-        <MaterialDesignIcons
-          name="weight-lifter"
-          size={FONT_SIZES.base}
-          color={COLORS.text.tertiary}
-        />
-        <Text style={styles.modeBannerText}>{practicePhrase}</Text>
-      </View>
+      <ProgressHeader
+        mode="practice"
+        phrase={practicePhrase}
+        icon="weight-lifter"
+      />
 
-      <View
-        style={[
-          styles.characterContainer,
-          showCorrectFeedback
-            ? isFuzzyMatch
-              ? styles.fuzzyMatchHeader
-              : styles.correctHeader
-            : { backgroundColor },
-        ]}
-        testID="practice-session-character-container"
-      >
-        <Text style={styles.characters} testID="practice-session-characters">
-          {item.characters ?? '?'}
-        </Text>
-        {showCorrectFeedback && (
-          <Text
-            style={styles.correctLabel}
-            testID={
-              isFuzzyMatch
-                ? 'practice-session-fuzzy-match-label'
-                : 'practice-session-correct-label'
-            }
-          >
-            {isFuzzyMatch ? 'Close enough!' : 'Correct!'}
-          </Text>
-        )}
-      </View>
+      <SubjectDisplay
+        subjectType={item.subjectType}
+        displayMode="characters"
+        displayText={item.characters ?? '?'}
+        testID="practice-session-subject-display"
+      />
 
-      <View
-        style={[
-          styles.questionContainer,
-          type === 'reading'
-            ? styles.questionContainerReading
-            : styles.questionContainerMeaning,
-        ]}
-      >
-        <Text
-          style={[
-            styles.questionType,
-            type === 'reading' && styles.questionTypeReading,
-          ]}
-          testID="practice-session-question-type"
-        >
-          {type === 'meaning' ? 'MEANING' : 'READING'}
-        </Text>
-      </View>
+      <QuestionTypeLabel
+        type={type}
+        testID="practice-session-question-type"
+      />
 
       <Animated.View
-        style={[
-          styles.inputContainer,
-          { transform: [{ translateX: shakeAnimation }] },
-        ]}
+        style={[styles.inputContainer, shakeStyle]}
         testID="practice-session-input-container"
       >
         <TextInput
           ref={inputRef}
           style={[styles.input, { borderColor: backgroundColor }]}
-          value={type === 'reading' ? displayText : inputValue}
-          onChangeText={handleInputChange}
+          value={type === 'reading' ? displayValue : inputValue}
+          onChangeText={handleTextChange}
           onSubmitEditing={handleSubmit}
           placeholder={placeholder}
           placeholderTextColor="#999"
@@ -772,19 +643,13 @@ export function PracticeScreen() {
       <View style={styles.spacer} />
 
       <View style={styles.buttonRow}>
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            styles.submitButtonFlex,
-            { backgroundColor },
-          ]}
+        <Button
+          label="Submit"
           onPress={handleSubmit}
           disabled={showCorrectFeedback}
-          activeOpacity={0.8}
+          style={[styles.submitButtonFlex, { backgroundColor }]}
           testID="practice-session-submit"
-        >
-          <Text style={styles.submitButtonText}>Submit</Text>
-        </TouchableOpacity>
+        />
       </View>
     </KeyboardAvoidingView>
   );
@@ -802,11 +667,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: SPACING.xxxl,
   },
-  loadingText: {
-    fontSize: FONT_SIZES.base,
-    color: COLORS.text.secondary,
-    marginTop: SPACING.lg,
-  },
   emptyTitle: {
     fontSize: FONT_SIZES.xxl,
     fontWeight: 'bold',
@@ -818,79 +678,6 @@ const styles = StyleSheet.create({
     color: COLORS.text.secondary,
     textAlign: 'center',
     lineHeight: FONT_SIZES.xxl,
-  },
-  modeBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    paddingTop: SPACING.md,
-    paddingBottom: SPACING.sm,
-    minHeight: 50,
-    backgroundColor: COLORS.background.secondary,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border.light,
-  },
-
-  modeBannerText: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.text.secondary,
-    fontWeight: '600',
-    fontStyle: 'italic',
-  },
-  characterContainer: {
-    paddingVertical: 64,
-    paddingHorizontal: SPACING.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  characters: {
-    fontSize: FONT_SIZES.display,
-    ...TEXT_STYLES.japaneseDisplay,
-    color: COLORS.text.inverse,
-    textAlign: 'center',
-  },
-  correctHeader: {
-    backgroundColor: COLORS.feedback.correct,
-  },
-  fuzzyMatchHeader: {
-    backgroundColor: COLORS.feedback.fuzzyMatch,
-  },
-  correctLabel: {
-    position: 'absolute',
-    bottom: SPACING.md,
-    fontSize: FONT_SIZES.sm,
-    fontWeight: 'bold',
-    color: COLORS.text.inverse,
-  },
-  incorrectHeader: {
-    backgroundColor: COLORS.feedback.incorrect,
-  },
-  incorrectLabel: {
-    fontSize: FONT_SIZES.lg,
-    fontWeight: 'bold',
-    color: COLORS.text.inverse,
-    marginTop: SPACING.sm,
-  },
-  questionContainer: {
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    alignItems: 'center',
-  },
-  questionContainerReading: {
-    backgroundColor: COLORS.neutral.black,
-  },
-  questionContainerMeaning: {
-    backgroundColor: COLORS.neutral.white,
-  },
-  questionType: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: '700',
-    color: COLORS.text.tertiary,
-    letterSpacing: 2,
-  },
-  questionTypeReading: {
-    color: COLORS.text.inverse,
   },
   inputContainer: {
     paddingHorizontal: SPACING.lg,
@@ -916,61 +703,7 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.lg,
     gap: SPACING.md,
   },
-  submitButton: {
-    margin: SPACING.lg,
-    paddingVertical: SPACING.lg,
-    minHeight: MIN_TOUCH_TARGET,
-    borderRadius: BORDER_RADIUS.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: SHADOW.color,
-    shadowOffset: SHADOW.offset,
-    shadowOpacity: SHADOW.opacity,
-    shadowRadius: SHADOW.radius,
-    elevation: SHADOW.elevation,
-  },
   submitButtonFlex: {
     flex: 1,
-    margin: 0,
-  },
-  submitButtonText: {
-    fontSize: FONT_SIZES.lg,
-    fontWeight: 'bold',
-    color: COLORS.text.inverse,
-  },
-  continueButton: {
-    backgroundColor: COLORS.neutral.gray600,
-  },
-  feedbackContainer: {
-    flex: 1,
-  },
-  feedbackContent: {
-    padding: SPACING.lg,
-  },
-  feedbackSection: {
-    marginBottom: SPACING.xl,
-  },
-  feedbackLabel: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: '600',
-    color: COLORS.text.secondary,
-    marginBottom: SPACING.xs,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  userAnswer: {
-    fontSize: FONT_SIZES.xl,
-    color: COLORS.feedback.incorrect,
-    fontWeight: '500',
-  },
-  correctAnswerText: {
-    fontSize: FONT_SIZES.xxl,
-    color: COLORS.feedback.correct,
-    fontWeight: 'bold',
-  },
-  mnemonicText: {
-    fontSize: FONT_SIZES.base,
-    color: COLORS.text.primary,
-    lineHeight: FONT_SIZES.xxl,
   },
 });
