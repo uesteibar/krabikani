@@ -204,15 +204,24 @@ function getPrimaryMeaning(meanings: Meaning[]): string {
   return primary?.meaning ?? meanings[0]?.meaning ?? '';
 }
 
+export function getSecondaryMeanings(meanings: Meaning[]): string {
+  return meanings
+    .filter(m => m.accepted_answer && !m.primary)
+    .map(m => m.meaning)
+    .join(', ');
+}
+
 function reversePracticeQuestionToQuestion(
   rpq: ReversePracticeQuestion,
 ): Question {
   const { item, key } = rpq;
+  const secondaryMeanings = getSecondaryMeanings(item.meanings);
   return {
     id: key,
     subjectId: item.id,
     subjectType: item.subjectType,
     displayText: getPrimaryMeaning(item.meanings),
+    displaySubtitle: secondaryMeanings || undefined,
     displayMode: 'meaning',
     correctAnswers: [item.characters],
     questionType: 'reverse',

@@ -19,6 +19,7 @@ export interface Question {
   subjectId: number;
   subjectType: SubjectType;
   displayText: string;
+  displaySubtitle?: string;
   displayMode: 'characters' | 'meaning';
   correctAnswers: string[];
   questionType: QuestionType;
