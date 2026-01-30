@@ -3,7 +3,7 @@ import {
   validateAnswer,
 } from '../../../src/components/quiz/answerValidation';
 import type { Question } from '../../../src/components/quiz/types';
-import type { Meaning, AuxiliaryMeaning, Reading } from '../../../src/api/types';
+import type { Meaning, Reading } from '../../../src/api/types';
 
 function makeQuestion(overrides: Partial<Question> = {}): Question {
   return {

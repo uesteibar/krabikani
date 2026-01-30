@@ -5,7 +5,6 @@ import { QuizEngine } from '../../../src/components/quiz/QuizEngine';
 import type {
   Question,
   QuizEngineConfig,
-  QuizAnswerEvent,
 } from '../../../src/components/quiz/types';
 
 // Mock the hooks
@@ -58,15 +57,6 @@ function makeQuestion(overrides: Partial<Question> = {}): Question {
   };
 }
 
-function makeReadingQuestion(overrides: Partial<Question> = {}): Question {
-  return makeQuestion({
-    id: 'q1-reading',
-    questionType: 'reading',
-    mnemonicLabel: 'Reading Mnemonic:',
-    readings: [{ reading: 'おお', primary: true, accepted_answer: true }],
-    ...overrides,
-  });
-}
 
 function makeReverseQuestion(overrides: Partial<Question> = {}): Question {
   return makeQuestion({
