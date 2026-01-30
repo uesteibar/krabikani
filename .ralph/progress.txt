@@ -367,4 +367,22 @@ Started:
   - Level-down animation is visible via `srs-level-name-old` testID from AnimatedSrsLevelBadge when `shouldAnimate && previousLevelInfo` is truthy
   - `handleContinueDelay` returns 800ms delay; during that time `incorrectFeedback` in QuizEngine stays set and animated badge renders
   - Pre-existing test failures: 3 suites (syncService, database x2) — unchanged
+
+## 2026-01-30 - US-001, US-002, US-003
+- Implemented all three user stories for "Build APK on PR and Upload as Comment"
+- Added `build-apk` job to `.github/workflows/ci.yml` that:
+  - Runs only on pull_request events (`if: github.event_name == 'pull_request'`)
+  - Sets up JDK 17 (actions/setup-java@v4 with gradle cache) and Node.js 20 (actions/setup-node@v4 with npm cache)
+  - Runs `npm ci` then `./gradlew assembleRelease` from android/ directory
+  - Uses existing debug signing config for release builds (no secrets needed)
+  - Uploads APK as artifact named `app-release-apk` with 7-day retention (actions/upload-artifact@v4)
+  - Finds existing bot comment using hidden HTML marker `<!-- apk-build-comment -->` (peter-evans/find-comment@v3)
+  - Creates or updates PR comment with download link and commit SHA (peter-evans/create-or-update-comment@v4)
+  - Has `permissions: contents: read, pull-requests: write`
+- Files changed: .github/workflows/ci.yml
+- **Learnings for future iterations:**
+  - Release build uses debug signing config (line 102-103 of android/app/build.gradle), so no keystore secrets are needed in CI
+  - peter-evans/find-comment must run BEFORE create-or-update-comment so the comment-id output is available
+  - Hidden HTML comments (`<!-- marker -->`) are used to identify bot comments for update-instead-of-duplicate behavior
+  - GitHub Actions artifact download links use the format `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts`
 ---
