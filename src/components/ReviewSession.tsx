@@ -837,6 +837,12 @@ export function ReviewSession({
         };
       }
 
+      // If this item has already had its level-down shown, display the downgraded stage
+      const downgradedStage = levelDownShownRef.current.get(rq.item.id);
+      if (downgradedStage !== undefined) {
+        return { type: 'static', stage: downgradedStage };
+      }
+
       return { type: 'static', stage: rq.item.srsStage };
     },
     [

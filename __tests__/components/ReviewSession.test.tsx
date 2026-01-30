@@ -3836,4 +3836,66 @@ describe('ReviewSession', () => {
       expect(queryByTestId('srs-level-name-old')).toBeTruthy();
     });
   });
+
+  describe('Static SRS Badge Shows Downgraded Stage on Repeated Failures', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.clearAllMocks();
+      (database.getSetting as jest.Mock).mockResolvedValue(null);
+      (database.addUserSynonym as jest.Mock).mockResolvedValue(1);
+      (database.insertPendingSynonym as jest.Mock).mockResolvedValue(1);
+      jest.spyOn(Math, 'random');
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('should show downgraded SRS stage in static badge on second incorrect answer', () => {
+      // Stage 5 (Guru 1) → incorrect → Stage 4 (Apprentice 4)
+      const radicalAtStage5 = createRadicalItem(610, '火', 'Fire', 5);
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[radicalAtStage5]} autoAdvanceDelay={0} />,
+      );
+
+      // First incorrect answer — triggers level-down animation
+      fireEvent.changeText(getByTestId('review-session-input'), 'Wrong');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Press continue to trigger level-down animation
+      act(() => {
+        fireEvent.press(getByTestId('review-session-continue'));
+      });
+      expect(queryByTestId('srs-level-name-old')).toBeTruthy();
+
+      // Wait for animation to complete and advance
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Second incorrect answer — no animation, but badge should show downgraded stage
+      fireEvent.changeText(getByTestId('review-session-input'), 'Wrong Again');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Should show incorrect feedback with static badge at downgraded stage (Apprentice)
+      expect(queryByTestId('review-session-incorrect-feedback')).toBeTruthy();
+      // The static SRS badge should show "Apprentice" (stage 4), not "Guru" (stage 5)
+      const srsBadge = getByTestId('srs-badge');
+      expect(srsBadge.props.children).toBe('Apprentice');
+    });
+
+    it('should show original SRS stage in badge before first failure', () => {
+      // Stage 5 (Guru 1) — first correct answer should show Guru badge
+      const radicalAtStage5 = createRadicalItem(611, '山', 'Mountain', 5);
+
+      const { getByTestId } = render(
+        <ReviewSession items={[radicalAtStage5]} autoAdvanceDelay={0} />,
+      );
+
+      // Before any answer, the badge should show original stage (Guru)
+      const srsBadge = getByTestId('srs-badge');
+      expect(srsBadge.props.children).toBe('Guru');
+    });
+  });
 });
