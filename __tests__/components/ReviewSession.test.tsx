@@ -304,9 +304,11 @@ describe('ReviewSession', () => {
       const { getByTestId } = render(<ReviewSession {...defaultProps} />);
 
       // Initially 0 items complete out of 5
-      expect(
-        getByTestId('progress-header-count').props.children,
-      ).toEqual([0, ' / ', 5]);
+      expect(getByTestId('progress-header-count').props.children).toEqual([
+        0,
+        ' / ',
+        5,
+      ]);
     });
 
     it('should show remaining count', () => {
@@ -316,9 +318,10 @@ describe('ReviewSession', () => {
       const { getByTestId } = render(<ReviewSession {...defaultProps} />);
 
       // Initially 5 remaining
-      expect(
-        getByTestId('progress-header-remaining').props.children,
-      ).toEqual([5, ' remaining']);
+      expect(getByTestId('progress-header-remaining').props.children).toEqual([
+        5,
+        ' remaining',
+      ]);
     });
 
     it('should display characters for current question', () => {
@@ -490,9 +493,11 @@ describe('ReviewSession', () => {
       const submit = getByTestId('review-session-submit');
 
       // Initially 0 complete
-      expect(
-        getByTestId('progress-header-count').props.children,
-      ).toEqual([0, ' / ', 1]);
+      expect(getByTestId('progress-header-count').props.children).toEqual([
+        0,
+        ' / ',
+        1,
+      ]);
 
       // Answer correctly
       fireEvent.changeText(input, 'Ground');
@@ -837,8 +842,7 @@ describe('ReviewSession', () => {
       const questionCount = 8;
 
       for (let i = 0; i < questionCount; i++) {
-        const currentChar = getByTestId('subject-display-text').props
-          .children;
+        const currentChar = getByTestId('subject-display-text').props.children;
         const questionType = getByTestId('review-session-question-type').props
           .children;
         const input = getByTestId('review-session-input');
@@ -923,8 +927,8 @@ describe('ReviewSession', () => {
       fireEvent.changeText(input, 'Ground');
       fireEvent.press(submit);
 
-      // Character container should have green background (during correct feedback, SubjectDisplay is under CorrectFeedbackView)
-      const container = getByTestId('correct-feedback-subject-display');
+      // Character container should have green background (correct feedback renders inline in SubjectDisplay)
+      const container = getByTestId('review-session-character-container');
       expect(container.props.style).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ backgroundColor: COLORS.feedback.correct }),
@@ -972,8 +976,8 @@ describe('ReviewSession', () => {
       fireEvent.changeText(input, 'Ground');
       fireEvent.press(submit);
 
-      // Input should be present during correct feedback (now as correct-feedback-input)
-      expect(getByTestId('correct-feedback-input')).toBeTruthy();
+      // Input should remain mounted during correct feedback (same TextInput, not editable)
+      expect(getByTestId('review-session-input')).toBeTruthy();
     });
 
     it('should disable submit button during correct feedback', () => {
@@ -1373,9 +1377,11 @@ describe('ReviewSession', () => {
       const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
 
       // Initially 0 / 1
-      expect(
-        getByTestId('progress-header-count').props.children,
-      ).toEqual([0, ' / ', 1]);
+      expect(getByTestId('progress-header-count').props.children).toEqual([
+        0,
+        ' / ',
+        1,
+      ]);
 
       const input = getByTestId('review-session-input');
       const submit = getByTestId('review-session-submit');
@@ -1384,9 +1390,11 @@ describe('ReviewSession', () => {
       fireEvent.press(submit);
 
       // Progress should still be 0 / 1 in feedback view
-      expect(
-        getByTestId('progress-header-count').props.children,
-      ).toEqual([0, ' / ', 1]);
+      expect(getByTestId('progress-header-count').props.children).toEqual([
+        0,
+        ' / ',
+        1,
+      ]);
     });
 
     it('should track incorrect answer counts correctly', () => {
@@ -1439,9 +1447,7 @@ describe('ReviewSession', () => {
       fireEvent.press(submit);
 
       // Should show character
-      expect(getByTestId('subject-display-text').props.children).toBe(
-        '一',
-      );
+      expect(getByTestId('subject-display-text').props.children).toBe('一');
     });
 
     it('should complete session after answering incorrectly then correctly', () => {
@@ -1645,8 +1651,7 @@ describe('ReviewSession', () => {
       // If not, we should still see the same item (second question)
       if (!queryByTestId('review-completion')) {
         // Session not complete, which means we're still working on the introduced item
-        const currentChar = getByTestId('subject-display-text').props
-          .children;
+        const currentChar = getByTestId('subject-display-text').props.children;
         // The character should be the same (or session should be complete)
         // because in wrap-up mode we don't introduce new items
         expect(currentChar).toBe(firstChar);
@@ -2015,8 +2020,7 @@ describe('ReviewSession', () => {
       );
 
       // Get the displayed character to determine the correct answer
-      const displayedChar = getByTestId('subject-display-text').props
-        .children;
+      const displayedChar = getByTestId('subject-display-text').props.children;
       const correctAnswer = displayedChar === '一' ? 'Ground' : 'Person';
 
       // Answer first question correctly (radical only has meaning question)
@@ -2084,8 +2088,7 @@ describe('ReviewSession', () => {
       );
 
       // Get the displayed character to determine the correct answer
-      const displayedChar = getByTestId('subject-display-text').props
-        .children;
+      const displayedChar = getByTestId('subject-display-text').props.children;
       const correctAnswer = displayedChar === '一' ? 'Ground' : 'Person';
 
       // Answer correctly
@@ -2095,8 +2098,8 @@ describe('ReviewSession', () => {
       // Should show correct label
       expect(queryByTestId('subject-display-feedback-label')).toBeTruthy();
 
-      // Input should be present during correct feedback (as correct-feedback-input)
-      const input = getByTestId('correct-feedback-input');
+      // Input should remain mounted during correct feedback (same TextInput, not editable)
+      const input = getByTestId('review-session-input');
       expect(input).toBeTruthy();
 
       jest.useRealTimers();
@@ -3387,8 +3390,7 @@ describe('ReviewSession', () => {
 
       // Now buffer is full. The next question should be a re-queued one.
       // Answer it correctly to complete one item and free a slot.
-      const currentChars = getByTestId('subject-display-text').props
-        .children;
+      const currentChars = getByTestId('subject-display-text').props.children;
       expect(introducedChars).toContain(currentChars);
 
       // Find the item and answer correctly

@@ -63,9 +63,7 @@ function makeReadingQuestion(overrides: Partial<Question> = {}): Question {
     id: 'q1-reading',
     questionType: 'reading',
     mnemonicLabel: 'Reading Mnemonic:',
-    readings: [
-      { reading: 'おお', primary: true, accepted_answer: true },
-    ],
+    readings: [{ reading: 'おお', primary: true, accepted_answer: true }],
     ...overrides,
   });
 }
@@ -83,7 +81,9 @@ function makeReverseQuestion(overrides: Partial<Question> = {}): Question {
   });
 }
 
-function makeConfig(overrides: Partial<QuizEngineConfig> = {}): QuizEngineConfig {
+function makeConfig(
+  overrides: Partial<QuizEngineConfig> = {},
+): QuizEngineConfig {
   return {
     questions: [makeQuestion()],
     progressMode: { mode: 'none' },
@@ -165,9 +165,7 @@ describe('QuizEngine', () => {
 
     it('renders extra buttons when provided', () => {
       const config = makeConfig({
-        renderExtraButtons: () => (
-          <></>
-        ),
+        renderExtraButtons: () => <></>,
       });
       const { getByTestId } = render(<QuizEngine config={config} />);
       expect(getByTestId('quiz-engine-button-row')).toBeTruthy();
@@ -219,22 +217,29 @@ describe('QuizEngine', () => {
     });
 
     it('shows correct feedback briefly then advances', async () => {
-      const questions = [makeQuestion(), makeQuestion({ id: 'q2-meaning', subjectId: 2 })];
+      const questions = [
+        makeQuestion(),
+        makeQuestion({ id: 'q2-meaning', subjectId: 2 }),
+      ];
       const config = makeConfig({ questions, autoAdvanceDelay: 500 });
-      const { getByTestId, queryByTestId } = render(<QuizEngine config={config} />);
+      const { getByTestId, queryByTestId } = render(
+        <QuizEngine config={config} />,
+      );
 
       const input = getByTestId('quiz-engine-input');
       fireEvent.changeText(input, 'big');
       fireEvent.press(getByTestId('quiz-engine-submit'));
 
-      // Should show correct feedback
-      expect(getByTestId('correct-feedback-subject-display')).toBeTruthy();
+      // Should show correct feedback inline (subject display shows feedback label)
+      expect(getByTestId('subject-display-feedback-label')).toBeTruthy();
 
       // After delay, should advance
-      act(() => { jest.advanceTimersByTime(500); });
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
 
       // Should now show next question (no more correct feedback)
-      expect(queryByTestId('correct-feedback-subject-display')).toBeNull();
+      expect(queryByTestId('subject-display-feedback-label')).toBeNull();
     });
 
     it('shows incorrect feedback with continue button', () => {
@@ -254,7 +259,10 @@ describe('QuizEngine', () => {
     });
 
     it('advances to next question on continue press', () => {
-      const questions = [makeQuestion(), makeQuestion({ id: 'q2-meaning', subjectId: 2, displayText: '小' })];
+      const questions = [
+        makeQuestion(),
+        makeQuestion({ id: 'q2-meaning', subjectId: 2, displayText: '小' }),
+      ];
       validateAnswer.mockReturnValue({
         status: 'incorrect',
         userAnswer: 'small',
@@ -304,7 +312,9 @@ describe('QuizEngine', () => {
       });
       fireEvent.changeText(getByTestId('quiz-engine-input'), 'small');
       fireEvent.press(getByTestId('quiz-engine-submit'));
-      act(() => { jest.advanceTimersByTime(500); });
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
 
       // Should be back on q1 (re-queued)
       expect(getByTestId('subject-display-text').props.children).toBe('大');
@@ -343,7 +353,9 @@ describe('QuizEngine', () => {
       });
       fireEvent.changeText(getByTestId('quiz-engine-input'), 'small');
       fireEvent.press(getByTestId('quiz-engine-submit'));
-      act(() => { jest.advanceTimersByTime(500); });
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
 
       // No more questions — should NOT go back to q1
       // (queue is exhausted — engine still renders, just shows loading/empty)
@@ -362,7 +374,9 @@ describe('QuizEngine', () => {
 
       fireEvent.changeText(getByTestId('quiz-engine-input'), 'big');
       fireEvent.press(getByTestId('quiz-engine-submit'));
-      act(() => { jest.advanceTimersByTime(500); });
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
 
       expect(onComplete).toHaveBeenCalled();
     });
@@ -377,7 +391,9 @@ describe('QuizEngine', () => {
 
       fireEvent.changeText(getByTestId('quiz-engine-input'), 'big');
       fireEvent.press(getByTestId('quiz-engine-submit'));
-      act(() => { jest.advanceTimersByTime(500); });
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
 
       expect(getByTestId('quiz-engine-complete')).toBeTruthy();
     });
@@ -393,7 +409,9 @@ describe('QuizEngine', () => {
 
       fireEvent.changeText(getByTestId('quiz-engine-input'), 'big');
       fireEvent.press(getByTestId('quiz-engine-submit'));
-      act(() => { jest.advanceTimersByTime(500); });
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
 
       expect(onComplete).not.toHaveBeenCalled();
     });
@@ -485,7 +503,9 @@ describe('QuizEngine', () => {
       // Answer q2 correctly
       fireEvent.changeText(getByTestId('quiz-engine-input'), 'small');
       fireEvent.press(getByTestId('quiz-engine-submit'));
-      act(() => { jest.advanceTimersByTime(500); });
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
 
       // Should complete (q1 was marked correct, q2 answered correctly, no re-queued q1)
       expect(onComplete).toHaveBeenCalled();
@@ -494,7 +514,11 @@ describe('QuizEngine', () => {
 
   describe('auto-refill', () => {
     it('triggers loadMore when queue runs low', async () => {
-      const newQuestion = makeQuestion({ id: 'q3-meaning', subjectId: 3, displayText: '中' });
+      const newQuestion = makeQuestion({
+        id: 'q3-meaning',
+        subjectId: 3,
+        displayText: '中',
+      });
       const loadMore = jest.fn().mockResolvedValue([newQuestion]);
       const config = makeConfig({
         questions: [
@@ -509,7 +533,9 @@ describe('QuizEngine', () => {
       // Answer q1 correctly — 1 remaining, should trigger refill
       fireEvent.changeText(getByTestId('quiz-engine-input'), 'big');
       fireEvent.press(getByTestId('quiz-engine-submit'));
-      act(() => { jest.advanceTimersByTime(500); });
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
 
       await waitFor(() => {
         expect(loadMore).toHaveBeenCalled();
@@ -545,7 +571,9 @@ describe('QuizEngine', () => {
       fireEvent.changeText(getByTestId('quiz-engine-input'), 'bigg');
       fireEvent.press(getByTestId('quiz-engine-submit'));
 
-      expect(getByTestId('subject-display-feedback-label').props.children).toBe('Close Enough!');
+      expect(getByTestId('subject-display-feedback-label').props.children).toBe(
+        'Close Enough!',
+      );
     });
   });
 

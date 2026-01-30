@@ -23,9 +23,11 @@ import {
   FONT_SIZES,
 } from '../../theme';
 import { SubjectDisplay } from '../SubjectDisplay';
-import { QuestionTypeLabel, type QuestionTypeLabelType } from '../QuestionTypeLabel';
+import {
+  QuestionTypeLabel,
+  type QuestionTypeLabelType,
+} from '../QuestionTypeLabel';
 import { IncorrectFeedbackView } from '../IncorrectFeedbackView';
-import { CorrectFeedbackView } from '../CorrectFeedbackView';
 import { ProgressHeader } from '../ProgressHeader';
 import { LoadingView } from '../LoadingView';
 import { Button } from '../Button';
@@ -33,11 +35,7 @@ import { useShakeAnimation } from '../../hooks/useShakeAnimation';
 import { useAutoFocus } from '../../hooks/useAutoFocus';
 import { useQuestionInput } from '../../hooks/useQuestionInput';
 import { validateInput, validateAnswer } from './answerValidation';
-import type {
-  Question,
-  QuizEngineConfig,
-  AnswerResult,
-} from './types';
+import type { Question, QuizEngineConfig, AnswerResult } from './types';
 
 interface IncorrectFeedbackState {
   question: Question;
@@ -80,20 +78,29 @@ export function QuizEngine({ config }: QuizEngineProps) {
   } = config;
 
   // Question queue state
-  const [questionQueue, setQuestionQueue] = useState<Question[]>(initialQuestions);
+  const [questionQueue, setQuestionQueue] =
+    useState<Question[]>(initialQuestions);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   // Track completed question IDs (for allQuestions completion mode)
-  const [completedQuestionIds, setCompletedQuestionIds] = useState<Set<string>>(new Set());
-  const originalQuestionCount = useMemo(() => initialQuestions.length, [initialQuestions]);
+  const [completedQuestionIds, setCompletedQuestionIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const originalQuestionCount = useMemo(
+    () => initialQuestions.length,
+    [initialQuestions],
+  );
 
   // Feedback state
   const [showCorrectFeedback, setShowCorrectFeedback] = useState(false);
   const [isFuzzyMatch, setIsFuzzyMatch] = useState(false);
-  const [incorrectFeedback, setIncorrectFeedback] = useState<IncorrectFeedbackState | null>(null);
+  const [incorrectFeedback, setIncorrectFeedback] =
+    useState<IncorrectFeedbackState | null>(null);
 
   // Synonym state
-  const [synonymAddState, setSynonymAddState] = useState<null | 'adding' | 'added'>(null);
+  const [synonymAddState, setSynonymAddState] = useState<
+    null | 'adding' | 'added'
+  >(null);
 
   // Auto-refill guard
   const isRefilling = useRef(false);
@@ -107,9 +114,10 @@ export function QuizEngine({ config }: QuizEngineProps) {
   const currentQuestion = questionQueue[currentQuestionIndex];
 
   // Determine input type for useQuestionInput
-  const inputType = currentQuestion?.questionType === 'reading'
-    ? 'reading'
-    : currentQuestion?.questionType === 'reverse'
+  const inputType =
+    currentQuestion?.questionType === 'reading'
+      ? 'reading'
+      : currentQuestion?.questionType === 'reverse'
       ? 'reverse'
       : 'meaning';
 
@@ -123,12 +131,8 @@ export function QuizEngine({ config }: QuizEngineProps) {
     }
   }, [currentQuestion, onQuestionChange]);
 
-  // Auto-focus on question change
-  useAutoFocus(inputRef, [
-    currentQuestionIndex,
-    incorrectFeedback,
-    showCorrectFeedback,
-  ]);
+  // Auto-focus on question change (after incorrect feedback dismissed)
+  useAutoFocus(inputRef, [currentQuestionIndex, incorrectFeedback]);
 
   // Completion detection — external override takes precedence
   const internalIsComplete = useMemo(() => {
@@ -137,7 +141,8 @@ export function QuizEngine({ config }: QuizEngineProps) {
     return completedQuestionIds.size >= originalQuestionCount;
   }, [completionMode, completedQuestionIds.size, originalQuestionCount]);
 
-  const isComplete = externalIsComplete !== undefined ? externalIsComplete : internalIsComplete;
+  const isComplete =
+    externalIsComplete !== undefined ? externalIsComplete : internalIsComplete;
 
   // Reset state when initial questions change
   useEffect(() => {
@@ -195,7 +200,13 @@ export function QuizEngine({ config }: QuizEngineProps) {
     setIsFuzzyMatch(false);
     setSynonymAddState(null);
     maybeRefillQueue(nextIndex, questionQueue);
-  }, [currentQuestionIndex, questionQueue, maybeRefillQueue, clearInput, findNextValidIndex]);
+  }, [
+    currentQuestionIndex,
+    questionQueue,
+    maybeRefillQueue,
+    clearInput,
+    findNextValidIndex,
+  ]);
 
   // Handle continue after incorrect feedback
   const handleContinue = useCallback(() => {
@@ -265,7 +276,10 @@ export function QuizEngine({ config }: QuizEngineProps) {
     setSynonymAddState('adding');
 
     try {
-      await onAddSynonym?.(incorrectFeedback.question, incorrectFeedback.userAnswer);
+      await onAddSynonym?.(
+        incorrectFeedback.question,
+        incorrectFeedback.userAnswer,
+      );
       setSynonymAddState('added');
 
       setTimeout(() => {
@@ -302,9 +316,6 @@ export function QuizEngine({ config }: QuizEngineProps) {
       setIsFuzzyMatch(result.status === 'fuzzyMatch');
 
       setTimeout(() => {
-        setShowCorrectFeedback(false);
-        setIsFuzzyMatch(false);
-
         // Check completion
         const newCompletedCount = completedQuestionIds.size + 1;
         const sessionComplete =
@@ -312,10 +323,11 @@ export function QuizEngine({ config }: QuizEngineProps) {
           newCompletedCount >= originalQuestionCount;
 
         if (sessionComplete) {
+          setShowCorrectFeedback(false);
+          setIsFuzzyMatch(false);
           onComplete?.();
-        }
-
-        if (!sessionComplete) {
+        } else {
+          // advanceToNextQuestion() resets feedback state internally
           advanceToNextQuestion();
         }
       }, autoAdvanceDelay);
@@ -389,7 +401,7 @@ export function QuizEngine({ config }: QuizEngineProps) {
   if (isComplete) {
     if (renderCompletion) {
       return (
-        <View testID={`${testID}-complete`}>
+        <View style={styles.container} testID={`${testID}-complete`}>
           {renderCompletion()}
         </View>
       );
@@ -406,30 +418,30 @@ export function QuizEngine({ config }: QuizEngineProps) {
   const labelType = getQuestionLabelType(currentQuestion);
 
   // Build SRS badge
-  const srsBadge = showSrsBadge && getSrsBadge
-    ? getSrsBadge(currentQuestion)
-    : undefined;
+  const srsBadge =
+    showSrsBadge && getSrsBadge ? getSrsBadge(currentQuestion) : undefined;
 
   // Determine placeholder text
-  const placeholder = currentQuestion.questionType === 'reverse'
-    ? 'Enter Japanese...'
-    : currentQuestion.questionType === 'reading'
+  const placeholder =
+    currentQuestion.questionType === 'reverse'
+      ? 'Enter Japanese...'
+      : currentQuestion.questionType === 'reading'
       ? 'Type reading (romaji)...'
       : 'Enter meaning...';
 
   // Input display value
-  const inputDisplayText = currentQuestion.questionType === 'reading'
-    ? displayValue
-    : currentQuestion.questionType === 'reverse'
+  const inputDisplayText =
+    currentQuestion.questionType === 'reading'
+      ? displayValue
+      : currentQuestion.questionType === 'reverse'
       ? displayValue
       : inputValue;
 
   // Incorrect feedback view
   if (incorrectFeedback) {
     const feedbackQuestion = incorrectFeedback.question;
-    const feedbackSrsBadge = showSrsBadge && getSrsBadge
-      ? getSrsBadge(feedbackQuestion)
-      : undefined;
+    const feedbackSrsBadge =
+      showSrsBadge && getSrsBadge ? getSrsBadge(feedbackQuestion) : undefined;
 
     return (
       <View style={styles.container} testID={`${testID}-incorrect-feedback`}>
@@ -444,9 +456,13 @@ export function QuizEngine({ config }: QuizEngineProps) {
           mnemonic={feedbackQuestion.mnemonic}
           mnemonicLabel={feedbackQuestion.mnemonicLabel}
           onContinue={handleContinue}
-          onMarkCorrect={allowMarkCorrect && onMarkCorrect ? handleMarkAsCorrect : undefined}
+          onMarkCorrect={
+            allowMarkCorrect && onMarkCorrect ? handleMarkAsCorrect : undefined
+          }
           onAddSynonym={
-            allowAddSynonym && onAddSynonym && feedbackQuestion.questionType === 'meaning'
+            allowAddSynonym &&
+            onAddSynonym &&
+            feedbackQuestion.questionType === 'meaning'
               ? handleAddAsSynonym
               : undefined
           }
@@ -465,43 +481,11 @@ export function QuizEngine({ config }: QuizEngineProps) {
     );
   }
 
-  // Correct feedback view
-  if (showCorrectFeedback) {
-    return (
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        testID={testID}
-      >
-        {renderProgressHeader()}
+  // Feedback state for SubjectDisplay (correct answers show inline)
+  const feedbackState: 'correct' | 'fuzzyMatch' | undefined =
+    showCorrectFeedback ? (isFuzzyMatch ? 'fuzzyMatch' : 'correct') : undefined;
 
-        <CorrectFeedbackView
-          subjectType={currentQuestion.subjectType}
-          displayText={currentQuestion.displayText}
-          displayMode={currentQuestion.displayMode}
-          feedbackState={isFuzzyMatch ? 'fuzzyMatch' : 'correct'}
-          srsBadge={srsBadge}
-          questionType={labelType}
-          inputValue={inputDisplayText}
-        />
-
-        <View style={styles.spacer} />
-
-        <View style={styles.buttonRow} testID={`${testID}-button-row`}>
-          <Button
-            label="Submit"
-            onPress={handleSubmit}
-            disabled={true}
-            style={[styles.submitButtonFlex, { backgroundColor }]}
-            testID={`${testID}-submit`}
-          />
-          {renderExtraButtons?.(showCorrectFeedback)}
-        </View>
-      </KeyboardAvoidingView>
-    );
-  }
-
-  // Active question view
+  // Active question view (also handles correct feedback inline to keep keyboard open)
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -514,15 +498,17 @@ export function QuizEngine({ config }: QuizEngineProps) {
         subjectType={currentQuestion.subjectType}
         displayMode={currentQuestion.displayMode}
         displayText={currentQuestion.displayText}
+        feedbackState={feedbackState}
         srsBadge={srsBadge}
-        subjectTypeLabel={showSubjectTypeLabel ? currentQuestion.subjectType.replace('_', ' ') : undefined}
+        subjectTypeLabel={
+          showSubjectTypeLabel
+            ? currentQuestion.subjectType.replace('_', ' ')
+            : undefined
+        }
         testID={`${testID}-${subjectDisplayTestIDSuffix}`}
       />
 
-      <QuestionTypeLabel
-        type={labelType}
-        testID={`${testID}-question-type`}
-      />
+      <QuestionTypeLabel type={labelType} testID={`${testID}-question-type`} />
 
       <Animated.View
         style={[styles.inputContainer, shakeStyle]}
@@ -532,14 +518,18 @@ export function QuizEngine({ config }: QuizEngineProps) {
           ref={inputRef}
           style={[styles.input, { borderColor: backgroundColor }]}
           value={inputDisplayText}
-          onChangeText={handleTextChange}
+          onChangeText={showCorrectFeedback ? undefined : handleTextChange}
           onSubmitEditing={handleSubmit}
           placeholder={placeholder}
           placeholderTextColor="#999"
           autoCapitalize="none"
           autoCorrect={false}
           autoComplete="off"
-          keyboardType={currentQuestion.questionType === 'reading' ? 'ascii-capable' : 'default'}
+          keyboardType={
+            currentQuestion.questionType === 'reading'
+              ? 'ascii-capable'
+              : 'default'
+          }
           returnKeyType="done"
           blurOnSubmit={false}
           caretHidden={true}
