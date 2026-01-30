@@ -450,6 +450,7 @@ export function QuizEngine({ config }: QuizEngineProps) {
         <IncorrectFeedbackView
           subjectType={feedbackQuestion.subjectType}
           displayText={feedbackQuestion.displayText}
+          displaySubtitle={feedbackQuestion.displaySubtitle}
           displayMode={feedbackQuestion.displayMode}
           userAnswer={incorrectFeedback.userAnswer}
           correctAnswer={incorrectFeedback.correctAnswer}

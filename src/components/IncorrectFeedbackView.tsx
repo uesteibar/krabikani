@@ -14,6 +14,7 @@ import { SubjectDisplay, type SrsBadge } from './SubjectDisplay';
 export interface IncorrectFeedbackViewProps {
   subjectType: SubjectType;
   displayText: string;
+  displaySubtitle?: string;
   displayMode: 'characters' | 'meaning';
   userAnswer: string;
   correctAnswer: string;
@@ -32,6 +33,7 @@ export interface IncorrectFeedbackViewProps {
 export function IncorrectFeedbackView({
   subjectType,
   displayText,
+  displaySubtitle,
   displayMode,
   userAnswer,
   correctAnswer,
@@ -51,6 +53,7 @@ export function IncorrectFeedbackView({
         subjectType={subjectType}
         displayMode={displayMode}
         displayText={displayText}
+        displaySubtitle={displaySubtitle}
         feedbackState="incorrect"
         srsBadge={srsBadge}
         testID={`${testID}-subject-display`}
