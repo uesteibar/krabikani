@@ -3675,9 +3675,8 @@ describe('ReviewSession', () => {
   });
 
   describe('SRS Level-Down First Failure Tracking', () => {
-    // Create item at SRS stage boundary where level-down occurs:
+    // Tests use radicals at SRS stage boundary where level-down occurs:
     // Stage 5 (Guru 1) -> incorrect -> Stage 4 (Apprentice 4) = Guru -> Apprentice level change
-    const kanjiAtStage5 = createKanjiItem(600, '川', 'River', 'かわ', 5);
 
     beforeEach(() => {
       jest.useFakeTimers();
