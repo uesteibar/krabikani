@@ -56,6 +56,12 @@ for row in $(echo "$PRS_JSON" | jq -rc '.[]'); do
   echo "Review automation for PR #$PR_NUMBER: $PR_TITLE ($BRANCH_NAME)"
   echo "=========================================="
 
+  # Safety: ensure branch name is a ralph/* branch with a safe pattern
+  if ! [[ "$BRANCH_NAME" =~ ^ralph\/[a-zA-Z0-9._-]+$ ]]; then
+    echo "⚠️ Skipping PR #$PR_NUMBER with unexpected branch name: $BRANCH_NAME"
+    continue
+  fi
+
   # Fetch comments (issue + review threads)
   PR_DATA=$(gh pr view "$PR_NUMBER" --json comments,reviewThreads)
 

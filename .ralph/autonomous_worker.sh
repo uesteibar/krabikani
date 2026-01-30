@@ -37,9 +37,9 @@ query {
 
 PROJECT_ID=$(echo "$PROJECT_DATA" | jq -r '.data.user.projectV2.id')
 STATUS_FIELD_ID=$(echo "$PROJECT_DATA" | jq -r '.data.user.projectV2.fields.nodes[] | select(.name == "Status") | .id')
-READY_OPTION_ID=$(echo "$PROJECT_DATA" | jq -r '.data.user.projectV2.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == "'"$READY_STATUS_NAME"'") | .id')
-IN_PROGRESS_OPTION_ID=$(echo "$PROJECT_DATA" | jq -r '.data.user.projectV2.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == "'"$IN_PROGRESS_STATUS_NAME"'") | .id')
-IN_REVIEW_OPTION_ID=$(echo "$PROJECT_DATA" | jq -r '.data.user.projectV2.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == "'"$IN_REVIEW_STATUS_NAME"'") | .id')
+READY_OPTION_ID=$(echo "$PROJECT_DATA" | jq -r '.data.user.projectV2.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == '"'$READY_STATUS_NAME'"') | .id')
+IN_PROGRESS_OPTION_ID=$(echo "$PROJECT_DATA" | jq -r '.data.user.projectV2.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == '"'$IN_PROGRESS_STATUS_NAME'"') | .id')
+IN_REVIEW_OPTION_ID=$(echo "$PROJECT_DATA" | jq -r '.data.user.projectV2.fields.nodes[] | select(.name == "Status") | .options[] | select(.name == '"'$IN_REVIEW_STATUS_NAME'"') | .id')
 
 echo "Project ID: $PROJECT_ID"
 echo "Status Field ID: $STATUS_FIELD_ID"
@@ -154,6 +154,16 @@ echo "$ISSUES_TO_PROCESS" | while IFS= read -r item; do
     echo "✅ Ralph completed successfully!"
     
     BRANCH_NAME=$(jq -r '.branchName // empty' .ralph/prd.json)
+
+    # Safety: only allow Ralph to operate on ralph/* branches with a safe name.
+    # This prevents an LLM from setting branchName to "main" or similar.
+    if ! [[ "$BRANCH_NAME" =~ ^ralph\/[a-zA-Z0-9._-]+$ ]]; then
+      echo "⚠️ Refusing to push unexpected branchName: $BRANCH_NAME"
+      cd "$REPO_PATH"
+      move_to_status "$ITEM_ID" "$IN_REVIEW_OPTION_ID"
+      continue
+    fi
+
     WORKTREE_PATH=".ralph/.worktrees/$BRANCH_NAME"
     
     if [ -d "$WORKTREE_PATH" ]; then
