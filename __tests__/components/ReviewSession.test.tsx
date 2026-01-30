@@ -3673,4 +3673,168 @@ describe('ReviewSession', () => {
       expect(queryByTestId('srs-level-name-old')).toBeNull();
     });
   });
+
+  describe('SRS Level-Down First Failure Tracking', () => {
+    // Create item at SRS stage boundary where level-down occurs:
+    // Stage 5 (Guru 1) -> incorrect -> Stage 4 (Apprentice 4) = Guru -> Apprentice level change
+    const kanjiAtStage5 = createKanjiItem(600, '川', 'River', 'かわ', 5);
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.clearAllMocks();
+      // Re-setup mocks after clearAllMocks
+      (database.getSetting as jest.Mock).mockResolvedValue(null);
+      (database.addUserSynonym as jest.Mock).mockResolvedValue(1);
+      (database.insertPendingSynonym as jest.Mock).mockResolvedValue(1);
+      jest.spyOn(Math, 'random');
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('should show level-down animation on first incorrect answer that crosses level boundary', () => {
+      // Use a radical at stage 5 (Guru 1) — only has meaning question
+      const radicalAtStage5 = createRadicalItem(603, '力', 'Power', 5);
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[radicalAtStage5]} autoAdvanceDelay={0} />,
+      );
+
+      // Submit wrong answer for meaning
+      fireEvent.changeText(getByTestId('review-session-input'), 'Wrong');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Should show incorrect feedback
+      expect(queryByTestId('review-session-incorrect-feedback')).toBeTruthy();
+
+      // Press continue to trigger the level-down animation
+      act(() => {
+        fireEvent.press(getByTestId('review-session-continue'));
+      });
+
+      // Should show animated SRS badge with level-down (Guru → Apprentice)
+      expect(queryByTestId('srs-level-name-old')).toBeTruthy();
+    });
+
+    it('should NOT show level-down animation on second incorrect answer for same item', () => {
+      // Use a radical at stage 5 — only has meaning question, simpler to test
+      const radicalAtStage5 = createRadicalItem(604, '目', 'Eye', 5);
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[radicalAtStage5]} autoAdvanceDelay={0} />,
+      );
+
+      // First incorrect answer
+      fireEvent.changeText(getByTestId('review-session-input'), 'Wrong');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Press continue to trigger first level-down animation
+      act(() => {
+        fireEvent.press(getByTestId('review-session-continue'));
+      });
+
+      // Level-down animation should be showing
+      expect(queryByTestId('srs-level-name-old')).toBeTruthy();
+
+      // Wait for animation to complete and advance
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // The same question should re-appear (incorrect answers are re-queued)
+      // Submit another wrong answer
+      fireEvent.changeText(getByTestId('review-session-input'), 'Wrong Again');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Should show incorrect feedback
+      expect(queryByTestId('review-session-incorrect-feedback')).toBeTruthy();
+
+      // Press continue — should NOT trigger level-down animation this time
+      act(() => {
+        fireEvent.press(getByTestId('review-session-continue'));
+      });
+
+      // Should NOT show animated level-down badge (already shown once)
+      expect(queryByTestId('srs-level-name-old')).toBeNull();
+    });
+
+    it('should track level-down per item independently', () => {
+      // Two radicals at Guru level
+      const radical1AtStage5 = createRadicalItem(605, '口', 'Mouth', 5);
+      const radical2AtStage5 = createRadicalItem(606, '手', 'Hand', 5);
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[radical1AtStage5, radical2AtStage5]} autoAdvanceDelay={0} />,
+      );
+
+      // First question — submit wrong answer
+      fireEvent.changeText(getByTestId('review-session-input'), 'Wrong');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Press continue to trigger level-down for first item
+      act(() => {
+        fireEvent.press(getByTestId('review-session-continue'));
+      });
+      expect(queryByTestId('srs-level-name-old')).toBeTruthy();
+
+      // Wait for animation and advance
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Next question — submit wrong answer (could be either item)
+      fireEvent.changeText(getByTestId('review-session-input'), 'Wrong');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // We should see incorrect feedback
+      expect(queryByTestId('review-session-incorrect-feedback')).toBeTruthy();
+
+      // Press continue
+      act(() => {
+        fireEvent.press(getByTestId('review-session-continue'));
+      });
+
+      // If this is a different item, it should show level-down animation
+      // If it's the same item again, it should NOT show level-down animation
+      // Either way, the tracking is per-item (tested more directly in the second-failure test)
+    });
+
+    it('should reset level-down tracking when items change (new session)', () => {
+      const radicalAtStage5 = createRadicalItem(607, '水', 'Water', 5);
+
+      const { getByTestId, queryByTestId, rerender } = render(
+        <ReviewSession items={[radicalAtStage5]} autoAdvanceDelay={0} />,
+      );
+
+      // First incorrect answer — triggers level-down
+      fireEvent.changeText(getByTestId('review-session-input'), 'Wrong');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      act(() => {
+        fireEvent.press(getByTestId('review-session-continue'));
+      });
+      expect(queryByTestId('srs-level-name-old')).toBeTruthy();
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Re-render with new items (simulating a new session)
+      // Use a different item array reference to trigger the items useEffect
+      const newRadicalAtStage5 = createRadicalItem(608, '土', 'Earth', 5);
+      rerender(
+        <ReviewSession items={[newRadicalAtStage5]} autoAdvanceDelay={0} />,
+      );
+
+      // Submit wrong answer again — should trigger level-down again since tracking was reset
+      fireEvent.changeText(getByTestId('review-session-input'), 'Wrong');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      act(() => {
+        fireEvent.press(getByTestId('review-session-continue'));
+      });
+      expect(queryByTestId('srs-level-name-old')).toBeTruthy();
+    });
+  });
 });

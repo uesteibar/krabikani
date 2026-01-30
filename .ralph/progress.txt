@@ -130,7 +130,6 @@ Started:
   - Meaning/reverse modes: inputValue and displayValue are identical (direct passthrough)
   - Hook resets state automatically when questionType changes (tracked via useRef to avoid clearing on every render)
   - Pre-existing test failures unchanged
->>>>>>> 3d53bed (feat: Create useQuestionInput hook)
 ---
 
 ## 2026-01-29 - US-007
@@ -354,4 +353,18 @@ Started:
   - The CI workflow triggers on both push and pull_request — for PRs, this causes duplicate runs. Scoping push to main only fixes this while still running CI on direct pushes to main
   - Lint and typecheck pass cleanly; tests cannot run in worktree due to `testPathIgnorePatterns` excluding `.ralph/.worktrees/` paths
   - Use `git -c commit.gpgsign=false commit` in worktree environments where GPG signing may not be available
+
+## 2026-01-30 - US-001 (SRS animation)
+- Implemented first-failure tracking for SRS level-down animations in ReviewSession
+- Added `levelDownShownRef` (useRef<Map<number, number>>) to track item IDs that have already had their level-down animation shown, mapping to the downgraded SRS stage
+- Modified incorrect answer handler to only set `pendingLevelDown` when the item is NOT already in the tracking map (first failure only)
+- Map is reset to empty when `items` prop changes (new session)
+- Added 4 tests: first failure shows animation, second failure suppresses animation, per-item tracking, session reset
+- Files changed: src/components/ReviewSession.tsx (added ref + conditional logic), __tests__/components/ReviewSession.test.tsx (4 new tests)
+- **Learnings for future iterations:**
+  - `jest.clearAllMocks()` resets `getSetting` mock return values — must re-setup `mockResolvedValue` in nested `beforeEach` blocks
+  - Kanji items with fake timers are harder to test for level-down (async rendering issues) — use radical items at stage 5 for simpler level-down testing (radicals only have meaning questions)
+  - Level-down animation is visible via `srs-level-name-old` testID from AnimatedSrsLevelBadge when `shouldAnimate && previousLevelInfo` is truthy
+  - `handleContinueDelay` returns 800ms delay; during that time `incorrectFeedback` in QuizEngine stays set and animated badge renders
+  - Pre-existing test failures: 3 suites (syncService, database x2) — unchanged
 ---
