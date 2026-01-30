@@ -1,17 +1,21 @@
 {
   "project": "Wanidroid",
-  "branchName": "ralph/srs-animation-first-failure-only",
-  "description": "Only play SRS level-down animation on first failure per item in a review session; show static badge on subsequent failures",
+  "branchName": "ralph/build-apk-on-pr",
+  "description": "Build APK on PR and Upload as Comment - Automatically build a debug APK for every pull request, upload it as an artifact, and post a PR comment with a download link",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Track first failure per item in review session",
-      "description": "As a developer, I need to track which items have already had their first incorrect answer so the system knows when to suppress the level-down animation and what downgraded stage to display.",
+      "title": "Add Android build job to CI workflow",
+      "description": "As a developer, I want the CI to build an Android APK on every PR so that build-breaking changes are caught before merge.",
       "acceptanceCriteria": [
-        "A useRef<Map<number, number>> (item ID → downgraded SRS stage) tracks items that have already had their level-down shown during the current session",
-        "When an item receives its first incorrect answer that triggers a level-down, the item ID and its downgraded stage are added to this map",
-        "The map is initialized empty at the start of each review session",
-        "All tests pass",
+        "A new job 'build-apk' is added to .github/workflows/ci.yml",
+        "The job runs on pull_request events only (uses a conditional to skip on push events)",
+        "The job sets up JDK 17 using actions/setup-java@v4 with cache: gradle",
+        "The job sets up Node.js 20 using actions/setup-node@v4 with npm cache",
+        "The job runs 'npm ci' to install JS dependencies",
+        "The job runs './gradlew assembleRelease' from the android/ directory",
+        "The build uses the existing debug signing config (no secrets needed)",
+        "The workflow YAML is valid and parseable",
         "All quality checks pass"
       ],
       "priority": 1,
@@ -20,15 +24,14 @@
     },
     {
       "id": "US-002",
-      "title": "Show level-down animation only on first failure",
-      "description": "As a user, I want to see the SRS level-down animation only the first time I fail an item so that I understand my SRS level dropped, without being shown the same animation repeatedly.",
+      "title": "Upload APK as GitHub Actions artifact",
+      "description": "As a developer, I want the built APK uploaded as a workflow artifact so that I can download it from the Actions UI.",
       "acceptanceCriteria": [
-        "On the first incorrect answer for an item that crosses an SRS level boundary, the level-down animation plays as before",
-        "On subsequent incorrect answers for the same item, pendingLevelDown is NOT set — no shake animation or cross-fade plays",
-        "Level-up animation behavior remains unchanged",
-        "All tests pass",
-        "All quality checks pass",
-        "Verify in browser using dev-browser skill"
+        "A step using actions/upload-artifact@v4 uploads android/app/build/outputs/apk/release/app-release.apk",
+        "The artifact is named 'app-release-apk'",
+        "The artifact has a retention period of 7 days",
+        "The upload step is part of the build-apk job after the Gradle build step",
+        "All quality checks pass"
       ],
       "priority": 2,
       "passes": false,
@@ -36,15 +39,15 @@
     },
     {
       "id": "US-003",
-      "title": "Display correct static SRS badge on repeated failures",
-      "description": "As a user, when I fail an already-failed item again, I want to see my current downgraded SRS level displayed correctly as a static badge.",
+      "title": "Post PR comment with APK download link",
+      "description": "As a reviewer, I want a comment on the PR with a link to the APK artifact so that I can quickly download and test the build on a device.",
       "acceptanceCriteria": [
-        "getSrsBadge returns a static badge with the downgraded SRS stage for items already in the level-down-shown map",
-        "The downgraded stage is consistent with what was shown in the initial level-down animation (computed from original srsStage via calculateSrsStageAfterIncorrect)",
-        "The static badge uses the correct color and label for the downgraded level",
-        "All tests pass",
-        "All quality checks pass",
-        "Verify in browser using dev-browser skill"
+        "After the APK is uploaded, a comment is posted on the PR with a link to the workflow run artifacts page",
+        "If a comment from the bot already exists on the PR, it is updated instead of creating a duplicate (use peter-evans/create-or-update-comment@v4 or equivalent with a hidden marker comment for identification)",
+        "The comment includes the commit SHA for traceability",
+        "The comment uses a clear, readable markdown format",
+        "The workflow has appropriate permissions: contents: read, pull-requests: write",
+        "All quality checks pass"
       ],
       "priority": 3,
       "passes": false,
