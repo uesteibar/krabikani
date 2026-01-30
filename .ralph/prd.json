@@ -1,20 +1,53 @@
 {
   "project": "Wanidroid",
-  "branchName": "ralph/fix-ci-running-twice",
-  "description": "Fix CI running twice for PRs by scoping push trigger to main branch only",
+  "branchName": "ralph/srs-animation-first-failure-only",
+  "description": "Only play SRS level-down animation on first failure per item in a review session; show static badge on subsequent failures",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Scope CI push trigger to main branch only",
-      "description": "As a developer, I want CI to run only once per code change so that I don't see duplicate checks and waste CI resources.",
+      "title": "Track first failure per item in review session",
+      "description": "As a developer, I need to track which items have already had their first incorrect answer so the system knows when to suppress the level-down animation and what downgraded stage to display.",
       "acceptanceCriteria": [
-        "The push trigger in .github/workflows/ci.yml is scoped to main branch only (branches: ['main'])",
-        "The pull_request trigger remains for all branches (branches: ['**'])",
-        "All existing CI steps (lint, typecheck, test) remain unchanged",
+        "A useRef<Map<number, number>> (item ID → downgraded SRS stage) tracks items that have already had their level-down shown during the current session",
+        "When an item receives its first incorrect answer that triggers a level-down, the item ID and its downgraded stage are added to this map",
+        "The map is initialized empty at the start of each review session",
+        "All tests pass",
         "All quality checks pass"
       ],
       "priority": 1,
       "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Show level-down animation only on first failure",
+      "description": "As a user, I want to see the SRS level-down animation only the first time I fail an item so that I understand my SRS level dropped, without being shown the same animation repeatedly.",
+      "acceptanceCriteria": [
+        "On the first incorrect answer for an item that crosses an SRS level boundary, the level-down animation plays as before",
+        "On subsequent incorrect answers for the same item, pendingLevelDown is NOT set — no shake animation or cross-fade plays",
+        "Level-up animation behavior remains unchanged",
+        "All tests pass",
+        "All quality checks pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Display correct static SRS badge on repeated failures",
+      "description": "As a user, when I fail an already-failed item again, I want to see my current downgraded SRS level displayed correctly as a static badge.",
+      "acceptanceCriteria": [
+        "getSrsBadge returns a static badge with the downgraded SRS stage for items already in the level-down-shown map",
+        "The downgraded stage is consistent with what was shown in the initial level-down animation (computed from original srsStage via calculateSrsStageAfterIncorrect)",
+        "The static badge uses the correct color and label for the downgraded level",
+        "All tests pass",
+        "All quality checks pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 3,
+      "passes": false,
       "notes": ""
     }
   ]

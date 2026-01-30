@@ -18,6 +18,7 @@ The CI workflow (`.github/workflows/ci.yml`) currently triggers on both `push` (
 **Acceptance Criteria:**
 - [ ] CI workflow triggers on `push` only for the `main` branch
 - [ ] CI workflow triggers on `pull_request` for all branches
+- [ ] A push to a non-main branch without a PR does NOT trigger CI
 - [ ] A push to a branch with an open PR triggers CI exactly once (via `pull_request`)
 - [ ] A merge/push to `main` triggers CI exactly once (via `push`)
 - [ ] All existing CI steps (lint, typecheck, test) remain unchanged

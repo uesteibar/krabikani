@@ -335,6 +335,10 @@ export function ReviewSession({
   // Zen mode state
   const [zenModeEnabled, setZenModeEnabled] = useState(false);
 
+  // Track items that have already had their level-down animation shown
+  // Map: item ID → downgraded SRS stage
+  const levelDownShownRef = useRef<Map<number, number>>(new Map());
+
   // Track completed items
   const [completedItemCount, setCompletedItemCount] = useState(0);
   const totalItemCount = items.length;
@@ -380,6 +384,7 @@ export function ReviewSession({
     setShowingIncorrectFeedback(false);
     setFeedbackQuestionId(null);
     sessionCompleteCalledRef.current = false;
+    levelDownShownRef.current = new Map();
   }, [items]);
 
   // Notify parent of progress changes
@@ -597,7 +602,9 @@ export function ReviewSession({
         const isLevelDown =
           currentLevel && newLevel && currentLevel.key !== newLevel.key;
 
-        if (isLevelDown) {
+        if (isLevelDown && !levelDownShownRef.current.has(item.id)) {
+          // First failure for this item — record it and trigger animation
+          levelDownShownRef.current.set(item.id, newStage);
           setPendingLevelDown({
             fromStage: currentStage,
             toStage: newStage,
@@ -828,6 +835,12 @@ export function ReviewSession({
           fromStage: levelUpAnimation.fromStage,
           animateLevelUp: true,
         };
+      }
+
+      // If this item has already had its level-down shown, display the downgraded stage
+      const downgradedStage = levelDownShownRef.current.get(rq.item.id);
+      if (downgradedStage !== undefined) {
+        return { type: 'static', stage: downgradedStage };
       }
 
       return { type: 'static', stage: rq.item.srsStage };
