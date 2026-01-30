@@ -346,4 +346,12 @@ Started:
   - To run tests from the worktree, use: `cd /path/to/main && ./node_modules/.bin/jest --roots /path/to/worktree --config /path/to/worktree/jest.config.js --testPathIgnorePatterns '[]'`
   - GPG signing may not be available - use `git -c commit.gpgSign=false commit` to bypass
   - `npm install` must be run from the main project root, not the worktree
+
+## 2026-01-30 - US-001
+- Scoped CI push trigger from `branches: ['**']` to `branches: ['main']` so CI only runs once per PR (via pull_request trigger) instead of twice (push + pull_request)
+- Files changed: .github/workflows/ci.yml (1 line change)
+- **Learnings for future iterations:**
+  - The CI workflow triggers on both push and pull_request — for PRs, this causes duplicate runs. Scoping push to main only fixes this while still running CI on direct pushes to main
+  - Lint and typecheck pass cleanly; tests cannot run in worktree due to `testPathIgnorePatterns` excluding `.ralph/.worktrees/` paths
+  - Use `git -c commit.gpgsign=false commit` in worktree environments where GPG signing may not be available
 ---
