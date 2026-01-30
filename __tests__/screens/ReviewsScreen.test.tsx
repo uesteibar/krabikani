@@ -1458,7 +1458,7 @@ describe('ReviewsScreen', () => {
 
     it('should show correct count for multiple items that will be lost', async () => {
       // Set up two kanji items - each kanji has 2 questions (meaning + reading)
-      // We'll answer one question per item correctly, leaving them incomplete (started but not failed/complete)
+      // We answer questions until both items are started but leave them incomplete.
       const kanji1 = {
         ...kanjiSubjectWithReadings,
         id: 5,
@@ -1496,35 +1496,43 @@ describe('ReviewsScreen', () => {
         expect(getByTestId('review-session')).toBeTruthy();
       });
 
-      // Answer the first question correctly
-      const firstQuestionType = getByTestId('review-session-question-type')
-        .props.children;
-      if (firstQuestionType === 'MEANING') {
-        fireEvent.changeText(getByTestId('review-session-input'), 'Moon');
-      } else {
-        fireEvent.changeText(getByTestId('review-session-input'), 'nichi');
+      // Helper to answer the current question correctly
+      const answerCurrentQuestion = () => {
+        const questionType = getByTestId('review-session-question-type')
+          .props.children;
+        if (questionType === 'MEANING') {
+          const displayedChar =
+            getByTestId('subject-display-text').props.children;
+          const answer = displayedChar === '月' ? 'Moon' : 'Fire';
+          fireEvent.changeText(getByTestId('review-session-input'), answer);
+        } else {
+          fireEvent.changeText(getByTestId('review-session-input'), 'nichi');
+        }
+        return getByTestId('subject-display-text').props.children;
+      };
+
+      // Answer questions until both kanji items have been started (at least one
+      // question answered per item). Due to random question ordering we may need
+      // up to 3 answers (worst case: first 2 questions are for the same kanji).
+      const startedKanji = new Set<string>();
+      for (let i = 0; i < 3; i++) {
+        const char = answerCurrentQuestion();
+        startedKanji.add(char);
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        if (startedKanji.size >= 2) {
+          // Both items are now started; wait for feedback and stop answering
+          await waitFor(() => {
+            expect(getByTestId('review-session')).toBeTruthy();
+          });
+          break;
+        }
+
+        // Wait for next question after correct feedback auto-advance
+        await waitFor(() => {
+          expect(getByTestId('review-session-input').props.value).toBe('');
+        });
       }
-      fireEvent.press(getByTestId('review-session-submit'));
-
-      // Wait for next question
-      await new Promise<void>(resolve => setTimeout(resolve, 600));
-
-      // Answer another question correctly (could be same item's reading or different item)
-      const secondQuestionType = getByTestId('review-session-question-type')
-        .props.children;
-      if (secondQuestionType === 'MEANING') {
-        // Try both Moon and Fire - one will match
-        fireEvent.changeText(getByTestId('review-session-input'), 'Fire');
-      } else {
-        fireEvent.changeText(getByTestId('review-session-input'), 'nichi');
-      }
-      fireEvent.press(getByTestId('review-session-submit'));
-
-      // Wait for feedback
-      await new Promise<void>(resolve => setTimeout(resolve, 600));
-
-      // At this point, we may have completed one kanji (if both questions were for the same item)
-      // or have two incomplete items. Either way, we should trigger the exit now and verify.
 
       // Trigger beforeRemove
       const mockPreventDefault = jest.fn();
@@ -1536,7 +1544,7 @@ describe('ReviewsScreen', () => {
         }),
       );
 
-      // Verify dialog was shown - the exact count depends on question ordering
+      // Verify dialog was shown
       expect(Alert.alert as jest.Mock).toHaveBeenCalled();
       const alertCalls = (Alert.alert as jest.Mock).mock.calls;
       const dialog = alertCalls.find(
@@ -1544,8 +1552,7 @@ describe('ReviewsScreen', () => {
       );
       expect(dialog).toBeDefined();
 
-      // Message should indicate items will be lost (dialog is only shown when lostItemCount > 0)
-      // If no dialog was shown, it means nothing was lost and navigation proceeded directly
+      // Message should indicate items will be lost
       if (dialog) {
         const message = dialog[1] as string;
         expect(message.includes('will be lost')).toBe(true);
