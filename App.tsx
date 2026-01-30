@@ -7,6 +7,7 @@ import notifee from '@notifee/react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   StatusBar,
+  StyleSheet,
   useColorScheme,
   ActivityIndicator,
   View,
@@ -113,18 +114,18 @@ function App() {
     [isDarkMode],
   );
 
+  const loadingBackground = useMemo(
+    () => ({
+      backgroundColor: isDarkMode ? '#121212' : COLORS.background.primary,
+    }),
+    [isDarkMode],
+  );
+
   // Show loading screen while database initializes
   if (!isDbReady) {
     return (
       <SafeAreaProvider>
-        <View
-          style={{
-            flex: 1,
-            justifyContent: 'center',
-            alignItems: 'center',
-            backgroundColor: isDarkMode ? '#121212' : COLORS.background.primary,
-          }}
-        >
+        <View style={[appStyles.loadingContainer, loadingBackground]}>
           <ActivityIndicator size="large" color={COLORS.subject.kanji} />
         </View>
       </SafeAreaProvider>
@@ -142,5 +143,13 @@ function App() {
     </SafeAreaProvider>
   );
 }
+
+const appStyles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});
 
 export default App;

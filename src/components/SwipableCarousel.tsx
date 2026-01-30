@@ -2,6 +2,7 @@ import React, {
   forwardRef,
   useCallback,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -72,6 +73,15 @@ export const SwipableCarousel = forwardRef<
     [currentPage, pages.length, onPageChange],
   );
 
+  const activeDotStyle = useMemo(
+    () => ({ backgroundColor: colors.text.primary, opacity: 1 }),
+    [colors.text.primary],
+  );
+  const inactiveDotStyle = useMemo(
+    () => ({ backgroundColor: colors.text.primary, opacity: 0.3 }),
+    [colors.text.primary],
+  );
+
   return (
     <View style={styles.container} testID={testID}>
       <ScrollView
@@ -105,10 +115,7 @@ export const SwipableCarousel = forwardRef<
             testID={`page-dot-${index}`}
             style={[
               styles.dot,
-              {
-                backgroundColor: colors.text.primary,
-                opacity: index === currentPage ? 1 : 0.3,
-              },
+              index === currentPage ? activeDotStyle : inactiveDotStyle,
             ]}
           />
         ))}

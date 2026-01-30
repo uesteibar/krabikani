@@ -1,6 +1,6 @@
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
   Image,
@@ -103,16 +103,22 @@ export function InstructionsScreen() {
 
   const isLastPage = currentPage === STEPS.length - 1;
 
+  const imageStyles = useMemo(
+    () =>
+      STEPS.map(step => ({
+        ...getImageSize(step.image),
+        borderRadius: BORDER_RADIUS.lg,
+        borderWidth: 2,
+        borderColor: colors.border.medium,
+      })),
+    [colors.border.medium],
+  );
+
   const pages = STEPS.map((step, index) => (
     <View key={index} style={styles.pageContent}>
       <Image
         source={step.image}
-        style={{
-          ...getImageSize(step.image),
-          borderRadius: BORDER_RADIUS.lg,
-          borderWidth: 2,
-          borderColor: colors.border.medium,
-        }}
+        style={imageStyles[index]}
         testID={`instruction-image-${index}`}
       />
 
