@@ -77,3 +77,7 @@ yarn-error.log
 .ralph/.worktrees
 .env
 .claude
+
+# Ralph
+.ralph/worktrees/
+.ralph/state/

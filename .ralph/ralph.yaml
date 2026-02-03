@@ -1,0 +1,11 @@
+project: unainikani
+repo:
+    default_base: main
+    branch_pattern: ^ralph/[a-zA-Z0-9._-]+$
+paths:
+    tasks_dir: .ralph/tasks
+    skills_dir: .ralph/skills
+quality_checks:
+    - npm run lint
+    - npm run typecheck
+    - npm test
