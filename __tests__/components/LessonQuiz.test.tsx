@@ -831,17 +831,21 @@ describe('LessonQuiz', () => {
       );
     });
 
-    it('displays empty answer placeholder', () => {
+    it('blocks empty meaning answers with shake', () => {
       const items = [sampleRadical];
-      const { getByTestId } = render(
-        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+      const onAnswer = jest.fn();
+      const { getByTestId, queryByTestId } = render(
+        <LessonQuiz items={items} onAnswer={onAnswer} autoAdvanceDelay={0} />,
       );
 
+      // Submit without entering anything
       fireEvent.press(getByTestId('lesson-quiz-submit'));
 
-      expect(getByTestId('lesson-quiz-your-answer').props.children).toBe(
-        '(empty)',
-      );
+      // Should NOT proceed to incorrect feedback - question should stay the same
+      expect(queryByTestId('lesson-quiz-your-answer')).toBeNull();
+      expect(queryByTestId('lesson-quiz-continue')).toBeNull();
+      // onAnswer should not be called
+      expect(onAnswer).not.toHaveBeenCalled();
     });
 
     it('displays correct answer in feedback', () => {
@@ -2294,9 +2298,9 @@ describe('LessonQuiz', () => {
       }
     });
 
-    it('does not block empty meaning answers (they are processed normally)', () => {
+    it('blocks empty meaning answers with shake', () => {
       const onAnswer = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId, queryByTestId } = render(
         <LessonQuiz
           items={[sampleRadical]}
           onAnswer={onAnswer}
@@ -2305,10 +2309,13 @@ describe('LessonQuiz', () => {
       );
 
       // Radical always has meaning question
+      // Submit without entering anything
       fireEvent.press(getByTestId('lesson-quiz-submit'));
 
-      // onAnswer should be called (empty meaning answers are submitted and marked incorrect)
-      expect(onAnswer).toHaveBeenCalled();
+      // onAnswer should NOT be called (empty meaning answers trigger shake, not submission)
+      expect(onAnswer).not.toHaveBeenCalled();
+      // Should NOT proceed to incorrect feedback
+      expect(queryByTestId('lesson-quiz-your-answer')).toBeNull();
     });
 
     it('renders input container that shakes on invalid reading submission', () => {

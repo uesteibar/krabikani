@@ -31,12 +31,40 @@ import {
   stopNetworkMonitoring,
   _resetNetworkStatus,
 } from '../../src/utils/networkStatus';
+import { _resetAppStateSync } from '../../src/utils/appStateSync';
+
+// Mock appStateSync module to control listener behavior
+const mockSyncStatusListeners: Set<(syncing: boolean) => void> = new Set();
+const mockSyncErrorListeners: Set<(error: Error) => void> = new Set();
+const mockBackgroundSyncListeners: Set<() => void> = new Set();
+
+jest.mock('../../src/utils/appStateSync', () => ({
+  addSyncStatusListener: jest.fn((listener: (syncing: boolean) => void) => {
+    mockSyncStatusListeners.add(listener);
+    return () => mockSyncStatusListeners.delete(listener);
+  }),
+  addSyncErrorListener: jest.fn((listener: (error: Error) => void) => {
+    mockSyncErrorListeners.add(listener);
+    return () => mockSyncErrorListeners.delete(listener);
+  }),
+  addBackgroundSyncListener: jest.fn((listener: () => void) => {
+    mockBackgroundSyncListeners.add(listener);
+    return () => mockBackgroundSyncListeners.delete(listener);
+  }),
+  _resetAppStateSync: jest.fn(() => {
+    mockSyncStatusListeners.clear();
+    mockSyncErrorListeners.clear();
+    mockBackgroundSyncListeners.clear();
+  }),
+}));
 import {
   initializeDatabase,
   _resetDatabaseInstance,
   upsertSubject,
   upsertAssignment,
   updateSyncStatus,
+  insertPendingReview,
+  insertPendingLesson,
 } from '../../src/storage/database';
 import type { RootStackParamList } from '../../src/navigation/types';
 
@@ -80,6 +108,16 @@ function renderWithFullNavigator() {
   );
 }
 
+// Helper to simulate sync status change
+function simulateSyncStatusChange(syncing: boolean) {
+  mockSyncStatusListeners.forEach(listener => listener(syncing));
+}
+
+// Helper to simulate sync error
+function simulateSyncError(error: Error) {
+  mockSyncErrorListeners.forEach(listener => listener(error));
+}
+
 describe('HomeScreen', () => {
   beforeEach(async () => {
     // Reset all state before each test
@@ -87,6 +125,7 @@ describe('HomeScreen', () => {
     __resetMockDatabase();
     _resetNetworkStatus();
     _resetDatabaseInstance();
+    _resetAppStateSync();
 
     // Initialize fresh database
     await initializeDatabase();
@@ -98,6 +137,7 @@ describe('HomeScreen', () => {
 
   afterEach(() => {
     stopNetworkMonitoring();
+    _resetAppStateSync();
   });
 
   describe('normal state (online with or without data)', () => {
@@ -540,6 +580,70 @@ describe('HomeScreen', () => {
     });
   });
 
+  describe('background sync integration', () => {
+    it('shows sync progress bar when background sync starts', async () => {
+      const { queryByTestId } = renderWithNavigation(<HomeScreen />);
+
+      // Initially, progress bar should not be visible
+      await waitFor(() => {
+        expect(queryByTestId('sync-progress-bar')).toBeNull();
+      });
+
+      // Simulate sync starting
+      await act(async () => {
+        simulateSyncStatusChange(true);
+      });
+
+      // Progress bar should now be visible
+      await waitFor(() => {
+        expect(queryByTestId('sync-progress-bar')).toBeTruthy();
+      });
+    });
+
+    it('hides sync progress bar when background sync completes', async () => {
+      const { queryByTestId } = renderWithNavigation(<HomeScreen />);
+
+      // Start sync
+      await act(async () => {
+        simulateSyncStatusChange(true);
+      });
+
+      await waitFor(() => {
+        expect(queryByTestId('sync-progress-bar')).toBeTruthy();
+      });
+
+      // Complete sync
+      await act(async () => {
+        simulateSyncStatusChange(false);
+      });
+
+      // Progress bar should be hidden
+      await waitFor(() => {
+        expect(queryByTestId('sync-progress-bar')).toBeNull();
+      });
+    });
+
+    it('shows sync error toast when sync fails', async () => {
+      const { queryByTestId, getByText } = renderWithNavigation(<HomeScreen />);
+
+      // Initially, error toast should not be visible
+      await waitFor(() => {
+        expect(queryByTestId('sync-error-toast')).toBeNull();
+      });
+
+      // Simulate sync error
+      await act(async () => {
+        simulateSyncError(new Error('Network error'));
+      });
+
+      // Error toast should now be visible
+      await waitFor(() => {
+        expect(queryByTestId('sync-error-toast')).toBeTruthy();
+        expect(getByText('Sync failed')).toBeTruthy();
+      });
+    });
+  });
+
   describe('pull-to-refresh', () => {
     beforeEach(async () => {
       __resetKeychainMock();
@@ -641,6 +745,295 @@ describe('HomeScreen', () => {
 
       expect(syncSubjects).not.toHaveBeenCalled();
       expect(syncAssignments).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('timer-based review refresh', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('refreshes available reviews every minute while screen is focused', async () => {
+      // Add a subject
+      await upsertSubject({
+        id: 100,
+        object_type: 'kanji',
+        characters: '一',
+        meanings: JSON.stringify([
+          { meaning: 'one', primary: true, accepted_answer: true },
+        ]),
+        readings: JSON.stringify([
+          { reading: 'いち', primary: true, accepted_answer: true },
+        ]),
+        meaning_mnemonic: 'Test mnemonic',
+        reading_mnemonic: 'Reading mnemonic',
+        level: 1,
+        component_subject_ids: null,
+        character_images: null,
+        auxiliary_meanings: null,
+        data_updated_at: null,
+      });
+
+      // Add an assignment that will become available in 30 seconds
+      const futureTime = new Date(Date.now() + 30 * 1000).toISOString();
+      await upsertAssignment({
+        id: 1,
+        subject_id: 100,
+        srs_stage: 5,
+        available_at: futureTime,
+        started_at: new Date().toISOString(),
+        unlocked_at: new Date().toISOString(),
+        data_updated_at: null,
+      });
+
+      const { getByText } = renderWithNavigation(<HomeScreen />);
+
+      // Initially, the review is not available (available_at is in the future)
+      await waitFor(() => {
+        expect(getByText(/0.*pending reviews/)).toBeTruthy();
+      });
+
+      // Update the assignment to make it available now
+      await upsertAssignment({
+        id: 1,
+        subject_id: 100,
+        srs_stage: 5,
+        available_at: new Date(Date.now() - 1000).toISOString(), // Now available
+        started_at: new Date().toISOString(),
+        unlocked_at: new Date().toISOString(),
+        data_updated_at: null,
+      });
+
+      // Advance timer by 1 minute to trigger refresh
+      await act(async () => {
+        jest.advanceTimersByTime(60 * 1000);
+      });
+
+      // Now the review should be shown
+      await waitFor(() => {
+        expect(getByText(/1.*pending reviews/)).toBeTruthy();
+      });
+    });
+
+    it('shows reviews that become available based on device time', async () => {
+      // Add a subject
+      await upsertSubject({
+        id: 100,
+        object_type: 'kanji',
+        characters: '二',
+        meanings: JSON.stringify([
+          { meaning: 'two', primary: true, accepted_answer: true },
+        ]),
+        readings: JSON.stringify([
+          { reading: 'に', primary: true, accepted_answer: true },
+        ]),
+        meaning_mnemonic: 'Test mnemonic',
+        reading_mnemonic: 'Reading mnemonic',
+        level: 1,
+        component_subject_ids: null,
+        character_images: null,
+        auxiliary_meanings: null,
+        data_updated_at: null,
+      });
+
+      // Add an assignment that is already available (past time)
+      const pastTime = new Date(Date.now() - 60 * 1000).toISOString();
+      await upsertAssignment({
+        id: 1,
+        subject_id: 100,
+        srs_stage: 5,
+        available_at: pastTime,
+        started_at: pastTime,
+        unlocked_at: pastTime,
+        data_updated_at: null,
+      });
+
+      const { getByText } = renderWithNavigation(<HomeScreen />);
+
+      // Review should be shown immediately based on device time
+      await waitFor(() => {
+        expect(getByText(/1.*pending reviews/)).toBeTruthy();
+      });
+    });
+
+    it('cleans up interval when screen loses focus', async () => {
+      const clearIntervalSpy = jest.spyOn(globalThis, 'clearInterval');
+
+      const { unmount } = renderWithNavigation(<HomeScreen />);
+
+      await waitFor(() => {
+        // Wait for initial render
+      });
+
+      // Unmount triggers cleanup (simulates losing focus)
+      unmount();
+
+      // Verify clearInterval was called
+      expect(clearIntervalSpy).toHaveBeenCalled();
+
+      clearIntervalSpy.mockRestore();
+    });
+
+    it('refreshes upcoming reviews chart every minute while screen is focused', async () => {
+      // Add a subject
+      await upsertSubject({
+        id: 100,
+        object_type: 'kanji',
+        characters: '三',
+        meanings: JSON.stringify([
+          { meaning: 'three', primary: true, accepted_answer: true },
+        ]),
+        readings: JSON.stringify([
+          { reading: 'さん', primary: true, accepted_answer: true },
+        ]),
+        meaning_mnemonic: 'Test mnemonic',
+        reading_mnemonic: 'Reading mnemonic',
+        level: 1,
+        component_subject_ids: null,
+        character_images: null,
+        auxiliary_meanings: null,
+        data_updated_at: null,
+      });
+
+      // Add an assignment with available_at in the future (next hour)
+      const now = new Date();
+      const nextHour = new Date(now);
+      nextHour.setHours(now.getHours() + 1);
+      nextHour.setMinutes(0, 0, 0);
+      const futureTime = nextHour.toISOString();
+
+      await upsertAssignment({
+        id: 1,
+        subject_id: 100,
+        srs_stage: 5,
+        available_at: futureTime,
+        started_at: new Date().toISOString(),
+        unlocked_at: new Date().toISOString(),
+        data_updated_at: null,
+      });
+
+      const { queryByTestId } = renderWithNavigation(<HomeScreen />);
+
+      // Wait for initial render - chart should be present
+      await waitFor(() => {
+        expect(queryByTestId('upcoming-reviews-chart')).toBeTruthy();
+      });
+
+      // Advance timer by 1 minute to trigger refresh
+      await act(async () => {
+        jest.advanceTimersByTime(60 * 1000);
+      });
+
+      // Chart should still be rendered after timer refresh
+      await waitFor(() => {
+        expect(queryByTestId('upcoming-reviews-chart')).toBeTruthy();
+      });
+    });
+  });
+
+  describe('pending sync indicator', () => {
+    it('shows pending reviews count when there are pending reviews', async () => {
+      // Insert pending reviews
+      await insertPendingReview({
+        assignment_id: 1,
+        subject_id: 100,
+        incorrect_meaning_answers: 0,
+        incorrect_reading_answers: 0,
+      });
+      await insertPendingReview({
+        assignment_id: 2,
+        subject_id: 101,
+        incorrect_meaning_answers: 1,
+        incorrect_reading_answers: 0,
+      });
+      await insertPendingReview({
+        assignment_id: 3,
+        subject_id: 102,
+        incorrect_meaning_answers: 0,
+        incorrect_reading_answers: 1,
+      });
+
+      const { getByTestId, getByText } = renderWithNavigation(<HomeScreen />);
+
+      await waitFor(() => {
+        expect(getByTestId('pending-sync-indicator')).toBeTruthy();
+        expect(getByText('3 reviews pending sync')).toBeTruthy();
+      });
+    });
+
+    it('shows pending lessons count when there are pending lessons', async () => {
+      // Insert pending lessons
+      await insertPendingLesson({
+        assignment_id: 1,
+        subject_id: 100,
+        started_at: new Date().toISOString(),
+      });
+      await insertPendingLesson({
+        assignment_id: 2,
+        subject_id: 101,
+        started_at: new Date().toISOString(),
+      });
+
+      const { getByTestId, getByText } = renderWithNavigation(<HomeScreen />);
+
+      await waitFor(() => {
+        expect(getByTestId('pending-sync-indicator')).toBeTruthy();
+        expect(getByText('2 lessons pending sync')).toBeTruthy();
+      });
+    });
+
+    it('shows both lessons and reviews when both are pending', async () => {
+      // Insert pending reviews
+      await insertPendingReview({
+        assignment_id: 1,
+        subject_id: 100,
+        incorrect_meaning_answers: 0,
+        incorrect_reading_answers: 0,
+      });
+
+      // Insert pending lessons
+      await insertPendingLesson({
+        assignment_id: 2,
+        subject_id: 101,
+        started_at: new Date().toISOString(),
+      });
+
+      const { getByTestId, getByText } = renderWithNavigation(<HomeScreen />);
+
+      await waitFor(() => {
+        expect(getByTestId('pending-sync-indicator')).toBeTruthy();
+        expect(getByText('1 lesson and 1 review pending sync')).toBeTruthy();
+      });
+    });
+
+    it('hides indicator when no pending items', async () => {
+      // No pending items inserted - table is empty
+      const { queryByTestId } = renderWithNavigation(<HomeScreen />);
+
+      await waitFor(() => {
+        expect(queryByTestId('pending-sync-indicator')).toBeNull();
+      });
+    });
+
+    it('shows indicator with correct styling in sync status area', async () => {
+      await insertPendingReview({
+        assignment_id: 1,
+        subject_id: 100,
+        incorrect_meaning_answers: 0,
+        incorrect_reading_answers: 0,
+      });
+
+      const { getByTestId, getByText } = renderWithNavigation(<HomeScreen />);
+
+      await waitFor(() => {
+        const indicator = getByTestId('pending-sync-indicator');
+        expect(indicator).toBeTruthy();
+        expect(getByText('Will sync automatically when online')).toBeTruthy();
+      });
     });
   });
 });

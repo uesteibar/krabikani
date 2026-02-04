@@ -1228,18 +1228,22 @@ describe('ReviewSession', () => {
       );
     });
 
-    it('should show "(empty)" when user submits empty answer', () => {
-      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
+    it('should block empty meaning answers with shake', () => {
+      const onAnswer = jest.fn();
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[sampleRadical]} onAnswer={onAnswer} />,
+      );
 
       const submit = getByTestId('review-session-submit');
 
       // Submit without entering anything
       fireEvent.press(submit);
 
-      // Should show (empty) for user's answer
-      expect(getByTestId('review-session-your-answer').props.children).toBe(
-        '(empty)',
-      );
+      // Should NOT proceed to incorrect feedback - question should stay the same
+      expect(queryByTestId('review-session-your-answer')).toBeNull();
+      expect(queryByTestId('review-session-continue')).toBeNull();
+      // onAnswer should not be called
+      expect(onAnswer).not.toHaveBeenCalled();
     });
 
     it('should show meaning mnemonic for meaning questions', () => {
@@ -2846,7 +2850,7 @@ describe('ReviewSession', () => {
       }
     });
 
-    it('does not block empty meaning answers (they are processed normally)', () => {
+    it('blocks empty meaning answers with shake', () => {
       // Use meaning-first order
       callIndex = 0;
       (Math.random as jest.Mock).mockImplementation(() => {
@@ -2856,7 +2860,7 @@ describe('ReviewSession', () => {
 
       const onAnswer = jest.fn();
       const radical = createRadicalItem(60, '一', 'Ground');
-      const { getByTestId } = render(
+      const { getByTestId, queryByTestId } = render(
         <ReviewSession
           items={[radical]}
           onAnswer={onAnswer}
@@ -2865,10 +2869,13 @@ describe('ReviewSession', () => {
       );
 
       // Radical always has meaning question
+      // Submit without entering anything
       fireEvent.press(getByTestId('review-session-submit'));
 
-      // onAnswer should be called (empty meaning answers are submitted and marked incorrect)
-      expect(onAnswer).toHaveBeenCalled();
+      // onAnswer should NOT be called (empty meaning answers trigger shake, not submission)
+      expect(onAnswer).not.toHaveBeenCalled();
+      // Should NOT proceed to incorrect feedback
+      expect(queryByTestId('review-session-your-answer')).toBeNull();
     });
 
     it('renders input container that shakes on invalid reading submission', () => {
@@ -3458,6 +3465,163 @@ describe('ReviewSession', () => {
         unknown
       >;
       expect(progressMap.size).toBe(1);
+
+      jest.useRealTimers();
+    });
+
+    it('should never show loading screen during active session at MAX_INCOMPLETE_ITEMS', () => {
+      jest.useFakeTimers();
+
+      // Create 15 radicals (more than MAX_INCOMPLETE_ITEMS to test the edge case)
+      const manyRadicals = Array.from({ length: 15 }, (_, i) =>
+        createRadicalItem(300 + i, `T${i}`, `TestRadical${i}`),
+      );
+
+      // Force deterministic order
+      (Math.random as jest.Mock).mockReturnValue(0.99);
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={manyRadicals} autoAdvanceDelay={0} />,
+      );
+
+      // Answer 10 items incorrectly to hit MAX_INCOMPLETE_ITEMS
+      for (let i = 0; i < 10; i++) {
+        // Verify we're showing a question, not loading
+        expect(queryByTestId('subject-display-text')).toBeTruthy();
+        expect(queryByTestId('review-session-empty')).toBeNull();
+
+        fireEvent.changeText(getByTestId('review-session-input'), 'wrong');
+        fireEvent.press(getByTestId('review-session-submit'));
+        fireEvent.press(getByTestId('review-session-continue'));
+      }
+
+      // After hitting MAX_INCOMPLETE_ITEMS, we should still see a question (not loading)
+      expect(queryByTestId('subject-display-text')).toBeTruthy();
+      expect(queryByTestId('review-session-empty')).toBeNull();
+
+      // Answer a few more re-queued questions incorrectly
+      for (let i = 0; i < 5; i++) {
+        expect(queryByTestId('subject-display-text')).toBeTruthy();
+        expect(queryByTestId('review-session-empty')).toBeNull();
+
+        fireEvent.changeText(getByTestId('review-session-input'), 'wrong');
+        fireEvent.press(getByTestId('review-session-submit'));
+        fireEvent.press(getByTestId('review-session-continue'));
+      }
+
+      // Still no loading screen
+      expect(queryByTestId('subject-display-text')).toBeTruthy();
+      expect(queryByTestId('review-session-empty')).toBeNull();
+
+      jest.useRealTimers();
+    });
+
+    it('should show second question for introduced items when at MAX_INCOMPLETE_ITEMS', () => {
+      jest.useFakeTimers();
+
+      // Create 15 kanji items (30 questions total - 2 per item)
+      const manyKanji = Array.from({ length: 15 }, (_, i) =>
+        createKanjiItem(350 + i, `漢${i}`, `Meaning${i}`, `よみ${i}`),
+      );
+
+      // Force deterministic order - meaning first
+      (Math.random as jest.Mock).mockReturnValue(0.1);
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={manyKanji} autoAdvanceDelay={0} />,
+      );
+
+      // Track introduced items (by their characters)
+      const introducedChars = new Set<string>();
+
+      // Answer 10 items INCORRECTLY on their first question to introduce them
+      // but not complete them
+      for (let i = 0; i < 10; i++) {
+        // Verify we're showing a question, not loading
+        expect(queryByTestId('subject-display-text')).toBeTruthy();
+        expect(queryByTestId('review-session-empty')).toBeNull();
+
+        const chars = getByTestId('subject-display-text').props.children;
+        const questionType = getByTestId('review-session-question-type').props.children;
+        introducedChars.add(chars);
+
+        // Submit wrong answer
+        if (questionType === 'READING') {
+          fireEvent.changeText(getByTestId('review-session-input'), 'machigai');
+        } else {
+          fireEvent.changeText(getByTestId('review-session-input'), 'wrong');
+        }
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        // Dismiss incorrect feedback
+        fireEvent.press(getByTestId('review-session-continue'));
+      }
+
+      // Now we've introduced 10 items. The next question should be for an introduced item
+      // (either the second question or a re-queued question)
+      expect(queryByTestId('subject-display-text')).toBeTruthy();
+      expect(queryByTestId('review-session-empty')).toBeNull();
+
+      // The character shown should be one of the introduced items
+      const nextChars = getByTestId('subject-display-text').props.children;
+      expect(introducedChars.has(nextChars)).toBe(true);
+
+      jest.useRealTimers();
+    });
+
+    it('should never show loading screen with vocabulary items (2 questions each)', () => {
+      jest.useFakeTimers();
+
+      // Create 15 vocabulary items (30 questions total)
+      const manyVocab = Array.from({ length: 15 }, (_, i) =>
+        createVocabularyItem(400 + i, `漢${i}`, `Vocab${i}`, `よみ${i}`),
+      );
+
+      // Force deterministic order - meaning first for all items
+      (Math.random as jest.Mock).mockReturnValue(0.1);
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={manyVocab} autoAdvanceDelay={0} />,
+      );
+
+      // Helper to submit wrong answer based on question type
+      const submitWrongAnswer = () => {
+        const questionType = getByTestId('review-session-question-type').props.children;
+        if (questionType === 'READING') {
+          // Use valid romaji that converts to wrong hiragana
+          fireEvent.changeText(getByTestId('review-session-input'), 'machigai');
+        } else {
+          fireEvent.changeText(getByTestId('review-session-input'), 'wrong');
+        }
+        fireEvent.press(getByTestId('review-session-submit'));
+      };
+
+      // Answer 10 different items incorrectly to hit MAX_INCOMPLETE_ITEMS
+      for (let i = 0; i < 10; i++) {
+        // Verify we're showing a question, not loading
+        expect(queryByTestId('subject-display-text')).toBeTruthy();
+        expect(queryByTestId('review-session-empty')).toBeNull();
+
+        submitWrongAnswer();
+        fireEvent.press(getByTestId('review-session-continue'));
+      }
+
+      // After hitting MAX_INCOMPLETE_ITEMS, we should still see a question (not loading)
+      expect(queryByTestId('subject-display-text')).toBeTruthy();
+      expect(queryByTestId('review-session-empty')).toBeNull();
+
+      // Continue answering questions - should never see loading
+      for (let i = 0; i < 10; i++) {
+        expect(queryByTestId('subject-display-text')).toBeTruthy();
+        expect(queryByTestId('review-session-empty')).toBeNull();
+
+        submitWrongAnswer();
+        fireEvent.press(getByTestId('review-session-continue'));
+      }
+
+      // Still no loading screen
+      expect(queryByTestId('subject-display-text')).toBeTruthy();
+      expect(queryByTestId('review-session-empty')).toBeNull();
 
       jest.useRealTimers();
     });

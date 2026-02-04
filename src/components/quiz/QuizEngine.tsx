@@ -176,15 +176,34 @@ export function QuizEngine({ config }: QuizEngineProps) {
     [autoRefill],
   );
 
-  // Find the next valid question index, skipping filtered questions
+  // Find the next valid question index, skipping filtered questions.
+  // Wraps around to beginning of queue if needed to find previously-skipped questions.
   const findNextValidIndex = useCallback(
     (startIndex: number, queue: Question[]): number => {
       if (!shouldSkipQuestion) return startIndex;
+      if (queue.length === 0) return 0;
+
+      // First pass: search from startIndex to end
       let idx = startIndex;
       while (idx < queue.length && shouldSkipQuestion(queue[idx])) {
         idx++;
       }
-      return idx;
+      if (idx < queue.length) {
+        return idx;
+      }
+
+      // Second pass: wrap around and search from 0 to startIndex
+      // This finds questions that were skipped earlier (e.g., item wasn't introduced yet)
+      idx = 0;
+      while (idx < startIndex && shouldSkipQuestion(queue[idx])) {
+        idx++;
+      }
+      if (idx < startIndex) {
+        return idx;
+      }
+
+      // No valid question found anywhere
+      return queue.length;
     },
     [shouldSkipQuestion],
   );
@@ -571,7 +590,7 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 2,
     borderRadius: BORDER_RADIUS.md,
-    paddingVertical: SPACING.lg,
+    height: 56,
     paddingHorizontal: SPACING.lg,
     fontSize: FONT_SIZES.lg,
     fontWeight: '600',

@@ -52,7 +52,11 @@ export function validateInput(
     return { valid: true };
   }
 
-  // Empty meaning answers are allowed — they will be processed as incorrect
+  // meaning
+  const answer = rawInput.trim();
+  if (answer.length === 0) {
+    return { valid: false, reason: 'shake' };
+  }
   return { valid: true };
 }
 

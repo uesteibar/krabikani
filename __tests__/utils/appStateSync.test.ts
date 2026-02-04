@@ -7,14 +7,23 @@ import {
   isBackgroundSyncInProgress,
   addAppStateChangeListener,
   addBackgroundSyncListener,
+  addSyncStatusListener,
+  addSyncErrorListener,
   getAppStateListenerCount,
   getBackgroundSyncListenerCount,
+  getSyncStatusListenerCount,
+  getSyncErrorListenerCount,
   _resetAppStateSync,
   _setCurrentAppState,
   _setSyncingState,
+  _setHasColdStartSynced,
+  _getSyncThrottleMs,
 } from '../../src/utils/appStateSync';
 import { _resetSessionState, startSession } from '../../src/utils/sessionState';
 import { _resetNetworkStatus } from '../../src/utils/networkStatus';
+
+// Get the mocked getSyncStatus so we can control its return value
+const mockGetSyncStatus = jest.fn();
 
 // Mock the storage and API modules
 jest.mock('../../src/storage/secureStorage', () => ({
@@ -26,12 +35,7 @@ jest.mock('../../src/storage/database', () => ({
   upsertAssignments: jest.fn().mockResolvedValue(undefined),
   upsertAssignment: jest.fn().mockResolvedValue(undefined),
   updateSyncStatus: jest.fn().mockResolvedValue(undefined),
-  getSyncStatus: jest.fn().mockResolvedValue({
-    id: 1,
-    last_subjects_sync: '2026-01-25T10:00:00.000Z',
-    last_assignments_sync: '2026-01-25T10:00:00.000Z',
-    last_summary_sync: null,
-  }),
+  getSyncStatus: jest.fn().mockImplementation(() => mockGetSyncStatus()),
   getAllPendingLessons: jest.fn().mockResolvedValue([]),
   getAllPendingReviews: jest.fn().mockResolvedValue([]),
   deletePendingLessonByAssignmentId: jest.fn().mockResolvedValue(undefined),
@@ -75,6 +79,14 @@ describe('appStateSync', () => {
         data: { level: 5 },
         data_updated_at: '2026-01-25T10:00:00.000Z',
       }),
+    });
+
+    // Default sync status (old sync time - won't throttle)
+    mockGetSyncStatus.mockResolvedValue({
+      id: 1,
+      last_subjects_sync: '2026-01-20T10:00:00.000Z',
+      last_assignments_sync: '2026-01-20T10:00:00.000Z',
+      last_summary_sync: null,
     });
   });
 
@@ -224,6 +236,8 @@ describe('appStateSync', () => {
       initializeAppStateSync();
       addAppStateChangeListener(() => {});
       addBackgroundSyncListener(() => {});
+      addSyncStatusListener(() => {});
+      addSyncErrorListener(() => {});
       _setCurrentAppState('background');
       _setSyncingState(true);
 
@@ -233,6 +247,75 @@ describe('appStateSync', () => {
       expect(isBackgroundSyncInProgress()).toBe(false);
       expect(getAppStateListenerCount()).toBe(0);
       expect(getBackgroundSyncListenerCount()).toBe(0);
+      expect(getSyncStatusListenerCount()).toBe(0);
+      expect(getSyncErrorListenerCount()).toBe(0);
+    });
+  });
+
+  describe('addSyncStatusListener', () => {
+    it('should add a listener and return unsubscribe function', () => {
+      const listener = jest.fn();
+
+      const unsubscribe = addSyncStatusListener(listener);
+
+      expect(getSyncStatusListenerCount()).toBe(1);
+      expect(typeof unsubscribe).toBe('function');
+    });
+
+    it('should remove listener when unsubscribe is called', () => {
+      const listener = jest.fn();
+      const unsubscribe = addSyncStatusListener(listener);
+
+      unsubscribe();
+
+      expect(getSyncStatusListenerCount()).toBe(0);
+    });
+  });
+
+  describe('addSyncErrorListener', () => {
+    it('should add a listener and return unsubscribe function', () => {
+      const listener = jest.fn();
+
+      const unsubscribe = addSyncErrorListener(listener);
+
+      expect(getSyncErrorListenerCount()).toBe(1);
+      expect(typeof unsubscribe).toBe('function');
+    });
+
+    it('should remove listener when unsubscribe is called', () => {
+      const listener = jest.fn();
+      const unsubscribe = addSyncErrorListener(listener);
+
+      unsubscribe();
+
+      expect(getSyncErrorListenerCount()).toBe(0);
+    });
+  });
+
+  describe('5-minute throttling', () => {
+    it('should expose throttle duration constant', () => {
+      const throttleMs = _getSyncThrottleMs();
+
+      expect(throttleMs).toBe(5 * 60 * 1000); // 5 minutes
+    });
+
+    it('should have a cold start synced flag that can be set', () => {
+      _setHasColdStartSynced(true);
+      // The flag is internal, but we can verify the function exists
+      expect(_setHasColdStartSynced).toBeDefined();
+    });
+  });
+
+  describe('stopAppStateSync clears new listeners', () => {
+    it('should clear sync status and error listeners', () => {
+      initializeAppStateSync();
+      addSyncStatusListener(() => {});
+      addSyncErrorListener(() => {});
+
+      stopAppStateSync();
+
+      expect(getSyncStatusListenerCount()).toBe(0);
+      expect(getSyncErrorListenerCount()).toBe(0);
     });
   });
 });

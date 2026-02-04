@@ -95,6 +95,16 @@ export {
   type SyncingIndicatorProps,
 } from './SyncingIndicator';
 
+export {
+  SyncProgressBar,
+  type SyncProgressBarProps,
+} from './SyncProgressBar';
+
+export {
+  SyncErrorToast,
+  type SyncErrorToastProps,
+} from './SyncErrorToast';
+
 export { LoadingSpinner, type LoadingSpinnerProps } from './LoadingSpinner';
 
 export { LoadingView, type LoadingViewProps } from './LoadingView';

@@ -45,14 +45,22 @@ export {
   isBackgroundSyncInProgress,
   addAppStateChangeListener,
   addBackgroundSyncListener,
+  addSyncStatusListener,
+  addSyncErrorListener,
   manualBackgroundSync,
   getAppStateListenerCount,
   getBackgroundSyncListenerCount,
+  getSyncStatusListenerCount,
+  getSyncErrorListenerCount,
   _resetAppStateSync,
   _setCurrentAppState,
   _setSyncingState,
+  _setHasColdStartSynced,
+  _getSyncThrottleMs,
   type AppStateChangeListener,
   type BackgroundSyncListener,
+  type SyncStatusListener,
+  type SyncErrorListener,
 } from './appStateSync';
 
 export {

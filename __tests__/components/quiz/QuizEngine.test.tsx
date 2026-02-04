@@ -115,6 +115,22 @@ describe('QuizEngine', () => {
       expect(getByTestId('quiz-engine-input')).toBeTruthy();
     });
 
+    it('renders the input field with fixed height to prevent UI jumping with Japanese characters', () => {
+      const { getByTestId } = render(<QuizEngine config={makeConfig()} />);
+      const input = getByTestId('quiz-engine-input');
+      const styles = input.props.style
+        .flat(Infinity)
+        .filter(Boolean)
+        .reduce(
+          (acc: Record<string, unknown>, style: Record<string, unknown>) => ({
+            ...acc,
+            ...style,
+          }),
+          {},
+        );
+      expect(styles.height).toBe(56);
+    });
+
     it('renders the submit button', () => {
       const { getByTestId } = render(<QuizEngine config={makeConfig()} />);
       expect(getByTestId('quiz-engine-submit')).toBeTruthy();
@@ -591,6 +607,74 @@ describe('QuizEngine', () => {
       const config = makeConfig({ questions: [] });
       const { getByTestId } = render(<QuizEngine config={config} />);
       expect(getByTestId('quiz-engine-empty')).toBeTruthy();
+    });
+  });
+
+  describe('shouldSkipQuestion with wrap-around', () => {
+    it('wraps around to find previously-skipped question after reaching end of queue', () => {
+      // This test simulates the real bug scenario:
+      // Queue: [Q0, Q1-skipped, Q2]
+      // 1. Q0 is shown first (index 0, initial question)
+      // 2. After answering Q0, it becomes "done" and should be skipped
+      // 3. Q1 is also skipped (shouldSkipQuestion returns true for non-introduced items)
+      // 4. Q2 is shown (index 2)
+      // 5. After answering Q2, advance to index 3 (past end)
+      // 6. Now Q1 becomes available (simulating item becoming introduced)
+      // BUG: Q1 is at index 1, but we're at index 3 - can't go back
+      // FIX: wrap around to find Q1
+
+      const q0 = makeQuestion({ id: 'q0', subjectId: 1, displayText: 'Q0' });
+      const q1 = makeQuestion({ id: 'q1', subjectId: 2, displayText: 'Q1' });
+      const q2 = makeQuestion({ id: 'q2', subjectId: 3, displayText: 'Q2' });
+
+      // Track completed questions (items that are "done")
+      const completedQuestions = new Set<string>();
+      // Q1 is skipped initially, becomes available after Q2 is answered
+      let skipQ1 = true;
+
+      const config = makeConfig({
+        questions: [q0, q1, q2],
+        completionMode: 'never',
+        shouldSkipQuestion: (q: Question) => {
+          // Skip completed questions (like real ReviewSession does for done items)
+          if (completedQuestions.has(q.id)) return true;
+          // Skip Q1 initially (simulates item not being introduced yet)
+          if (q.id === 'q1') return skipQ1;
+          return false;
+        },
+        onAnswer: ({ question }) => {
+          // Mark question as completed when answered
+          completedQuestions.add(question.id);
+        },
+      });
+
+      const { getByTestId, queryByTestId, getByText } = render(
+        <QuizEngine config={config} />,
+      );
+
+      // Q0 is shown first (initial question at index 0)
+      expect(getByText('Q0')).toBeTruthy();
+
+      // Answer Q0 correctly → Q0 becomes done, Q1 is skipped, Q2 is shown
+      fireEvent.changeText(getByTestId('quiz-engine-input'), 'answer');
+      fireEvent.press(getByTestId('quiz-engine-submit'));
+      act(() => jest.advanceTimersByTime(600));
+
+      // Q0 is now done (skipped), Q1 is skipped, Q2 should be shown
+      expect(getByText('Q2')).toBeTruthy();
+
+      // Before answering Q2, make Q1 available (simulates item becoming introduced)
+      skipQ1 = false;
+
+      // Answer Q2 correctly → Q2 becomes done, advance to index 3 (past end)
+      fireEvent.changeText(getByTestId('quiz-engine-input'), 'answer');
+      fireEvent.press(getByTestId('quiz-engine-submit'));
+      act(() => jest.advanceTimersByTime(600));
+
+      // BUG: Without wrap-around, shows loading screen (quiz-engine-empty)
+      // FIX: Should wrap around and find Q1 at index 1
+      expect(queryByTestId('quiz-engine-empty')).toBeNull();
+      expect(getByText('Q1')).toBeTruthy();
     });
   });
 });

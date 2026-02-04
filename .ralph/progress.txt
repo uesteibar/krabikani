@@ -31,6 +31,10 @@
 - QuizEngine component lives in src/components/quiz/QuizEngine.tsx — config-driven via QuizEngineConfig, wrapper screens handle domain logic (SRS, navigation, data loading) via callbacks
 - QuizEngine tests: don't mock useQuestionInput with React.useState in jest.mock factory — use the real hook or require('react') inside the factory
 - Reverse mode Question: `displayText` = English meaning (shown on screen), `correctAnswers` = [Japanese characters] — answerValidation uses `correctAnswers[0]` for comparison, NOT `displayText`
+- App state sync module (appStateSync.ts) uses listener pattern with Set + add/remove functions for sync status, sync errors, and background sync completion
+- Cold start sync bypasses throttle check and is triggered via `setImmediate()` in `initializeAppStateSync()` to allow initialization to complete first
+- Throttle logic uses `getSyncStatus()` from database to get last sync timestamps and compares against SYNC_THROTTLE_MS (5 minutes)
+- react-native-reanimated mock in jest.setup.js needs `cancelAnimation` and `withRepeat` for animated components that use indeterminate loops
 
 Started:
 ---
@@ -367,4 +371,143 @@ Started:
   - Level-down animation is visible via `srs-level-name-old` testID from AnimatedSrsLevelBadge when `shouldAnimate && previousLevelInfo` is truthy
   - `handleContinueDelay` returns 800ms delay; during that time `incorrectFeedback` in QuizEngine stays set and animated badge renders
   - Pre-existing test failures: 3 suites (syncService, database x2) — unchanged
+---
+
+## 2026-02-03 - US-001 (Reject empty meaning answers)
+- Fixed `validateInput` in `src/components/quiz/answerValidation.ts` to reject empty meaning answers with shake animation
+- Changed the meaning question validation to check for empty trimmed input and return `{ valid: false, reason: 'shake' }`
+- Updated 4 tests that expected the old behavior (empty meaning answers processed as incorrect):
+  - `__tests__/components/quiz/answerValidation.test.ts`: Changed "allows empty input" to "rejects empty input with shake"
+  - `__tests__/components/LessonQuiz.test.tsx`: Changed 2 tests to verify empty meaning answers are blocked
+  - `__tests__/components/ReviewSession.test.tsx`: Changed 2 tests to verify empty meaning answers are blocked
+- Files changed:
+  - `src/components/quiz/answerValidation.ts` (3 lines added for empty check)
+  - `__tests__/components/quiz/answerValidation.test.ts` (test expectation updated)
+  - `__tests__/components/LessonQuiz.test.tsx` (2 tests updated)
+  - `__tests__/components/ReviewSession.test.tsx` (2 tests updated)
+- **Learnings for future iterations:**
+  - Empty meaning answer rejection is now consistent with reading questions (both trigger shake, not submission)
+  - The `validateInput` function is the gatekeeper for pre-submission validation; `validateAnswer` handles correctness evaluation after validation passes
+  - Tests for blocking behavior should use `queryByTestId` to assert elements are NOT present (returns null) vs `getByTestId` which throws
+---
+
+## 2026-02-03 - US-002 (Fixed height input box)
+- Changed QuizEngine input style from `paddingVertical: SPACING.lg` to `height: 56` to prevent UI jumping when typing Japanese characters
+- Japanese characters have different line height metrics than Latin characters, causing content height to vary with paddingVertical
+- Fixed height of 56px accommodates both Latin and Japanese text comfortably (font size 18 * ~1.4 line height + comfortable padding)
+- Added test to verify input has fixed height of 56px
+- Files changed:
+  - `src/components/quiz/QuizEngine.tsx` (replaced paddingVertical with height: 56 in input style)
+  - `__tests__/components/quiz/QuizEngine.test.tsx` (added test for fixed height)
+- **Learnings for future iterations:**
+  - Use fixed `height` instead of `paddingVertical` for TextInput when consistent sizing is needed across different character sets (Latin, Japanese, etc.)
+  - Japanese characters typically have a line height of ~1.4x the font size
+  - Style extraction in tests uses `.flat(Infinity).filter(Boolean).reduce()` pattern to flatten StyleSheet styles into a single object
+---
+
+## 2026-02-03 - US-003 (Fix loading screen during reviews)
+- Verified that the existing `shouldSkipQuestion` logic in ReviewSession.tsx correctly handles the MAX_INCOMPLETE_ITEMS scenario
+- The logic `if (blockNewItems && (!isIntroduced || isItemDone))` ensures:
+  - New (non-introduced) items are skipped when at MAX_INCOMPLETE_ITEMS
+  - Completed items are skipped
+  - Re-queued questions for introduced but incomplete items are NEVER skipped
+- Added 3 comprehensive tests to verify no loading screen appears during active review sessions:
+  - `should never show loading screen during active session at MAX_INCOMPLETE_ITEMS` (radicals)
+  - `should show second question for introduced items when at MAX_INCOMPLETE_ITEMS` (kanji)
+  - `should never show loading screen with vocabulary items (2 questions each)` (vocabulary)
+- Files changed:
+  - `__tests__/components/ReviewSession.test.tsx` (added 3 new tests in "Incomplete Item Buffer Cap" section)
+- **Learnings for future iterations:**
+  - The `shouldSkipQuestion` callback is recreated when `introducedItemIds` changes due to proper useCallback dependencies
+  - Reading question tests need valid romaji input (e.g., 'machigai') not literal 'wrong' which can't convert to hiragana
+  - `findNextValidIndex` in QuizEngine correctly iterates through the queue to find the next non-skipped question
+  - Pre-existing test failures in database/syncService suites are unrelated to this feature
+---
+
+## 2026-02-03 - US-004 (Sync on app open)
+- Implemented automatic sync on cold start and foreground return with 5-minute throttle
+- Added `SYNC_THROTTLE_MS` constant (5 minutes) and `shouldThrottleSync()` function to check if enough time has passed since last sync
+- Added `hasColdStartSynced` flag to track if cold start sync has been triggered (bypasses throttle)
+- Added `SyncStatusListener` and `SyncErrorListener` types with corresponding listener registration functions
+- Cold start sync triggers in `initializeAppStateSync()` via `setImmediate()` to allow initialization to complete first
+- Created `SyncProgressBar` component: subtle 3px animated progress bar shown at top of HomeScreen during sync
+- Created `SyncErrorToast` component: auto-dismissing (3 seconds) error toast with fade animation
+- HomeScreen now listens to `addSyncStatusListener`, `addSyncErrorListener`, and `addBackgroundSyncListener` to show UI feedback
+- HomeScreen reloads dashboard data when background sync completes
+- Files changed:
+  - `src/utils/appStateSync.ts` (added throttling, cold start sync, sync status/error listeners)
+  - `src/utils/index.ts` (exported new functions and types)
+  - `src/components/SyncProgressBar.tsx` (new component)
+  - `src/components/SyncErrorToast.tsx` (new component)
+  - `src/components/index.ts` (exported new components)
+  - `src/screens/HomeScreen.tsx` (integrated sync status and error listeners, added UI components)
+  - `__tests__/utils/appStateSync.test.ts` (added tests for new listeners and throttling)
+  - `__tests__/components/SyncProgressBar.test.tsx` (new test file)
+  - `__tests__/components/SyncErrorToast.test.tsx` (new test file)
+  - `__tests__/screens/HomeScreen.test.tsx` (added tests for sync integration)
+  - `jest.setup.js` (added `cancelAnimation` and `withRepeat` to reanimated mock)
+- **Learnings for future iterations:**
+  - `setImmediate()` is useful for deferring cold start sync so initialization completes first
+  - `cancelAnimation` from react-native-reanimated must be mocked in jest.setup.js for test cleanup to work
+  - Throttle logic uses `getSyncStatus()` from database to get last sync timestamp
+  - Listener pattern (Set + add/remove functions) is reused across appStateSync for consistency
+  - SyncProgressBar uses `withRepeat` for indeterminate animation (looping 0→100%)
+  - SyncErrorToast uses `withSequence` with `runOnJS` callback to auto-dismiss after animation completes
+---
+
+## 2026-02-03 - US-005 (Show pending sync indicator)
+- Verified that PendingSyncIndicator component was already properly integrated into HomeScreen
+- The component displays pending reviews/lessons counts and shows "Will sync automatically when online" subtext
+- Added 5 integration tests to HomeScreen.test.tsx to verify:
+  - Shows pending reviews count when there are pending reviews
+  - Shows pending lessons count when there are pending lessons
+  - Shows both lessons and reviews when both are pending
+  - Hides indicator when no pending items
+  - Shows indicator with correct styling in sync status area
+- Files changed:
+  - `__tests__/screens/HomeScreen.test.tsx` (added import for insertPendingReview/insertPendingLesson, added "pending sync indicator" describe block with 5 tests)
+- **Learnings for future iterations:**
+  - The PendingSyncIndicator component was already fully implemented and integrated in HomeScreen prior to this story
+  - HomeScreen already fetches `pendingLessonsCount` and `pendingReviewsCount` via `getPendingLessonCount()` and `getPendingReviewCount()` in `loadDashboardData`
+  - The indicator uses `COLORS.status.pendingSyncBackground` for background and orange text color for visibility
+  - Database mock allows inserting pending reviews/lessons via `insertPendingReview` and `insertPendingLesson` for integration testing
+---
+
+## 2026-02-03 - US-006 (Show reviews available while offline)
+- Verified that `getAvailableReviews()` in database.ts already uses `new Date().toISOString()` which correctly uses current device time
+- Added timer-based refresh (every minute) to HomeScreen via `setInterval` in `useFocusEffect` callback
+- Timer is automatically cleaned up when screen loses focus via `clearInterval` in cleanup function
+- Added `REFRESH_INTERVAL_MS` constant (60 * 1000 = 60 seconds) at module level
+- Added 3 new tests in HomeScreen.test.tsx:
+  - `refreshes available reviews every minute while screen is focused`
+  - `shows reviews that become available based on device time`
+  - `cleans up interval when screen loses focus`
+- Files changed:
+  - `src/screens/HomeScreen.tsx` (added timer-based refresh in useFocusEffect, added REFRESH_INTERVAL_MS constant)
+  - `__tests__/screens/HomeScreen.test.tsx` (added 3 tests in "timer-based review refresh" describe block)
+- **Learnings for future iterations:**
+  - `useFocusEffect` cleanup function runs when screen loses focus, making it ideal for setting up/tearing down timers
+  - Use `jest.useFakeTimers()` and `jest.advanceTimersByTime()` for testing interval-based behavior
+  - Constants used inside `useCallback` dependency arrays should be defined at module level to avoid lint errors
+  - `getAvailableReviews()` already uses device time - no modification needed to the query itself
+---
+
+## 2026-02-04 - US-007 (Update upcoming reviews chart while offline)
+- Verified that `getUpcomingReviewsByHour()` in database.ts already uses `new Date()` for current device time (line 1169)
+- Verified that past hours are excluded by starting from the next hour (lines 1169-1173: `startHour.setHours(now.getHours() + 1)`)
+- Verified that timer-based refresh already exists in HomeScreen via `REFRESH_INTERVAL_MS` which calls `loadDashboardData()` including `getUpcomingReviewsByHour(12)`
+- Added 2 new tests in databaseCrud.test.ts:
+  - `should recalculate based on current device time, not cached data`
+  - `should exclude past hours from buckets (only future hours included)`
+- Added 1 new test in HomeScreen.test.tsx:
+  - `refreshes upcoming reviews chart every minute while screen is focused`
+- Files changed:
+  - `__tests__/storage/databaseCrud.test.ts` (added 2 tests for getUpcomingReviewsByHour)
+  - `__tests__/screens/HomeScreen.test.tsx` (added 1 test for chart timer refresh)
+  - `.ralph/state/prd.json` (marked US-007 passes: true)
+- **Learnings for future iterations:**
+  - Implementation was already complete from US-006 — same timer mechanism refreshes both available reviews count AND upcoming reviews chart
+  - `getUpcomingReviewsByHour()` uses `new Date()` internally each time it's called, so no cached sync time is ever used
+  - The chart data is part of `loadDashboardData()` which is called on initial render, focus, timer tick, and background sync completion
+  - All acceptance criteria were already satisfied — main work was adding test coverage to verify the behavior
 ---

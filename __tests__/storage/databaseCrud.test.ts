@@ -1202,6 +1202,31 @@ describe('Database CRUD Operations', () => {
         expect(firstBucket.hour.getSeconds()).toBe(0);
         expect(firstBucket.hour.getMilliseconds()).toBe(0);
       });
+
+      it('should recalculate based on current device time, not cached data', async () => {
+        // Each call to getUpcomingReviewsByHour uses new Date() internally
+        const buckets1 = await getUpcomingReviewsByHour(1);
+        const now = new Date();
+        const currentHour = new Date(now);
+        currentHour.setMinutes(0, 0, 0);
+
+        // First bucket should be the next hour from current time
+        const expectedNextHour = new Date(currentHour);
+        expectedNextHour.setHours(currentHour.getHours() + 1);
+
+        expect(buckets1[0].hour.getHours()).toBe(expectedNextHour.getHours());
+      });
+
+      it('should exclude past hours from buckets (only future hours included)', async () => {
+        // Buckets should only include future hours starting from next hour
+        const now = new Date();
+        const buckets = await getUpcomingReviewsByHour(12);
+
+        buckets.forEach(bucket => {
+          // Each bucket hour should be in the future (greater than current time)
+          expect(bucket.hour.getTime()).toBeGreaterThan(now.getTime());
+        });
+      });
     });
 
     describe('getPracticeItems', () => {

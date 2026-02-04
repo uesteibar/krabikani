@@ -34,6 +34,8 @@ import {
   LevelIndicator,
   LearnedCounts,
   UpcomingReviewsChart,
+  SyncProgressBar,
+  SyncErrorToast,
 } from '../components';
 import {
   COLORS,
@@ -66,7 +68,13 @@ import {
   getUserLevel,
   syncPendingData,
 } from '../sync';
-import { isOnline, addNetworkStatusListener } from '../utils';
+import {
+  isOnline,
+  addNetworkStatusListener,
+  addSyncStatusListener,
+  addSyncErrorListener,
+  addBackgroundSyncListener,
+} from '../utils';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -100,6 +108,8 @@ export interface UpcomingReviewsData {
 
 const ROCK_ANGLE = 12;
 const ROCK_DURATION = 120;
+// Refresh interval for updating reviews based on device time (every minute)
+const REFRESH_INTERVAL_MS = 60 * 1000;
 
 export function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
@@ -162,6 +172,8 @@ export function HomeScreen() {
     useState<UpcomingReviewsData>({
       hourlyBuckets: [],
     });
+  const [isBackgroundSyncing, setIsBackgroundSyncing] = useState(false);
+  const [showSyncError, setShowSyncError] = useState(false);
   const isSyncingPending = useRef(false);
 
   const loadDashboardData = useCallback(async () => {
@@ -321,9 +333,46 @@ export function HomeScreen() {
     };
   }, [syncPendingDataOnReconnect]);
 
+  // Listen for background sync status changes
+  useEffect(() => {
+    const unsubscribeSyncStatus = addSyncStatusListener((syncing: boolean) => {
+      setIsBackgroundSyncing(syncing);
+    });
+
+    const unsubscribeSyncError = addSyncErrorListener(() => {
+      setShowSyncError(true);
+    });
+
+    const unsubscribeSyncComplete = addBackgroundSyncListener(() => {
+      // Reload dashboard data after background sync completes
+      loadDashboardData();
+    });
+
+    return () => {
+      unsubscribeSyncStatus();
+      unsubscribeSyncError();
+      unsubscribeSyncComplete();
+    };
+  }, [loadDashboardData]);
+
+  const handleDismissSyncError = useCallback(() => {
+    setShowSyncError(false);
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
+      // Load data when screen comes into focus
       loadDashboardData();
+
+      // Set up timer to refresh data every minute while screen is focused
+      const intervalId = setInterval(() => {
+        loadDashboardData();
+      }, REFRESH_INTERVAL_MS);
+
+      // Clean up timer when screen loses focus
+      return () => {
+        clearInterval(intervalId);
+      };
     }, [loadDashboardData]),
   );
 
@@ -367,6 +416,7 @@ export function HomeScreen() {
   if (showOfflineError) {
     return (
       <View style={[styles.container, dynamicStyles.container]}>
+        <SyncProgressBar isSyncing={isBackgroundSyncing} />
         <OfflineIndicator />
         <View style={styles.errorContainer}>
           <Text style={[styles.errorTitle, dynamicStyles.errorTitle]}>
@@ -383,7 +433,12 @@ export function HomeScreen() {
 
   return (
     <View style={[styles.container, dynamicStyles.container]}>
+      <SyncProgressBar isSyncing={isBackgroundSyncing} />
       <OfflineIndicator />
+      <SyncErrorToast
+        visible={showSyncError}
+        onDismiss={handleDismissSyncError}
+      />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
