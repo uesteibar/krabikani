@@ -42,7 +42,11 @@ import {
   addUserSynonym,
   getUserSynonymsBySubjectId,
 } from '../../src/storage/database';
-import { __resetMockDatabase } from '../../__mocks__/@op-engineering/op-sqlite';
+
+jest.mock('@op-engineering/op-sqlite');
+
+// Get mock helpers from the mocked module to ensure same instance
+const { __resetMockDatabase } = jest.requireMock('@op-engineering/op-sqlite');
 
 // Mock fetch globally
 const mockFetch = jest.fn();

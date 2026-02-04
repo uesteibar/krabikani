@@ -90,13 +90,15 @@ import {
   type UserSynonymInput,
   type PendingSynonymInput,
 } from '../../src/storage/database';
-import {
+
+jest.mock('@op-engineering/op-sqlite');
+
+// Get mock helpers from the mocked module to ensure same instance
+const {
   __resetMockDatabase,
   __insertRow,
   __getTableRows,
-} from '../../__mocks__/@op-engineering/op-sqlite';
-
-jest.mock('@op-engineering/op-sqlite');
+} = jest.requireMock('@op-engineering/op-sqlite');
 
 describe('Database CRUD Operations', () => {
   beforeEach(async () => {
