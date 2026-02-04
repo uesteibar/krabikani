@@ -511,3 +511,47 @@ Started:
   - The chart data is part of `loadDashboardData()` which is called on initial render, focus, timer tick, and background sync completion
   - All acceptance criteria were already satisfied — main work was adding test coverage to verify the behavior
 ---
+
+## 2026-02-04 - US-001 (Add GitHub Action to build APK on push to main)
+- Created new workflow file `.github/workflows/build-apk.yml` for building release APK
+- Workflow triggers only on push to main branch (not PRs) per acceptance criteria
+- Builds APK with `./gradlew assembleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a` (ARM architectures only)
+- Uses appropriate caching:
+  - Node.js npm cache via `actions/setup-node@v4` with `cache: 'npm'`
+  - Gradle cache via `gradle/actions/setup-gradle@v4`
+- Uploads APK artifact using `actions/upload-artifact@v4` for use by subsequent jobs
+- Files changed:
+  - `.github/workflows/build-apk.yml` (new workflow file)
+  - `.ralph/state/prd.json` (marked US-001 passes: true)
+- **Learnings for future iterations:**
+  - Separate workflow file (build-apk.yml) keeps APK build concerns separate from CI quality checks
+  - `gradle/actions/setup-gradle@v4` provides better caching than manual cache setup
+  - Java 17 with Temurin distribution is the standard for modern Android builds
+  - `if-no-files-found: error` ensures the workflow fails if APK build fails
+  - APK is uploaded as artifact named 'app-release' for subsequent jobs (like US-002 release publish)
+---
+
+## 2026-02-04 - US-002 (Publish APK to GitHub Releases as latest)
+- Added `release` job to `.github/workflows/build-apk.yml` that runs after `build-apk` job
+- Release job workflow:
+  1. Downloads APK artifact from build job using `actions/download-artifact@v4`
+  2. Deletes existing 'latest' release using `gh release delete latest --yes || true` (replaces old release)
+  3. Creates new release using `softprops/action-gh-release@v2` with tag 'latest'
+- Release configuration:
+  - `tag_name: latest` - uses fixed 'latest' tag for easy access
+  - `name: Latest Build (${{ steps.sha.outputs.short }})` - includes 7-character short SHA
+  - `body` - includes markdown link to the full commit
+  - `files: app-release.apk` - attaches the APK
+  - `make_latest: true` - marks as the latest release on GitHub
+- Added `permissions: contents: write` to release job for creating releases and tags
+- Files changed:
+  - `.github/workflows/build-apk.yml` (added release job)
+  - `.ralph/state/prd.json` (marked US-002 passes: true)
+- **Learnings for future iterations:**
+  - `softprops/action-gh-release@v2` is the standard action for creating GitHub releases
+  - Short SHA is obtained via: `echo "short=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT`
+  - Use `gh release delete ... || true` to handle case where release doesn't exist yet
+  - `needs: build-apk` ensures release job waits for build to complete
+  - `permissions: contents: write` is required for creating releases/tags
+  - Downloaded artifact is in working directory directly as `app-release.apk`
+---

@@ -67,7 +67,7 @@ describe('database', () => {
       await initializeDatabase();
 
       const statements = __getExecutedStatements();
-      const createSubjects = statements.find(s =>
+      const createSubjects = statements.find((s: string) =>
         s.includes('CREATE TABLE IF NOT EXISTS subjects'),
       );
 
@@ -87,7 +87,7 @@ describe('database', () => {
       await initializeDatabase();
 
       const statements = __getExecutedStatements();
-      const createAssignments = statements.find(s =>
+      const createAssignments = statements.find((s: string) =>
         s.includes('CREATE TABLE IF NOT EXISTS assignments'),
       );
 
@@ -107,7 +107,7 @@ describe('database', () => {
       await initializeDatabase();
 
       const statements = __getExecutedStatements();
-      const createPendingReviews = statements.find(s =>
+      const createPendingReviews = statements.find((s: string) =>
         s.includes('CREATE TABLE IF NOT EXISTS pending_reviews'),
       );
 
@@ -132,7 +132,7 @@ describe('database', () => {
       await initializeDatabase();
 
       const statements = __getExecutedStatements();
-      const createSyncStatus = statements.find(s =>
+      const createSyncStatus = statements.find((s: string) =>
         s.includes('CREATE TABLE IF NOT EXISTS sync_status'),
       );
 
@@ -149,10 +149,10 @@ describe('database', () => {
       await initializeDatabase();
 
       const statements = __getExecutedStatements();
-      const subjectIndex = statements.find(s =>
+      const subjectIndex = statements.find((s: string) =>
         s.includes('idx_assignments_subject_id'),
       );
-      const availableIndex = statements.find(s =>
+      const availableIndex = statements.find((s: string) =>
         s.includes('idx_assignments_available_at'),
       );
 
@@ -166,8 +166,8 @@ describe('database', () => {
       await initializeDatabase();
 
       const statements = __getExecutedStatements();
-      const levelIndex = statements.find(s => s.includes('idx_subjects_level'));
-      const typeIndex = statements.find(s =>
+      const levelIndex = statements.find((s: string) => s.includes('idx_subjects_level'));
+      const typeIndex = statements.find((s: string) =>
         s.includes('idx_subjects_object_type'),
       );
 
@@ -181,7 +181,7 @@ describe('database', () => {
       await initializeDatabase();
 
       const statements = __getExecutedStatements();
-      const initSync = statements.find(s =>
+      const initSync = statements.find((s: string) =>
         s.includes('INSERT OR IGNORE INTO sync_status'),
       );
 
@@ -286,7 +286,7 @@ describe('database', () => {
       await initializeDatabase();
 
       const statements = __getExecutedStatements();
-      const createSubjects = statements.find(s =>
+      const createSubjects = statements.find((s: string) =>
         s.includes('CREATE TABLE IF NOT EXISTS subjects'),
       );
 
@@ -297,7 +297,7 @@ describe('database', () => {
       await initializeDatabase();
 
       const statements = __getExecutedStatements();
-      const createAssignments = statements.find(s =>
+      const createAssignments = statements.find((s: string) =>
         s.includes('CREATE TABLE IF NOT EXISTS assignments'),
       );
 
