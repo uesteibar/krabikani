@@ -86,6 +86,10 @@ export function QuizEngine({ config }: QuizEngineProps) {
   const [completedQuestionIds, setCompletedQuestionIds] = useState<Set<string>>(
     new Set(),
   );
+  // Ref mirror so advanceToNextQuestion always reads the latest set,
+  // even when called from a stale setTimeout closure in handleSubmit.
+  const completedIdsRef = useRef(completedQuestionIds);
+  completedIdsRef.current = completedQuestionIds;
   const originalQuestionCount = useMemo(
     () => initialQuestions.length,
     [initialQuestions],
@@ -176,16 +180,19 @@ export function QuizEngine({ config }: QuizEngineProps) {
     [autoRefill],
   );
 
-  // Find the next valid question index, skipping filtered questions.
+  // Find the next valid question index, skipping filtered and completed questions.
   // Wraps around to beginning of queue if needed to find previously-skipped questions.
   const findNextValidIndex = useCallback(
     (startIndex: number, queue: Question[]): number => {
-      if (!shouldSkipQuestion) return startIndex;
       if (queue.length === 0) return 0;
+
+      const completed = completedIdsRef.current;
+      const shouldSkip = (q: Question): boolean =>
+        completed.has(q.id) || (shouldSkipQuestion?.(q) ?? false);
 
       // First pass: search from startIndex to end
       let idx = startIndex;
-      while (idx < queue.length && shouldSkipQuestion(queue[idx])) {
+      while (idx < queue.length && shouldSkip(queue[idx])) {
         idx++;
       }
       if (idx < queue.length) {
@@ -195,7 +202,7 @@ export function QuizEngine({ config }: QuizEngineProps) {
       // Second pass: wrap around and search from 0 to startIndex
       // This finds questions that were skipped earlier (e.g., item wasn't introduced yet)
       idx = 0;
-      while (idx < startIndex && shouldSkipQuestion(queue[idx])) {
+      while (idx < startIndex && shouldSkip(queue[idx])) {
         idx++;
       }
       if (idx < startIndex) {

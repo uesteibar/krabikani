@@ -57,7 +57,6 @@ function makeQuestion(overrides: Partial<Question> = {}): Question {
   };
 }
 
-
 function makeReverseQuestion(overrides: Partial<Question> = {}): Question {
   return makeQuestion({
     id: 'q1-reverse',
@@ -607,6 +606,251 @@ describe('QuizEngine', () => {
       const config = makeConfig({ questions: [] });
       const { getByTestId } = render(<QuizEngine config={config} />);
       expect(getByTestId('quiz-engine-empty')).toBeTruthy();
+    });
+  });
+
+  describe('completed questions should not reappear from requeue', () => {
+    it('does not show a re-queued question if it was already answered correctly', () => {
+      // Scenario: requeueIncorrect is on. A question is answered incorrectly
+      // (gets re-queued to end). Later the same question appears again from
+      // the re-queued copy — but by then the user already answered it
+      // correctly via "Mark as Correct". The re-queued copy should be skipped.
+      //
+      // Queue starts as: [Q1, Q2]
+      // 1. Q1 answered incorrectly → queue becomes [Q1, Q2, Q1-requeued]
+      // 2. Q1 is marked correct → completedQuestionIds has Q1
+      // 3. Advance to Q2 (index 1)
+      // 4. Q2 answered correctly → advance to index 2
+      // 5. Index 2 is the re-queued Q1 — it should be SKIPPED (it's completed)
+
+      const q1 = makeQuestion({
+        id: 'q1-meaning',
+        subjectId: 1,
+        displayText: '大',
+      });
+      const q2 = makeQuestion({
+        id: 'q2-meaning',
+        subjectId: 2,
+        displayText: '小',
+      });
+
+      // First call: incorrect for Q1. Then correct for Q2.
+      validateAnswer
+        .mockReturnValueOnce({
+          status: 'incorrect',
+          userAnswer: 'wrong',
+          correctAnswer: 'big',
+        })
+        .mockReturnValue({
+          status: 'correct',
+          userAnswer: 'small',
+          correctAnswer: 'small',
+        });
+
+      const onMarkCorrect = jest.fn();
+      const onComplete = jest.fn();
+      const config = makeConfig({
+        questions: [q1, q2],
+        requeueIncorrect: true,
+        allowMarkCorrect: true,
+        onMarkCorrect,
+        completionMode: 'allQuestions',
+        onComplete,
+      });
+
+      const { getByTestId, queryByTestId } = render(
+        <QuizEngine config={config} />,
+      );
+
+      // Q1 is shown
+      expect(getByTestId('subject-display-text').props.children).toBe('大');
+
+      // Answer Q1 incorrectly → gets re-queued
+      fireEvent.changeText(getByTestId('quiz-engine-input'), 'wrong');
+      fireEvent.press(getByTestId('quiz-engine-submit'));
+
+      // Now on incorrect feedback. Mark as correct.
+      fireEvent.press(getByTestId('quiz-engine-mark-correct'));
+
+      // Should advance to Q2
+      expect(getByTestId('subject-display-text').props.children).toBe('小');
+
+      // Answer Q2 correctly
+      fireEvent.changeText(getByTestId('quiz-engine-input'), 'small');
+      fireEvent.press(getByTestId('quiz-engine-submit'));
+      act(() => jest.advanceTimersByTime(600));
+
+      // The re-queued Q1 at index 2 should be skipped since Q1 is completed.
+      // Session should complete (both questions answered), NOT show Q1 again.
+      expect(onComplete).toHaveBeenCalled();
+      expect(queryByTestId('quiz-engine-complete')).toBeTruthy();
+    });
+
+    it('skips re-queued question copy when advancing past end of original queue', () => {
+      // Simpler scenario without Mark as Correct:
+      // Queue: [Q1, Q2, Q3]
+      // 1. Q1 answered incorrectly → queue: [Q1, Q2, Q3, Q1-requeued]
+      // 2. Q2 answered correctly
+      // 3. Q3 answered correctly
+      // 4. Now at index 3: the re-queued Q1. Answer it correctly.
+      // 5. Advance to index 4 — past end, nothing left.
+      //    Session should complete, NOT wrap around and show Q1/Q2/Q3 again.
+
+      const q1 = makeQuestion({
+        id: 'q1-meaning',
+        subjectId: 1,
+        displayText: '大',
+      });
+      const q2 = makeQuestion({
+        id: 'q2-meaning',
+        subjectId: 2,
+        displayText: '小',
+      });
+      const q3 = makeQuestion({
+        id: 'q3-meaning',
+        subjectId: 3,
+        displayText: '中',
+      });
+
+      validateAnswer
+        .mockReturnValueOnce({
+          status: 'incorrect',
+          userAnswer: 'wrong',
+          correctAnswer: 'big',
+        })
+        .mockReturnValue({
+          status: 'correct',
+          userAnswer: 'answer',
+          correctAnswer: 'answer',
+        });
+
+      const onComplete = jest.fn();
+      const config = makeConfig({
+        questions: [q1, q2, q3],
+        requeueIncorrect: true,
+        completionMode: 'allQuestions',
+        onComplete,
+      });
+
+      const { getByTestId } = render(<QuizEngine config={config} />);
+
+      // Q1: answer incorrectly → re-queued
+      expect(getByTestId('subject-display-text').props.children).toBe('大');
+      fireEvent.changeText(getByTestId('quiz-engine-input'), 'wrong');
+      fireEvent.press(getByTestId('quiz-engine-submit'));
+      fireEvent.press(getByTestId('quiz-engine-continue'));
+
+      // Q2: answer correctly
+      expect(getByTestId('subject-display-text').props.children).toBe('小');
+      fireEvent.changeText(getByTestId('quiz-engine-input'), 'small');
+      fireEvent.press(getByTestId('quiz-engine-submit'));
+      act(() => jest.advanceTimersByTime(600));
+
+      // Q3: answer correctly
+      expect(getByTestId('subject-display-text').props.children).toBe('中');
+      fireEvent.changeText(getByTestId('quiz-engine-input'), 'medium');
+      fireEvent.press(getByTestId('quiz-engine-submit'));
+      act(() => jest.advanceTimersByTime(600));
+
+      // Re-queued Q1: answer correctly this time
+      expect(getByTestId('subject-display-text').props.children).toBe('大');
+      fireEvent.changeText(getByTestId('quiz-engine-input'), 'big');
+      fireEvent.press(getByTestId('quiz-engine-submit'));
+      act(() => jest.advanceTimersByTime(600));
+
+      // All 3 original questions answered correctly → session complete
+      expect(onComplete).toHaveBeenCalled();
+    });
+
+    it('does not show already-completed question when wrapping around with shouldSkipQuestion', () => {
+      // This is the core bug: shouldSkipQuestion causes wrap-around,
+      // and a completed question gets shown again because findNextValidIndex
+      // only checks shouldSkipQuestion, not completedQuestionIds.
+      //
+      // Queue: [Q0, Q1-skipped, Q2, Q0-requeued]
+      // 1. Q0 answered incorrectly → re-queued → queue: [Q0, Q1, Q2, Q0-requeued]
+      // 2. Advance to Q1 — skipped by shouldSkipQuestion
+      // 3. Advance to Q2 — shown, answered correctly
+      // 4. Advance to Q0-requeued (index 3) — answer correctly → Q0 completed
+      // 5. Advance past end (index 4), wrap around
+      // 6. Index 0 is Q0 — should be skipped (completed)
+      // 7. Index 1 is Q1 — shouldSkipQuestion now says available
+      // BUG: Q0 at index 0 gets shown again because completedQuestionIds isn't checked
+
+      const q0 = makeQuestion({ id: 'q0', subjectId: 1, displayText: 'Q0' });
+      const q1 = makeQuestion({ id: 'q1', subjectId: 2, displayText: 'Q1' });
+      const q2 = makeQuestion({ id: 'q2', subjectId: 3, displayText: 'Q2' });
+
+      let skipQ1 = true;
+
+      validateAnswer
+        .mockReturnValueOnce({
+          // Q0 first time: incorrect
+          status: 'incorrect',
+          userAnswer: 'wrong',
+          correctAnswer: 'Q0-answer',
+        })
+        .mockReturnValueOnce({
+          // Q2: correct
+          status: 'correct',
+          userAnswer: 'Q2-answer',
+          correctAnswer: 'Q2-answer',
+        })
+        .mockReturnValueOnce({
+          // Q0 requeued: correct
+          status: 'correct',
+          userAnswer: 'Q0-answer',
+          correctAnswer: 'Q0-answer',
+        })
+        .mockReturnValue({
+          // Q1: correct (if we get there)
+          status: 'correct',
+          userAnswer: 'Q1-answer',
+          correctAnswer: 'Q1-answer',
+        });
+
+      const config = makeConfig({
+        questions: [q0, q1, q2],
+        requeueIncorrect: true,
+        completionMode: 'never',
+        shouldSkipQuestion: (q: Question) => {
+          if (q.id === 'q1') return skipQ1;
+          return false;
+        },
+      });
+
+      const { getByTestId, queryByTestId } = render(
+        <QuizEngine config={config} />,
+      );
+
+      // Step 1: Q0 shown, answer incorrectly → re-queued
+      expect(getByTestId('subject-display-text').props.children).toBe('Q0');
+      fireEvent.changeText(getByTestId('quiz-engine-input'), 'wrong');
+      fireEvent.press(getByTestId('quiz-engine-submit'));
+      fireEvent.press(getByTestId('quiz-engine-continue'));
+
+      // Step 2-3: Q1 is skipped, Q2 is shown
+      expect(getByTestId('subject-display-text').props.children).toBe('Q2');
+      fireEvent.changeText(getByTestId('quiz-engine-input'), 'Q2-answer');
+      fireEvent.press(getByTestId('quiz-engine-submit'));
+      act(() => jest.advanceTimersByTime(600));
+
+      // Step 4: Re-queued Q0 (index 3), answer correctly
+      expect(getByTestId('subject-display-text').props.children).toBe('Q0');
+
+      // Make Q1 available BEFORE answering Q0 — simulates another item being
+      // introduced while Q0 is being answered (as happens in ReviewSession
+      // when buffer cap drops and a new item becomes available)
+      skipQ1 = false;
+
+      fireEvent.changeText(getByTestId('quiz-engine-input'), 'Q0-answer');
+      fireEvent.press(getByTestId('quiz-engine-submit'));
+      act(() => jest.advanceTimersByTime(600));
+
+      // BUG: Shows Q0 again (index 0) because completedQuestionIds not checked
+      // FIX: Should skip Q0 (completed) and show Q1
+      expect(queryByTestId('quiz-engine-empty')).toBeNull();
+      expect(getByTestId('subject-display-text').props.children).toBe('Q1');
     });
   });
 
