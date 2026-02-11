@@ -889,7 +889,7 @@ describe('LessonQuiz', () => {
       expect(getByTestId('lesson-quiz-continue')).toBeTruthy();
     });
 
-    it('advances to next question when continue is pressed', () => {
+    it('advances to next question when continue is pressed after delay', () => {
       const items = [sampleRadical, sampleRadical2]; // 2 questions
       const { getByTestId } = render(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
@@ -901,6 +901,11 @@ describe('LessonQuiz', () => {
 
       // Press continue
       fireEvent.press(getByTestId('lesson-quiz-continue'));
+
+      // Wait for the transition delay
+      act(() => {
+        jest.advanceTimersByTime(300);
+      });
 
       // Should be back at quiz view (not feedback)
       expect(getByTestId('lesson-quiz')).toBeTruthy();
@@ -920,8 +925,11 @@ describe('LessonQuiz', () => {
       fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
       fireEvent.press(getByTestId('lesson-quiz-submit'));
 
-      // Press continue
+      // Press continue and wait for transition delay
       fireEvent.press(getByTestId('lesson-quiz-continue'));
+      act(() => {
+        jest.advanceTimersByTime(300);
+      });
 
       // The same question should appear again (it was re-queued)
       expect(getByTestId('lesson-quiz')).toBeTruthy();
@@ -951,6 +959,9 @@ describe('LessonQuiz', () => {
         fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
         fireEvent.press(getByTestId('lesson-quiz-submit'));
         fireEvent.press(getByTestId('lesson-quiz-continue'));
+        act(() => {
+          jest.advanceTimersByTime(300);
+        });
       }
 
       // Should still be showing the question
@@ -1052,10 +1063,16 @@ describe('LessonQuiz', () => {
       fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
       fireEvent.press(getByTestId('lesson-quiz-submit'));
       fireEvent.press(getByTestId('lesson-quiz-continue'));
+      act(() => {
+        jest.advanceTimersByTime(300);
+      });
 
       fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong again');
       fireEvent.press(getByTestId('lesson-quiz-submit'));
       fireEvent.press(getByTestId('lesson-quiz-continue'));
+      act(() => {
+        jest.advanceTimersByTime(300);
+      });
 
       fireEvent.changeText(getByTestId('lesson-quiz-input'), 'Ground');
       fireEvent.press(getByTestId('lesson-quiz-submit'));
@@ -1504,12 +1521,12 @@ describe('LessonQuiz', () => {
       // Should show incorrect feedback
       expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
 
-      // Press continue
+      // Press continue and wait for transition delay + focus delay
       fireEvent.press(getByTestId('lesson-quiz-continue'));
 
-      // Run timers for focus delay (100ms)
+      // Run timers for transition delay (300ms) + focus delay (100ms)
       act(() => {
-        jest.advanceTimersByTime(100);
+        jest.advanceTimersByTime(400);
       });
 
       // Should be back at quiz view with input available
@@ -1758,7 +1775,7 @@ describe('LessonQuiz', () => {
       ],
     };
 
-    it('shows component radicals on incorrect kanji answer', () => {
+    it('shows expandable details with component radicals on incorrect kanji answer', () => {
       const { getByTestId, getByText } = render(
         <LessonQuiz
           items={[kanjiWithRadicals]}
@@ -1777,17 +1794,21 @@ describe('LessonQuiz', () => {
       // Should show incorrect feedback
       expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
 
-      // Should show component radicals section
-      expect(getByTestId('lesson-quiz-component-radicals')).toBeTruthy();
-      expect(getByText('Made up of:')).toBeTruthy();
+      // Should show expandable details with ItemDetails
+      expect(getByTestId('lesson-quiz-expandable-details')).toBeTruthy();
+      expect(getByTestId('lesson-quiz-item-details')).toBeTruthy();
+
+      // ItemDetails renders 'Made up of' section for components
+      expect(getByTestId('lesson-quiz-item-details-components')).toBeTruthy();
+      expect(getByText('Made up of')).toBeTruthy();
 
       // Should show each component radical
-      expect(getByTestId('lesson-quiz-component-1')).toBeTruthy();
-      expect(getByTestId('lesson-quiz-component-2')).toBeTruthy();
-      expect(getByTestId('lesson-quiz-component-3')).toBeTruthy();
+      expect(getByTestId('lesson-quiz-item-details-component-1')).toBeTruthy();
+      expect(getByTestId('lesson-quiz-item-details-component-2')).toBeTruthy();
+      expect(getByTestId('lesson-quiz-item-details-component-3')).toBeTruthy();
     });
 
-    it('shows component radicals on incorrect kanji reading answer', () => {
+    it('shows expandable details on incorrect kanji reading answer', () => {
       const { getByTestId } = render(
         <LessonQuiz
           items={[kanjiWithRadicals]}
@@ -1825,12 +1846,13 @@ describe('LessonQuiz', () => {
         jest.runAllTimers();
       });
 
-      // Should show incorrect feedback with component radicals
+      // Should show incorrect feedback with expandable details
       expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
-      expect(getByTestId('lesson-quiz-component-radicals')).toBeTruthy();
+      expect(getByTestId('lesson-quiz-expandable-details')).toBeTruthy();
+      expect(getByTestId('lesson-quiz-item-details-components')).toBeTruthy();
     });
 
-    it('does not show component radicals for kanji without components', () => {
+    it('does not show expandable details for kanji without components', () => {
       const kanjiWithoutRadicals: QuizItem = {
         ...sampleKanji,
         componentRadicals: undefined,
@@ -1854,11 +1876,11 @@ describe('LessonQuiz', () => {
       // Should show incorrect feedback
       expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
 
-      // Should not show component radicals section
-      expect(queryByTestId('lesson-quiz-component-radicals')).toBeNull();
+      // Should not show expandable details
+      expect(queryByTestId('lesson-quiz-expandable-details')).toBeNull();
     });
 
-    it('does not show component radicals for radicals', () => {
+    it('does not show expandable details for radicals', () => {
       const { getByTestId, queryByTestId } = render(
         <LessonQuiz
           items={[sampleRadical]}
@@ -1879,11 +1901,11 @@ describe('LessonQuiz', () => {
       // Should show incorrect feedback
       expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
 
-      // Should not show component radicals section
-      expect(queryByTestId('lesson-quiz-component-radicals')).toBeNull();
+      // Should not show expandable details (radicals have no components)
+      expect(queryByTestId('lesson-quiz-expandable-details')).toBeNull();
     });
 
-    it('does not show component radicals for vocabulary', () => {
+    it('does not show expandable details for vocabulary without components', () => {
       const { getByTestId, queryByTestId } = render(
         <LessonQuiz
           items={[sampleVocabulary]}
@@ -1902,11 +1924,11 @@ describe('LessonQuiz', () => {
       // Should show incorrect feedback
       expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
 
-      // Should not show component radicals section
-      expect(queryByTestId('lesson-quiz-component-radicals')).toBeNull();
+      // Should not show expandable details
+      expect(queryByTestId('lesson-quiz-expandable-details')).toBeNull();
     });
 
-    it('displays radical characters correctly', () => {
+    it('displays radical characters in ItemDetails', () => {
       const { getByTestId, getAllByText } = render(
         <LessonQuiz
           items={[kanjiWithRadicals]}
@@ -1922,7 +1944,7 @@ describe('LessonQuiz', () => {
         jest.runAllTimers();
       });
 
-      // Should display radical characters
+      // Should display radical characters via ItemDetails ComponentDisplay
       const treeTexts = getAllByText('木');
       // There should be at least 3 tree radicals displayed
       expect(treeTexts.length).toBeGreaterThanOrEqual(3);
@@ -1945,7 +1967,7 @@ describe('LessonQuiz', () => {
       ],
     };
 
-    it('shows component kanji on incorrect vocabulary meaning answer', () => {
+    it('shows expandable details with component kanji on incorrect vocabulary answer', () => {
       const { getByTestId, getByText } = render(
         <LessonQuiz
           items={[vocabWithKanji]}
@@ -1954,17 +1976,8 @@ describe('LessonQuiz', () => {
         />,
       );
 
-      // Check if on meaning question first
-      const type = getByTestId('lesson-quiz-question-type').props.children;
-      if (type !== 'MEANING') {
-        // Skip this test if we got a reading question first
-        return;
-      }
-
-      // Submit wrong answer
-      const input = getByTestId('lesson-quiz-input');
-      fireEvent.changeText(input, 'wrong');
-      fireEvent(input, 'submitEditing');
+      // Submit wrong answer (handles both meaning and reading questions)
+      submitWrongAnswer(getByTestId);
 
       act(() => {
         jest.runAllTimers();
@@ -1973,59 +1986,20 @@ describe('LessonQuiz', () => {
       // Should show incorrect feedback
       expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
 
-      // Should show component kanji section
-      expect(getByTestId('lesson-quiz-component-kanji')).toBeTruthy();
-      expect(getByText('Made up of:')).toBeTruthy();
+      // Should show expandable details with ItemDetails
+      expect(getByTestId('lesson-quiz-expandable-details')).toBeTruthy();
+      expect(getByTestId('lesson-quiz-item-details')).toBeTruthy();
 
-      // Should show each component kanji with meaning (not reading, since this is a meaning question)
-      expect(getByTestId('lesson-quiz-component-kanji-10')).toBeTruthy();
-      expect(getByTestId('lesson-quiz-component-kanji-11')).toBeTruthy();
+      // ItemDetails renders 'Made up of' section for components
+      expect(getByTestId('lesson-quiz-item-details-components')).toBeTruthy();
+      expect(getByText('Made up of')).toBeTruthy();
+
+      // Should show each component kanji
+      expect(getByTestId('lesson-quiz-item-details-component-10')).toBeTruthy();
+      expect(getByTestId('lesson-quiz-item-details-component-11')).toBeTruthy();
     });
 
-    it('shows component kanji with readings on incorrect vocabulary reading answer', () => {
-      const { getByTestId, getByText } = render(
-        <LessonQuiz
-          items={[vocabWithKanji]}
-          onAnswer={jest.fn()}
-          autoAdvanceDelay={0}
-        />,
-      );
-
-      // First, answer any question type correctly to get to the next one
-      const firstType = getByTestId('lesson-quiz-question-type').props.children;
-      const input = getByTestId('lesson-quiz-input');
-
-      if (firstType === 'MEANING') {
-        fireEvent.changeText(input, 'Adult');
-        fireEvent(input, 'submitEditing');
-        act(() => {
-          jest.runAllTimers();
-        });
-
-        // Now should be on reading question
-        const type = getByTestId('lesson-quiz-question-type').props.children;
-        expect(type).toBe('READING');
-      }
-
-      // Submit wrong answer on reading question (use valid hiragana, not romaji)
-      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'あああ');
-      fireEvent(getByTestId('lesson-quiz-input'), 'submitEditing');
-
-      act(() => {
-        jest.runAllTimers();
-      });
-
-      // Should show incorrect feedback with component kanji
-      expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
-      expect(getByTestId('lesson-quiz-component-kanji')).toBeTruthy();
-
-      // For reading questions, should show the reading instead of meaning
-      // The ComponentDisplay shows reading when displayText prop is provided
-      expect(getByText('おお')).toBeTruthy();
-      expect(getByText('ひと')).toBeTruthy();
-    });
-
-    it('does not show component kanji for vocabulary without components', () => {
+    it('does not show expandable details for vocabulary without components', () => {
       const vocabWithoutKanji: QuizItem = {
         ...sampleVocabulary,
         componentKanji: undefined,
@@ -2049,11 +2023,11 @@ describe('LessonQuiz', () => {
       // Should show incorrect feedback
       expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
 
-      // Should not show component kanji section
-      expect(queryByTestId('lesson-quiz-component-kanji')).toBeNull();
+      // Should not show expandable details
+      expect(queryByTestId('lesson-quiz-expandable-details')).toBeNull();
     });
 
-    it('does not show component kanji for kanji items', () => {
+    it('does not show expandable details for kanji items (kanji shows radicals, not component kanji)', () => {
       const { getByTestId, queryByTestId } = render(
         <LessonQuiz
           items={[sampleKanji]}
@@ -2072,11 +2046,11 @@ describe('LessonQuiz', () => {
       // Should show incorrect feedback
       expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
 
-      // Should not show component kanji section (kanji shows radicals, not kanji)
-      expect(queryByTestId('lesson-quiz-component-kanji')).toBeNull();
+      // sampleKanji has no componentRadicals, so no expandable details
+      expect(queryByTestId('lesson-quiz-expandable-details')).toBeNull();
     });
 
-    it('does not show component kanji for radicals', () => {
+    it('does not show expandable details for radicals', () => {
       const { getByTestId, queryByTestId } = render(
         <LessonQuiz
           items={[sampleRadical]}
@@ -2097,11 +2071,11 @@ describe('LessonQuiz', () => {
       // Should show incorrect feedback
       expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
 
-      // Should not show component kanji section
-      expect(queryByTestId('lesson-quiz-component-kanji')).toBeNull();
+      // Should not show expandable details
+      expect(queryByTestId('lesson-quiz-expandable-details')).toBeNull();
     });
 
-    it('displays kanji characters correctly with pink background', () => {
+    it('displays kanji characters in ItemDetails', () => {
       const { getByTestId, getAllByText } = render(
         <LessonQuiz
           items={[vocabWithKanji]}
@@ -2110,22 +2084,14 @@ describe('LessonQuiz', () => {
         />,
       );
 
-      // Check if on meaning question first (we need the incorrect state)
-      const type = getByTestId('lesson-quiz-question-type').props.children;
-      if (type !== 'MEANING') {
-        return;
-      }
-
-      // Submit wrong answer
-      const input = getByTestId('lesson-quiz-input');
-      fireEvent.changeText(input, 'wrong');
-      fireEvent(input, 'submitEditing');
+      // Submit wrong answer (handles both meaning and reading questions)
+      submitWrongAnswer(getByTestId);
 
       act(() => {
         jest.runAllTimers();
       });
 
-      // Should display kanji characters
+      // Should display kanji characters via ItemDetails ComponentDisplay
       const bigTexts = getAllByText('大');
       expect(bigTexts.length).toBeGreaterThanOrEqual(1);
       const personTexts = getAllByText('人');
@@ -2156,8 +2122,69 @@ describe('LessonQuiz', () => {
       // Should show incorrect feedback
       expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
 
-      // Should not show component kanji section (empty array)
-      expect(queryByTestId('lesson-quiz-component-kanji')).toBeNull();
+      // Should not show expandable details (empty array)
+      expect(queryByTestId('lesson-quiz-expandable-details')).toBeNull();
+    });
+  });
+
+  describe('feedback transition delay', () => {
+    it('delays transition from incorrect feedback to next question to prevent vertical hop', () => {
+      const items = [sampleRadical, sampleRadical2]; // 2 questions
+      const { getByTestId, queryByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+      );
+
+      // Submit wrong answer
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      // Should show incorrect feedback
+      expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
+
+      // Press continue
+      fireEvent.press(getByTestId('lesson-quiz-continue'));
+
+      // Immediately after pressing continue, feedback should still be visible
+      // (the delay prevents instant transition which causes vertical hop)
+      expect(queryByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
+
+      // After the delay, should advance to next question
+      act(() => {
+        jest.advanceTimersByTime(300);
+      });
+
+      // Now should be back at quiz view
+      expect(queryByTestId('lesson-quiz-incorrect-feedback')).toBeNull();
+      expect(getByTestId('lesson-quiz')).toBeTruthy();
+    });
+
+    it('does not affect correct answer auto-advance timing', () => {
+      const items = [sampleRadical, sampleRadical2]; // 2 questions
+      const { getByTestId, queryByTestId } = render(
+        <LessonQuiz
+          items={items}
+          onAnswer={jest.fn()}
+          autoAdvanceDelay={100}
+        />,
+      );
+
+      // Get the first question's expected answer
+      const firstChar = getByTestId('subject-display-text').props.children;
+      const firstAnswer = firstChar === '一' ? 'Ground' : 'Person';
+
+      // Answer correctly
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), firstAnswer);
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
+      // Should show correct feedback
+      expect(queryByTestId('subject-display-feedback-label')).toBeTruthy();
+
+      // After autoAdvanceDelay, should advance (not affected by onContinueDelay)
+      act(() => {
+        jest.advanceTimersByTime(100);
+      });
+
+      expect(queryByTestId('subject-display-feedback-label')).toBeNull();
     });
   });
 

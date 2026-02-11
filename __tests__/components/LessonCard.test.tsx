@@ -5,6 +5,7 @@ import {
   LessonCard,
   LessonCardProps,
   ComponentRadical,
+  ComponentKanji,
 } from '../../src/components/LessonCard';
 import type { Meaning, Reading, KanjiReading } from '../../src/api/types';
 import { SUBJECT_COLORS } from '../../src/theme';
@@ -728,6 +729,95 @@ describe('LessonCard', () => {
         ' ',
         'たい',
       ]);
+    });
+  });
+
+  describe('component kanji section (vocabulary)', () => {
+    const componentKanji: ComponentKanji[] = [
+      { id: 10, characters: '大', meaning: 'Big' },
+      { id: 11, characters: '小', meaning: 'Small' },
+    ];
+
+    it('renders component kanji section for vocabulary items', () => {
+      const props = { ...defaultVocabularyProps, componentKanji };
+      const { getByTestId } = render(<LessonCard {...props} />);
+      expect(getByTestId('lesson-card-components')).toBeTruthy();
+    });
+
+    it('displays "Made up of:" title for vocabulary', () => {
+      const props = { ...defaultVocabularyProps, componentKanji };
+      const { getByText } = render(<LessonCard {...props} />);
+      expect(getByText('Made up of:')).toBeTruthy();
+    });
+
+    it('displays each component kanji', () => {
+      const props = { ...defaultVocabularyProps, componentKanji };
+      const { getByTestId } = render(<LessonCard {...props} />);
+      expect(getByTestId('lesson-card-component-10')).toBeTruthy();
+      expect(getByTestId('lesson-card-component-11')).toBeTruthy();
+    });
+
+    it('displays component kanji characters', () => {
+      const props = { ...defaultVocabularyProps, componentKanji };
+      const { getByText } = render(<LessonCard {...props} />);
+      expect(getByText('大')).toBeTruthy();
+      expect(getByText('小')).toBeTruthy();
+    });
+
+    it('displays component kanji meanings', () => {
+      const props = { ...defaultVocabularyProps, componentKanji };
+      const { getAllByText, getByText } = render(<LessonCard {...props} />);
+      // "Big" appears both as primary meaning and component meaning
+      expect(getAllByText('Big').length).toBeGreaterThanOrEqual(2);
+      expect(getByText('Small')).toBeTruthy();
+    });
+
+    it('does not render component kanji section when not provided', () => {
+      const { queryByTestId } = render(
+        <LessonCard {...defaultVocabularyProps} />,
+      );
+      expect(queryByTestId('lesson-card-components')).toBeNull();
+    });
+
+    it('does not render component kanji section when array is empty', () => {
+      const props = { ...defaultVocabularyProps, componentKanji: [] };
+      const { queryByTestId } = render(<LessonCard {...props} />);
+      expect(queryByTestId('lesson-card-components')).toBeNull();
+    });
+
+    it('uses kanji background color for component items', () => {
+      const props = { ...defaultVocabularyProps, componentKanji };
+      const { getByTestId } = render(<LessonCard {...props} />);
+      const component = getByTestId('lesson-card-component-10');
+      expect(component.props.style).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ backgroundColor: SUBJECT_COLORS.kanji }),
+        ]),
+      );
+    });
+
+    it('calls onComponentPress when a component kanji is pressed', () => {
+      const onComponentPress = jest.fn();
+      const props = { ...defaultVocabularyProps, componentKanji, onComponentPress };
+      const { getByTestId } = render(<LessonCard {...props} />);
+      fireEvent.press(getByTestId('lesson-card-component-10'));
+      expect(onComponentPress).toHaveBeenCalledWith(10);
+    });
+  });
+
+  describe('radicals do not show Made up of', () => {
+    it('does not show components section for radical items', () => {
+      const { queryByTestId } = render(<LessonCard {...defaultRadicalProps} />);
+      expect(queryByTestId('lesson-card-components')).toBeNull();
+    });
+
+    it('does not show components section for radical even with componentRadicals prop', () => {
+      const props = {
+        ...defaultRadicalProps,
+        componentRadicals: [{ id: 1, characters: '一', meaning: 'Ground' }],
+      };
+      const { queryByTestId } = render(<LessonCard {...props} />);
+      expect(queryByTestId('lesson-card-components')).toBeNull();
     });
   });
 });

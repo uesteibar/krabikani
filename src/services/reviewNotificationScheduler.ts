@@ -2,7 +2,11 @@
  * Review notification scheduler.
  * Handles hourly checks for reviews and schedules notifications when appropriate.
  */
-import notifee, { EventType, TriggerType } from '@notifee/react-native';
+import notifee, {
+  AndroidImportance,
+  EventType,
+  TriggerType,
+} from '@notifee/react-native';
 import { AppState, Platform } from 'react-native';
 
 import {
@@ -74,12 +78,7 @@ export function isAppInForeground(): boolean {
  * This is called when the scheduled trigger fires.
  */
 export async function performHourlyReviewCheck(): Promise<void> {
-  // Skip if app is in foreground
-  if (isAppInForeground()) {
-    // Schedule next check and return
-    await scheduleNextHourlyCheck();
-    return;
-  }
+  const foreground = isAppInForeground();
 
   // Check if notifications are enabled (both permission and user setting)
   const permissionStatus = await checkPermissions();
@@ -108,8 +107,8 @@ export async function performHourlyReviewCheck(): Promise<void> {
     return;
   }
 
-  // Only show notification if count >= 20
-  if (reviewCount >= MIN_REVIEWS_FOR_NOTIFICATION) {
+  // Only show notification if count >= 20 and app is in background
+  if (!foreground && reviewCount >= MIN_REVIEWS_FOR_NOTIFICATION) {
     // Ensure channel exists on Android
     if (Platform.OS === 'android') {
       await setupNotificationChannel();
@@ -147,20 +146,16 @@ export async function scheduleNextHourlyCheck(): Promise<void> {
     await setupNotificationChannel();
   }
 
-  // Schedule a trigger notification that will fire at the next hour
-  // The notification itself won't be shown - we use it to trigger our check
+  // Schedule a silent trigger notification that will fire at the next hour.
+  // This notification is not visible to the user — it only triggers the background check.
   await notifee.createTriggerNotification(
     {
       id: HOURLY_CHECK_NOTIFICATION_ID,
-      title: 'Review Check',
-      body: 'Checking for reviews...',
+      title: '',
       android: {
         channelId: NOTIFICATION_CHANNEL_ID,
-        // Don't show heads-up notification for the trigger
-        showTimestamp: false,
-        pressAction: {
-          id: 'default',
-        },
+        importance: AndroidImportance.MIN,
+        asForegroundService: false,
       },
     },
     {

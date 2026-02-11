@@ -23,7 +23,8 @@ import {
   SPACING,
   FONT_SIZES,
 } from '../theme';
-import { ComponentDisplay } from './ComponentDisplay';
+import { ExpandableDetails } from './ExpandableDetails';
+import { ItemDetails } from './ItemDetails';
 import { QuizEngine } from './quiz/QuizEngine';
 import type {
   Question,
@@ -306,90 +307,53 @@ export function LessonQuiz({
   }, [onQuizComplete]);
 
   // Render details content (component radicals/kanji) for incorrect feedback
+  // Uses ExpandableDetails + ItemDetails to match ReviewSession's display style
   const renderDetailsContent = useCallback(
     (question: Question): React.ReactNode | undefined => {
       const qq = questionMapRef.current.get(question.id);
       if (!qq) return undefined;
 
       const feedbackItem = qq.item;
-      const feedbackType = qq.type;
-      const sections: React.ReactNode[] = [];
 
-      // Component radicals for kanji items
-      if (
-        feedbackItem.subjectType === 'kanji' &&
-        feedbackItem.componentRadicals &&
-        feedbackItem.componentRadicals.length > 0
-      ) {
-        sections.push(
-          <View
-            key="component-radicals"
-            style={detailStyles.feedbackSection}
-            testID="lesson-quiz-component-radicals"
-          >
-            <Text style={detailStyles.feedbackLabel}>Made up of:</Text>
-            <View style={detailStyles.componentsRow}>
-              {feedbackItem.componentRadicals.map(radical => (
-                <ComponentDisplay
-                  key={radical.id}
-                  subjectType="radical"
-                  characters={radical.characters}
-                  meaning={radical.meaning}
-                  characterImages={radical.characterImages}
-                  onPress={
-                    onComponentPress
-                      ? () => onComponentPress(radical.id)
-                      : undefined
-                  }
-                  testID={`lesson-quiz-component-${radical.id}`}
-                />
-              ))}
-            </View>
-          </View>,
-        );
-      }
-
-      // Component kanji for vocabulary items
-      if (
-        (feedbackItem.subjectType === 'vocabulary' ||
+      // Only show details for items that have components
+      const hasComponents =
+        (feedbackItem.subjectType === 'kanji' &&
+          feedbackItem.componentRadicals &&
+          feedbackItem.componentRadicals.length > 0) ||
+        ((feedbackItem.subjectType === 'vocabulary' ||
           feedbackItem.subjectType === 'kana_vocabulary') &&
-        feedbackItem.componentKanji &&
-        feedbackItem.componentKanji.length > 0
-      ) {
-        sections.push(
-          <View
-            key="component-kanji"
-            style={detailStyles.feedbackSection}
-            testID="lesson-quiz-component-kanji"
-          >
-            <Text style={detailStyles.feedbackLabel}>Made up of:</Text>
-            <View style={detailStyles.componentsRow}>
-              {feedbackItem.componentKanji.map(kanji => (
-                <ComponentDisplay
-                  key={kanji.id}
-                  subjectType="kanji"
-                  characters={kanji.characters}
-                  meaning={kanji.meaning}
-                  displayText={
-                    feedbackType === 'reading' ? kanji.reading : undefined
-                  }
-                  onPress={
-                    onComponentPress
-                      ? () => onComponentPress(kanji.id)
-                      : undefined
-                  }
-                  testID={`lesson-quiz-component-kanji-${kanji.id}`}
-                />
-              ))}
-            </View>
-          </View>,
-        );
-      }
+          feedbackItem.componentKanji &&
+          feedbackItem.componentKanji.length > 0);
 
-      return sections.length > 0 ? <>{sections}</> : undefined;
+      if (!hasComponents) return undefined;
+
+      return (
+        <ExpandableDetails
+          resetKey={qq.key}
+          testID="lesson-quiz-expandable-details"
+        >
+          <ItemDetails
+            subjectType={feedbackItem.subjectType}
+            meanings={feedbackItem.meanings}
+            readings={feedbackItem.readings}
+            meaningMnemonic={feedbackItem.meaningMnemonic}
+            readingMnemonic={feedbackItem.readingMnemonic}
+            componentRadicals={feedbackItem.componentRadicals}
+            componentKanji={feedbackItem.componentKanji}
+            onComponentPress={onComponentPress}
+            hideMnemonicType={qq.type}
+            testID="lesson-quiz-item-details"
+          />
+        </ExpandableDetails>
+      );
     },
     [onComponentPress],
   );
+
+  // Delay before advancing after incorrect feedback to prevent vertical layout shift
+  const handleContinueDelay = useCallback((): number => {
+    return 300;
+  }, []);
 
   // Render empty state
   const renderEmpty = useCallback((): React.ReactNode => {
@@ -440,6 +404,7 @@ export function LessonQuiz({
       renderCompletion,
       renderEmpty,
       autoAdvanceDelay,
+      onContinueDelay: handleContinueDelay,
       testID: 'lesson-quiz',
       subjectDisplayTestIDSuffix: 'character-container',
     }),
@@ -453,6 +418,7 @@ export function LessonQuiz({
       renderCompletion,
       renderEmpty,
       autoAdvanceDelay,
+      handleContinueDelay,
     ],
   );
 
@@ -489,21 +455,3 @@ const styles = StyleSheet.create({
   },
 });
 
-const detailStyles = StyleSheet.create({
-  feedbackSection: {
-    marginBottom: SPACING.xl,
-  },
-  feedbackLabel: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: '600',
-    color: COLORS.text.secondary,
-    marginBottom: SPACING.xs,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  componentsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.md,
-  },
-});

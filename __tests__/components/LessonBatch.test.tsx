@@ -8,7 +8,7 @@ import {
   LESSON_BATCH_SIZE,
   SWIPE_THRESHOLD,
 } from '../../src/components/LessonBatch';
-import { ComponentRadical } from '../../src/components/LessonCard';
+import { ComponentRadical, ComponentKanji } from '../../src/components/LessonCard';
 import type { Meaning, Reading, KanjiReading } from '../../src/api/types';
 import { SUBJECT_COLORS, COLORS } from '../../src/theme';
 
@@ -96,6 +96,7 @@ function createVocabularyItem(
   characters: string,
   meaning: string,
   reading: string,
+  componentSubjectIds?: number[],
 ): LessonItem {
   return {
     id,
@@ -105,6 +106,7 @@ function createVocabularyItem(
     readings: createReadings([{ reading, primary: true }]),
     meaningMnemonic: `Meaning mnemonic for ${meaning}`,
     readingMnemonic: `Reading mnemonic for ${reading}`,
+    componentSubjectIds,
   };
 }
 
@@ -497,12 +499,12 @@ describe('LessonBatch', () => {
       expect(getByText('Ground')).toBeTruthy(); // Meaning
     });
 
-    it('does not show components for vocabulary items', () => {
+    it('does not show components for vocabulary items without componentSubjectIds', () => {
       const { getByTestId, queryByTestId } = render(
         <LessonBatch {...defaultProps} />,
       );
 
-      // Navigate to vocabulary item (index 2)
+      // Navigate to vocabulary item (index 2) — this one has no componentSubjectIds
       fireEvent.press(getByTestId('lesson-card-next-button')); // kanji
       fireEvent.press(getByTestId('lesson-card-next-button')); // vocabulary
 
@@ -872,6 +874,97 @@ describe('LessonBatch', () => {
         // Back button should not be rendered on first item
         expect(queryByTestId('lesson-card-back-button')).toBeNull();
       });
+    });
+  });
+
+  describe('component kanji display (vocabulary)', () => {
+    const componentKanjiMap = new Map<number, ComponentKanji>([
+      [20, { id: 20, characters: '大', meaning: 'Big' }],
+      [21, { id: 21, characters: '小', meaning: 'Small' }],
+    ]);
+
+    const vocabWithComponents = createVocabularyItem(
+      50,
+      '大小',
+      'Size',
+      'たいしょう',
+      [20, 21],
+    );
+
+    it('shows component kanji section for vocabulary items with componentSubjectIds', () => {
+      const { getByTestId } = render(
+        <LessonBatch
+          items={[vocabWithComponents]}
+          componentKanji={componentKanjiMap}
+          onBatchComplete={jest.fn()}
+        />,
+      );
+
+      expect(getByTestId('lesson-card-components')).toBeTruthy();
+    });
+
+    it('displays component kanji characters and meanings', () => {
+      const { getByText, getByTestId } = render(
+        <LessonBatch
+          items={[vocabWithComponents]}
+          componentKanji={componentKanjiMap}
+          onBatchComplete={jest.fn()}
+        />,
+      );
+
+      expect(getByTestId('lesson-card-component-20')).toBeTruthy();
+      expect(getByTestId('lesson-card-component-21')).toBeTruthy();
+      expect(getByText('Big')).toBeTruthy();
+      expect(getByText('Small')).toBeTruthy();
+    });
+
+    it('does not show component kanji for vocabulary without componentSubjectIds', () => {
+      const vocabNoComponents = createVocabularyItem(
+        51,
+        '大きい',
+        'Big',
+        'おおきい',
+      );
+      const { queryByTestId } = render(
+        <LessonBatch
+          items={[vocabNoComponents]}
+          componentKanji={componentKanjiMap}
+          onBatchComplete={jest.fn()}
+        />,
+      );
+
+      expect(queryByTestId('lesson-card-components')).toBeNull();
+    });
+
+    it('does not show component kanji when componentKanji map is not provided', () => {
+      const { queryByTestId } = render(
+        <LessonBatch
+          items={[vocabWithComponents]}
+          onBatchComplete={jest.fn()}
+        />,
+      );
+
+      expect(queryByTestId('lesson-card-components')).toBeNull();
+    });
+
+    it('filters out missing component kanji', () => {
+      const vocabWithMissing = createVocabularyItem(
+        52,
+        '大中',
+        'Large-Medium',
+        'たいちゅう',
+        [20, 999], // 999 doesn't exist in map
+      );
+      const { getByTestId, queryByTestId } = render(
+        <LessonBatch
+          items={[vocabWithMissing]}
+          componentKanji={componentKanjiMap}
+          onBatchComplete={jest.fn()}
+        />,
+      );
+
+      expect(getByTestId('lesson-card-component-20')).toBeTruthy();
+      expect(queryByTestId('lesson-card-component-999')).toBeNull();
     });
   });
 });

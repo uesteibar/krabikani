@@ -447,6 +447,7 @@ export function LessonsScreen() {
         <LessonBatch
           items={currentBatch.items}
           componentRadicals={componentRadicals}
+          componentKanji={componentKanji}
           onBatchComplete={handleBatchComplete}
           onComponentPress={handleComponentPress}
         />

@@ -1,4 +1,5 @@
 import notifee, {
+  AndroidImportance,
   AuthorizationStatus,
   TriggerType,
   EventType,
@@ -150,7 +151,7 @@ describe('reviewNotificationScheduler', () => {
       (AppState as any).currentState = 'background';
     });
 
-    it('skips notification if app is in foreground', async () => {
+    it('skips notification but still checks reviews when app is in foreground', async () => {
       (AppState as any).currentState = 'active';
       (getAvailableReviews as jest.Mock).mockResolvedValue(
         Array(25).fill({ id: 1 }),
@@ -158,6 +159,8 @@ describe('reviewNotificationScheduler', () => {
 
       await performHourlyReviewCheck();
 
+      expect(getAvailableReviews).toHaveBeenCalled();
+      expect(setBadgeCount).toHaveBeenCalledWith(25);
       expect(notifee.displayNotification).not.toHaveBeenCalled();
     });
 
@@ -276,7 +279,7 @@ describe('reviewNotificationScheduler', () => {
       expect(notifee.displayNotification).not.toHaveBeenCalled();
     });
 
-    it('does not update badge when app is in foreground', async () => {
+    it('schedules next check when app is in foreground', async () => {
       (AppState as any).currentState = 'active';
       (getAvailableReviews as jest.Mock).mockResolvedValue(
         Array(25).fill({ id: 1 }),
@@ -284,7 +287,18 @@ describe('reviewNotificationScheduler', () => {
 
       await performHourlyReviewCheck();
 
-      expect(setBadgeCount).not.toHaveBeenCalled();
+      expect(notifee.createTriggerNotification).toHaveBeenCalled();
+    });
+
+    it('updates badge when app is in foreground', async () => {
+      (AppState as any).currentState = 'active';
+      (getAvailableReviews as jest.Mock).mockResolvedValue(
+        Array(25).fill({ id: 1 }),
+      );
+
+      await performHourlyReviewCheck();
+
+      expect(setBadgeCount).toHaveBeenCalledWith(25);
     });
 
     it('does not update badge when permissions not granted', async () => {
@@ -317,6 +331,19 @@ describe('reviewNotificationScheduler', () => {
       expect(notifee.cancelTriggerNotifications).toHaveBeenCalledWith([
         'hourly-review-check',
       ]);
+    });
+
+    it('creates a silent trigger notification with no visible content', async () => {
+      await scheduleNextHourlyCheck();
+
+      const call = (notifee.createTriggerNotification as jest.Mock).mock
+        .calls[0];
+      const notification = call[0];
+
+      expect(notification.title).toBe('');
+      expect(notification.body).toBeUndefined();
+      expect(notification.android.importance).toBe(AndroidImportance.MIN);
+      expect(notification.android.asForegroundService).toBe(false);
     });
 
     it('creates a trigger notification for next hour', async () => {

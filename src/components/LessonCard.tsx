@@ -34,6 +34,16 @@ export interface ComponentRadical {
   characterImages?: string | null;
 }
 
+/** Data for a component kanji (used in vocabulary lesson cards) */
+export interface ComponentKanji {
+  /** Subject ID */
+  id: number;
+  /** Kanji character */
+  characters: string;
+  /** Primary meaning of the kanji */
+  meaning: string;
+}
+
 export interface LessonCardProps {
   /** The subject type (radical, kanji, vocabulary, kana_vocabulary) */
   subjectType: SubjectType;
@@ -51,6 +61,8 @@ export interface LessonCardProps {
   characterImages?: string | null;
   /** Component radicals for kanji items */
   componentRadicals?: ComponentRadical[];
+  /** Component kanji for vocabulary items */
+  componentKanji?: ComponentKanji[];
   /** Callback when Next button is pressed */
   onNext: () => void;
   /** Optional callback when Back button is pressed (hides button if not provided) */
@@ -108,6 +120,7 @@ export function LessonCard({
   readingMnemonic,
   characterImages,
   componentRadicals,
+  componentKanji,
   onNext,
   onBack,
   onComponentPress,
@@ -147,59 +160,119 @@ export function LessonCard({
       </View>
 
       {/* Component radicals display for kanji (below character block) */}
-      {componentRadicals && componentRadicals.length > 0 && (
-        <View
-          style={styles.componentsContainer}
-          testID="lesson-card-components"
-        >
-          <Text style={styles.componentsTitle}>Made up of:</Text>
-          <View style={styles.componentsRow}>
-            {componentRadicals.map(radical => {
-              const componentContent = (
-                <>
-                  {radical.characters === null ? (
-                    <RadicalImage
-                      characterImages={radical.characterImages ?? null}
-                      fallbackText={radical.meaning}
-                      size={FONT_SIZES.xxl}
-                      testID={`lesson-card-component-${radical.id}-image`}
-                    />
-                  ) : (
-                    <Text style={styles.componentCharacter}>
-                      {radical.characters}
+      {subjectType === 'kanji' &&
+        componentRadicals &&
+        componentRadicals.length > 0 && (
+          <View
+            style={styles.componentsContainer}
+            testID="lesson-card-components"
+          >
+            <Text style={styles.componentsTitle}>Made up of:</Text>
+            <View style={styles.componentsRow}>
+              {componentRadicals.map(radical => {
+                const componentContent = (
+                  <>
+                    {radical.characters === null ? (
+                      <RadicalImage
+                        characterImages={radical.characterImages ?? null}
+                        fallbackText={radical.meaning}
+                        size={FONT_SIZES.xxl}
+                        testID={`lesson-card-component-${radical.id}-image`}
+                      />
+                    ) : (
+                      <Text style={styles.componentCharacter}>
+                        {radical.characters}
+                      </Text>
+                    )}
+                    <Text style={styles.componentMeaning}>
+                      {radical.meaning}
                     </Text>
-                  )}
-                  <Text style={styles.componentMeaning}>{radical.meaning}</Text>
-                </>
-              );
+                  </>
+                );
 
-              if (onComponentPress) {
+                if (onComponentPress) {
+                  return (
+                    <TouchableOpacity
+                      key={radical.id}
+                      style={styles.componentItem}
+                      testID={`lesson-card-component-${radical.id}`}
+                      onPress={() => onComponentPress(radical.id)}
+                      activeOpacity={0.7}
+                    >
+                      {componentContent}
+                    </TouchableOpacity>
+                  );
+                }
+
                 return (
-                  <TouchableOpacity
+                  <View
                     key={radical.id}
                     style={styles.componentItem}
                     testID={`lesson-card-component-${radical.id}`}
-                    onPress={() => onComponentPress(radical.id)}
-                    activeOpacity={0.7}
                   >
                     {componentContent}
-                  </TouchableOpacity>
+                  </View>
                 );
-              }
-
-              return (
-                <View
-                  key={radical.id}
-                  style={styles.componentItem}
-                  testID={`lesson-card-component-${radical.id}`}
-                >
-                  {componentContent}
-                </View>
-              );
-            })}
+              })}
+            </View>
           </View>
-        </View>
-      )}
+        )}
+
+      {/* Component kanji display for vocabulary (below character block) */}
+      {(subjectType === 'vocabulary' || subjectType === 'kana_vocabulary') &&
+        componentKanji &&
+        componentKanji.length > 0 && (
+          <View
+            style={styles.componentsContainer}
+            testID="lesson-card-components"
+          >
+            <Text style={styles.componentsTitle}>Made up of:</Text>
+            <View style={styles.componentsRow}>
+              {componentKanji.map(kanji => {
+                const componentContent = (
+                  <>
+                    <Text style={styles.componentCharacter}>
+                      {kanji.characters}
+                    </Text>
+                    <Text style={styles.componentMeaning}>
+                      {kanji.meaning}
+                    </Text>
+                  </>
+                );
+
+                if (onComponentPress) {
+                  return (
+                    <TouchableOpacity
+                      key={kanji.id}
+                      style={[
+                        styles.componentItem,
+                        { backgroundColor: SUBJECT_COLORS.kanji },
+                      ]}
+                      testID={`lesson-card-component-${kanji.id}`}
+                      onPress={() => onComponentPress(kanji.id)}
+                      activeOpacity={0.7}
+                    >
+                      {componentContent}
+                    </TouchableOpacity>
+                  );
+                }
+
+                return (
+                  <View
+                    key={kanji.id}
+                    style={[
+                      styles.componentItem,
+                      { backgroundColor: SUBJECT_COLORS.kanji },
+                    ]}
+                    testID={`lesson-card-component-${kanji.id}`}
+                  >
+                    {componentContent}
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        )}
 
       <ScrollView
         style={styles.content}

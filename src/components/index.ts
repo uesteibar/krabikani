@@ -49,6 +49,7 @@ export {
   LessonCard,
   type LessonCardProps,
   type ComponentRadical,
+  type ComponentKanji,
 } from './LessonCard';
 
 export {

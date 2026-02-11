@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { StyleSheet, Text, View, PanResponder, GestureResponderEvent, PanResponderGestureState } from 'react-native';
 
 import type { SubjectType, Meaning, Reading, KanjiReading } from '../api/types';
-import { LessonCard, ComponentRadical } from './LessonCard';
+import { LessonCard, ComponentRadical, ComponentKanji } from './LessonCard';
 import {
   getSubjectColor,
   COLORS,
@@ -38,6 +38,8 @@ export interface LessonBatchProps {
   items: LessonItem[];
   /** Component radicals lookup map (for kanji items) */
   componentRadicals?: Map<number, ComponentRadical>;
+  /** Component kanji lookup map (for vocabulary items) */
+  componentKanji?: Map<number, ComponentKanji>;
   /** Callback when the batch learning phase is complete (all items viewed) */
   onBatchComplete: () => void;
   /** Callback when a component radical is pressed (for navigation to item detail) */
@@ -73,6 +75,7 @@ function getDotColor(
 export function LessonBatch({
   items,
   componentRadicals,
+  componentKanji,
   onBatchComplete,
   onComponentPress,
 }: LessonBatchProps) {
@@ -97,6 +100,22 @@ export function LessonBatch({
       .map(id => componentRadicals.get(id))
       .filter((r): r is ComponentRadical => r !== undefined);
   }, [currentItem, componentRadicals]);
+
+  // Get component kanji for the current item (if vocabulary)
+  const currentComponentKanji = useMemo(() => {
+    if (
+      !currentItem ||
+      (currentItem.subjectType !== 'vocabulary' &&
+        currentItem.subjectType !== 'kana_vocabulary') ||
+      !currentItem.componentSubjectIds ||
+      !componentKanji
+    ) {
+      return [];
+    }
+    return currentItem.componentSubjectIds
+      .map(id => componentKanji.get(id))
+      .filter((k): k is ComponentKanji => k !== undefined);
+  }, [currentItem, componentKanji]);
 
   const handleNext = useCallback(() => {
     if (isLastItem) {
@@ -200,6 +219,7 @@ export function LessonBatch({
           readingMnemonic={currentItem.readingMnemonic}
           characterImages={currentItem.characterImages}
           componentRadicals={currentComponentRadicals}
+          componentKanji={currentComponentKanji}
           onNext={handleNext}
           onBack={isFirstItem ? undefined : handleBack}
           onComponentPress={onComponentPress}

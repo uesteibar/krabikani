@@ -16,8 +16,12 @@ import { name as appName } from './app.json';
  * We use dynamic import to avoid circular dependencies during bootstrap.
  */
 notifee.onBackgroundEvent(async ({ type, detail }) => {
-  const { handleNotificationEvent } = await import('./src/services/reviewNotificationScheduler');
-  await handleNotificationEvent(type, detail.notification?.id);
+  try {
+    const { handleNotificationEvent } = await import('./src/services/reviewNotificationScheduler');
+    await handleNotificationEvent(type, detail.notification?.id);
+  } catch (error) {
+    console.error('[BackgroundEvent] Failed to handle notification event:', error);
+  }
 });
 
 AppRegistry.registerComponent(appName, () => App);
