@@ -138,4 +138,10 @@ export interface QuizEngineConfig {
    * Used by ReviewSession for tracking introduced items.
    */
   onQuestionChange?: (question: Question) => void;
+  /**
+   * Custom delay before advancing after mark-as-correct.
+   * Used by ReviewSession for level-up animation timing.
+   * Return the delay in ms, or 0 for immediate advance.
+   */
+  onMarkCorrectDelay?: () => number;
 }

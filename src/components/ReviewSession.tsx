@@ -353,6 +353,10 @@ export function ReviewSession({
   const [showingIncorrectFeedback, setShowingIncorrectFeedback] = useState(false);
   const [feedbackQuestionId, setFeedbackQuestionId] = useState<string | null>(null);
 
+  // Ref to signal that mark-as-correct triggered a level-up animation
+  // Stores deferred completion callback when level-up animation needs to play
+  const markCorrectLevelUpRef = useRef<(() => void) | null>(null);
+
   // Fetch zen mode setting on mount
   useEffect(() => {
     const loadZenModeSetting = async () => {
@@ -385,6 +389,7 @@ export function ReviewSession({
     setFeedbackQuestionId(null);
     sessionCompleteCalledRef.current = false;
     levelDownShownRef.current = new Map();
+    markCorrectLevelUpRef.current = null;
   }, [items]);
 
   // Notify parent of progress changes
@@ -570,7 +575,11 @@ export function ReviewSession({
         const isLevelUp =
           currentLevel && newLevel && currentLevel.key !== newLevel.key;
 
-        if (isLevelUp && itemJustCompleted) {
+        const hasZeroErrors =
+          currentProgress.incorrectMeaningAnswers === 0 &&
+          currentProgress.incorrectReadingAnswers === 0;
+
+        if (isLevelUp && itemJustCompleted && hasZeroErrors) {
           setLevelUpAnimation({
             fromStage: currentStage,
             toStage: newStage,
@@ -632,7 +641,7 @@ export function ReviewSession({
 
       const { item, type } = rq;
 
-      // Clear pending level-down
+      // Clear pending level-down (mark-as-correct never triggers level-down)
       setPendingLevelDown(null);
       setShowingIncorrectFeedback(false);
       setFeedbackQuestionId(null);
@@ -645,11 +654,26 @@ export function ReviewSession({
         correctAnswer: '',
       });
 
-      // Update item progress
+      // Compute new error counts after decrementing
       const currentProgress = _itemProgress.get(item.id)!;
+      const newMeaningErrors = type === 'meaning'
+        ? Math.max(0, currentProgress.incorrectMeaningAnswers - 1)
+        : currentProgress.incorrectMeaningAnswers;
+      const newReadingErrors = type === 'reading'
+        ? Math.max(0, currentProgress.incorrectReadingAnswers - 1)
+        : currentProgress.incorrectReadingAnswers;
+      const hasZeroErrors = newMeaningErrors === 0 && newReadingErrors === 0;
+
+      // If errors drop to zero, clear levelDownShownRef for this item
+      // so the pill shows the original SRS stage, not the penalized one
+      if (hasZeroErrors) {
+        levelDownShownRef.current.delete(item.id);
+      }
+
       const wasComplete =
         currentProgress.meaningCorrect && currentProgress.readingCorrect;
 
+      // Update item progress
       setItemProgress(prev => {
         const newProgress = new Map(prev);
         const itemProgress = { ...newProgress.get(item.id)! };
@@ -678,7 +702,30 @@ export function ReviewSession({
       const willBeComplete = willMeaningBeCorrect && willReadingBeCorrect;
       const itemJustCompleted = willBeComplete && !wasComplete;
 
-      if (itemJustCompleted) {
+      // Check SRS level-up animation (same logic as correct answer path)
+      let triggeredLevelUp = false;
+      if (itemJustCompleted && hasZeroErrors) {
+        const currentStage = item.srsStage;
+        const newStage = Math.min(currentStage + 1, 9);
+        const currentLevel = getSrsLevelInfo(currentStage);
+        const newLevel = getSrsLevelInfo(newStage);
+        const isLevelUp =
+          currentLevel && newLevel && currentLevel.key !== newLevel.key;
+
+        if (isLevelUp) {
+          triggeredLevelUp = true;
+          setCurrentQuestionId(question.id);
+          setLevelUpAnimation({
+            fromStage: currentStage,
+            toStage: newStage,
+          });
+        }
+      }
+
+      // Build deferred completion work
+      const completeItem = () => {
+        if (!itemJustCompleted) return;
+
         const newCompletedCount = completedItemCount + 1;
         setCompletedItemCount(newCompletedCount);
 
@@ -730,6 +777,13 @@ export function ReviewSession({
           onSessionComplete?.(finalProgress);
           sessionCompleteCalledRef.current = true;
         }
+      };
+
+      if (triggeredLevelUp) {
+        // Defer completion until after animation plays
+        markCorrectLevelUpRef.current = completeItem;
+      } else {
+        completeItem();
       }
     },
     [
@@ -785,6 +839,22 @@ export function ReviewSession({
     setFeedbackQuestionId(null);
     return 0;
   }, [pendingLevelDown]);
+
+  // onMarkCorrectDelay — pause for level-up animation after mark-as-correct
+  const handleMarkCorrectDelay = useCallback((): number => {
+    const deferredWork = markCorrectLevelUpRef.current;
+    if (deferredWork) {
+      markCorrectLevelUpRef.current = null;
+      // Use at least 500ms for level-up animation visibility
+      const animDelay = Math.max(autoAdvanceDelay, 500);
+      setTimeout(() => {
+        setLevelUpAnimation(null);
+        deferredWork();
+      }, animDelay);
+      return animDelay;
+    }
+    return 0;
+  }, [autoAdvanceDelay]);
 
   // shouldSkipQuestion — buffer cap + wrap-up logic
   const shouldSkipQuestion = useCallback(
@@ -1028,6 +1098,7 @@ export function ReviewSession({
       getSrsBadge,
       shouldSkipQuestion,
       onContinueDelay: handleContinueDelay,
+      onMarkCorrectDelay: handleMarkCorrectDelay,
       renderCompletion,
       renderDetailsContent,
       renderExtraButtons,
@@ -1053,6 +1124,7 @@ export function ReviewSession({
       getSrsBadge,
       shouldSkipQuestion,
       handleContinueDelay,
+      handleMarkCorrectDelay,
       renderCompletion,
       renderDetailsContent,
       renderExtraButtons,

@@ -3723,7 +3723,7 @@ describe('ReviewSession', () => {
       expect(queryByTestId('srs-level-name-old')).toBeTruthy();
     });
 
-    it('should NOT show level-up animation until item is fully completed, even with prior incorrect answer', () => {
+    it('should NOT show level-up animation when item is completed with prior incorrect answer', () => {
       // Force meaning question first
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
@@ -3764,11 +3764,48 @@ describe('ReviewSession', () => {
       fireEvent.changeText(getByTestId('review-session-input'), finalAnswer);
       fireEvent.press(getByTestId('review-session-submit'));
 
-      // NOW the item is fully completed, so level-up animation shows
-      // (Note: In actual WaniKani SRS, an incorrect answer would prevent level-up,
-      // but the animation logic currently only checks stage boundaries, not incorrect counts.
-      // This is acceptable as the animation provides visual feedback for item completion.)
-      expect(queryByTestId('srs-level-name-old')).toBeTruthy();
+      // Item is fully completed but had a prior incorrect answer,
+      // so NO level-up animation should play
+      expect(queryByTestId('srs-level-name-old')).toBeNull();
+    });
+
+    it('should NOT show level-up animation when reading was answered incorrectly even if retried correctly', () => {
+      // Force meaning question first
+      (Math.random as jest.Mock).mockReturnValue(0.1);
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[kanjiAtStage4]} autoAdvanceDelay={0} />,
+      );
+
+      const firstType = getByTestId('review-session-question-type').props
+        .children;
+      const meaningAnswer = 'Forest';
+      const readingAnswer = 'mori';
+
+      // Answer first question correctly
+      const firstAnswer = firstType === 'MEANING' ? meaningAnswer : readingAnswer;
+      fireEvent.changeText(getByTestId('review-session-input'), firstAnswer);
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Answer second question incorrectly
+      const wrongSecondAnswer = firstType === 'MEANING' ? 'あああ' : 'wrong';
+      fireEvent.changeText(getByTestId('review-session-input'), wrongSecondAnswer);
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Tap continue
+      fireEvent.press(getByTestId('review-session-continue'));
+
+      // Retry second question correctly
+      const correctSecondAnswer = firstType === 'MEANING' ? readingAnswer : meaningAnswer;
+      fireEvent.changeText(getByTestId('review-session-input'), correctSecondAnswer);
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Item completed but had an incorrect answer — no level-up animation
+      expect(queryByTestId('srs-level-name-old')).toBeNull();
     });
 
     it('should show level-up animation at correct stage boundary (4->5 Apprentice->Guru)', () => {
@@ -4060,6 +4097,247 @@ describe('ReviewSession', () => {
       // Before any answer, the badge should show original stage (Guru)
       const srsBadge = getByTestId('srs-badge');
       expect(srsBadge.props.children).toBe('Guru');
+    });
+  });
+
+  describe('Mark as Correct SRS Animation', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.clearAllMocks();
+      (database.getSetting as jest.Mock).mockResolvedValue(null);
+      (database.addUserSynonym as jest.Mock).mockResolvedValue(1);
+      (database.insertPendingSynonym as jest.Mock).mockResolvedValue(1);
+      jest.spyOn(Math, 'random');
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('should trigger level-up animation when mark-as-correct completes item with zero errors and cross-level boundary', () => {
+      // Radical at stage 4 (Apprentice 4 → Guru 1 on success)
+      const radicalAtStage4 = createRadicalItem(700, '石', 'Stone', 4);
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[radicalAtStage4]} autoAdvanceDelay={0} />,
+      );
+
+      // Answer incorrectly
+      fireEvent.changeText(getByTestId('review-session-input'), 'Wrong');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Press Mark as Correct — this should decrement error to 0, complete the item,
+      // and trigger level-up animation (stage 4 → 5, Apprentice → Guru)
+      fireEvent.press(getByTestId('review-session-mark-correct'));
+
+      // Should show level-up animation
+      expect(queryByTestId('srs-level-name-old')).toBeTruthy();
+      expect(queryByTestId('srs-level-name-old')?.props.children).toBe('Apprentice');
+      expect(queryByTestId('srs-level-name')?.props.children).toBe('Guru');
+    });
+
+    it('should trigger level-up animation when mark-as-correct is the second question and first was clean', () => {
+      // Kanji at stage 4 (Apprentice 4 → Guru 1 on success)
+      const kanjiAtStage4 = createKanjiItem(701, '金', 'Gold', 'きん', 4);
+      (Math.random as jest.Mock).mockReturnValue(0.1);
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[kanjiAtStage4]} autoAdvanceDelay={0} />,
+      );
+
+      // Get first question type
+      const firstType = getByTestId('review-session-question-type').props.children;
+      const firstAnswer = firstType === 'MEANING' ? 'Gold' : 'kin';
+
+      // Answer first question correctly
+      fireEvent.changeText(getByTestId('review-session-input'), firstAnswer);
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Advance to next question
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      // Answer second question incorrectly
+      const wrongSecondAnswer = firstType === 'MEANING' ? 'あああ' : 'wrong';
+      fireEvent.changeText(getByTestId('review-session-input'), wrongSecondAnswer);
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Press Mark as Correct — item should complete with zero total errors → level-up
+      fireEvent.press(getByTestId('review-session-mark-correct'));
+
+      // Should show level-up animation (Apprentice → Guru)
+      expect(queryByTestId('srs-level-name-old')).toBeTruthy();
+      expect(queryByTestId('srs-level-name-old')?.props.children).toBe('Apprentice');
+      expect(queryByTestId('srs-level-name')?.props.children).toBe('Guru');
+    });
+
+    it('should NOT trigger level-up animation when mark-as-correct leaves other question with unresolved error', () => {
+      // Kanji at stage 4 (Apprentice 4 → Guru 1 on success)
+      const kanjiAtStage4 = createKanjiItem(702, '銀', 'Silver', 'ぎん', 4);
+      (Math.random as jest.Mock).mockReturnValue(0.1);
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[kanjiAtStage4]} autoAdvanceDelay={0} />,
+      );
+
+      // Get first question type
+      const firstType = getByTestId('review-session-question-type').props.children;
+
+      // Answer first question incorrectly
+      const wrongFirst = firstType === 'MEANING' ? 'wrong' : 'あああ';
+      fireEvent.changeText(getByTestId('review-session-input'), wrongFirst);
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Press continue
+      fireEvent.press(getByTestId('review-session-continue'));
+
+      // Answer second question incorrectly
+      const wrongSecond = firstType === 'MEANING' ? 'あああ' : 'wrong';
+      fireEvent.changeText(getByTestId('review-session-input'), wrongSecond);
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Press Mark as Correct on second question — meaning still has error
+      fireEvent.press(getByTestId('review-session-mark-correct'));
+
+      // Should NOT show level-up (meaning question still has error)
+      expect(queryByTestId('srs-level-name-old')).toBeNull();
+    });
+
+    it('should clear pendingLevelDown and levelDownShownRef when mark-as-correct drops errors to zero', () => {
+      // Use two radicals: one at stage 5 (Guru 1) that we'll error on and mark correct,
+      // then answer it again to verify the badge shows original stage, not downgraded
+      const radicalAtStage5 = createRadicalItem(703, '田', 'Rice Paddy', 5);
+      const radicalFiller = createRadicalItem(708, '白', 'White', 1);
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[radicalAtStage5, radicalFiller]} autoAdvanceDelay={0} />,
+      );
+
+      // Identify which question came first
+      const firstChars = getByTestId('subject-display-text').props.children;
+
+      if (firstChars === '田') {
+        // Rice Paddy (stage 5) is first — answer incorrectly
+        fireEvent.changeText(getByTestId('review-session-input'), 'Wrong');
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        // At this point, levelDownShownRef has been set for this item (stage 5 → 4)
+        // Press Mark as Correct — should clear levelDownShownRef
+        fireEvent.press(getByTestId('review-session-mark-correct'));
+
+        // Now on next question (White). Answer it.
+        fireEvent.changeText(getByTestId('review-session-input'), 'White');
+        fireEvent.press(getByTestId('review-session-submit'));
+      } else {
+        // White is first — answer correctly
+        fireEvent.changeText(getByTestId('review-session-input'), 'White');
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        act(() => {
+          jest.runAllTimers();
+        });
+
+        // Rice Paddy should appear — answer incorrectly
+        fireEvent.changeText(getByTestId('review-session-input'), 'Wrong');
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        // Press Mark as Correct
+        fireEvent.press(getByTestId('review-session-mark-correct'));
+      }
+
+      // No level-down animation should be showing (mark-as-correct doesn't trigger it)
+      expect(queryByTestId('srs-level-name-old')).toBeNull();
+    });
+
+    it('should show original SRS stage after mark-as-correct, not penalized stage', () => {
+      // Use two radicals — one at stage 5 (Guru), one at stage 1
+      // After marking incorrect on the Guru radical and then marking correct,
+      // the badge should show Guru (stage 5), not Apprentice (stage 4)
+      const radicalAtStage5 = createRadicalItem(704, '竹', 'Bamboo', 5);
+      const radicalAtStage1 = createRadicalItem(705, '糸', 'Thread', 1);
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[radicalAtStage5, radicalAtStage1]} autoAdvanceDelay={0} />,
+      );
+
+      // First question — get the characters to identify which item
+      const firstChars = getByTestId('subject-display-text').props.children;
+
+      if (firstChars === '竹') {
+        // Bamboo (stage 5) is first — answer incorrectly then mark correct
+        fireEvent.changeText(getByTestId('review-session-input'), 'Wrong');
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        // Before mark correct: SRS badge should NOT show Apprentice (downgraded)
+        // At this point, incorrect feedback shows, and pending level-down is set
+
+        // Press Mark as Correct
+        fireEvent.press(getByTestId('review-session-mark-correct'));
+
+        // Now the next question should be the Thread radical
+        // The Bamboo badge should be cleared from levelDownShownRef
+        // Badge for next question should show its own stage
+        const badge = queryByTestId('srs-badge');
+        expect(badge).toBeTruthy();
+        expect(badge?.props.children).toBe('Apprentice'); // Thread at stage 1
+      } else {
+        // Thread (stage 1) is first — answer correctly
+        fireEvent.changeText(getByTestId('review-session-input'), 'Thread');
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        act(() => {
+          jest.runAllTimers();
+        });
+
+        // Now Bamboo should appear — answer incorrectly then mark correct
+        fireEvent.changeText(getByTestId('review-session-input'), 'Wrong');
+        fireEvent.press(getByTestId('review-session-submit'));
+
+        fireEvent.press(getByTestId('review-session-mark-correct'));
+
+        // Session should be complete with no downgraded stages persisting
+      }
+    });
+
+    it('should NOT trigger level-down animation on mark-as-correct', () => {
+      // Radical at stage 5 (Guru 1) — incorrect drops to Apprentice
+      const radicalAtStage5 = createRadicalItem(706, '雨', 'Rain', 5);
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[radicalAtStage5]} autoAdvanceDelay={0} />,
+      );
+
+      // Answer incorrectly — pendingLevelDown is set
+      fireEvent.changeText(getByTestId('review-session-input'), 'Wrong');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      // Should show incorrect feedback
+      expect(queryByTestId('review-session-incorrect-feedback')).toBeTruthy();
+
+      // Press Mark as Correct (NOT Continue)
+      fireEvent.press(getByTestId('review-session-mark-correct'));
+
+      // Should NOT show level-down animation (only Continue triggers level-down)
+      expect(queryByTestId('srs-level-name-old')).toBeNull();
+    });
+
+    it('should NOT trigger level-up animation when mark-as-correct keeps within same level', () => {
+      // Radical at stage 1 (Apprentice 1 → Apprentice 2, no level change)
+      const radicalAtStage1 = createRadicalItem(707, '雲', 'Cloud', 1);
+
+      const { getByTestId, queryByTestId } = render(
+        <ReviewSession items={[radicalAtStage1]} autoAdvanceDelay={0} />,
+      );
+
+      // Answer incorrectly then mark correct
+      fireEvent.changeText(getByTestId('review-session-input'), 'Wrong');
+      fireEvent.press(getByTestId('review-session-submit'));
+
+      fireEvent.press(getByTestId('review-session-mark-correct'));
+
+      // Should NOT show level-up animation (stage 1→2 is still Apprentice)
+      expect(queryByTestId('srs-level-name-old')).toBeNull();
     });
   });
 });

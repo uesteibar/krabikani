@@ -75,6 +75,7 @@ export function QuizEngine({ config }: QuizEngineProps) {
     renderEmpty,
     subjectDisplayTestIDSuffix = 'subject-display',
     onQuestionChange,
+    onMarkCorrectDelay,
   } = config;
 
   // Question queue state
@@ -281,7 +282,15 @@ export function QuizEngine({ config }: QuizEngineProps) {
       onComplete?.();
     }
 
-    advanceToNextQuestion();
+    // Optionally delay before advancing (e.g., for level-up animation)
+    const delay = onMarkCorrectDelay?.() ?? 0;
+    if (delay > 0) {
+      setTimeout(() => {
+        advanceToNextQuestion();
+      }, delay);
+    } else {
+      advanceToNextQuestion();
+    }
   }, [
     incorrectFeedback,
     requeueIncorrect,
@@ -292,6 +301,7 @@ export function QuizEngine({ config }: QuizEngineProps) {
     originalQuestionCount,
     onComplete,
     advanceToNextQuestion,
+    onMarkCorrectDelay,
   ]);
 
   // Handle add as synonym
