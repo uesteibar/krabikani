@@ -36,7 +36,7 @@ export function CorrectFeedbackView({
   const borderColor = getSubjectColor(subjectType);
 
   return (
-    <View testID={testID ?? 'correct-feedback-view'}>
+    <View style={styles.container} testID={testID ?? 'correct-feedback-view'}>
       <SubjectDisplay
         subjectType={subjectType}
         displayMode={displayMode}
@@ -56,11 +56,21 @@ export function CorrectFeedbackView({
           testID="correct-feedback-input"
         />
       </View>
+
+      <View style={styles.spacer} testID="correct-feedback-spacer" />
+
+      <View
+        style={styles.buttonRowPlaceholder}
+        testID="correct-feedback-button-row-placeholder"
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   inputContainer: {
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.md,
@@ -69,11 +79,19 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 2,
     borderRadius: BORDER_RADIUS.md,
-    paddingVertical: SPACING.lg,
+    height: 56,
     paddingHorizontal: SPACING.lg,
     fontSize: FONT_SIZES.lg,
     fontWeight: '600',
     textAlign: 'center',
     backgroundColor: COLORS.background.input,
+  },
+  spacer: {
+    flex: 1,
+  },
+  buttonRowPlaceholder: {
+    flexDirection: 'row',
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.lg,
   },
 });
