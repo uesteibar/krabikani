@@ -1,4 +1,5 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { render } from '@testing-library/react-native';
 
 import { CorrectFeedbackView } from '../../src/components/CorrectFeedbackView';
@@ -93,5 +94,46 @@ describe('CorrectFeedbackView', () => {
     );
 
     expect(getByTestId('correct-feedback-view')).toBeTruthy();
+  });
+
+  describe('layout alignment with QuizEngine', () => {
+    it('input uses fixed height: 56 matching QuizEngine input dimensions', () => {
+      const { getByTestId } = render(
+        <CorrectFeedbackView {...defaultProps} />,
+      );
+
+      const input = getByTestId('correct-feedback-input');
+      const flatStyle = StyleSheet.flatten(input.props.style);
+      expect(flatStyle.height).toBe(56);
+      expect(flatStyle.paddingVertical).toBeUndefined();
+    });
+
+    it('includes a spacer with flex: 1 between input and button row placeholder', () => {
+      const { getByTestId } = render(
+        <CorrectFeedbackView {...defaultProps} />,
+      );
+
+      const spacer = getByTestId('correct-feedback-spacer');
+      const flatStyle = StyleSheet.flatten(spacer.props.style);
+      expect(flatStyle.flex).toBe(1);
+    });
+
+    it('includes a button row placeholder to match QuizEngine vertical layout', () => {
+      const { getByTestId } = render(
+        <CorrectFeedbackView {...defaultProps} />,
+      );
+
+      expect(getByTestId('correct-feedback-button-row-placeholder')).toBeTruthy();
+    });
+
+    it('root container uses flex: 1 to fill available space', () => {
+      const { getByTestId } = render(
+        <CorrectFeedbackView {...defaultProps} />,
+      );
+
+      const root = getByTestId('correct-feedback-view');
+      const flatStyle = StyleSheet.flatten(root.props.style);
+      expect(flatStyle.flex).toBe(1);
+    });
   });
 });

@@ -350,10 +350,12 @@ export function LessonQuiz({
     [onComponentPress],
   );
 
-  // Delay before advancing after incorrect feedback to prevent vertical layout shift
-  const handleContinueDelay = useCallback((): number => {
-    return 300;
-  }, []);
+  // No delay needed for incorrect feedback transitions in lesson quizzes.
+  // Both the active question view and incorrect feedback view render
+  // ProgressHeader → SubjectDisplay at the same top positions, so no
+  // vertical layout shift occurs during the transition.
+  // (ReviewSession uses onContinueDelay for level-down animation timing,
+  // but lesson quizzes have no SRS level changes to animate.)
 
   // Render empty state
   const renderEmpty = useCallback((): React.ReactNode => {
@@ -404,7 +406,6 @@ export function LessonQuiz({
       renderCompletion,
       renderEmpty,
       autoAdvanceDelay,
-      onContinueDelay: handleContinueDelay,
       testID: 'lesson-quiz',
       subjectDisplayTestIDSuffix: 'character-container',
     }),
@@ -418,7 +419,6 @@ export function LessonQuiz({
       renderCompletion,
       renderEmpty,
       autoAdvanceDelay,
-      handleContinueDelay,
     ],
   );
 
