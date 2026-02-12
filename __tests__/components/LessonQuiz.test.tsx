@@ -889,7 +889,7 @@ describe('LessonQuiz', () => {
       expect(getByTestId('lesson-quiz-continue')).toBeTruthy();
     });
 
-    it('advances to next question when continue is pressed after delay', () => {
+    it('advances to next question immediately when continue is pressed', () => {
       const items = [sampleRadical, sampleRadical2]; // 2 questions
       const { getByTestId } = render(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
@@ -899,15 +899,10 @@ describe('LessonQuiz', () => {
       fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
       fireEvent.press(getByTestId('lesson-quiz-submit'));
 
-      // Press continue
+      // Press continue — transition is instant (no delay)
       fireEvent.press(getByTestId('lesson-quiz-continue'));
 
-      // Wait for the transition delay
-      act(() => {
-        jest.advanceTimersByTime(300);
-      });
-
-      // Should be back at quiz view (not feedback)
+      // Should be back at quiz view immediately
       expect(getByTestId('lesson-quiz')).toBeTruthy();
     });
   });
@@ -925,11 +920,8 @@ describe('LessonQuiz', () => {
       fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
       fireEvent.press(getByTestId('lesson-quiz-submit'));
 
-      // Press continue and wait for transition delay
+      // Press continue — transition is instant
       fireEvent.press(getByTestId('lesson-quiz-continue'));
-      act(() => {
-        jest.advanceTimersByTime(300);
-      });
 
       // The same question should appear again (it was re-queued)
       expect(getByTestId('lesson-quiz')).toBeTruthy();
@@ -959,9 +951,6 @@ describe('LessonQuiz', () => {
         fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
         fireEvent.press(getByTestId('lesson-quiz-submit'));
         fireEvent.press(getByTestId('lesson-quiz-continue'));
-        act(() => {
-          jest.advanceTimersByTime(300);
-        });
       }
 
       // Should still be showing the question
@@ -1063,16 +1052,10 @@ describe('LessonQuiz', () => {
       fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
       fireEvent.press(getByTestId('lesson-quiz-submit'));
       fireEvent.press(getByTestId('lesson-quiz-continue'));
-      act(() => {
-        jest.advanceTimersByTime(300);
-      });
 
       fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong again');
       fireEvent.press(getByTestId('lesson-quiz-submit'));
       fireEvent.press(getByTestId('lesson-quiz-continue'));
-      act(() => {
-        jest.advanceTimersByTime(300);
-      });
 
       fireEvent.changeText(getByTestId('lesson-quiz-input'), 'Ground');
       fireEvent.press(getByTestId('lesson-quiz-submit'));
@@ -1521,12 +1504,12 @@ describe('LessonQuiz', () => {
       // Should show incorrect feedback
       expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
 
-      // Press continue and wait for transition delay + focus delay
+      // Press continue — transition is instant (no delay)
       fireEvent.press(getByTestId('lesson-quiz-continue'));
 
-      // Run timers for transition delay (300ms) + focus delay (100ms)
+      // Run timers for focus delay (100ms)
       act(() => {
-        jest.advanceTimersByTime(400);
+        jest.advanceTimersByTime(100);
       });
 
       // Should be back at quiz view with input available
@@ -2127,8 +2110,8 @@ describe('LessonQuiz', () => {
     });
   });
 
-  describe('feedback transition delay', () => {
-    it('delays transition from incorrect feedback to next question to prevent vertical hop', () => {
+  describe('feedback transition', () => {
+    it('transitions instantly from incorrect feedback to next question', () => {
       const items = [sampleRadical, sampleRadical2]; // 2 questions
       const { getByTestId, queryByTestId } = render(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
@@ -2141,20 +2124,34 @@ describe('LessonQuiz', () => {
       // Should show incorrect feedback
       expect(getByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
 
+      // Press continue — transition is instant (no onContinueDelay)
+      fireEvent.press(getByTestId('lesson-quiz-continue'));
+
+      // Should immediately be back at quiz view
+      expect(queryByTestId('lesson-quiz-incorrect-feedback')).toBeNull();
+      expect(getByTestId('lesson-quiz')).toBeTruthy();
+    });
+
+    it('does not pass onContinueDelay to QuizEngine', () => {
+      // LessonQuiz should not use onContinueDelay since there is no
+      // vertical layout shift: both the active question view and incorrect
+      // feedback view render ProgressHeader → SubjectDisplay at the same
+      // top positions. ReviewSession uses onContinueDelay for level-down
+      // animation timing, which is not needed in lesson quizzes.
+      const items = [sampleRadical, sampleRadical2];
+      const { getByTestId } = render(
+        <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
+      );
+
+      // Submit wrong answer
+      fireEvent.changeText(getByTestId('lesson-quiz-input'), 'wrong');
+      fireEvent.press(getByTestId('lesson-quiz-submit'));
+
       // Press continue
       fireEvent.press(getByTestId('lesson-quiz-continue'));
 
-      // Immediately after pressing continue, feedback should still be visible
-      // (the delay prevents instant transition which causes vertical hop)
-      expect(queryByTestId('lesson-quiz-incorrect-feedback')).toBeTruthy();
-
-      // After the delay, should advance to next question
-      act(() => {
-        jest.advanceTimersByTime(300);
-      });
-
-      // Now should be back at quiz view
-      expect(queryByTestId('lesson-quiz-incorrect-feedback')).toBeNull();
+      // Transition should be immediate (no setTimeout delay)
+      // Verify we're back at the quiz view without needing to advance timers
       expect(getByTestId('lesson-quiz')).toBeTruthy();
     });
 
