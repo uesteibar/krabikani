@@ -5,6 +5,7 @@ on:
     types: [opened, synchronize, reopened]
 
 permissions:
+  contents: read
   pull-requests: write
 
 jobs:
@@ -31,6 +32,10 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Generate native codegen artifacts
+        working-directory: android
+        run: ./gradlew generateCodegenArtifactsFromSchema
 
       - name: Build release APK
         working-directory: android
