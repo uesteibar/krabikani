@@ -82,6 +82,14 @@ describe('build-apk.yml workflow', () => {
     expect(uploadStep.with.path).toContain('app-release.apk');
   });
 
+  it('upload step has id so its outputs can be referenced', () => {
+    const steps = workflow.jobs['build-apk'].steps;
+    const uploadStep = steps.find(
+      (s: any) => s.uses && s.uses.startsWith('actions/upload-artifact@'),
+    );
+    expect(uploadStep.id).toBe('upload');
+  });
+
   it('posts or updates a PR comment using actions/github-script', () => {
     const steps = workflow.jobs['build-apk'].steps;
     const commentStep = steps.find(
@@ -89,6 +97,35 @@ describe('build-apk.yml workflow', () => {
     );
     expect(commentStep).toBeDefined();
     expect(commentStep.with.script).toBeDefined();
+  });
+
+  it('passes artifact-url as an environment variable to the comment step', () => {
+    const steps = workflow.jobs['build-apk'].steps;
+    const commentStep = steps.find(
+      (s: any) => s.uses && s.uses.startsWith('actions/github-script@'),
+    );
+    expect(commentStep.env.ARTIFACT_URL).toBe(
+      '${{ steps.upload.outputs.artifact-url }}',
+    );
+  });
+
+  it('comment script uses process.env.ARTIFACT_URL instead of a manual run URL', () => {
+    const steps = workflow.jobs['build-apk'].steps;
+    const commentStep = steps.find(
+      (s: any) => s.uses && s.uses.startsWith('actions/github-script@'),
+    );
+    const script = commentStep.with.script;
+    expect(script).toContain('process.env.ARTIFACT_URL');
+    expect(script).not.toContain('context.runId');
+  });
+
+  it('comment body contains a Download artifact link', () => {
+    const steps = workflow.jobs['build-apk'].steps;
+    const commentStep = steps.find(
+      (s: any) => s.uses && s.uses.startsWith('actions/github-script@'),
+    );
+    const script = commentStep.with.script;
+    expect(script).toContain('[Download artifact]');
   });
 
   it('uses a marker comment for update-in-place behavior', () => {
