@@ -1,7 +1,7 @@
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import type { RootStackParamList } from '../navigation/types';
@@ -35,6 +35,15 @@ export function NotificationPermissionScreen() {
   const theme = useTheme();
   const { colors, shadow } = theme;
   const [isLoading, setIsLoading] = useState(false);
+
+  const dynamicStyles = useMemo(
+    () => ({
+      primaryButtonText: {
+        color: colors.text.inverse,
+      },
+    }),
+    [colors.text.inverse],
+  );
 
   const navigateAfterChoice = () => {
     if (isInitialSetup) {
@@ -111,7 +120,7 @@ export function NotificationPermissionScreen() {
             disabled={isLoading}
             testID="enable-notifications-button"
           >
-            <Text style={styles.primaryButtonText}>
+            <Text style={[styles.primaryButtonText, dynamicStyles.primaryButtonText]}>
               {isLoading ? 'Requesting...' : 'Enable Notifications'}
             </Text>
           </TouchableOpacity>
@@ -174,7 +183,6 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: FONT_SIZES.lg,
     fontWeight: '600',
-    color: '#FFFFFF',
   },
   secondaryButton: {
     paddingVertical: SPACING.lg,

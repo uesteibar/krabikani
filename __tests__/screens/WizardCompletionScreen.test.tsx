@@ -12,9 +12,12 @@ jest.mock('@react-navigation/native', () => ({
   }),
 }));
 
-function renderWithTheme(ui: React.ReactElement) {
+function renderWithTheme(
+  ui: React.ReactElement,
+  colorScheme: 'light' | 'dark' = 'light',
+) {
   return render(
-    <ThemeProvider forcedColorScheme="light">{ui}</ThemeProvider>,
+    <ThemeProvider forcedColorScheme={colorScheme}>{ui}</ThemeProvider>,
   );
 }
 
@@ -51,6 +54,29 @@ describe('WizardCompletionScreen', () => {
     expect(mockReset).toHaveBeenCalledWith({
       index: 0,
       routes: [{ name: 'Home' }],
+    });
+  });
+
+  describe('Theme-aware styling', () => {
+    it('should use light button text color in light mode', () => {
+      const { getByText } = renderWithTheme(<WizardCompletionScreen />);
+      const buttonText = getByText('Start Learning');
+      const flatStyle = Array.isArray(buttonText.props.style)
+        ? Object.assign({}, ...buttonText.props.style.flat())
+        : buttonText.props.style;
+      expect(flatStyle.color).toBe('#FFFFFF');
+    });
+
+    it('should use dark button text color in dark mode', () => {
+      const { getByText } = renderWithTheme(
+        <WizardCompletionScreen />,
+        'dark',
+      );
+      const buttonText = getByText('Start Learning');
+      const flatStyle = Array.isArray(buttonText.props.style)
+        ? Object.assign({}, ...buttonText.props.style.flat())
+        : buttonText.props.style;
+      expect(flatStyle.color).toBe('#121212');
     });
   });
 });

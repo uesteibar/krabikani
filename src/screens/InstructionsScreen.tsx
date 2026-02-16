@@ -103,6 +103,15 @@ export function InstructionsScreen() {
 
   const isLastPage = currentPage === STEPS.length - 1;
 
+  const dynamicStyles = useMemo(
+    () => ({
+      primaryButtonText: {
+        color: colors.text.inverse,
+      },
+    }),
+    [colors.text.inverse],
+  );
+
   const imageStyles = useMemo(
     () =>
       STEPS.map(step => ({
@@ -202,7 +211,7 @@ export function InstructionsScreen() {
               activeOpacity={0.8}
               testID="continue-button"
             >
-              <Text style={styles.primaryButtonText}>Continue</Text>
+              <Text style={[styles.primaryButtonText, dynamicStyles.primaryButtonText]}>Continue</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
@@ -222,7 +231,7 @@ export function InstructionsScreen() {
               activeOpacity={0.8}
               testID="next-button"
             >
-              <Text style={styles.primaryButtonText}>Next</Text>
+              <Text style={[styles.primaryButtonText, dynamicStyles.primaryButtonText]}>Next</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -291,7 +300,6 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: FONT_SIZES.lg,
     fontWeight: '600',
-    color: '#FFFFFF',
   },
   secondaryButton: {
     flex: 1,

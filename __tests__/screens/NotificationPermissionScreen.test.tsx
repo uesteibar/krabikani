@@ -26,9 +26,10 @@ function MockHomeScreen() {
 function renderWithNavigation(
   initialRouteName: keyof RootStackParamList = 'NotificationPermission',
   initialParams?: { isInitialSetup?: boolean },
+  colorScheme: 'light' | 'dark' = 'light',
 ) {
   return render(
-    <ThemeProvider forcedColorScheme="light">
+    <ThemeProvider forcedColorScheme={colorScheme}>
       <NavigationContainer>
         <Stack.Navigator initialRouteName={initialRouteName}>
           <Stack.Screen name="Home" component={MockHomeScreen} />
@@ -373,6 +374,36 @@ describe('NotificationPermissionScreen', () => {
       // Since we started on NotificationPermission directly without a previous screen,
       // we can't actually verify goBack navigated anywhere, but we verify no crash
       // and that Home screen is NOT reached via reset (since isInitialSetup is false)
+    });
+  });
+
+  describe('Theme-aware styling', () => {
+    it('should use light button text color in light mode', async () => {
+      const { getByText } = renderWithNavigation();
+      await waitFor(() => {
+        expect(getByText('Enable Notifications')).toBeTruthy();
+      });
+      const buttonText = getByText('Enable Notifications');
+      const flatStyle = Array.isArray(buttonText.props.style)
+        ? Object.assign({}, ...buttonText.props.style.flat())
+        : buttonText.props.style;
+      expect(flatStyle.color).toBe('#FFFFFF');
+    });
+
+    it('should use dark button text color in dark mode', async () => {
+      const { getByText } = renderWithNavigation(
+        'NotificationPermission',
+        undefined,
+        'dark',
+      );
+      await waitFor(() => {
+        expect(getByText('Enable Notifications')).toBeTruthy();
+      });
+      const buttonText = getByText('Enable Notifications');
+      const flatStyle = Array.isArray(buttonText.props.style)
+        ? Object.assign({}, ...buttonText.props.style.flat())
+        : buttonText.props.style;
+      expect(flatStyle.color).toBe('#121212');
     });
   });
 });

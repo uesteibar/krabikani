@@ -1,6 +1,6 @@
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -32,6 +32,15 @@ export function ApiKeyInputScreen() {
   const [apiKey, setApiKey] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const dynamicStyles = useMemo(
+    () => ({
+      primaryButtonText: {
+        color: colors.text.inverse,
+      },
+    }),
+    [colors.text.inverse],
+  );
 
   const handleValidate = async () => {
     const trimmedKey = apiKey.trim();
@@ -128,7 +137,7 @@ export function ApiKeyInputScreen() {
           disabled={isLoading || !apiKey.trim()}
           testID="validate-button"
         >
-          <Text style={styles.primaryButtonText}>
+          <Text style={[styles.primaryButtonText, dynamicStyles.primaryButtonText]}>
             {isLoading ? 'Validating...' : 'Validate & Connect'}
           </Text>
         </TouchableOpacity>
@@ -201,7 +210,6 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: FONT_SIZES.lg,
     fontWeight: '600',
-    color: '#FFFFFF',
   },
   secondaryButton: {
     paddingVertical: SPACING.lg,

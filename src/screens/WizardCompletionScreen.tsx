@@ -1,6 +1,6 @@
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import type { RootStackParamList } from '../navigation/types';
@@ -21,6 +21,15 @@ type WizardCompletionNavigationProp = NativeStackNavigationProp<
 export function WizardCompletionScreen() {
   const navigation = useNavigation<WizardCompletionNavigationProp>();
   const { colors, shadow } = useTheme();
+
+  const dynamicStyles = useMemo(
+    () => ({
+      primaryButtonText: {
+        color: colors.text.inverse,
+      },
+    }),
+    [colors.text.inverse],
+  );
 
   const handleStartLearning = () => {
     navigation.reset({
@@ -60,7 +69,7 @@ export function WizardCompletionScreen() {
           activeOpacity={0.8}
           testID="start-learning-button"
         >
-          <Text style={styles.primaryButtonText}>Start Learning</Text>
+          <Text style={[styles.primaryButtonText, dynamicStyles.primaryButtonText]}>Start Learning</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -100,6 +109,5 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: FONT_SIZES.lg,
     fontWeight: '600',
-    color: '#FFFFFF',
   },
 });

@@ -1,6 +1,6 @@
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import type { RootStackParamList } from '../navigation/types';
@@ -26,6 +26,15 @@ export function WizardNotificationScreen() {
   const navigation = useNavigation<WizardNotificationNavigationProp>();
   const { colors, shadow } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
+
+  const dynamicStyles = useMemo(
+    () => ({
+      primaryButtonText: {
+        color: colors.text.inverse,
+      },
+    }),
+    [colors.text.inverse],
+  );
 
   const handleEnableNotifications = async () => {
     setIsLoading(true);
@@ -83,7 +92,7 @@ export function WizardNotificationScreen() {
             disabled={isLoading}
             testID="enable-notifications-button"
           >
-            <Text style={styles.primaryButtonText}>
+            <Text style={[styles.primaryButtonText, dynamicStyles.primaryButtonText]}>
               {isLoading ? 'Requesting...' : 'Enable Notifications'}
             </Text>
           </TouchableOpacity>
@@ -146,7 +155,6 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: FONT_SIZES.lg,
     fontWeight: '600',
-    color: '#FFFFFF',
   },
   secondaryButton: {
     paddingVertical: SPACING.lg,

@@ -32,9 +32,12 @@ jest.mock('../../src/api', () => ({
   WaniKaniClient: jest.fn().mockImplementation(() => ({})),
 }));
 
-function renderWithTheme(ui: React.ReactElement) {
+function renderWithTheme(
+  ui: React.ReactElement,
+  colorScheme: 'light' | 'dark' = 'light',
+) {
   return render(
-    <ThemeProvider forcedColorScheme="light">{ui}</ThemeProvider>,
+    <ThemeProvider forcedColorScheme={colorScheme}>{ui}</ThemeProvider>,
   );
 }
 
@@ -94,6 +97,32 @@ describe('SyncScreen', () => {
 
     await waitFor(() => {
       expect(mockGetUserLevel.mock.calls.length).toBeGreaterThan(callsBefore);
+    });
+  });
+
+  describe('Theme-aware styling', () => {
+    it('should use light retry button text color in light mode', async () => {
+      mockGetUserLevel.mockRejectedValue(new Error('Sync failed'));
+      const { getByText } = renderWithTheme(<SyncScreen />);
+      await waitFor(() => {
+        const retryText = getByText('Retry');
+        const flatStyle = Array.isArray(retryText.props.style)
+          ? Object.assign({}, ...retryText.props.style.flat())
+          : retryText.props.style;
+        expect(flatStyle.color).toBe('#FFFFFF');
+      });
+    });
+
+    it('should use dark retry button text color in dark mode', async () => {
+      mockGetUserLevel.mockRejectedValue(new Error('Sync failed'));
+      const { getByText } = renderWithTheme(<SyncScreen />, 'dark');
+      await waitFor(() => {
+        const retryText = getByText('Retry');
+        const flatStyle = Array.isArray(retryText.props.style)
+          ? Object.assign({}, ...retryText.props.style.flat())
+          : retryText.props.style;
+        expect(flatStyle.color).toBe('#121212');
+      });
     });
   });
 });
