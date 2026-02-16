@@ -8,7 +8,14 @@ import {
   generateQuizQuestions,
   shuffleArray,
 } from '../../src/components/LessonQuiz';
+import { ThemeProvider } from '../../src/theme/ThemeContext';
 import type { Meaning, Reading, KanjiReading } from '../../src/api/types';
+
+function renderWithTheme(ui: React.ReactElement) {
+  return render(
+    <ThemeProvider forcedColorScheme="light">{ui}</ThemeProvider>,
+  );
+}
 
 // Helper to create test meanings
 function createMeanings(
@@ -334,40 +341,40 @@ describe('LessonQuiz', () => {
 
   describe('basic rendering', () => {
     it('renders the component with testID', () => {
-      const { getByTestId } = render(<LessonQuiz {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonQuiz {...defaultProps} />);
       expect(getByTestId('lesson-quiz')).toBeTruthy();
     });
 
     it('renders the progress indicator', () => {
-      const { getByTestId } = render(<LessonQuiz {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonQuiz {...defaultProps} />);
       expect(getByTestId('progress-header-progress')).toBeTruthy();
     });
 
     it('renders the character display', () => {
-      const { getByTestId } = render(<LessonQuiz {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonQuiz {...defaultProps} />);
       expect(getByTestId('lesson-quiz-character-container')).toBeTruthy();
       expect(getByTestId('subject-display-text')).toBeTruthy();
     });
 
     it('renders the input field', () => {
-      const { getByTestId } = render(<LessonQuiz {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonQuiz {...defaultProps} />);
       expect(getByTestId('lesson-quiz-input')).toBeTruthy();
     });
 
     it('renders the submit button', () => {
-      const { getByTestId } = render(<LessonQuiz {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonQuiz {...defaultProps} />);
       expect(getByTestId('lesson-quiz-submit')).toBeTruthy();
     });
 
     it('renders the question type indicator', () => {
-      const { getByTestId } = render(<LessonQuiz {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonQuiz {...defaultProps} />);
       expect(getByTestId('lesson-quiz-question-type')).toBeTruthy();
     });
   });
 
   describe('empty state', () => {
     it('renders empty state when no items provided', () => {
-      const { getByTestId, getByText } = render(
+      const { getByTestId, getByText } = renderWithTheme(
         <LessonQuiz items={[]} onAnswer={jest.fn()} />,
       );
 
@@ -378,7 +385,7 @@ describe('LessonQuiz', () => {
 
   describe('progress indicator', () => {
     it('displays progress text showing current position', () => {
-      const { getByTestId } = render(<LessonQuiz {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonQuiz {...defaultProps} />);
       const progressText = getByTestId('progress-header-count');
 
       // ProgressHeader renders "current / total" as text children
@@ -387,7 +394,7 @@ describe('LessonQuiz', () => {
     });
 
     it('renders the progress bar', () => {
-      const { getByTestId } = render(<LessonQuiz {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonQuiz {...defaultProps} />);
       expect(getByTestId('progress-header-fill')).toBeTruthy();
     });
   });
@@ -395,7 +402,7 @@ describe('LessonQuiz', () => {
   describe('question display', () => {
     it('displays the subject characters', () => {
       const items = [sampleKanji];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -404,7 +411,7 @@ describe('LessonQuiz', () => {
 
     it('displays the subject type', () => {
       const items = [sampleKanji];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -415,7 +422,7 @@ describe('LessonQuiz', () => {
 
     it('displays kana_vocabulary as "kana vocabulary"', () => {
       const items = [sampleKanaVocabulary];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -429,7 +436,7 @@ describe('LessonQuiz', () => {
         ...sampleRadical,
         characters: null,
       };
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz
           items={[itemWithNullChar]}
           onAnswer={jest.fn()}
@@ -445,7 +452,7 @@ describe('LessonQuiz', () => {
     it('shows MEANING label for meaning questions', () => {
       // Use a radical to guarantee a meaning question
       const items = [sampleRadical];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -458,7 +465,7 @@ describe('LessonQuiz', () => {
       // We need to control the order - use a single kanji and find the reading question
       // Since order is randomized, we'll check both possible labels
       const items = [sampleKanji];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -472,7 +479,7 @@ describe('LessonQuiz', () => {
   describe('input handling', () => {
     it('accepts text input for meaning questions', () => {
       const items = [sampleRadical]; // Radical only has meaning
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -485,7 +492,7 @@ describe('LessonQuiz', () => {
     it('converts romaji to hiragana for reading questions', () => {
       // We need a non-radical to potentially get a reading question
       const items = [sampleVocabulary];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -502,7 +509,7 @@ describe('LessonQuiz', () => {
 
     it('shows raw text for meaning questions', () => {
       const items = [sampleRadical]; // Radical only has meaning
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -518,7 +525,7 @@ describe('LessonQuiz', () => {
     it('calls onAnswer with isCorrect=true for correct meaning answer', () => {
       const onAnswer = jest.fn();
       const items = [sampleRadical];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={onAnswer} autoAdvanceDelay={0} />,
       );
 
@@ -540,7 +547,7 @@ describe('LessonQuiz', () => {
     it('accepts case-insensitive meaning answers', () => {
       const onAnswer = jest.fn();
       const items = [sampleRadical];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={onAnswer} autoAdvanceDelay={0} />,
       );
 
@@ -558,7 +565,7 @@ describe('LessonQuiz', () => {
 
     it('auto-advances after correct answer', async () => {
       const items = [sampleRadical, sampleRadical2]; // 2 meaning questions
-      const { getByTestId, getByText } = render(
+      const { getByTestId, getByText } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -582,7 +589,7 @@ describe('LessonQuiz', () => {
 
     it('shows correct feedback briefly before advancing', () => {
       const items = [sampleRadical, sampleRadical2];
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <LessonQuiz
           items={items}
           onAnswer={jest.fn()}
@@ -616,7 +623,7 @@ describe('LessonQuiz', () => {
 
     it('should use default autoAdvanceDelay of 500ms', () => {
       const items = [sampleRadical, sampleRadical2];
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} />,
       );
 
@@ -651,7 +658,7 @@ describe('LessonQuiz', () => {
     it('calls onQuizComplete when all questions answered correctly', () => {
       const onQuizComplete = jest.fn();
       const items = [sampleRadical]; // Just 1 question
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz
           items={items}
           onQuizComplete={onQuizComplete}
@@ -679,7 +686,7 @@ describe('LessonQuiz', () => {
         ...sampleVocabulary,
         meanings: createMeanings([{ meaning: 'Beautiful', primary: true }]),
       };
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <LessonQuiz
           items={[itemWithLongMeaning]}
           onAnswer={jest.fn()}
@@ -705,7 +712,7 @@ describe('LessonQuiz', () => {
     it('shows green feedback with "Correct!" for exact match answers', () => {
       // Use 2 items so there's more than 1 question - prevents immediate quiz completion
       const items = [sampleRadical, sampleRadical2];
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={100} />,
       );
 
@@ -731,7 +738,7 @@ describe('LessonQuiz', () => {
         ...sampleVocabulary,
         meanings: createMeanings([{ meaning: 'Water', primary: true }]),
       };
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz
           items={[itemWithMediumMeaning]}
           onAnswer={onAnswer}
@@ -757,7 +764,7 @@ describe('LessonQuiz', () => {
     it('does not show fuzzy match for reading questions', () => {
       // Reading questions do not support typo forgiveness
       const items = [sampleVocabulary];
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={100} />,
       );
 
@@ -781,7 +788,7 @@ describe('LessonQuiz', () => {
     it('calls onAnswer with isCorrect=false for incorrect answer', () => {
       const onAnswer = jest.fn();
       const items = [sampleRadical];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={onAnswer} autoAdvanceDelay={0} />,
       );
 
@@ -800,7 +807,7 @@ describe('LessonQuiz', () => {
 
     it('shows incorrect feedback screen after wrong answer', () => {
       const items = [sampleRadical];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -819,7 +826,7 @@ describe('LessonQuiz', () => {
 
     it('displays user answer in feedback', () => {
       const items = [sampleRadical];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -834,7 +841,7 @@ describe('LessonQuiz', () => {
     it('blocks empty meaning answers with shake', () => {
       const items = [sampleRadical];
       const onAnswer = jest.fn();
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={onAnswer} autoAdvanceDelay={0} />,
       );
 
@@ -850,7 +857,7 @@ describe('LessonQuiz', () => {
 
     it('displays correct answer in feedback', () => {
       const items = [sampleRadical];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -864,7 +871,7 @@ describe('LessonQuiz', () => {
 
     it('displays mnemonic in feedback', () => {
       const items = [sampleRadical];
-      const { getByTestId, getByText } = render(
+      const { getByTestId, getByText } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -879,7 +886,7 @@ describe('LessonQuiz', () => {
 
     it('shows continue button after incorrect answer', () => {
       const items = [sampleRadical];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -891,7 +898,7 @@ describe('LessonQuiz', () => {
 
     it('advances to next question immediately when continue is pressed', () => {
       const items = [sampleRadical, sampleRadical2]; // 2 questions
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -912,7 +919,7 @@ describe('LessonQuiz', () => {
       const onAnswer = jest.fn();
       // Just one radical with 1 question
       const items = [sampleRadical];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={onAnswer} autoAdvanceDelay={0} />,
       );
 
@@ -942,7 +949,7 @@ describe('LessonQuiz', () => {
     it('tracks incorrect items until answered correctly', () => {
       const onAnswer = jest.fn();
       const items = [sampleRadical];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={onAnswer} autoAdvanceDelay={0} />,
       );
 
@@ -979,7 +986,7 @@ describe('LessonQuiz', () => {
         readingMnemonic: 'This is the reading mnemonic',
       };
       const items = [vocabItem];
-      const { getByTestId, getByText } = render(
+      const { getByTestId, getByText } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -1011,7 +1018,7 @@ describe('LessonQuiz', () => {
   describe('quiz completion', () => {
     it('shows completion state when all questions answered correctly', () => {
       const items = [sampleRadical];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -1028,7 +1035,7 @@ describe('LessonQuiz', () => {
 
     it('displays completion message', () => {
       const items = [sampleRadical];
-      const { getByTestId, getByText } = render(
+      const { getByTestId, getByText } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -1044,7 +1051,7 @@ describe('LessonQuiz', () => {
 
     it('displays number of questions answered including retries', () => {
       const items = [sampleRadical];
-      const { getByTestId, getByText } = render(
+      const { getByTestId, getByText } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -1072,7 +1079,7 @@ describe('LessonQuiz', () => {
   describe('subject type colors', () => {
     it('uses correct background color for radicals', () => {
       const items = [sampleRadical];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -1083,7 +1090,7 @@ describe('LessonQuiz', () => {
 
     it('uses correct background color for kanji', () => {
       const items = [sampleKanji];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -1093,7 +1100,7 @@ describe('LessonQuiz', () => {
 
     it('uses correct background color for vocabulary', () => {
       const items = [sampleVocabulary];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -1103,7 +1110,7 @@ describe('LessonQuiz', () => {
 
     it('uses correct background color for kana_vocabulary', () => {
       const items = [sampleKanaVocabulary];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -1116,7 +1123,7 @@ describe('LessonQuiz', () => {
     it('uses black background for reading questions', () => {
       // Use vocabulary which has both meaning and reading questions
       const items = [sampleVocabulary];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -1133,7 +1140,7 @@ describe('LessonQuiz', () => {
     it('shows question type label for meaning questions', () => {
       // Use radical which only has meaning questions
       const items = [sampleRadical];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -1145,7 +1152,7 @@ describe('LessonQuiz', () => {
   describe('placeholder text', () => {
     it('shows "Enter meaning..." for meaning questions', () => {
       const items = [sampleRadical];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -1158,7 +1165,7 @@ describe('LessonQuiz', () => {
     it('cycles through all questions when answered correctly', () => {
       const items = [sampleRadical, sampleRadical2]; // 2 meaning questions
       const onAnswer = jest.fn();
-      const { getByTestId, getByText } = render(
+      const { getByTestId, getByText } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={onAnswer} autoAdvanceDelay={0} />,
       );
 
@@ -1195,7 +1202,7 @@ describe('LessonQuiz', () => {
     });
 
     it('generates correct question count for full batch', () => {
-      const { getByText } = render(<LessonQuiz {...defaultProps} />);
+      const { getByText } = renderWithTheme(<LessonQuiz {...defaultProps} />);
 
       // 5 items: 2 radicals (1 each) + 3 non-radicals (2 each) = 8 questions
       // ProgressHeader shows "1 / 8"
@@ -1207,7 +1214,7 @@ describe('LessonQuiz', () => {
     it('includes all required fields in answer result', () => {
       const onAnswer = jest.fn();
       const items = [sampleRadical];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={onAnswer} autoAdvanceDelay={0} />,
       );
 
@@ -1241,7 +1248,7 @@ describe('LessonQuiz', () => {
       };
 
       const onAnswer = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz
           items={[itemWithMultipleMeanings]}
           onAnswer={onAnswer}
@@ -1276,7 +1283,7 @@ describe('LessonQuiz', () => {
       };
 
       const onAnswer = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz
           items={[itemWithMultipleReadings]}
           onAnswer={onAnswer}
@@ -1321,7 +1328,7 @@ describe('LessonQuiz', () => {
     it('handles a single radical (1 question)', () => {
       const items = [sampleRadical];
       const onQuizComplete = jest.fn();
-      const { getByTestId, getByText } = render(
+      const { getByTestId, getByText } = renderWithTheme(
         <LessonQuiz
           items={items}
           onQuizComplete={onQuizComplete}
@@ -1345,7 +1352,7 @@ describe('LessonQuiz', () => {
 
     it('handles a single kanji (2 questions)', () => {
       const items = [sampleKanji];
-      const { getByTestId, getByText } = render(
+      const { getByTestId, getByText } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -1381,7 +1388,7 @@ describe('LessonQuiz', () => {
   describe('callbacks are optional', () => {
     it('works without onAnswer callback', () => {
       const items = [sampleRadical];
-      const { getByTestId, getByText } = render(
+      const { getByTestId, getByText } = renderWithTheme(
         <LessonQuiz items={items} autoAdvanceDelay={0} />,
       );
 
@@ -1398,7 +1405,7 @@ describe('LessonQuiz', () => {
 
     it('works without onQuizComplete callback', () => {
       const items = [sampleRadical];
-      const { getByTestId, getByText } = render(
+      const { getByTestId, getByText } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -1419,7 +1426,7 @@ describe('LessonQuiz', () => {
       // Create a vocabulary item where we control the question order
       const vocabItem = createVocabularyItem(10, 'たべる', 'Eat', 'たべる');
       const onAnswer = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz
           items={[vocabItem]}
           onAnswer={onAnswer}
@@ -1447,7 +1454,7 @@ describe('LessonQuiz', () => {
   describe('auto-focus input', () => {
     it('auto-focuses input on initial render', () => {
       const items = [sampleRadical];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -1463,7 +1470,7 @@ describe('LessonQuiz', () => {
 
     it('auto-focuses input after advancing from correct answer', () => {
       const items = [sampleRadical, sampleRadical2]; // 2 meaning questions
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz
           items={items}
           onAnswer={jest.fn()}
@@ -1493,7 +1500,7 @@ describe('LessonQuiz', () => {
 
     it('auto-focuses input after tapping Continue on incorrect feedback', () => {
       const items = [sampleRadical, sampleRadical2]; // 2 questions
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -1521,7 +1528,7 @@ describe('LessonQuiz', () => {
 
     it('does not focus input while showing correct feedback', () => {
       const items = [sampleRadical, sampleRadical2];
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <LessonQuiz
           items={items}
           onAnswer={jest.fn()}
@@ -1543,7 +1550,7 @@ describe('LessonQuiz', () => {
 
     it('does not focus input when quiz is complete', () => {
       const items = [sampleRadical]; // Just 1 question
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -1565,7 +1572,7 @@ describe('LessonQuiz', () => {
   describe('Mark as Correct functionality', () => {
     it('shows "Mark as Correct" button on incorrect feedback screen', () => {
       const items = [sampleRadical];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -1581,7 +1588,7 @@ describe('LessonQuiz', () => {
     it('marks question as correct when "Mark as Correct" is pressed', () => {
       const onAnswer = jest.fn();
       const items = [sampleRadical];
-      const { getByTestId, getByText } = render(
+      const { getByTestId, getByText } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={onAnswer} autoAdvanceDelay={0} />,
       );
 
@@ -1612,7 +1619,7 @@ describe('LessonQuiz', () => {
 
     it('advances to next question after "Mark as Correct" is pressed', () => {
       const items = [sampleRadical, sampleRadical2]; // 2 questions
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -1637,7 +1644,7 @@ describe('LessonQuiz', () => {
 
     it('removes re-queued question when "Mark as Correct" is pressed', () => {
       const items = [sampleRadical]; // Single item
-      const { getByTestId, getByText } = render(
+      const { getByTestId, getByText } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -1655,7 +1662,7 @@ describe('LessonQuiz', () => {
     it('calls onQuizComplete when all questions marked correct', () => {
       const onQuizComplete = jest.fn();
       const items = [sampleRadical];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz
           items={items}
           onQuizComplete={onQuizComplete}
@@ -1677,7 +1684,7 @@ describe('LessonQuiz', () => {
     it('preserves user answer when marking as correct', () => {
       const onAnswer = jest.fn();
       const items = [sampleRadical];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={onAnswer} autoAdvanceDelay={0} />,
       );
 
@@ -1701,7 +1708,7 @@ describe('LessonQuiz', () => {
   describe('input positioning', () => {
     it('has padding for appropriate spacing', () => {
       const items = [sampleRadical];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -1714,7 +1721,7 @@ describe('LessonQuiz', () => {
 
     it('renders input container with testID', () => {
       const items = [sampleRadical];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -1723,7 +1730,7 @@ describe('LessonQuiz', () => {
 
     it('shows hiragana directly in input for reading questions', () => {
       const items = [sampleVocabulary];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -1759,7 +1766,7 @@ describe('LessonQuiz', () => {
     };
 
     it('shows expandable details with component radicals on incorrect kanji answer', () => {
-      const { getByTestId, getByText } = render(
+      const { getByTestId, getByText } = renderWithTheme(
         <LessonQuiz
           items={[kanjiWithRadicals]}
           onAnswer={jest.fn()}
@@ -1792,7 +1799,7 @@ describe('LessonQuiz', () => {
     });
 
     it('shows expandable details on incorrect kanji reading answer', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz
           items={[kanjiWithRadicals]}
           onAnswer={jest.fn()}
@@ -1841,7 +1848,7 @@ describe('LessonQuiz', () => {
         componentRadicals: undefined,
       };
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <LessonQuiz
           items={[kanjiWithoutRadicals]}
           onAnswer={jest.fn()}
@@ -1864,7 +1871,7 @@ describe('LessonQuiz', () => {
     });
 
     it('does not show expandable details for radicals', () => {
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <LessonQuiz
           items={[sampleRadical]}
           onAnswer={jest.fn()}
@@ -1889,7 +1896,7 @@ describe('LessonQuiz', () => {
     });
 
     it('does not show expandable details for vocabulary without components', () => {
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <LessonQuiz
           items={[sampleVocabulary]}
           onAnswer={jest.fn()}
@@ -1912,7 +1919,7 @@ describe('LessonQuiz', () => {
     });
 
     it('displays radical characters in ItemDetails', () => {
-      const { getByTestId, getAllByText } = render(
+      const { getByTestId, getAllByText } = renderWithTheme(
         <LessonQuiz
           items={[kanjiWithRadicals]}
           onAnswer={jest.fn()}
@@ -1951,7 +1958,7 @@ describe('LessonQuiz', () => {
     };
 
     it('shows expandable details with component kanji on incorrect vocabulary answer', () => {
-      const { getByTestId, getByText } = render(
+      const { getByTestId, getByText } = renderWithTheme(
         <LessonQuiz
           items={[vocabWithKanji]}
           onAnswer={jest.fn()}
@@ -1988,7 +1995,7 @@ describe('LessonQuiz', () => {
         componentKanji: undefined,
       };
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <LessonQuiz
           items={[vocabWithoutKanji]}
           onAnswer={jest.fn()}
@@ -2011,7 +2018,7 @@ describe('LessonQuiz', () => {
     });
 
     it('does not show expandable details for kanji items (kanji shows radicals, not component kanji)', () => {
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <LessonQuiz
           items={[sampleKanji]}
           onAnswer={jest.fn()}
@@ -2034,7 +2041,7 @@ describe('LessonQuiz', () => {
     });
 
     it('does not show expandable details for radicals', () => {
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <LessonQuiz
           items={[sampleRadical]}
           onAnswer={jest.fn()}
@@ -2059,7 +2066,7 @@ describe('LessonQuiz', () => {
     });
 
     it('displays kanji characters in ItemDetails', () => {
-      const { getByTestId, getAllByText } = render(
+      const { getByTestId, getAllByText } = renderWithTheme(
         <LessonQuiz
           items={[vocabWithKanji]}
           onAnswer={jest.fn()}
@@ -2087,7 +2094,7 @@ describe('LessonQuiz', () => {
         componentKanji: [], // Empty array - no kanji components
       };
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <LessonQuiz
           items={[kanaVocab]}
           onAnswer={jest.fn()}
@@ -2113,7 +2120,7 @@ describe('LessonQuiz', () => {
   describe('feedback transition', () => {
     it('transitions instantly from incorrect feedback to next question', () => {
       const items = [sampleRadical, sampleRadical2]; // 2 questions
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -2139,7 +2146,7 @@ describe('LessonQuiz', () => {
       // top positions. ReviewSession uses onContinueDelay for level-down
       // animation timing, which is not needed in lesson quizzes.
       const items = [sampleRadical, sampleRadical2];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz items={items} onAnswer={jest.fn()} autoAdvanceDelay={0} />,
       );
 
@@ -2157,7 +2164,7 @@ describe('LessonQuiz', () => {
 
     it('does not affect correct answer auto-advance timing', () => {
       const items = [sampleRadical, sampleRadical2]; // 2 questions
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <LessonQuiz
           items={items}
           onAnswer={jest.fn()}
@@ -2190,7 +2197,7 @@ describe('LessonQuiz', () => {
 
     it('does not submit empty reading answer', () => {
       const onAnswer = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz
           items={[vocabForReading]}
           onAnswer={onAnswer}
@@ -2214,7 +2221,7 @@ describe('LessonQuiz', () => {
 
     it('does not submit whitespace-only reading answer', () => {
       const onAnswer = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz
           items={[vocabForReading]}
           onAnswer={onAnswer}
@@ -2236,7 +2243,7 @@ describe('LessonQuiz', () => {
 
     it('does not submit reading answer with unconvertible romaji', () => {
       const onAnswer = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz
           items={[vocabForReading]}
           onAnswer={onAnswer}
@@ -2258,7 +2265,7 @@ describe('LessonQuiz', () => {
 
     it('does not submit reading answer with partial romaji like "ky"', () => {
       const onAnswer = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz
           items={[vocabForReading]}
           onAnswer={onAnswer}
@@ -2280,7 +2287,7 @@ describe('LessonQuiz', () => {
 
     it('allows submission of valid romaji that converts to hiragana', () => {
       const onAnswer = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz
           items={[vocabForReading]}
           onAnswer={onAnswer}
@@ -2302,7 +2309,7 @@ describe('LessonQuiz', () => {
 
     it('allows submission of direct hiragana input', () => {
       const onAnswer = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz
           items={[vocabForReading]}
           onAnswer={onAnswer}
@@ -2324,7 +2331,7 @@ describe('LessonQuiz', () => {
 
     it('blocks empty meaning answers with shake', () => {
       const onAnswer = jest.fn();
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <LessonQuiz
           items={[sampleRadical]}
           onAnswer={onAnswer}
@@ -2343,7 +2350,7 @@ describe('LessonQuiz', () => {
     });
 
     it('renders input container that shakes on invalid reading submission', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonQuiz
           items={[vocabForReading]}
           onAnswer={jest.fn()}

@@ -9,9 +9,16 @@ import {
   shuffleArray,
   MAX_INCOMPLETE_ITEMS,
 } from '../../src/components/ReviewSession';
+import { ThemeProvider } from '../../src/theme/ThemeContext';
 import type { Meaning, Reading, KanjiReading } from '../../src/api/types';
 import { SUBJECT_COLORS, COLORS } from '../../src/theme';
 import * as database from '../../src/storage/database';
+
+function renderWithTheme(ui: React.ReactElement) {
+  return render(
+    <ThemeProvider forcedColorScheme="light">{ui}</ThemeProvider>,
+  );
+}
 
 // Mock database functions
 jest.mock('../../src/storage/database', () => ({
@@ -270,7 +277,7 @@ describe('ReviewSession', () => {
 
   describe('Component Rendering', () => {
     it('should render empty state when no items provided', () => {
-      const { getByTestId, getByText } = render(<ReviewSession items={[]} />);
+      const { getByTestId, getByText } = renderWithTheme(<ReviewSession items={[]} />);
 
       expect(getByTestId('review-session-empty')).toBeTruthy();
       expect(getByText('No reviews available')).toBeTruthy();
@@ -280,7 +287,7 @@ describe('ReviewSession', () => {
       // Make random deterministic
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId } = render(<ReviewSession {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession {...defaultProps} />);
 
       expect(getByTestId('review-session')).toBeTruthy();
       expect(getByTestId('progress-header-progress')).toBeTruthy();
@@ -292,7 +299,7 @@ describe('ReviewSession', () => {
     it('should render question type indicator bar', () => {
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId } = render(<ReviewSession {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession {...defaultProps} />);
 
       expect(getByTestId('review-session-question-type')).toBeTruthy();
     });
@@ -301,7 +308,7 @@ describe('ReviewSession', () => {
       // Make random deterministic
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId } = render(<ReviewSession {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession {...defaultProps} />);
 
       // Initially 0 items complete out of 5
       expect(getByTestId('progress-header-count').props.children).toEqual([
@@ -315,7 +322,7 @@ describe('ReviewSession', () => {
       // Make random deterministic
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId } = render(<ReviewSession {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession {...defaultProps} />);
 
       // Initially 5 remaining
       expect(getByTestId('progress-header-remaining').props.children).toEqual([
@@ -328,7 +335,7 @@ describe('ReviewSession', () => {
       // Make random return specific values to control question order
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId } = render(<ReviewSession {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession {...defaultProps} />);
 
       // Should display one of the item characters
       const characters = getByTestId('subject-display-text');
@@ -337,7 +344,7 @@ describe('ReviewSession', () => {
 
     it('should show MEANING label for meaning questions', () => {
       // Single radical item = meaning only
-      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession items={[sampleRadical]} />);
 
       expect(getByTestId('review-session-question-type').props.children).toBe(
         'MEANING',
@@ -347,7 +354,7 @@ describe('ReviewSession', () => {
 
   describe('Input Handling', () => {
     it('should update input value on text change for meaning questions', () => {
-      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession items={[sampleRadical]} />);
 
       const input = getByTestId('review-session-input');
       fireEvent.changeText(input, 'Ground');
@@ -363,7 +370,7 @@ describe('ReviewSession', () => {
         return values[callIndex++ % values.length];
       });
 
-      const { getByTestId } = render(<ReviewSession items={[sampleKanji]} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession items={[sampleKanji]} />);
 
       // First question should be reading
       const questionType = getByTestId('review-session-question-type').props
@@ -381,7 +388,7 @@ describe('ReviewSession', () => {
   describe('Answer Submission', () => {
     it('should call onAnswer when submitting', () => {
       const onAnswer = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} onAnswer={onAnswer} />,
       );
 
@@ -396,7 +403,7 @@ describe('ReviewSession', () => {
 
     it('should mark correct answer for meaning question', () => {
       const onAnswer = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} onAnswer={onAnswer} />,
       );
 
@@ -416,7 +423,7 @@ describe('ReviewSession', () => {
 
     it('should mark incorrect answer for meaning question', () => {
       const onAnswer = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} onAnswer={onAnswer} />,
       );
 
@@ -438,7 +445,7 @@ describe('ReviewSession', () => {
       jest.useFakeTimers();
 
       // Use single radical item for simplicity
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} autoAdvanceDelay={0} />,
       );
 
@@ -464,7 +471,7 @@ describe('ReviewSession', () => {
       // Single kanji item = 2 questions (meaning + reading)
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[sampleKanji]} />,
       );
 
@@ -485,7 +492,7 @@ describe('ReviewSession', () => {
       jest.useFakeTimers();
 
       // Use single radical (1 question only)
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} autoAdvanceDelay={0} />,
       );
 
@@ -520,7 +527,7 @@ describe('ReviewSession', () => {
       // Single kanji with 2 questions
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[sampleKanji]} autoAdvanceDelay={0} />,
       );
 
@@ -569,7 +576,7 @@ describe('ReviewSession', () => {
       const onSessionComplete = jest.fn();
 
       // Single radical item for simplicity
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession
           items={[sampleRadical]}
           onSessionComplete={onSessionComplete}
@@ -596,7 +603,7 @@ describe('ReviewSession', () => {
       jest.useFakeTimers();
       const onSessionComplete = jest.fn();
 
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession
           items={[sampleRadical]}
           onSessionComplete={onSessionComplete}
@@ -632,7 +639,7 @@ describe('ReviewSession', () => {
       jest.useFakeTimers();
       const onSessionComplete = jest.fn();
 
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession
           items={[sampleRadical]}
           onSessionComplete={onSessionComplete}
@@ -671,7 +678,7 @@ describe('ReviewSession', () => {
 
     it('should display completion screen with answered count', () => {
       jest.useFakeTimers();
-      const { getByTestId, getByText } = render(
+      const { getByTestId, getByText } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} autoAdvanceDelay={0} />,
       );
 
@@ -696,7 +703,7 @@ describe('ReviewSession', () => {
 
   describe('Subject Type Colors', () => {
     it('should use blue color for radicals', () => {
-      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession items={[sampleRadical]} />);
 
       const container = getByTestId('review-session-character-container');
       expect(container.props.style).toEqual(
@@ -709,7 +716,7 @@ describe('ReviewSession', () => {
     it('should use pink color for kanji', () => {
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId } = render(<ReviewSession items={[sampleKanji]} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession items={[sampleKanji]} />);
 
       const container = getByTestId('review-session-character-container');
       expect(container.props.style).toEqual(
@@ -722,7 +729,7 @@ describe('ReviewSession', () => {
     it('should use purple color for vocabulary', () => {
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession items={[sampleVocabulary]} />,
       );
 
@@ -743,7 +750,7 @@ describe('ReviewSession', () => {
       // Mock random to control the question order (0.7 > 0.5 means reading first)
       (Math.random as jest.Mock).mockReturnValue(0.7);
 
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession items={[sampleVocabulary]} />,
       );
 
@@ -759,7 +766,7 @@ describe('ReviewSession', () => {
 
     it('should use white background for meaning questions', () => {
       // Use radical which only has meaning questions
-      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession items={[sampleRadical]} />);
 
       // Meaning questions should show MEANING label
       const questionTypeLabel = getByTestId('review-session-question-type');
@@ -767,7 +774,7 @@ describe('ReviewSession', () => {
     });
 
     it('should show incorrect feedback screen without indicator bar', () => {
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} />,
       );
 
@@ -784,7 +791,7 @@ describe('ReviewSession', () => {
   describe('Case Insensitive Meaning Validation', () => {
     it('should accept lowercase meaning answers', () => {
       const onAnswer = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} onAnswer={onAnswer} />,
       );
 
@@ -803,7 +810,7 @@ describe('ReviewSession', () => {
 
     it('should accept uppercase meaning answers', () => {
       const onAnswer = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} onAnswer={onAnswer} />,
       );
 
@@ -829,7 +836,7 @@ describe('ReviewSession', () => {
       // Control randomization for predictable test
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession
           items={fiveItems}
           onSessionComplete={onSessionComplete}
@@ -899,7 +906,7 @@ describe('ReviewSession', () => {
     });
 
     it('should show visual feedback when answer is correct', () => {
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} autoAdvanceDelay={100} />,
       );
 
@@ -917,7 +924,7 @@ describe('ReviewSession', () => {
     });
 
     it('should show green header background during correct feedback', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} autoAdvanceDelay={100} />,
       );
 
@@ -938,7 +945,7 @@ describe('ReviewSession', () => {
 
     it('should auto-advance after correct answer feedback delay', () => {
       const onSessionComplete = jest.fn();
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession
           items={[sampleRadical]}
           onSessionComplete={onSessionComplete}
@@ -966,7 +973,7 @@ describe('ReviewSession', () => {
     });
 
     it('should keep input visible during correct feedback (keyboard stays open)', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} autoAdvanceDelay={100} />,
       );
 
@@ -981,7 +988,7 @@ describe('ReviewSession', () => {
     });
 
     it('should disable submit button during correct feedback', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} autoAdvanceDelay={100} />,
       );
 
@@ -998,7 +1005,7 @@ describe('ReviewSession', () => {
     });
 
     it('should NOT show correct feedback for incorrect answers', () => {
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} autoAdvanceDelay={100} />,
       );
 
@@ -1018,7 +1025,7 @@ describe('ReviewSession', () => {
       // Use kanji item which has 2 questions (meaning + reading)
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[sampleKanji]} autoAdvanceDelay={50} />,
       );
 
@@ -1050,7 +1057,7 @@ describe('ReviewSession', () => {
     });
 
     it('should use default autoAdvanceDelay of 500ms', () => {
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} />,
       );
 
@@ -1077,7 +1084,7 @@ describe('ReviewSession', () => {
     });
 
     it('should not show subject type label', () => {
-      const { queryByTestId } = render(
+      const { queryByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} autoAdvanceDelay={100} />,
       );
 
@@ -1093,7 +1100,7 @@ describe('ReviewSession', () => {
         ...sampleVocabulary,
         meanings: createMeanings([{ meaning: 'Beautiful', primary: true }]),
       };
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[itemWithLongMeaning]} autoAdvanceDelay={100} />,
       );
 
@@ -1112,7 +1119,7 @@ describe('ReviewSession', () => {
     });
 
     it('should show green feedback with "Correct!" for exact match answers', () => {
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} autoAdvanceDelay={100} />,
       );
 
@@ -1133,7 +1140,7 @@ describe('ReviewSession', () => {
         ...sampleVocabulary,
         meanings: createMeanings([{ meaning: 'Water', primary: true }]),
       };
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession
           items={[itemWithMediumMeaning]}
           onAnswer={onAnswer}
@@ -1158,7 +1165,7 @@ describe('ReviewSession', () => {
 
     it('should not show fuzzy match for reading questions', () => {
       // Reading questions do not support typo forgiveness
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[sampleVocabulary]} autoAdvanceDelay={100} />,
       );
 
@@ -1180,7 +1187,7 @@ describe('ReviewSession', () => {
 
   describe('Incorrect Answer Handling', () => {
     it('should show incorrect feedback screen when answer is wrong', () => {
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} />,
       );
 
@@ -1199,7 +1206,7 @@ describe('ReviewSession', () => {
     });
 
     it('should show correct answer prominently', () => {
-      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession items={[sampleRadical]} />);
 
       const input = getByTestId('review-session-input');
       const submit = getByTestId('review-session-submit');
@@ -1214,7 +1221,7 @@ describe('ReviewSession', () => {
     });
 
     it('should show user answer on incorrect feedback', () => {
-      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession items={[sampleRadical]} />);
 
       const input = getByTestId('review-session-input');
       const submit = getByTestId('review-session-submit');
@@ -1230,7 +1237,7 @@ describe('ReviewSession', () => {
 
     it('should block empty meaning answers with shake', () => {
       const onAnswer = jest.fn();
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} onAnswer={onAnswer} />,
       );
 
@@ -1247,7 +1254,7 @@ describe('ReviewSession', () => {
     });
 
     it('should show meaning mnemonic for meaning questions', () => {
-      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession items={[sampleRadical]} />);
 
       const input = getByTestId('review-session-input');
       const submit = getByTestId('review-session-submit');
@@ -1271,7 +1278,7 @@ describe('ReviewSession', () => {
         return values[callIndex++ % values.length];
       });
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[sampleKanji]} />,
       );
 
@@ -1295,7 +1302,7 @@ describe('ReviewSession', () => {
     });
 
     it('should require tap to continue after incorrect answer', () => {
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} />,
       );
 
@@ -1313,7 +1320,7 @@ describe('ReviewSession', () => {
     });
 
     it('should advance to next question when continue is pressed', () => {
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} />,
       );
 
@@ -1335,7 +1342,7 @@ describe('ReviewSession', () => {
     });
 
     it('should show red header background for incorrect answer', () => {
-      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession items={[sampleRadical]} />);
 
       const input = getByTestId('review-session-input');
       const submit = getByTestId('review-session-submit');
@@ -1356,7 +1363,7 @@ describe('ReviewSession', () => {
 
     it('should re-queue incorrect question to appear later', () => {
       jest.useFakeTimers();
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} autoAdvanceDelay={0} />,
       );
 
@@ -1378,7 +1385,7 @@ describe('ReviewSession', () => {
     });
 
     it('should maintain progress when showing incorrect feedback', () => {
-      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession items={[sampleRadical]} />);
 
       // Initially 0 / 1
       expect(getByTestId('progress-header-count').props.children).toEqual([
@@ -1405,7 +1412,7 @@ describe('ReviewSession', () => {
       jest.useFakeTimers();
       const onSessionComplete = jest.fn();
 
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession
           items={[sampleRadical]}
           onSessionComplete={onSessionComplete}
@@ -1442,7 +1449,7 @@ describe('ReviewSession', () => {
     });
 
     it('should display character in incorrect feedback view', () => {
-      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession items={[sampleRadical]} />);
 
       const input = getByTestId('review-session-input');
       const submit = getByTestId('review-session-submit');
@@ -1458,7 +1465,7 @@ describe('ReviewSession', () => {
       jest.useFakeTimers();
       const onSessionComplete = jest.fn();
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession
           items={[sampleRadical]}
           onSessionComplete={onSessionComplete}
@@ -1489,13 +1496,13 @@ describe('ReviewSession', () => {
 
   describe('Wrap Up Feature', () => {
     it('should render wrap up button', () => {
-      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession items={[sampleRadical]} />);
 
       expect(getByTestId('review-session-wrap-up')).toBeTruthy();
     });
 
     it('should show "Wrap Up" text on button by default', () => {
-      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession items={[sampleRadical]} />);
 
       const wrapUpButton = getByTestId('review-session-wrap-up');
       expect(wrapUpButton).toBeTruthy();
@@ -1509,7 +1516,7 @@ describe('ReviewSession', () => {
     });
 
     it('should toggle to "Cancel" text when wrap up is activated', () => {
-      const { getByTestId } = render(<ReviewSession items={fiveItems} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession items={fiveItems} />);
 
       // Press wrap up button
       fireEvent.press(getByTestId('review-session-wrap-up'));
@@ -1526,7 +1533,7 @@ describe('ReviewSession', () => {
 
     it('should call onWrapUpToggle when wrap up is pressed', () => {
       const onWrapUpToggle = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession items={fiveItems} onWrapUpToggle={onWrapUpToggle} />,
       );
 
@@ -1538,7 +1545,7 @@ describe('ReviewSession', () => {
     });
 
     it('should show "Wrapping up: X remaining" indicator when wrap up is active', () => {
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={fiveItems} />,
       );
 
@@ -1556,7 +1563,7 @@ describe('ReviewSession', () => {
 
     it('should show correct remaining count based on introduced items', () => {
       // With 1 item, when we start we've introduced 1 item
-      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession items={[sampleRadical]} />);
 
       // Activate wrap up - we've only introduced 1 item so far (the current one)
       fireEvent.press(getByTestId('review-session-wrap-up'));
@@ -1575,7 +1582,7 @@ describe('ReviewSession', () => {
       const onSessionComplete = jest.fn();
 
       // Use only one radical so we can easily complete it (radicals only need meaning answer)
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession
           items={[sampleRadical]}
           onSessionComplete={onSessionComplete}
@@ -1614,7 +1621,7 @@ describe('ReviewSession', () => {
       // Use fiveItems which has multiple items
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={fiveItems} autoAdvanceDelay={0} />,
       );
 
@@ -1665,7 +1672,7 @@ describe('ReviewSession', () => {
     });
 
     it('should deactivate wrap up mode and continue normally when cancel is pressed', () => {
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={fiveItems} />,
       );
 
@@ -1686,7 +1693,7 @@ describe('ReviewSession', () => {
       const twoItems = [sampleRadical, sampleRadical2];
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={twoItems} autoAdvanceDelay={0} />,
       );
 
@@ -1717,7 +1724,7 @@ describe('ReviewSession', () => {
 
     it('should show correct progress (completed/total) in wrap up mode', () => {
       // Use single radical for simplicity - radicals only have meaning questions
-      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession items={[sampleRadical]} />);
 
       // Activate wrap up - only 1 item introduced
       fireEvent.press(getByTestId('review-session-wrap-up'));
@@ -1728,7 +1735,7 @@ describe('ReviewSession', () => {
     });
 
     it('should disable wrap up button during correct feedback', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} autoAdvanceDelay={100} />,
       );
 
@@ -1748,7 +1755,7 @@ describe('ReviewSession', () => {
       jest.useFakeTimers();
       const onSessionComplete = jest.fn();
 
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession
           items={[sampleRadical, sampleKanji, sampleVocabulary]}
           onSessionComplete={onSessionComplete}
@@ -1784,7 +1791,7 @@ describe('ReviewSession', () => {
 
   describe('Mark as Correct functionality', () => {
     it('shows "Mark as Correct" button on incorrect feedback screen', () => {
-      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession items={[sampleRadical]} />);
 
       // Submit wrong answer
       fireEvent.changeText(getByTestId('review-session-input'), 'wrong');
@@ -1798,7 +1805,7 @@ describe('ReviewSession', () => {
     it('marks question as correct when "Mark as Correct" is pressed', () => {
       jest.useFakeTimers();
       const onAnswer = jest.fn();
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession
           items={[sampleRadical]}
           onAnswer={onAnswer}
@@ -1838,7 +1845,7 @@ describe('ReviewSession', () => {
       // Use kanji which has 2 questions (meaning + reading)
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[sampleKanji]} autoAdvanceDelay={0} />,
       );
 
@@ -1860,7 +1867,7 @@ describe('ReviewSession', () => {
 
     it('removes re-queued question when "Mark as Correct" is pressed', () => {
       jest.useFakeTimers();
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} autoAdvanceDelay={0} />,
       );
 
@@ -1881,7 +1888,7 @@ describe('ReviewSession', () => {
       jest.useFakeTimers();
       const onSessionComplete = jest.fn();
 
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession
           items={[sampleRadical]}
           onSessionComplete={onSessionComplete}
@@ -1906,7 +1913,7 @@ describe('ReviewSession', () => {
       jest.useFakeTimers();
       const onSessionComplete = jest.fn();
 
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession
           items={[sampleRadical]}
           onSessionComplete={onSessionComplete}
@@ -1936,7 +1943,7 @@ describe('ReviewSession', () => {
       jest.useFakeTimers();
       const onSessionComplete = jest.fn();
 
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession
           items={[sampleRadical]}
           onSessionComplete={onSessionComplete}
@@ -1964,7 +1971,7 @@ describe('ReviewSession', () => {
 
     it('preserves user answer when marking as correct', () => {
       const onAnswer = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} onAnswer={onAnswer} />,
       );
 
@@ -1992,7 +1999,7 @@ describe('ReviewSession', () => {
     it('auto-focuses input on initial render', () => {
       jest.useFakeTimers();
       const items = [sampleRadical];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession
           items={items}
           onAnswer={jest.fn()}
@@ -2015,7 +2022,7 @@ describe('ReviewSession', () => {
     it('auto-focuses input after advancing from correct answer', () => {
       jest.useFakeTimers();
       const items = [sampleRadical, sampleRadical2]; // 2 items
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession
           items={items}
           onAnswer={jest.fn()}
@@ -2048,7 +2055,7 @@ describe('ReviewSession', () => {
     it('auto-focuses input after tapping Continue on incorrect feedback', () => {
       jest.useFakeTimers();
       const items = [sampleRadical, sampleRadical2]; // 2 questions
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession
           items={items}
           onAnswer={jest.fn()}
@@ -2083,7 +2090,7 @@ describe('ReviewSession', () => {
     it('does not focus input while showing correct feedback', () => {
       jest.useFakeTimers();
       const items = [sampleRadical, sampleRadical2];
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession
           items={items}
           onAnswer={jest.fn()}
@@ -2112,7 +2119,7 @@ describe('ReviewSession', () => {
     it('does not focus input when session is complete', () => {
       jest.useFakeTimers();
       const items = [sampleRadical]; // Just 1 item with 1 question (meaning only)
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession
           items={items}
           onAnswer={jest.fn()}
@@ -2139,7 +2146,7 @@ describe('ReviewSession', () => {
 
   describe('input positioning', () => {
     it('positions input near the top with padding (not centered)', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} onAnswer={jest.fn()} />,
       );
 
@@ -2151,7 +2158,7 @@ describe('ReviewSession', () => {
     });
 
     it('has horizontal padding for appropriate margins', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} onAnswer={jest.fn()} />,
       );
 
@@ -2163,7 +2170,7 @@ describe('ReviewSession', () => {
     });
 
     it('renders input container with testID', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} onAnswer={jest.fn()} />,
       );
 
@@ -2178,7 +2185,7 @@ describe('ReviewSession', () => {
         return values[callIndex++ % values.length];
       });
 
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession items={[sampleKanji]} onAnswer={jest.fn()} />,
       );
 
@@ -2226,7 +2233,7 @@ describe('ReviewSession', () => {
     });
 
     it('shows component radicals on incorrect kanji meaning answer', () => {
-      const { getByTestId, getByText } = render(
+      const { getByTestId, getByText } = renderWithTheme(
         <ReviewSession
           items={[kanjiWithRadicals]}
           onAnswer={jest.fn()}
@@ -2281,7 +2288,7 @@ describe('ReviewSession', () => {
         return values[callIndex++ % values.length];
       });
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession
           items={[kanjiWithoutRadicals]}
           onAnswer={jest.fn()}
@@ -2318,7 +2325,7 @@ describe('ReviewSession', () => {
         return values[callIndex++ % values.length];
       });
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession
           items={[sampleRadical]}
           onAnswer={jest.fn()}
@@ -2351,7 +2358,7 @@ describe('ReviewSession', () => {
         return values[callIndex++ % values.length];
       });
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession
           items={[sampleVocabulary]}
           onAnswer={jest.fn()}
@@ -2388,7 +2395,7 @@ describe('ReviewSession', () => {
         return values[callIndex++ % values.length];
       });
 
-      const { getByTestId, getAllByText } = render(
+      const { getByTestId, getAllByText } = renderWithTheme(
         <ReviewSession
           items={[kanjiWithRadicals]}
           onAnswer={jest.fn()}
@@ -2456,7 +2463,7 @@ describe('ReviewSession', () => {
         return values[callIndex++ % values.length];
       });
 
-      const { getByTestId, getByText } = render(
+      const { getByTestId, getByText } = renderWithTheme(
         <ReviewSession
           items={[vocabWithKanji]}
           onAnswer={jest.fn()}
@@ -2506,7 +2513,7 @@ describe('ReviewSession', () => {
         return values[callIndex++ % values.length];
       });
 
-      const { getByTestId, getByText } = render(
+      const { getByTestId, getByText } = renderWithTheme(
         <ReviewSession
           items={[vocabWithKanji]}
           onAnswer={jest.fn()}
@@ -2554,7 +2561,7 @@ describe('ReviewSession', () => {
         return values[callIndex++ % values.length];
       });
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession
           items={[vocabWithoutKanji]}
           onAnswer={jest.fn()}
@@ -2590,7 +2597,7 @@ describe('ReviewSession', () => {
         return values[callIndex++ % values.length];
       });
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession
           items={[sampleKanji]}
           onAnswer={jest.fn()}
@@ -2626,7 +2633,7 @@ describe('ReviewSession', () => {
         return values[callIndex++ % values.length];
       });
 
-      const { getByTestId, getAllByText } = render(
+      const { getByTestId, getAllByText } = renderWithTheme(
         <ReviewSession
           items={[vocabWithKanji]}
           onAnswer={jest.fn()}
@@ -2674,7 +2681,7 @@ describe('ReviewSession', () => {
         return values[callIndex++ % values.length];
       });
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession
           items={[kanaVocab]}
           onAnswer={jest.fn()}
@@ -2718,7 +2725,7 @@ describe('ReviewSession', () => {
 
     it('does not submit empty reading answer', () => {
       const onAnswer = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession
           items={[vocabForReading]}
           onAnswer={onAnswer}
@@ -2742,7 +2749,7 @@ describe('ReviewSession', () => {
 
     it('does not submit whitespace-only reading answer', () => {
       const onAnswer = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession
           items={[vocabForReading]}
           onAnswer={onAnswer}
@@ -2764,7 +2771,7 @@ describe('ReviewSession', () => {
 
     it('does not submit reading answer with unconvertible romaji', () => {
       const onAnswer = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession
           items={[vocabForReading]}
           onAnswer={onAnswer}
@@ -2786,7 +2793,7 @@ describe('ReviewSession', () => {
 
     it('does not submit reading answer with partial romaji like "ky"', () => {
       const onAnswer = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession
           items={[vocabForReading]}
           onAnswer={onAnswer}
@@ -2808,7 +2815,7 @@ describe('ReviewSession', () => {
 
     it('allows submission of valid romaji that converts to hiragana', () => {
       const onAnswer = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession
           items={[vocabForReading]}
           onAnswer={onAnswer}
@@ -2830,7 +2837,7 @@ describe('ReviewSession', () => {
 
     it('allows submission of direct hiragana input', () => {
       const onAnswer = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession
           items={[vocabForReading]}
           onAnswer={onAnswer}
@@ -2860,7 +2867,7 @@ describe('ReviewSession', () => {
 
       const onAnswer = jest.fn();
       const radical = createRadicalItem(60, '一', 'Ground');
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession
           items={[radical]}
           onAnswer={onAnswer}
@@ -2879,7 +2886,7 @@ describe('ReviewSession', () => {
     });
 
     it('renders input container that shakes on invalid reading submission', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession
           items={[vocabForReading]}
           onAnswer={jest.fn()}
@@ -2913,7 +2920,7 @@ describe('ReviewSession', () => {
       // Force meaning question first
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId } = render(<ReviewSession items={[sampleKanji]} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession items={[sampleKanji]} />);
 
       const type = getByTestId('review-session-question-type').props.children;
 
@@ -2934,7 +2941,7 @@ describe('ReviewSession', () => {
       // Force reading question first
       (Math.random as jest.Mock).mockReturnValue(0.9);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[sampleKanji]} />,
       );
 
@@ -2954,7 +2961,7 @@ describe('ReviewSession', () => {
       // Force meaning question first
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId } = render(<ReviewSession items={[sampleKanji]} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession items={[sampleKanji]} />);
 
       const type = getByTestId('review-session-question-type').props.children;
 
@@ -2981,7 +2988,7 @@ describe('ReviewSession', () => {
       // Force meaning question first
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId } = render(<ReviewSession items={[sampleKanji]} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession items={[sampleKanji]} />);
 
       const type = getByTestId('review-session-question-type').props.children;
 
@@ -3018,7 +3025,7 @@ describe('ReviewSession', () => {
       // Force meaning question first
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId } = render(<ReviewSession items={[sampleKanji]} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession items={[sampleKanji]} />);
 
       const type = getByTestId('review-session-question-type').props.children;
 
@@ -3047,7 +3054,7 @@ describe('ReviewSession', () => {
       // Force meaning question first for kanji (has 2 questions)
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[sampleKanji]} autoAdvanceDelay={0} />,
       );
 
@@ -3083,7 +3090,7 @@ describe('ReviewSession', () => {
       // Force meaning question first
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession
           items={[sampleRadical]}
           onAnswer={onAnswer}
@@ -3126,7 +3133,7 @@ describe('ReviewSession', () => {
       // Force meaning question first
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId } = render(<ReviewSession items={[sampleKanji]} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession items={[sampleKanji]} />);
 
       const type = getByTestId('review-session-question-type').props.children;
 
@@ -3158,7 +3165,7 @@ describe('ReviewSession', () => {
     it('should show progress bar and count text when zen mode is disabled', async () => {
       (database.getSetting as jest.Mock).mockResolvedValue(false);
 
-      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession items={[sampleRadical]} />);
 
       // Wait for zen mode setting to load
       await act(async () => {
@@ -3172,7 +3179,7 @@ describe('ReviewSession', () => {
     it('should show SRS badge when zen mode is disabled', async () => {
       (database.getSetting as jest.Mock).mockResolvedValue(false);
 
-      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession items={[sampleRadical]} />);
 
       // Wait for zen mode setting to load
       await act(async () => {
@@ -3185,7 +3192,7 @@ describe('ReviewSession', () => {
     it('should hide progress bar and count text when zen mode is enabled', async () => {
       (database.getSetting as jest.Mock).mockResolvedValue(true);
 
-      const { queryByTestId } = render(
+      const { queryByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} />,
       );
 
@@ -3201,7 +3208,7 @@ describe('ReviewSession', () => {
     it('should hide SRS badge when zen mode is enabled', async () => {
       (database.getSetting as jest.Mock).mockResolvedValue(true);
 
-      const { queryByTestId } = render(
+      const { queryByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} />,
       );
 
@@ -3216,7 +3223,7 @@ describe('ReviewSession', () => {
     it('should still show wrap-up button when zen mode is enabled', async () => {
       (database.getSetting as jest.Mock).mockResolvedValue(true);
 
-      const { getByTestId } = render(<ReviewSession items={[sampleRadical]} />);
+      const { getByTestId } = renderWithTheme(<ReviewSession items={[sampleRadical]} />);
 
       // Wait for zen mode setting to load
       await act(async () => {
@@ -3229,7 +3236,7 @@ describe('ReviewSession', () => {
     it('should show progress bar when wrap-up mode is activated even in zen mode', async () => {
       (database.getSetting as jest.Mock).mockResolvedValue(true);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={fiveItems} />,
       );
 
@@ -3252,7 +3259,7 @@ describe('ReviewSession', () => {
     it('should hide progress bar and SRS badge in incorrect feedback view when zen mode is enabled', async () => {
       (database.getSetting as jest.Mock).mockResolvedValue(true);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[sampleRadical]} />,
       );
 
@@ -3277,7 +3284,7 @@ describe('ReviewSession', () => {
     it('should show progress bar but hide SRS badge in incorrect feedback view when wrap-up mode is active in zen mode', async () => {
       (database.getSetting as jest.Mock).mockResolvedValue(true);
 
-      const { getByTestId, queryByTestId, findByTestId } = render(
+      const { getByTestId, queryByTestId, findByTestId } = renderWithTheme(
         <ReviewSession items={fiveItems} />,
       );
 
@@ -3311,7 +3318,7 @@ describe('ReviewSession', () => {
     it('should fetch zen mode setting on mount', async () => {
       (database.getSetting as jest.Mock).mockResolvedValue(false);
 
-      render(<ReviewSession items={[sampleRadical]} />);
+      renderWithTheme(<ReviewSession items={[sampleRadical]} />);
 
       // Wait for effect to run
       await act(async () => {
@@ -3338,7 +3345,7 @@ describe('ReviewSession', () => {
       // Force deterministic order: items appear in sequence
       (Math.random as jest.Mock).mockReturnValue(0.99);
 
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession items={manyRadicals} autoAdvanceDelay={0} />,
       );
 
@@ -3379,7 +3386,7 @@ describe('ReviewSession', () => {
       // Force deterministic order
       (Math.random as jest.Mock).mockReturnValue(0.99);
 
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession items={manyRadicals} autoAdvanceDelay={0} />,
       );
 
@@ -3429,7 +3436,7 @@ describe('ReviewSession', () => {
       // Use a single radical — wrap-up with 1 introduced item should work fine
       // even though buffer cap is 10
       const onSessionComplete = jest.fn();
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession
           items={[sampleRadical, sampleRadical2]}
           onSessionComplete={onSessionComplete}
@@ -3480,7 +3487,7 @@ describe('ReviewSession', () => {
       // Force deterministic order
       (Math.random as jest.Mock).mockReturnValue(0.99);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={manyRadicals} autoAdvanceDelay={0} />,
       );
 
@@ -3527,7 +3534,7 @@ describe('ReviewSession', () => {
       // Force deterministic order - meaning first
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={manyKanji} autoAdvanceDelay={0} />,
       );
 
@@ -3580,7 +3587,7 @@ describe('ReviewSession', () => {
       // Force deterministic order - meaning first for all items
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={manyVocab} autoAdvanceDelay={0} />,
       );
 
@@ -3648,7 +3655,7 @@ describe('ReviewSession', () => {
       // Force meaning question first
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[kanjiAtStage4]} autoAdvanceDelay={100} />,
       );
 
@@ -3671,7 +3678,7 @@ describe('ReviewSession', () => {
       // Force meaning question first
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[kanjiAtStage4]} autoAdvanceDelay={0} />,
       );
 
@@ -3707,7 +3714,7 @@ describe('ReviewSession', () => {
       // However, we need to ensure the logic doesn't break for this edge case
       const radicalAtStage4 = createRadicalItem(501, '木', 'Tree', 4);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[radicalAtStage4]} autoAdvanceDelay={100} />,
       );
 
@@ -3727,7 +3734,7 @@ describe('ReviewSession', () => {
       // Force meaning question first
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[kanjiAtStage4]} autoAdvanceDelay={0} />,
       );
 
@@ -3773,7 +3780,7 @@ describe('ReviewSession', () => {
       // Force meaning question first
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[kanjiAtStage4]} autoAdvanceDelay={0} />,
       );
 
@@ -3812,7 +3819,7 @@ describe('ReviewSession', () => {
       // Force meaning first, then reading
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[kanjiAtStage4]} autoAdvanceDelay={0} />,
       );
 
@@ -3849,7 +3856,7 @@ describe('ReviewSession', () => {
       // Force meaning first
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[kanjiAtStage1]} autoAdvanceDelay={0} />,
       );
 
@@ -3897,7 +3904,7 @@ describe('ReviewSession', () => {
       // Use a radical at stage 5 (Guru 1) — only has meaning question
       const radicalAtStage5 = createRadicalItem(603, '力', 'Power', 5);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[radicalAtStage5]} autoAdvanceDelay={0} />,
       );
 
@@ -3921,7 +3928,7 @@ describe('ReviewSession', () => {
       // Use a radical at stage 5 — only has meaning question, simpler to test
       const radicalAtStage5 = createRadicalItem(604, '目', 'Eye', 5);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[radicalAtStage5]} autoAdvanceDelay={0} />,
       );
 
@@ -3964,7 +3971,7 @@ describe('ReviewSession', () => {
       const radical1AtStage5 = createRadicalItem(605, '口', 'Mouth', 5);
       const radical2AtStage5 = createRadicalItem(606, '手', 'Hand', 5);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[radical1AtStage5, radical2AtStage5]} autoAdvanceDelay={0} />,
       );
 
@@ -4003,7 +4010,7 @@ describe('ReviewSession', () => {
     it('should reset level-down tracking when items change (new session)', () => {
       const radicalAtStage5 = createRadicalItem(607, '水', 'Water', 5);
 
-      const { getByTestId, queryByTestId, rerender } = render(
+      const { getByTestId, queryByTestId, rerender } = renderWithTheme(
         <ReviewSession items={[radicalAtStage5]} autoAdvanceDelay={0} />,
       );
 
@@ -4024,7 +4031,9 @@ describe('ReviewSession', () => {
       // Use a different item array reference to trigger the items useEffect
       const newRadicalAtStage5 = createRadicalItem(608, '土', 'Earth', 5);
       rerender(
-        <ReviewSession items={[newRadicalAtStage5]} autoAdvanceDelay={0} />,
+        <ThemeProvider forcedColorScheme="light">
+          <ReviewSession items={[newRadicalAtStage5]} autoAdvanceDelay={0} />
+        </ThemeProvider>,
       );
 
       // Submit wrong answer again — should trigger level-down again since tracking was reset
@@ -4056,7 +4065,7 @@ describe('ReviewSession', () => {
       // Stage 5 (Guru 1) → incorrect → Stage 4 (Apprentice 4)
       const radicalAtStage5 = createRadicalItem(610, '火', 'Fire', 5);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[radicalAtStage5]} autoAdvanceDelay={0} />,
       );
 
@@ -4090,7 +4099,7 @@ describe('ReviewSession', () => {
       // Stage 5 (Guru 1) — first correct answer should show Guru badge
       const radicalAtStage5 = createRadicalItem(611, '山', 'Mountain', 5);
 
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ReviewSession items={[radicalAtStage5]} autoAdvanceDelay={0} />,
       );
 
@@ -4118,7 +4127,7 @@ describe('ReviewSession', () => {
       // Radical at stage 4 (Apprentice 4 → Guru 1 on success)
       const radicalAtStage4 = createRadicalItem(700, '石', 'Stone', 4);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[radicalAtStage4]} autoAdvanceDelay={0} />,
       );
 
@@ -4141,7 +4150,7 @@ describe('ReviewSession', () => {
       const kanjiAtStage4 = createKanjiItem(701, '金', 'Gold', 'きん', 4);
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[kanjiAtStage4]} autoAdvanceDelay={0} />,
       );
 
@@ -4177,7 +4186,7 @@ describe('ReviewSession', () => {
       const kanjiAtStage4 = createKanjiItem(702, '銀', 'Silver', 'ぎん', 4);
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[kanjiAtStage4]} autoAdvanceDelay={0} />,
       );
 
@@ -4210,7 +4219,7 @@ describe('ReviewSession', () => {
       const radicalAtStage5 = createRadicalItem(703, '田', 'Rice Paddy', 5);
       const radicalFiller = createRadicalItem(708, '白', 'White', 1);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[radicalAtStage5, radicalFiller]} autoAdvanceDelay={0} />,
       );
 
@@ -4257,7 +4266,7 @@ describe('ReviewSession', () => {
       const radicalAtStage5 = createRadicalItem(704, '竹', 'Bamboo', 5);
       const radicalAtStage1 = createRadicalItem(705, '糸', 'Thread', 1);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[radicalAtStage5, radicalAtStage1]} autoAdvanceDelay={0} />,
       );
 
@@ -4304,7 +4313,7 @@ describe('ReviewSession', () => {
       // Radical at stage 5 (Guru 1) — incorrect drops to Apprentice
       const radicalAtStage5 = createRadicalItem(706, '雨', 'Rain', 5);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[radicalAtStage5]} autoAdvanceDelay={0} />,
       );
 
@@ -4326,7 +4335,7 @@ describe('ReviewSession', () => {
       // Radical at stage 1 (Apprentice 1 → Apprentice 2, no level change)
       const radicalAtStage1 = createRadicalItem(707, '雲', 'Cloud', 1);
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <ReviewSession items={[radicalAtStage1]} autoAdvanceDelay={0} />,
       );
 

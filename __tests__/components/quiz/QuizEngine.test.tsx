@@ -2,10 +2,20 @@ import React from 'react';
 import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
 
 import { QuizEngine } from '../../../src/components/quiz/QuizEngine';
+import { ThemeProvider } from '../../../src/theme/ThemeContext';
+import { COLORS } from '../../../src/theme';
 import type {
   Question,
   QuizEngineConfig,
 } from '../../../src/components/quiz/types';
+
+function renderWithTheme(ui: React.ReactElement, colorScheme?: 'light' | 'dark') {
+  return render(
+    <ThemeProvider forcedColorScheme={colorScheme ?? 'light'}>
+      {ui}
+    </ThemeProvider>,
+  );
+}
 
 // Mock the hooks
 jest.mock('../../../src/hooks/useShakeAnimation', () => ({
@@ -105,17 +115,17 @@ describe('QuizEngine', () => {
 
   describe('rendering', () => {
     it('renders the current question with SubjectDisplay', () => {
-      const { getByTestId } = render(<QuizEngine config={makeConfig()} />);
+      const { getByTestId } = renderWithTheme(<QuizEngine config={makeConfig()} />);
       expect(getByTestId('subject-display-text')).toBeTruthy();
     });
 
     it('renders the input field', () => {
-      const { getByTestId } = render(<QuizEngine config={makeConfig()} />);
+      const { getByTestId } = renderWithTheme(<QuizEngine config={makeConfig()} />);
       expect(getByTestId('quiz-engine-input')).toBeTruthy();
     });
 
     it('renders the input field with fixed height to prevent UI jumping with Japanese characters', () => {
-      const { getByTestId } = render(<QuizEngine config={makeConfig()} />);
+      const { getByTestId } = renderWithTheme(<QuizEngine config={makeConfig()} />);
       const input = getByTestId('quiz-engine-input');
       const styles = input.props.style
         .flat(Infinity)
@@ -131,12 +141,12 @@ describe('QuizEngine', () => {
     });
 
     it('renders the submit button', () => {
-      const { getByTestId } = render(<QuizEngine config={makeConfig()} />);
+      const { getByTestId } = renderWithTheme(<QuizEngine config={makeConfig()} />);
       expect(getByTestId('quiz-engine-submit')).toBeTruthy();
     });
 
     it('renders QuestionTypeLabel', () => {
-      const { getByText } = render(<QuizEngine config={makeConfig()} />);
+      const { getByText } = renderWithTheme(<QuizEngine config={makeConfig()} />);
       expect(getByText('MEANING')).toBeTruthy();
     });
 
@@ -144,7 +154,7 @@ describe('QuizEngine', () => {
       const config = makeConfig({
         progressMode: { mode: 'progress', current: 1, total: 5 },
       });
-      const { getByTestId } = render(<QuizEngine config={config} />);
+      const { getByTestId } = renderWithTheme(<QuizEngine config={config} />);
       expect(getByTestId('progress-header-count')).toBeTruthy();
     });
 
@@ -156,7 +166,7 @@ describe('QuizEngine', () => {
           icon: 'weight-lifter',
         },
       });
-      const { getByText } = render(<QuizEngine config={config} />);
+      const { getByText } = renderWithTheme(<QuizEngine config={config} />);
       expect(getByText('Keep going!')).toBeTruthy();
     });
 
@@ -164,7 +174,7 @@ describe('QuizEngine', () => {
       const config = makeConfig({
         progressMode: { mode: 'zen' },
       });
-      const { getByText } = render(<QuizEngine config={config} />);
+      const { getByText } = renderWithTheme(<QuizEngine config={config} />);
       expect(getByText('Zen Mode')).toBeTruthy();
     });
 
@@ -172,13 +182,13 @@ describe('QuizEngine', () => {
       const config = makeConfig({
         renderExtraButtons: () => <></>,
       });
-      const { getByTestId } = render(<QuizEngine config={config} />);
+      const { getByTestId } = renderWithTheme(<QuizEngine config={config} />);
       expect(getByTestId('quiz-engine-button-row')).toBeTruthy();
     });
 
     it('renders subject type label when showSubjectTypeLabel is true', () => {
       const config = makeConfig({ showSubjectTypeLabel: true });
-      const { getByText } = render(<QuizEngine config={config} />);
+      const { getByText } = renderWithTheme(<QuizEngine config={config} />);
       expect(getByText('kanji')).toBeTruthy();
     });
 
@@ -187,7 +197,7 @@ describe('QuizEngine', () => {
         questions: [makeReverseQuestion()],
         questionLabelType: () => 'kanji',
       });
-      const { getByText } = render(<QuizEngine config={config} />);
+      const { getByText } = renderWithTheme(<QuizEngine config={config} />);
       expect(getByText('KANJI')).toBeTruthy();
     });
   });
@@ -196,7 +206,7 @@ describe('QuizEngine', () => {
     it('calls onAnswer with correct result', () => {
       const onAnswer = jest.fn();
       const config = makeConfig({ onAnswer });
-      const { getByTestId } = render(<QuizEngine config={config} />);
+      const { getByTestId } = renderWithTheme(<QuizEngine config={config} />);
 
       const input = getByTestId('quiz-engine-input');
       fireEvent.changeText(input, 'big');
@@ -214,7 +224,7 @@ describe('QuizEngine', () => {
       validateInput.mockReturnValue({ valid: false, reason: 'shake' });
       const onAnswer = jest.fn();
       const config = makeConfig({ onAnswer });
-      const { getByTestId } = render(<QuizEngine config={config} />);
+      const { getByTestId } = renderWithTheme(<QuizEngine config={config} />);
 
       fireEvent.press(getByTestId('quiz-engine-submit'));
 
@@ -227,7 +237,7 @@ describe('QuizEngine', () => {
         makeQuestion({ id: 'q2-meaning', subjectId: 2 }),
       ];
       const config = makeConfig({ questions, autoAdvanceDelay: 500 });
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <QuizEngine config={config} />,
       );
 
@@ -254,7 +264,7 @@ describe('QuizEngine', () => {
         correctAnswer: 'big',
       });
       const config = makeConfig();
-      const { getByTestId } = render(<QuizEngine config={config} />);
+      const { getByTestId } = renderWithTheme(<QuizEngine config={config} />);
 
       const input = getByTestId('quiz-engine-input');
       fireEvent.changeText(input, 'small');
@@ -274,7 +284,7 @@ describe('QuizEngine', () => {
         correctAnswer: 'big',
       });
       const config = makeConfig({ questions });
-      const { getByTestId } = render(<QuizEngine config={config} />);
+      const { getByTestId } = renderWithTheme(<QuizEngine config={config} />);
 
       const input = getByTestId('quiz-engine-input');
       fireEvent.changeText(input, 'small');
@@ -299,7 +309,7 @@ describe('QuizEngine', () => {
         correctAnswer: 'big',
       });
       const config = makeConfig({ questions, requeueIncorrect: true });
-      const { getByTestId } = render(<QuizEngine config={config} />);
+      const { getByTestId } = renderWithTheme(<QuizEngine config={config} />);
 
       // Answer q1 incorrectly
       fireEvent.changeText(getByTestId('quiz-engine-input'), 'wrong');
@@ -340,7 +350,7 @@ describe('QuizEngine', () => {
         requeueIncorrect: false,
         completionMode: 'never',
       });
-      const { getByTestId } = render(<QuizEngine config={config} />);
+      const { getByTestId } = renderWithTheme(<QuizEngine config={config} />);
 
       // Answer q1 incorrectly
       fireEvent.changeText(getByTestId('quiz-engine-input'), 'wrong');
@@ -375,7 +385,7 @@ describe('QuizEngine', () => {
         completionMode: 'allQuestions',
         onComplete,
       });
-      const { getByTestId } = render(<QuizEngine config={config} />);
+      const { getByTestId } = renderWithTheme(<QuizEngine config={config} />);
 
       fireEvent.changeText(getByTestId('quiz-engine-input'), 'big');
       fireEvent.press(getByTestId('quiz-engine-submit'));
@@ -392,7 +402,7 @@ describe('QuizEngine', () => {
         completionMode: 'allQuestions',
         renderCompletion: () => <></>,
       });
-      const { getByTestId } = render(<QuizEngine config={config} />);
+      const { getByTestId } = renderWithTheme(<QuizEngine config={config} />);
 
       fireEvent.changeText(getByTestId('quiz-engine-input'), 'big');
       fireEvent.press(getByTestId('quiz-engine-submit'));
@@ -410,7 +420,7 @@ describe('QuizEngine', () => {
         completionMode: 'never',
         onComplete,
       });
-      const { getByTestId } = render(<QuizEngine config={config} />);
+      const { getByTestId } = renderWithTheme(<QuizEngine config={config} />);
 
       fireEvent.changeText(getByTestId('quiz-engine-input'), 'big');
       fireEvent.press(getByTestId('quiz-engine-submit'));
@@ -433,7 +443,7 @@ describe('QuizEngine', () => {
         allowMarkCorrect: true,
         onMarkCorrect: jest.fn(),
       });
-      const { getByTestId } = render(<QuizEngine config={config} />);
+      const { getByTestId } = renderWithTheme(<QuizEngine config={config} />);
 
       fireEvent.changeText(getByTestId('quiz-engine-input'), 'wrong');
       fireEvent.press(getByTestId('quiz-engine-submit'));
@@ -458,7 +468,7 @@ describe('QuizEngine', () => {
         onMarkCorrect,
         requeueIncorrect: true,
       });
-      const { getByTestId } = render(<QuizEngine config={config} />);
+      const { getByTestId } = renderWithTheme(<QuizEngine config={config} />);
 
       fireEvent.changeText(getByTestId('quiz-engine-input'), 'wrong');
       fireEvent.press(getByTestId('quiz-engine-submit'));
@@ -498,7 +508,7 @@ describe('QuizEngine', () => {
         completionMode: 'allQuestions',
         onComplete,
       });
-      const { getByTestId } = render(<QuizEngine config={config} />);
+      const { getByTestId } = renderWithTheme(<QuizEngine config={config} />);
 
       // Answer q1 incorrectly, then mark correct
       fireEvent.changeText(getByTestId('quiz-engine-input'), 'wrong');
@@ -533,7 +543,7 @@ describe('QuizEngine', () => {
         completionMode: 'never',
         autoRefill: { threshold: 1, loadMore },
       });
-      const { getByTestId } = render(<QuizEngine config={config} />);
+      const { getByTestId } = renderWithTheme(<QuizEngine config={config} />);
 
       // Answer q1 correctly — 1 remaining, should trigger refill
       fireEvent.changeText(getByTestId('quiz-engine-input'), 'big');
@@ -554,7 +564,7 @@ describe('QuizEngine', () => {
         showSrsBadge: true,
         getSrsBadge: () => ({ type: 'static' as const, stage: 5 }),
       });
-      const { getByTestId } = render(<QuizEngine config={config} />);
+      const { getByTestId } = renderWithTheme(<QuizEngine config={config} />);
       expect(getByTestId('srs-badge')).toBeTruthy();
     });
   });
@@ -571,7 +581,7 @@ describe('QuizEngine', () => {
         makeQuestion({ id: 'q2-meaning', subjectId: 2 }),
       ];
       const config = makeConfig({ questions });
-      const { getByTestId } = render(<QuizEngine config={config} />);
+      const { getByTestId } = renderWithTheme(<QuizEngine config={config} />);
 
       fireEvent.changeText(getByTestId('quiz-engine-input'), 'bigg');
       fireEvent.press(getByTestId('quiz-engine-submit'));
@@ -592,7 +602,7 @@ describe('QuizEngine', () => {
       const config = makeConfig({
         renderDetailsContent: () => <></>,
       });
-      const { getByTestId } = render(<QuizEngine config={config} />);
+      const { getByTestId } = renderWithTheme(<QuizEngine config={config} />);
 
       fireEvent.changeText(getByTestId('quiz-engine-input'), 'wrong');
       fireEvent.press(getByTestId('quiz-engine-submit'));
@@ -604,7 +614,7 @@ describe('QuizEngine', () => {
   describe('empty questions', () => {
     it('renders loading view when no questions provided', () => {
       const config = makeConfig({ questions: [] });
-      const { getByTestId } = render(<QuizEngine config={config} />);
+      const { getByTestId } = renderWithTheme(<QuizEngine config={config} />);
       expect(getByTestId('quiz-engine-empty')).toBeTruthy();
     });
   });
@@ -658,7 +668,7 @@ describe('QuizEngine', () => {
         onComplete,
       });
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <QuizEngine config={config} />,
       );
 
@@ -732,7 +742,7 @@ describe('QuizEngine', () => {
         onComplete,
       });
 
-      const { getByTestId } = render(<QuizEngine config={config} />);
+      const { getByTestId } = renderWithTheme(<QuizEngine config={config} />);
 
       // Q1: answer incorrectly → re-queued
       expect(getByTestId('subject-display-text').props.children).toBe('大');
@@ -819,7 +829,7 @@ describe('QuizEngine', () => {
         },
       });
 
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <QuizEngine config={config} />,
       );
 
@@ -892,7 +902,7 @@ describe('QuizEngine', () => {
         },
       });
 
-      const { getByTestId, queryByTestId, getByText } = render(
+      const { getByTestId, queryByTestId, getByText } = renderWithTheme(
         <QuizEngine config={config} />,
       );
 
@@ -919,6 +929,64 @@ describe('QuizEngine', () => {
       // FIX: Should wrap around and find Q1 at index 1
       expect(queryByTestId('quiz-engine-empty')).toBeNull();
       expect(getByText('Q1')).toBeTruthy();
+    });
+  });
+
+  describe('theme-awareness', () => {
+    it('should use light placeholder color in light mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <QuizEngine config={makeConfig()} />,
+        'light',
+      );
+      const input = getByTestId('quiz-engine-input');
+      expect(input.props.placeholderTextColor).toBe(COLORS.text.placeholder);
+    });
+
+    it('should use dark placeholder color in dark mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <QuizEngine config={makeConfig()} />,
+        'dark',
+      );
+      const input = getByTestId('quiz-engine-input');
+      expect(input.props.placeholderTextColor).toBe('#666666');
+    });
+
+    it('should use dark background color in dark mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <QuizEngine config={makeConfig()} />,
+        'dark',
+      );
+      const container = getByTestId('quiz-engine');
+      const flatStyles = container.props.style
+        .flat(Infinity)
+        .filter(Boolean)
+        .reduce(
+          (acc: Record<string, unknown>, style: Record<string, unknown>) => ({
+            ...acc,
+            ...style,
+          }),
+          {},
+        );
+      expect(flatStyles.backgroundColor).toBe('#121212');
+    });
+
+    it('should use dark input background color in dark mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <QuizEngine config={makeConfig()} />,
+        'dark',
+      );
+      const input = getByTestId('quiz-engine-input');
+      const flatStyles = input.props.style
+        .flat(Infinity)
+        .filter(Boolean)
+        .reduce(
+          (acc: Record<string, unknown>, style: Record<string, unknown>) => ({
+            ...acc,
+            ...style,
+          }),
+          {},
+        );
+      expect(flatStyles.backgroundColor).toBe('#2A2A2A');
     });
   });
 });
