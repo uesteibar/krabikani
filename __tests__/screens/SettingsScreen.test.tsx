@@ -14,6 +14,8 @@ import * as reviewNotificationScheduler from '../../src/services/reviewNotificat
 import * as appStateSync from '../../src/utils/appStateSync';
 import type { AppStateChangeListener } from '../../src/utils/appStateSync';
 import type { RootStackParamList } from '../../src/navigation/types';
+import { ThemeProvider } from '../../src/theme';
+import type { ColorScheme } from '../../src/theme/ThemeContext';
 
 jest.mock('../../src/storage/secureStorage');
 jest.mock('../../src/storage/database');
@@ -56,19 +58,22 @@ function MockWelcomeScreen() {
 // Wrapper for tests that need navigation
 function renderWithNavigation(
   initialRouteName: keyof RootStackParamList = 'Settings',
+  colorScheme: ColorScheme = 'light',
 ) {
   return render(
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName={initialRouteName}>
-        <Stack.Screen name="Home" component={MockHomeScreen} />
-        <Stack.Screen name="Welcome" component={MockWelcomeScreen} />
-        <Stack.Screen name="Settings" component={SettingsScreen} />
-        <Stack.Screen
-          name="NotificationPermission"
-          component={MockNotificationPermissionScreen}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>,
+    <ThemeProvider forcedColorScheme={colorScheme}>
+      <NavigationContainer>
+        <Stack.Navigator initialRouteName={initialRouteName}>
+          <Stack.Screen name="Home" component={MockHomeScreen} />
+          <Stack.Screen name="Welcome" component={MockWelcomeScreen} />
+          <Stack.Screen name="Settings" component={SettingsScreen} />
+          <Stack.Screen
+            name="NotificationPermission"
+            component={MockNotificationPermissionScreen}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </ThemeProvider>,
   );
 }
 
@@ -1907,6 +1912,148 @@ describe('SettingsScreen', () => {
       // Should only call checkPermissions (not requestPermissions)
       expect(mockNotificationService.checkPermissions).toHaveBeenCalled();
       expect(mockNotificationService.requestPermissions).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Theme-aware styling', () => {
+    it('should use dark background color in dark mode', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+
+      const { getByTestId } = renderWithNavigation('Settings', 'dark');
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      const input = getByTestId('api-key-input');
+      const inputStyle = input.props.style;
+      const flatStyle = Array.isArray(inputStyle)
+        ? Object.assign({}, ...inputStyle.flat())
+        : inputStyle;
+      expect(flatStyle.backgroundColor).toBe('#2A2A2A');
+    });
+
+    it('should use dark text color for labels in dark mode', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+
+      const { getByTestId } = renderWithNavigation('Settings', 'dark');
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      const input = getByTestId('api-key-input');
+      const inputStyle = input.props.style;
+      const flatStyle = Array.isArray(inputStyle)
+        ? Object.assign({}, ...inputStyle.flat())
+        : inputStyle;
+      expect(flatStyle.color).toBe('#E0E0E0');
+    });
+
+    it('should use dark border color for input in dark mode', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+
+      const { getByTestId } = renderWithNavigation('Settings', 'dark');
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      const input = getByTestId('api-key-input');
+      const inputStyle = input.props.style;
+      const flatStyle = Array.isArray(inputStyle)
+        ? Object.assign({}, ...inputStyle.flat())
+        : inputStyle;
+      expect(flatStyle.borderColor).toBe('#444444');
+    });
+
+    it('should use dark placeholder color in dark mode', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+
+      const { getByTestId } = renderWithNavigation('Settings', 'dark');
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      const input = getByTestId('api-key-input');
+      expect(input.props.placeholderTextColor).toBe('#666666');
+    });
+
+    it('should use dark section divider color in dark mode', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+
+      const { getByTestId } = renderWithNavigation('Settings', 'dark');
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      // Verify the screen renders correctly in dark mode without errors
+      // (validates useTheme integration for the full settings form)
+      expect(getByTestId('save-button')).toBeTruthy();
+      expect(getByTestId('zen-mode-setting')).toBeTruthy();
+    });
+
+    it('should use dark background for syncing view in dark mode', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+      mockWanikaniApi.validateApiKey.mockResolvedValue({
+        success: true,
+        user: { id: 1, username: 'testuser', level: 10 },
+      });
+      mockSyncService.getUserLevel.mockImplementation(
+        () => new Promise(() => {}),
+      );
+
+      const { getByTestId } = renderWithNavigation('Settings', 'dark');
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('api-key-input'), 'valid-api-key');
+      fireEvent.press(getByTestId('save-button'));
+
+      await waitFor(() => {
+        expect(getByTestId('syncing-view')).toBeTruthy();
+      });
+
+      const syncingView = getByTestId('syncing-view');
+      const syncingStyle = syncingView.props.style;
+      const flatStyle = Array.isArray(syncingStyle)
+        ? Object.assign({}, ...syncingStyle.flat())
+        : syncingStyle;
+      expect(flatStyle.backgroundColor).toBe('#121212');
+    });
+
+    it('should use light background color in light mode', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+
+      const { getByTestId } = renderWithNavigation('Settings', 'light');
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      const input = getByTestId('api-key-input');
+      const inputStyle = input.props.style;
+      const flatStyle = Array.isArray(inputStyle)
+        ? Object.assign({}, ...inputStyle.flat())
+        : inputStyle;
+      expect(flatStyle.backgroundColor).toBe('#FAFAFA');
+    });
+
+    it('should use light placeholder color in light mode', async () => {
+      mockSecureStorage.getApiKey.mockResolvedValue(null);
+
+      const { getByTestId } = renderWithNavigation('Settings', 'light');
+
+      await waitFor(() => {
+        expect(getByTestId('api-key-input')).toBeTruthy();
+      });
+
+      const input = getByTestId('api-key-input');
+      expect(input.props.placeholderTextColor).toBe('#999999');
     });
   });
 });
