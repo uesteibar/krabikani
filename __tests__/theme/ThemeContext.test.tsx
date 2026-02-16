@@ -5,6 +5,35 @@ import { Text, View } from 'react-native';
 import { ThemeProvider, useTheme, useDarkMode } from '../../src/theme/ThemeContext';
 import { COLORS, SUBJECT_COLORS } from '../../src/theme';
 
+describe('COLORS palette', () => {
+  it('includes link color', () => {
+    expect(COLORS.link).toBe('#007AFF');
+  });
+
+  it('includes componentSection colors', () => {
+    expect(COLORS.componentSection.background).toBe('#E8F4FF');
+    expect(COLORS.componentSection.border).toBe('#B8D4F0');
+  });
+
+  it('includes chart colors', () => {
+    expect(COLORS.chart.barBackground).toBe('#E8E8E8');
+  });
+
+  it('preserves existing color values', () => {
+    expect(COLORS.text.primary).toBe('#333333');
+    expect(COLORS.text.secondary).toBe('#666666');
+    expect(COLORS.text.placeholder).toBe('#999999');
+    expect(COLORS.text.inverse).toBe('#FFFFFF');
+    expect(COLORS.background.primary).toBe('#FFFFFF');
+    expect(COLORS.background.secondary).toBe('#F8F8F8');
+    expect(COLORS.border.light).toBe('#EEEEEE');
+    expect(COLORS.border.medium).toBe('#DDDDDD');
+    expect(COLORS.border.dark).toBe('#CCCCCC');
+    expect(COLORS.feedback.correct).toBe('#4CAF50');
+    expect(COLORS.feedback.incorrect).toBe('#F44336');
+  });
+});
+
 // Test component that uses the theme
 function ThemeConsumer({ testID = 'consumer' }: { testID?: string }) {
   const theme = useTheme();
@@ -227,6 +256,135 @@ describe('ThemeContext', () => {
       expect(colors.background).toBeDefined();
       expect(colors.border).toBeDefined();
       expect(colors.shadow).toBeDefined();
+    });
+
+    it('provides link color in light mode', () => {
+      let capturedTheme: ReturnType<typeof useTheme> | null = null;
+
+      function CaptureTheme() {
+        capturedTheme = useTheme();
+        return null;
+      }
+
+      render(
+        <ThemeProvider forcedColorScheme="light">
+          <CaptureTheme />
+        </ThemeProvider>,
+      );
+
+      expect(capturedTheme!.colors.link).toBe('#007AFF');
+    });
+
+    it('provides link color in dark mode', () => {
+      let capturedTheme: ReturnType<typeof useTheme> | null = null;
+
+      function CaptureTheme() {
+        capturedTheme = useTheme();
+        return null;
+      }
+
+      render(
+        <ThemeProvider forcedColorScheme="dark">
+          <CaptureTheme />
+        </ThemeProvider>,
+      );
+
+      expect(capturedTheme!.colors.link).toBe('#4DA3FF');
+    });
+
+    it('provides componentSection colors in light mode', () => {
+      let capturedTheme: ReturnType<typeof useTheme> | null = null;
+
+      function CaptureTheme() {
+        capturedTheme = useTheme();
+        return null;
+      }
+
+      render(
+        <ThemeProvider forcedColorScheme="light">
+          <CaptureTheme />
+        </ThemeProvider>,
+      );
+
+      expect(capturedTheme!.colors.componentSection.background).toBe('#E8F4FF');
+      expect(capturedTheme!.colors.componentSection.border).toBe('#B8D4F0');
+    });
+
+    it('provides componentSection colors in dark mode', () => {
+      let capturedTheme: ReturnType<typeof useTheme> | null = null;
+
+      function CaptureTheme() {
+        capturedTheme = useTheme();
+        return null;
+      }
+
+      render(
+        <ThemeProvider forcedColorScheme="dark">
+          <CaptureTheme />
+        </ThemeProvider>,
+      );
+
+      expect(capturedTheme!.colors.componentSection.background).toBe('#1A2A3A');
+      expect(capturedTheme!.colors.componentSection.border).toBe('#2A3A4A');
+    });
+
+    it('provides chart colors in light mode', () => {
+      let capturedTheme: ReturnType<typeof useTheme> | null = null;
+
+      function CaptureTheme() {
+        capturedTheme = useTheme();
+        return null;
+      }
+
+      render(
+        <ThemeProvider forcedColorScheme="light">
+          <CaptureTheme />
+        </ThemeProvider>,
+      );
+
+      expect(capturedTheme!.colors.chart.barBackground).toBe('#E8E8E8');
+    });
+
+    it('provides chart colors in dark mode', () => {
+      let capturedTheme: ReturnType<typeof useTheme> | null = null;
+
+      function CaptureTheme() {
+        capturedTheme = useTheme();
+        return null;
+      }
+
+      render(
+        <ThemeProvider forcedColorScheme="dark">
+          <CaptureTheme />
+        </ThemeProvider>,
+      );
+
+      expect(capturedTheme!.colors.chart.barBackground).toBe('#333333');
+    });
+
+    it('preserves existing light mode colors unchanged', () => {
+      let capturedTheme: ReturnType<typeof useTheme> | null = null;
+
+      function CaptureTheme() {
+        capturedTheme = useTheme();
+        return null;
+      }
+
+      render(
+        <ThemeProvider forcedColorScheme="light">
+          <CaptureTheme />
+        </ThemeProvider>,
+      );
+
+      const colors = capturedTheme!.colors;
+      expect(colors.background.primary).toBe('#FFFFFF');
+      expect(colors.background.secondary).toBe('#F8F8F8');
+      expect(colors.text.primary).toBe('#333333');
+      expect(colors.text.secondary).toBe('#666666');
+      expect(colors.border.light).toBe('#EEEEEE');
+      expect(colors.border.medium).toBe('#DDDDDD');
+      expect(colors.feedback.correct).toBe('#4CAF50');
+      expect(colors.feedback.incorrect).toBe('#F44336');
     });
 
     it('provides shadow object with correct structure', () => {

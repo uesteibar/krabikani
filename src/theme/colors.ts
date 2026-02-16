@@ -206,6 +206,20 @@ export const COLORS = {
     dark: '#CCCCCC',
   },
 
+  // Link color
+  link: '#007AFF',
+
+  // Component section colors (e.g., "Made up of" sections in LessonCard)
+  componentSection: {
+    background: '#E8F4FF',
+    border: '#B8D4F0',
+  },
+
+  // Chart colors
+  chart: {
+    barBackground: '#E8E8E8',
+  },
+
   // Shadow (for elevation)
   shadow: '#000000',
 } as const;

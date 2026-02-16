@@ -40,6 +40,17 @@ const DARK_COLORS = {
     medium: '#444444',
     dark: '#555555',
   },
+  // Link color
+  link: '#4DA3FF',
+  // Component section colors
+  componentSection: {
+    background: '#1A2A3A',
+    border: '#2A3A4A',
+  },
+  // Chart colors
+  chart: {
+    barBackground: '#333333',
+  },
   // Neutral colors adjusted for dark mode
   neutral: {
     ...COLORS.neutral,
@@ -115,6 +126,17 @@ export interface NeutralColors {
   gray900: string;
 }
 
+/** Component section colors (e.g., "Made up of" sections) */
+export interface ComponentSectionColors {
+  background: string;
+  border: string;
+}
+
+/** Chart colors */
+export interface ChartColors {
+  barBackground: string;
+}
+
 export interface ThemeColors {
   subject: typeof SUBJECT_COLORS;
   feedback: typeof COLORS.feedback;
@@ -123,6 +145,9 @@ export interface ThemeColors {
   text: TextColors;
   background: BackgroundColors;
   border: BorderColors;
+  link: string;
+  componentSection: ComponentSectionColors;
+  chart: ChartColors;
   shadow: string;
 }
 
@@ -179,6 +204,9 @@ export function ThemeProvider({ children, forcedColorScheme }: ThemeProviderProp
         text: colors.text,
         background: colors.background,
         border: colors.border,
+        link: colors.link,
+        componentSection: colors.componentSection,
+        chart: colors.chart,
         shadow: colors.shadow,
       },
       dashboardColors: DASHBOARD_COLORS,
