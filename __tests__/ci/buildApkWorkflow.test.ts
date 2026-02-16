@@ -1,0 +1,116 @@
+const fs = require('fs');
+const path = require('path');
+const YAML = require('yaml');
+
+const WORKFLOW_PATH = path.resolve(
+  __dirname,
+  '../../.github/workflows/build-apk.yml',
+);
+
+describe('build-apk.yml workflow', () => {
+  let workflow: any;
+
+  beforeAll(() => {
+    const content = fs.readFileSync(WORKFLOW_PATH, 'utf8');
+    workflow = YAML.parse(content);
+  });
+
+  it('triggers on pull_request with opened, synchronize, reopened', () => {
+    expect(workflow.on.pull_request.types).toEqual([
+      'opened',
+      'synchronize',
+      'reopened',
+    ]);
+  });
+
+  it('runs on ubuntu-latest', () => {
+    const job = workflow.jobs['build-apk'];
+    expect(job['runs-on']).toBe('ubuntu-latest');
+  });
+
+  it('sets up Node 20 with npm cache', () => {
+    const steps = workflow.jobs['build-apk'].steps;
+    const nodeStep = steps.find(
+      (s: any) => s.uses && s.uses.startsWith('actions/setup-node@'),
+    );
+    expect(nodeStep).toBeDefined();
+    expect(nodeStep.with['node-version']).toBe(20);
+    expect(nodeStep.with.cache).toBe('npm');
+  });
+
+  it('sets up Java 17 Temurin', () => {
+    const steps = workflow.jobs['build-apk'].steps;
+    const javaStep = steps.find(
+      (s: any) => s.uses && s.uses.startsWith('actions/setup-java@'),
+    );
+    expect(javaStep).toBeDefined();
+    expect(javaStep.with['java-version']).toBe(17);
+    expect(javaStep.with.distribution).toBe('temurin');
+  });
+
+  it('configures Gradle caching via gradle/actions/setup-gradle@v4', () => {
+    const steps = workflow.jobs['build-apk'].steps;
+    const gradleStep = steps.find(
+      (s: any) => s.uses === 'gradle/actions/setup-gradle@v4',
+    );
+    expect(gradleStep).toBeDefined();
+  });
+
+  it('installs npm dependencies with npm ci', () => {
+    const steps = workflow.jobs['build-apk'].steps;
+    const npmCiStep = steps.find((s: any) => s.run && s.run.includes('npm ci'));
+    expect(npmCiStep).toBeDefined();
+  });
+
+  it('runs assembleRelease targeting armeabi-v7a,arm64-v8a', () => {
+    const steps = workflow.jobs['build-apk'].steps;
+    const buildStep = steps.find(
+      (s: any) => s.run && s.run.includes('assembleRelease'),
+    );
+    expect(buildStep).toBeDefined();
+    expect(buildStep.run).toContain(
+      '-PreactNativeArchitectures=armeabi-v7a,arm64-v8a',
+    );
+  });
+
+  it('uploads the APK as a GitHub Actions artifact', () => {
+    const steps = workflow.jobs['build-apk'].steps;
+    const uploadStep = steps.find(
+      (s: any) => s.uses && s.uses.startsWith('actions/upload-artifact@'),
+    );
+    expect(uploadStep).toBeDefined();
+    expect(uploadStep.with.path).toContain('app-release.apk');
+  });
+
+  it('posts or updates a PR comment using actions/github-script', () => {
+    const steps = workflow.jobs['build-apk'].steps;
+    const commentStep = steps.find(
+      (s: any) => s.uses && s.uses.startsWith('actions/github-script@'),
+    );
+    expect(commentStep).toBeDefined();
+    expect(commentStep.with.script).toBeDefined();
+  });
+
+  it('uses a marker comment for update-in-place behavior', () => {
+    const steps = workflow.jobs['build-apk'].steps;
+    const commentStep = steps.find(
+      (s: any) => s.uses && s.uses.startsWith('actions/github-script@'),
+    );
+    expect(commentStep.with.script).toContain('<!-- apk-bot -->');
+  });
+
+  it('updates existing comment rather than always creating new ones', () => {
+    const steps = workflow.jobs['build-apk'].steps;
+    const commentStep = steps.find(
+      (s: any) => s.uses && s.uses.startsWith('actions/github-script@'),
+    );
+    const script = commentStep.with.script;
+    expect(script).toContain('updateComment');
+    expect(script).toContain('createComment');
+  });
+
+  it('has pull-requests write permission for commenting', () => {
+    const permissions = workflow.permissions;
+    expect(permissions['pull-requests']).toBe('write');
+  });
+});
