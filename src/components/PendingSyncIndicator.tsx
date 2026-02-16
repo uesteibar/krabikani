@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
 
 export interface PendingSyncIndicatorProps {
   pendingLessonsCount: number;
@@ -16,7 +17,17 @@ export function PendingSyncIndicator({
   pendingLessonsCount,
   pendingReviewsCount,
 }: PendingSyncIndicatorProps) {
+  const { colors } = useTheme();
   const totalPending = pendingLessonsCount + pendingReviewsCount;
+
+  const dynamicStyles = useMemo(
+    () => ({
+      text: {
+        color: colors.status.pendingSyncText,
+      },
+    }),
+    [colors],
+  );
 
   if (totalPending === 0) {
     return null;
@@ -38,7 +49,7 @@ export function PendingSyncIndicator({
 
   return (
     <View style={styles.container} testID="pending-sync-indicator">
-      <Text style={styles.text}>
+      <Text style={[styles.text, dynamicStyles.text]}>
         {itemsText} pending sync
       </Text>
       <Text style={styles.subtext}>
@@ -59,7 +70,6 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: FONT_SIZES.sm,
-    color: '#E65100', // Darker orange for better contrast
     fontWeight: '500',
   },
   subtext: {

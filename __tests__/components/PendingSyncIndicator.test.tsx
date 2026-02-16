@@ -2,10 +2,20 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 
 import { PendingSyncIndicator } from '../../src/components/PendingSyncIndicator';
+import { ThemeProvider } from '../../src/theme/ThemeContext';
+import { COLORS } from '../../src/theme';
+
+function renderWithTheme(ui: React.ReactElement, colorScheme?: 'light' | 'dark') {
+  return render(
+    <ThemeProvider forcedColorScheme={colorScheme ?? 'light'}>
+      {ui}
+    </ThemeProvider>,
+  );
+}
 
 describe('PendingSyncIndicator', () => {
   it('should render nothing when there are no pending items', () => {
-    render(
+    renderWithTheme(
       <PendingSyncIndicator
         pendingLessonsCount={0}
         pendingReviewsCount={0}
@@ -16,7 +26,7 @@ describe('PendingSyncIndicator', () => {
   });
 
   it('should show indicator when there are pending lessons', () => {
-    render(
+    renderWithTheme(
       <PendingSyncIndicator
         pendingLessonsCount={3}
         pendingReviewsCount={0}
@@ -29,7 +39,7 @@ describe('PendingSyncIndicator', () => {
   });
 
   it('should show indicator when there are pending reviews', () => {
-    render(
+    renderWithTheme(
       <PendingSyncIndicator
         pendingLessonsCount={0}
         pendingReviewsCount={5}
@@ -41,7 +51,7 @@ describe('PendingSyncIndicator', () => {
   });
 
   it('should show both lessons and reviews when both are pending', () => {
-    render(
+    renderWithTheme(
       <PendingSyncIndicator
         pendingLessonsCount={2}
         pendingReviewsCount={3}
@@ -53,7 +63,7 @@ describe('PendingSyncIndicator', () => {
   });
 
   it('should use singular form for 1 lesson', () => {
-    render(
+    renderWithTheme(
       <PendingSyncIndicator
         pendingLessonsCount={1}
         pendingReviewsCount={0}
@@ -64,7 +74,7 @@ describe('PendingSyncIndicator', () => {
   });
 
   it('should use singular form for 1 review', () => {
-    render(
+    renderWithTheme(
       <PendingSyncIndicator
         pendingLessonsCount={0}
         pendingReviewsCount={1}
@@ -75,7 +85,7 @@ describe('PendingSyncIndicator', () => {
   });
 
   it('should use singular forms for 1 lesson and 1 review', () => {
-    render(
+    renderWithTheme(
       <PendingSyncIndicator
         pendingLessonsCount={1}
         pendingReviewsCount={1}
@@ -83,5 +93,33 @@ describe('PendingSyncIndicator', () => {
     );
 
     expect(screen.getByText('1 lesson and 1 review pending sync')).toBeTruthy();
+  });
+
+  describe('theme-awareness', () => {
+    it('uses light pendingSyncText color in light mode', () => {
+      renderWithTheme(
+        <PendingSyncIndicator pendingLessonsCount={3} pendingReviewsCount={0} />,
+        'light',
+      );
+      const text = screen.getByText('3 lessons pending sync');
+      expect(text.props.style).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ color: COLORS.status.pendingSyncText }),
+        ]),
+      );
+    });
+
+    it('uses dark pendingSyncText color in dark mode', () => {
+      renderWithTheme(
+        <PendingSyncIndicator pendingLessonsCount={3} pendingReviewsCount={0} />,
+        'dark',
+      );
+      const text = screen.getByText('3 lessons pending sync');
+      expect(text.props.style).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ color: '#E65100' }),
+        ]),
+      );
+    });
   });
 });

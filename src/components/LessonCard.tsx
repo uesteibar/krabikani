@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -21,6 +21,7 @@ import {
   MIN_TOUCH_TARGET,
   TEXT_STYLES,
 } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
 
 /** Data for a component radical */
 export interface ComponentRadical {
@@ -125,6 +126,7 @@ export function LessonCard({
   onBack,
   onComponentPress,
 }: LessonCardProps) {
+  const { colors } = useTheme();
   const backgroundColor = getSubjectColor(subjectType);
   const primaryMeaning = getPrimaryMeaning(meanings);
   const primaryReading = getPrimaryReading(readings);
@@ -132,11 +134,42 @@ export function LessonCard({
   const acceptedReadings = getAcceptedReadings(readings);
   const hasReading = subjectType !== 'radical';
 
+  const dynamicStyles = useMemo(
+    () => ({
+      container: {
+        backgroundColor: colors.background.primary,
+      },
+      componentsContainer: {
+        backgroundColor: colors.componentSection.background,
+        borderBottomColor: colors.componentSection.border,
+      },
+      componentsTitle: {
+        color: colors.text.secondary,
+      },
+      sectionTitle: {
+        color: colors.text.secondary,
+      },
+      primaryText: {
+        color: colors.text.primary,
+      },
+      secondaryText: {
+        color: colors.text.secondary,
+      },
+      mnemonicText: {
+        color: colors.text.primary,
+      },
+      backButton: {
+        backgroundColor: colors.background.primary,
+      },
+    }),
+    [colors],
+  );
+
   // Determine if we should show an image instead of text
   const shouldShowImage = characters === null && characterImages;
 
   return (
-    <View style={styles.container} testID="lesson-card">
+    <View style={[styles.container, dynamicStyles.container]} testID="lesson-card">
       {/* Header with characters */}
       <View
         style={[styles.header, { backgroundColor }]}
@@ -164,10 +197,10 @@ export function LessonCard({
         componentRadicals &&
         componentRadicals.length > 0 && (
           <View
-            style={styles.componentsContainer}
+            style={[styles.componentsContainer, dynamicStyles.componentsContainer]}
             testID="lesson-card-components"
           >
-            <Text style={styles.componentsTitle}>Made up of:</Text>
+            <Text style={[styles.componentsTitle, dynamicStyles.componentsTitle]}>Made up of:</Text>
             <View style={styles.componentsRow}>
               {componentRadicals.map(radical => {
                 const componentContent = (
@@ -223,10 +256,10 @@ export function LessonCard({
         componentKanji &&
         componentKanji.length > 0 && (
           <View
-            style={styles.componentsContainer}
+            style={[styles.componentsContainer, dynamicStyles.componentsContainer]}
             testID="lesson-card-components"
           >
-            <Text style={styles.componentsTitle}>Made up of:</Text>
+            <Text style={[styles.componentsTitle, dynamicStyles.componentsTitle]}>Made up of:</Text>
             <View style={styles.componentsRow}>
               {componentKanji.map(kanji => {
                 const componentContent = (
@@ -280,13 +313,13 @@ export function LessonCard({
       >
         {/* Meaning section */}
         <View style={styles.section} testID="lesson-card-meaning-section">
-          <Text style={styles.sectionTitle}>Meaning</Text>
-          <Text style={styles.primaryText} testID="lesson-card-primary-meaning">
+          <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Meaning</Text>
+          <Text style={[styles.primaryText, dynamicStyles.primaryText]} testID="lesson-card-primary-meaning">
             {primaryMeaning}
           </Text>
           {acceptedMeanings.length > 1 && (
             <Text
-              style={styles.secondaryText}
+              style={[styles.secondaryText, dynamicStyles.secondaryText]}
               testID="lesson-card-other-meanings"
             >
               Also:{' '}
@@ -298,16 +331,16 @@ export function LessonCard({
         {/* Reading section (only for kanji and vocabulary) */}
         {hasReading && (
           <View style={styles.section} testID="lesson-card-reading-section">
-            <Text style={styles.sectionTitle}>Reading</Text>
+            <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Reading</Text>
             <Text
-              style={styles.primaryText}
+              style={[styles.primaryText, dynamicStyles.primaryText]}
               testID="lesson-card-primary-reading"
             >
               {primaryReading}
             </Text>
             {acceptedReadings.length > 1 && (
               <Text
-                style={styles.secondaryText}
+                style={[styles.secondaryText, dynamicStyles.secondaryText]}
                 testID="lesson-card-other-readings"
               >
                 Also:{' '}
@@ -322,10 +355,10 @@ export function LessonCard({
           style={styles.section}
           testID="lesson-card-meaning-mnemonic-section"
         >
-          <Text style={styles.sectionTitle}>Meaning Mnemonic</Text>
+          <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Meaning Mnemonic</Text>
           <MnemonicText
             text={meaningMnemonic}
-            style={styles.mnemonicText}
+            style={{ ...styles.mnemonicText, ...dynamicStyles.mnemonicText }}
             testID="lesson-card-meaning-mnemonic"
           />
         </View>
@@ -336,10 +369,10 @@ export function LessonCard({
             style={styles.section}
             testID="lesson-card-reading-mnemonic-section"
           >
-            <Text style={styles.sectionTitle}>Reading Mnemonic</Text>
+            <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Reading Mnemonic</Text>
             <MnemonicText
               text={readingMnemonic}
-              style={styles.mnemonicText}
+              style={{ ...styles.mnemonicText, ...dynamicStyles.mnemonicText }}
               testID="lesson-card-reading-mnemonic"
             />
           </View>
@@ -350,7 +383,7 @@ export function LessonCard({
       <View style={styles.footer} testID="lesson-card-footer">
         {onBack ? (
           <TouchableOpacity
-            style={[styles.backButton, { borderColor: backgroundColor }]}
+            style={[styles.backButton, dynamicStyles.backButton, { borderColor: backgroundColor }]}
             onPress={onBack}
             activeOpacity={0.8}
             testID="lesson-card-back-button"
@@ -378,7 +411,6 @@ export function LessonCard({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background.primary,
   },
   header: {
     paddingVertical: SPACING.xxxl,
@@ -401,13 +433,10 @@ const styles = StyleSheet.create({
   componentsContainer: {
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.md,
-    backgroundColor: '#E8F4FF', // Light blue tint for radical components
     borderBottomWidth: 1,
-    borderBottomColor: '#B8D4F0',
   },
   componentsTitle: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.text.secondary,
     marginBottom: SPACING.sm,
     fontWeight: '500',
     textTransform: 'uppercase',
@@ -450,7 +479,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: FONT_SIZES.sm,
     fontWeight: '600',
-    color: COLORS.text.secondary,
     marginBottom: SPACING.sm,
     textTransform: 'uppercase',
     letterSpacing: 1,
@@ -458,17 +486,14 @@ const styles = StyleSheet.create({
   primaryText: {
     fontSize: FONT_SIZES.xxl,
     fontWeight: 'bold',
-    color: COLORS.text.primary,
   },
   secondaryText: {
     fontSize: FONT_SIZES.base,
-    color: COLORS.text.secondary,
     marginTop: SPACING.xs,
   },
   mnemonicText: {
     fontSize: FONT_SIZES.base,
     lineHeight: FONT_SIZES.xxl,
-    color: COLORS.text.primary,
   },
   footer: {
     flexDirection: 'row',
@@ -487,7 +512,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    backgroundColor: COLORS.background.primary,
   },
   backButtonText: {
     fontSize: FONT_SIZES.lg,

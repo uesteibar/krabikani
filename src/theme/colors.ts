@@ -163,6 +163,8 @@ export const COLORS = {
     pendingSync: '#F57C00',
     /** Orange background for pending sync */
     pendingSyncBackground: '#FFF3E0',
+    /** Darker orange for pending sync text (better contrast) */
+    pendingSyncText: '#E65100',
   },
 
   // Neutral colors
