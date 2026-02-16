@@ -11,6 +11,8 @@ import type { EventArg } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../navigation/types';
+import { COLORS } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import type {
   Meaning,
   Reading,
@@ -131,6 +133,25 @@ function subjectToReviewItem(
  */
 export function ReviewsScreen() {
   const navigation = useNavigation<ReviewsScreenNavigationProp>();
+  const { colors } = useTheme();
+
+  const dynamicStyles = useMemo(
+    () => ({
+      container: {
+        backgroundColor: colors.background.primary,
+      },
+      loadingText: {
+        color: colors.text.secondary,
+      },
+      errorText: {
+        color: colors.feedback.incorrect,
+      },
+      backLink: {
+        color: colors.link,
+      },
+    }),
+    [colors],
+  );
 
   const [phase, setPhase] = useState<ReviewPhase>('loading');
   const [sessionData, setSessionData] = useState<ReviewSessionData | null>(
@@ -577,9 +598,9 @@ export function ReviewsScreen() {
   // Render loading state
   if (phase === 'loading') {
     return (
-      <View style={styles.centerContainer} testID="reviews-screen-loading">
-        <ActivityIndicator size="large" color="#8f5bc4" />
-        <Text style={styles.loadingText}>Loading reviews...</Text>
+      <View style={[styles.centerContainer, dynamicStyles.container]} testID="reviews-screen-loading">
+        <ActivityIndicator size="large" color={COLORS.subject.vocabulary} />
+        <Text style={[styles.loadingText, dynamicStyles.loadingText]}>Loading reviews...</Text>
       </View>
     );
   }
@@ -590,12 +611,12 @@ export function ReviewsScreen() {
   // Render error state
   if (phase === 'error') {
     return (
-      <View style={styles.centerContainer} testID="reviews-screen-error">
-        <Text style={styles.errorText}>
+      <View style={[styles.centerContainer, dynamicStyles.container]} testID="reviews-screen-error">
+        <Text style={[styles.errorText, dynamicStyles.errorText]}>
           {errorMessage ?? 'An error occurred'}
         </Text>
         <Text
-          style={styles.backLink}
+          style={[styles.backLink, dynamicStyles.backLink]}
           onPress={handleReturnToDashboard}
           testID="reviews-screen-back"
         >
@@ -612,7 +633,7 @@ export function ReviewsScreen() {
     sessionData
   ) {
     return (
-      <View style={styles.container} testID="reviews-screen">
+      <View style={[styles.container, dynamicStyles.container]} testID="reviews-screen">
         <ReviewSession
           items={reviewItems}
           onSessionComplete={handleSessionComplete}
@@ -627,8 +648,8 @@ export function ReviewsScreen() {
 
   // Fallback (shouldn't reach here)
   return (
-    <View style={styles.centerContainer} testID="reviews-screen">
-      <Text style={styles.errorText}>Unexpected state</Text>
+    <View style={[styles.centerContainer, dynamicStyles.container]} testID="reviews-screen">
+      <Text style={[styles.errorText, dynamicStyles.errorText]}>Unexpected state</Text>
     </View>
   );
 }
@@ -636,29 +657,24 @@ export function ReviewsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   centerContainer: {
     flex: 1,
-    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
     marginTop: 16,
   },
   errorText: {
     fontSize: 16,
-    color: '#f44336',
     textAlign: 'center',
     marginBottom: 16,
   },
   backLink: {
     fontSize: 16,
-    color: '#007AFF',
     textDecorationLine: 'underline',
     marginTop: 16,
   },

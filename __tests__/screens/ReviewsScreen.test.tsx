@@ -7,6 +7,8 @@ import { Alert } from 'react-native';
 jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
 
 import { ReviewsScreen } from '../../src/screens/ReviewsScreen';
+import { ThemeProvider } from '../../src/theme/ThemeContext';
+import { COLORS } from '../../src/theme/colors';
 import * as storage from '../../src/storage';
 
 // Mock dependencies
@@ -86,8 +88,12 @@ jest.mock('@react-navigation/native', () => {
 // Mock Math.random for deterministic tests
 const mockRandom = jest.spyOn(Math, 'random');
 
-function renderWithNavigation(component: React.ReactElement) {
-  return render(<NavigationContainer>{component}</NavigationContainer>);
+function renderWithNavigation(component: React.ReactElement, colorScheme?: 'light' | 'dark') {
+  return render(
+    <ThemeProvider forcedColorScheme={colorScheme ?? 'light'}>
+      <NavigationContainer>{component}</NavigationContainer>
+    </ThemeProvider>,
+  );
 }
 
 // Sample data for testing
@@ -1606,6 +1612,66 @@ describe('ReviewsScreen', () => {
         '1 item will be lost (started but not yet failed or completed).',
         expect.any(Array),
       );
+    });
+  });
+
+  describe('theme-aware styles', () => {
+    it('should use dark background in loading state with dark theme', async () => {
+      (storage.getAvailableReviews as jest.Mock).mockImplementation(
+        () => new Promise(() => {}),
+      );
+
+      const { getByTestId } = renderWithNavigation(<ReviewsScreen />, 'dark');
+
+      const loadingView = getByTestId('reviews-screen-loading');
+      const flatStyle = Array.isArray(loadingView.props.style)
+        ? Object.assign({}, ...loadingView.props.style)
+        : loadingView.props.style;
+      expect(flatStyle.backgroundColor).toBe('#121212');
+    });
+
+    it('should use light background in loading state with light theme', async () => {
+      (storage.getAvailableReviews as jest.Mock).mockImplementation(
+        () => new Promise(() => {}),
+      );
+
+      const { getByTestId } = renderWithNavigation(<ReviewsScreen />, 'light');
+
+      const loadingView = getByTestId('reviews-screen-loading');
+      const flatStyle = Array.isArray(loadingView.props.style)
+        ? Object.assign({}, ...loadingView.props.style)
+        : loadingView.props.style;
+      expect(flatStyle.backgroundColor).toBe(COLORS.background.primary);
+    });
+
+    it('should use dark theme link color for back link in dark mode', async () => {
+      (storage.getAvailableReviews as jest.Mock).mockResolvedValue([]);
+
+      const { getByTestId } = renderWithNavigation(<ReviewsScreen />, 'dark');
+
+      await waitFor(() => {
+        expect(getByTestId('reviews-screen-back')).toBeTruthy();
+      });
+
+      const backLink = getByTestId('reviews-screen-back');
+      const flatStyle = Array.isArray(backLink.props.style)
+        ? Object.assign({}, ...backLink.props.style)
+        : backLink.props.style;
+      expect(flatStyle.color).toBe('#4DA3FF');
+    });
+
+    it('should use dark theme text color for loading text in dark mode', async () => {
+      (storage.getAvailableReviews as jest.Mock).mockImplementation(
+        () => new Promise(() => {}),
+      );
+
+      const { getByText } = renderWithNavigation(<ReviewsScreen />, 'dark');
+
+      const loadingText = getByText('Loading reviews...');
+      const flatStyle = Array.isArray(loadingText.props.style)
+        ? Object.assign({}, ...loadingText.props.style)
+        : loadingText.props.style;
+      expect(flatStyle.color).toBe('#AAAAAA');
     });
   });
 });

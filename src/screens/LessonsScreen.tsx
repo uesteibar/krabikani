@@ -4,6 +4,8 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../navigation/types';
+import { DASHBOARD_COLORS } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import type {
   Meaning,
   Reading,
@@ -128,6 +130,25 @@ function lessonItemToQuizItem(
  */
 export function LessonsScreen() {
   const navigation = useNavigation<LessonsScreenNavigationProp>();
+  const { colors } = useTheme();
+
+  const dynamicStyles = useMemo(
+    () => ({
+      container: {
+        backgroundColor: colors.background.primary,
+      },
+      loadingText: {
+        color: colors.text.secondary,
+      },
+      errorText: {
+        color: colors.feedback.incorrect,
+      },
+      backLink: {
+        color: colors.link,
+      },
+    }),
+    [colors],
+  );
 
   const [phase, setPhase] = useState<LessonPhase>('loading');
   const [session, setSession] = useState<LessonSession | null>(null);
@@ -415,9 +436,9 @@ export function LessonsScreen() {
   // Render loading state
   if (phase === 'loading') {
     return (
-      <View style={styles.centerContainer} testID="lessons-screen-loading">
-        <ActivityIndicator size="large" color="#e8a4c9" />
-        <Text style={styles.loadingText}>Loading lessons...</Text>
+      <View style={[styles.centerContainer, dynamicStyles.container]} testID="lessons-screen-loading">
+        <ActivityIndicator size="large" color={DASHBOARD_COLORS.lessons} />
+        <Text style={[styles.loadingText, dynamicStyles.loadingText]}>Loading lessons...</Text>
       </View>
     );
   }
@@ -425,12 +446,12 @@ export function LessonsScreen() {
   // Render error state
   if (phase === 'error') {
     return (
-      <View style={styles.centerContainer} testID="lessons-screen-error">
-        <Text style={styles.errorText}>
+      <View style={[styles.centerContainer, dynamicStyles.container]} testID="lessons-screen-error">
+        <Text style={[styles.errorText, dynamicStyles.errorText]}>
           {errorMessage ?? 'An error occurred'}
         </Text>
         <Text
-          style={styles.backLink}
+          style={[styles.backLink, dynamicStyles.backLink]}
           onPress={handleReturnToDashboard}
           testID="lessons-screen-back"
         >
@@ -443,7 +464,7 @@ export function LessonsScreen() {
   // Render learning phase
   if (phase === 'learning' && session) {
     return (
-      <View style={styles.container} testID="lessons-screen">
+      <View style={[styles.container, dynamicStyles.container]} testID="lessons-screen">
         <LessonBatch
           items={currentBatch.items}
           componentRadicals={componentRadicals}
@@ -462,7 +483,7 @@ export function LessonsScreen() {
     );
 
     return (
-      <View style={styles.container} testID="lessons-screen">
+      <View style={[styles.container, dynamicStyles.container]} testID="lessons-screen">
         <LessonQuiz
           items={quizItems}
           onQuizComplete={handleQuizComplete}
@@ -475,7 +496,7 @@ export function LessonsScreen() {
   // Render completion phase
   if (phase === 'complete' && session) {
     return (
-      <View style={styles.container} testID="lessons-screen">
+      <View style={[styles.container, dynamicStyles.container]} testID="lessons-screen">
         <LessonCompletion
           itemsLearned={currentBatch.items.length}
           syncedOnline={syncedOnline}
@@ -492,8 +513,8 @@ export function LessonsScreen() {
 
   // Fallback (shouldn't reach here)
   return (
-    <View style={styles.centerContainer} testID="lessons-screen">
-      <Text style={styles.errorText}>Unexpected state</Text>
+    <View style={[styles.centerContainer, dynamicStyles.container]} testID="lessons-screen">
+      <Text style={[styles.errorText, dynamicStyles.errorText]}>Unexpected state</Text>
     </View>
   );
 }
@@ -501,29 +522,24 @@ export function LessonsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   centerContainer: {
     flex: 1,
-    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
     marginTop: 16,
   },
   errorText: {
     fontSize: 16,
-    color: '#f44336',
     textAlign: 'center',
     marginBottom: 16,
   },
   backLink: {
     fontSize: 16,
-    color: '#007AFF',
     textDecorationLine: 'underline',
   },
 });
