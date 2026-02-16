@@ -2,12 +2,12 @@ import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import {
-  COLORS,
   DASHBOARD_COLORS,
   SPACING,
   FONT_SIZES,
   BORDER_RADIUS,
 } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
 import type { UpcomingReviewsHourBucket } from '../storage';
 
 export interface UpcomingReviewsChartProps {
@@ -66,6 +66,41 @@ export function UpcomingReviewsChart({
   nextReviewAt,
   currentPendingCount = 0,
 }: UpcomingReviewsChartProps) {
+  const { colors } = useTheme();
+
+  const dynamicStyles = useMemo(
+    () => ({
+      title: {
+        color: colors.text.secondary,
+      },
+      gridContainer: {
+        backgroundColor: colors.background.secondary,
+      },
+      timeText: {
+        color: colors.text.secondary,
+      },
+      totalCount: {
+        color: colors.text.tertiary,
+      },
+      noNewCount: {
+        color: colors.text.tertiary,
+      },
+      barContainer: {
+        backgroundColor: colors.chart.barBackground,
+      },
+      emptyStateContainer: {
+        backgroundColor: colors.background.secondary,
+      },
+      emptyStateTitle: {
+        color: colors.text.primary,
+      },
+      emptyStateMessage: {
+        color: colors.text.secondary,
+      },
+    }),
+    [colors],
+  );
+
   // Calculate rows with cumulative totals (starting from current pending reviews)
   const rows: RowData[] = useMemo(() => {
     let cumulative = currentPendingCount;
@@ -96,11 +131,11 @@ export function UpcomingReviewsChart({
   if (!hasUpcomingReviews && data.length > 0) {
     return (
       <View style={styles.container} testID="upcoming-reviews-chart">
-        <Text style={styles.title}>Upcoming Reviews</Text>
-        <View style={styles.emptyStateContainer}>
+        <Text style={[styles.title, dynamicStyles.title]}>Upcoming Reviews</Text>
+        <View style={[styles.emptyStateContainer, dynamicStyles.emptyStateContainer]}>
           <Text style={styles.emptyStateIcon}>🎉</Text>
-          <Text style={styles.emptyStateTitle}>All caught up!</Text>
-          <Text style={styles.emptyStateMessage}>
+          <Text style={[styles.emptyStateTitle, dynamicStyles.emptyStateTitle]}>All caught up!</Text>
+          <Text style={[styles.emptyStateMessage, dynamicStyles.emptyStateMessage]}>
             No reviews in the next 12 hours
           </Text>
           {nextReviewAt && (
@@ -115,8 +150,8 @@ export function UpcomingReviewsChart({
 
   return (
     <View style={styles.container} testID="upcoming-reviews-chart">
-      <Text style={styles.title}>Upcoming Reviews</Text>
-      <View style={styles.gridContainer}>
+      <Text style={[styles.title, dynamicStyles.title]}>Upcoming Reviews</Text>
+      <View style={[styles.gridContainer, dynamicStyles.gridContainer]}>
         {rows.map((row, index) => {
           // Bar width is based on new reviews per hour (not cumulative total)
           const barWidthPercent =
@@ -125,22 +160,22 @@ export function UpcomingReviewsChart({
           return (
             <View key={index} style={styles.row} testID={`review-row-${index}`}>
               {/* Time column */}
-              <Text style={styles.timeText}>{row.label}</Text>
+              <Text style={[styles.timeText, dynamicStyles.timeText]}>{row.label}</Text>
 
               {/* Count column */}
               <View style={styles.countColumn}>
                 {row.newCount > 0 ? (
                   <Text style={styles.countText}>
                     <Text style={styles.newCount}>+{row.newCount}</Text>
-                    <Text style={styles.totalCount}> ({row.totalCount})</Text>
+                    <Text style={[styles.totalCount, dynamicStyles.totalCount]}> ({row.totalCount})</Text>
                   </Text>
                 ) : (
-                  <Text style={styles.noNewCount}>-</Text>
+                  <Text style={[styles.noNewCount, dynamicStyles.noNewCount]}>-</Text>
                 )}
               </View>
 
               {/* Bar chart column */}
-              <View style={styles.barContainer}>
+              <View style={[styles.barContainer, dynamicStyles.barContainer]} testID={`review-bar-container-${index}`}>
                 <View
                   style={[
                     styles.bar,
@@ -169,12 +204,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FONT_SIZES.sm,
     fontWeight: '600',
-    color: COLORS.text.secondary,
     marginBottom: SPACING.sm,
     marginLeft: SPACING.sm + SPACING.sm,
   },
   gridContainer: {
-    backgroundColor: COLORS.background.secondary,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.sm,
     width: '100%',
@@ -188,7 +221,6 @@ const styles = StyleSheet.create({
   },
   timeText: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.text.secondary,
     fontWeight: '500',
     width: 45,
   },
@@ -205,17 +237,14 @@ const styles = StyleSheet.create({
     color: DASHBOARD_COLORS.reviews,
   },
   totalCount: {
-    color: COLORS.text.tertiary,
     fontSize: FONT_SIZES.xs,
   },
   noNewCount: {
-    color: COLORS.text.tertiary,
     fontSize: FONT_SIZES.sm,
   },
   barContainer: {
     flex: 1,
     height: 8,
-    backgroundColor: '#E8E8E8', // Light gray for bar background
     borderRadius: 4,
     overflow: 'hidden',
   },
@@ -224,7 +253,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   emptyStateContainer: {
-    backgroundColor: COLORS.background.secondary,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.xl,
     alignItems: 'center',
@@ -236,12 +264,10 @@ const styles = StyleSheet.create({
   emptyStateTitle: {
     fontSize: FONT_SIZES.lg,
     fontWeight: '600',
-    color: COLORS.text.primary,
     marginBottom: SPACING.xs,
   },
   emptyStateMessage: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.text.secondary,
     textAlign: 'center',
   },
   nextReviewText: {
