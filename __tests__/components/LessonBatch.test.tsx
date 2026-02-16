@@ -11,6 +11,15 @@ import {
 import { ComponentRadical, ComponentKanji } from '../../src/components/LessonCard';
 import type { Meaning, Reading, KanjiReading } from '../../src/api/types';
 import { SUBJECT_COLORS, COLORS } from '../../src/theme';
+import { ThemeProvider } from '../../src/theme/ThemeContext';
+
+function renderWithTheme(ui: React.ReactElement, colorScheme?: 'light' | 'dark') {
+  return render(
+    <ThemeProvider forcedColorScheme={colorScheme ?? 'light'}>
+      {ui}
+    </ThemeProvider>,
+  );
+}
 
 // Helper to create test meanings
 function createMeanings(
@@ -150,29 +159,29 @@ describe('LessonBatch', () => {
 
   describe('basic rendering', () => {
     it('renders the component with testID', () => {
-      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
       expect(getByTestId('lesson-batch')).toBeTruthy();
     });
 
     it('renders the progress indicator', () => {
-      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
       expect(getByTestId('lesson-batch-progress')).toBeTruthy();
     });
 
     it('renders the lesson card', () => {
-      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
       expect(getByTestId('lesson-card')).toBeTruthy();
     });
 
     it('renders the first item initially', () => {
-      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
       expect(getByTestId('lesson-card-characters').props.children).toBe('一');
     });
   });
 
   describe('progress indicator', () => {
     it('displays progress text showing current position', () => {
-      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
       expect(getByTestId('lesson-batch-progress-text').props.children).toEqual([
         1,
         ' / ',
@@ -181,14 +190,14 @@ describe('LessonBatch', () => {
     });
 
     it('renders correct number of progress dots', () => {
-      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
       for (let i = 0; i < 5; i++) {
         expect(getByTestId(`lesson-batch-dot-${i}`)).toBeTruthy();
       }
     });
 
     it('highlights the current dot and previous dots', () => {
-      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
       // First dot should be colored (blue for radical)
       const dot0 = getByTestId('lesson-batch-dot-0');
       expect(dot0.props.style).toEqual(
@@ -199,7 +208,7 @@ describe('LessonBatch', () => {
     });
 
     it('shows unvisited dots in gray', () => {
-      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
       // Second dot should be gray (not visited yet)
       const dot1 = getByTestId('lesson-batch-dot-1');
       expect(dot1.props.style).toEqual(
@@ -210,7 +219,7 @@ describe('LessonBatch', () => {
     });
 
     it('updates progress when advancing', () => {
-      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
 
       // Advance to second item
       fireEvent.press(getByTestId('lesson-card-next-button'));
@@ -223,7 +232,7 @@ describe('LessonBatch', () => {
     });
 
     it('colors dots based on their subject type', () => {
-      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
 
       // Advance to kanji item (index 1)
       fireEvent.press(getByTestId('lesson-card-next-button'));
@@ -240,7 +249,7 @@ describe('LessonBatch', () => {
 
   describe('navigation through items', () => {
     it('advances to the next item when Next is pressed', () => {
-      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
 
       // First item is radical "一"
       expect(getByTestId('lesson-card-characters').props.children).toBe('一');
@@ -253,7 +262,7 @@ describe('LessonBatch', () => {
     });
 
     it('navigates through all items in sequence', () => {
-      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
 
       const expectedCharacters = ['一', '大', '大きい', '人', '小'];
 
@@ -268,7 +277,7 @@ describe('LessonBatch', () => {
     });
 
     it('updates progress indicator as items are viewed', () => {
-      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
 
       for (let i = 1; i <= 5; i++) {
         expect(
@@ -283,14 +292,14 @@ describe('LessonBatch', () => {
 
   describe('back button navigation', () => {
     it('does not show back button on the first item', () => {
-      const { queryByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { queryByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
 
       // On first item, back button should not exist
       expect(queryByTestId('lesson-card-back-button')).toBeNull();
     });
 
     it('shows back button when not on the first item', () => {
-      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
 
       // Advance to second item
       fireEvent.press(getByTestId('lesson-card-next-button'));
@@ -300,7 +309,7 @@ describe('LessonBatch', () => {
     });
 
     it('goes back to previous item when Back is pressed', () => {
-      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
 
       // First item is "一"
       expect(getByTestId('lesson-card-characters').props.children).toBe('一');
@@ -315,7 +324,7 @@ describe('LessonBatch', () => {
     });
 
     it('hides back button after going back to first item', () => {
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <LessonBatch {...defaultProps} />,
       );
 
@@ -331,7 +340,7 @@ describe('LessonBatch', () => {
     });
 
     it('updates progress text when going back', () => {
-      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
 
       // Advance to third item (index 2)
       fireEvent.press(getByTestId('lesson-card-next-button'));
@@ -354,7 +363,7 @@ describe('LessonBatch', () => {
     });
 
     it('can navigate back and forth multiple times', () => {
-      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
 
       const expectedCharacters = ['一', '大', '大きい', '人', '小'];
 
@@ -380,7 +389,7 @@ describe('LessonBatch', () => {
     });
 
     it('shows back button on the last item', () => {
-      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
 
       // Navigate to the last item
       for (let i = 0; i < 4; i++) {
@@ -399,7 +408,7 @@ describe('LessonBatch', () => {
     });
 
     it('can go back from the last item', () => {
-      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
 
       // Navigate to the last item
       for (let i = 0; i < 4; i++) {
@@ -420,7 +429,7 @@ describe('LessonBatch', () => {
   describe('batch completion', () => {
     it('calls onBatchComplete when pressing Next on the last item', () => {
       const onBatchComplete = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonBatch {...defaultProps} onBatchComplete={onBatchComplete} />,
       );
 
@@ -444,7 +453,7 @@ describe('LessonBatch', () => {
 
     it('does not call onBatchComplete before viewing all items', () => {
       const onBatchComplete = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonBatch {...defaultProps} onBatchComplete={onBatchComplete} />,
       );
 
@@ -459,7 +468,7 @@ describe('LessonBatch', () => {
 
   describe('component radicals display', () => {
     it('shows component radicals section for kanji items', () => {
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <LessonBatch {...defaultProps} />,
       );
 
@@ -474,7 +483,7 @@ describe('LessonBatch', () => {
     });
 
     it('displays component radicals with correct data', () => {
-      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
 
       // Navigate to kanji item (index 1)
       fireEvent.press(getByTestId('lesson-card-next-button'));
@@ -485,7 +494,7 @@ describe('LessonBatch', () => {
     });
 
     it('displays component radical characters', () => {
-      const { getByTestId, getByText } = render(
+      const { getByTestId, getByText } = renderWithTheme(
         <LessonBatch {...defaultProps} />,
       );
 
@@ -500,7 +509,7 @@ describe('LessonBatch', () => {
     });
 
     it('does not show components for vocabulary items without componentSubjectIds', () => {
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <LessonBatch {...defaultProps} />,
       );
 
@@ -512,7 +521,7 @@ describe('LessonBatch', () => {
     });
 
     it('does not show components for radicals', () => {
-      const { queryByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { queryByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
 
       // First item is a radical
       expect(queryByTestId('lesson-card-components')).toBeNull();
@@ -520,7 +529,7 @@ describe('LessonBatch', () => {
 
     it('does not show components when kanji has no componentSubjectIds', () => {
       const items = [createKanjiItem(10, '本', 'Book', 'ほん')]; // No component_subject_ids
-      const { queryByTestId } = render(
+      const { queryByTestId } = renderWithTheme(
         <LessonBatch
           items={items}
           componentRadicals={componentRadicalsMap}
@@ -533,7 +542,7 @@ describe('LessonBatch', () => {
 
     it('does not show components when componentRadicals map is not provided', () => {
       const items = [createKanjiItem(10, '本', 'Book', 'ほん', [1, 2])];
-      const { queryByTestId } = render(
+      const { queryByTestId } = renderWithTheme(
         <LessonBatch items={items} onBatchComplete={jest.fn()} />,
       );
 
@@ -542,7 +551,7 @@ describe('LessonBatch', () => {
 
     it('filters out missing component radicals', () => {
       const items = [createKanjiItem(10, '本', 'Book', 'ほん', [1, 999])]; // 999 doesn't exist
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <LessonBatch
           items={items}
           componentRadicals={componentRadicalsMap}
@@ -558,7 +567,7 @@ describe('LessonBatch', () => {
 
   describe('empty state', () => {
     it('renders empty state when no items provided', () => {
-      const { getByTestId, getByText } = render(
+      const { getByTestId, getByText } = renderWithTheme(
         <LessonBatch
           items={[]}
           componentRadicals={componentRadicalsMap}
@@ -574,7 +583,7 @@ describe('LessonBatch', () => {
   describe('single item batch', () => {
     it('handles a batch with a single item', () => {
       const onBatchComplete = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonBatch
           items={[sampleRadical]}
           componentRadicals={componentRadicalsMap}
@@ -594,7 +603,7 @@ describe('LessonBatch', () => {
     });
 
     it('shows correct number of dots for single item', () => {
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <LessonBatch
           items={[sampleRadical]}
           componentRadicals={componentRadicalsMap}
@@ -611,7 +620,7 @@ describe('LessonBatch', () => {
     it('handles a batch with 3 items', () => {
       const items = [sampleRadical, sampleKanji, sampleVocabulary];
       const onBatchComplete = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonBatch
           items={items}
           componentRadicals={componentRadicalsMap}
@@ -638,7 +647,7 @@ describe('LessonBatch', () => {
   describe('subject type colors in progress dots', () => {
     it('uses blue for radical dots', () => {
       const items = [sampleRadical];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonBatch
           items={items}
           componentRadicals={componentRadicalsMap}
@@ -656,7 +665,7 @@ describe('LessonBatch', () => {
 
     it('uses pink for kanji dots when visited', () => {
       const items = [sampleKanji];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonBatch
           items={items}
           componentRadicals={componentRadicalsMap}
@@ -674,7 +683,7 @@ describe('LessonBatch', () => {
 
     it('uses purple for vocabulary dots when visited', () => {
       const items = [sampleVocabulary];
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonBatch
           items={items}
           componentRadicals={componentRadicalsMap}
@@ -702,7 +711,7 @@ describe('LessonBatch', () => {
         meaningMnemonic: 'Candy mnemonic',
         readingMnemonic: 'Candy reading mnemonic',
       };
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonBatch
           items={[kanaVocab]}
           componentRadicals={componentRadicalsMap}
@@ -727,7 +736,7 @@ describe('LessonBatch', () => {
       const radicalsWithNull = new Map<number, ComponentRadical>([
         [50, { id: 50, characters: null, meaning: 'Image Radical' }],
       ]);
-      const { getByTestId, getAllByText } = render(
+      const { getByTestId, getAllByText } = renderWithTheme(
         <LessonBatch
           items={items}
           componentRadicals={radicalsWithNull}
@@ -743,7 +752,7 @@ describe('LessonBatch', () => {
 
   describe('card content display', () => {
     it('displays radical card content correctly', () => {
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <LessonBatch {...defaultProps} />,
       );
 
@@ -754,7 +763,7 @@ describe('LessonBatch', () => {
     });
 
     it('displays kanji card content correctly', () => {
-      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
 
       // Navigate to kanji
       fireEvent.press(getByTestId('lesson-card-next-button'));
@@ -765,7 +774,7 @@ describe('LessonBatch', () => {
     });
 
     it('displays vocabulary card content correctly', () => {
-      const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+      const { getByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
 
       // Navigate to vocabulary (third item)
       fireEvent.press(getByTestId('lesson-card-next-button'));
@@ -793,12 +802,12 @@ describe('LessonBatch', () => {
 
     describe('swipe area rendering', () => {
       it('renders the swipe area with testID', () => {
-        const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+        const { getByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
         expect(getByTestId('lesson-batch-swipe-area')).toBeTruthy();
       });
 
       it('swipe area contains the lesson card', () => {
-        const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+        const { getByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
         const swipeArea = getByTestId('lesson-batch-swipe-area');
         // The lesson card should be a child of the swipe area
         expect(swipeArea).toBeTruthy();
@@ -806,7 +815,7 @@ describe('LessonBatch', () => {
       });
 
       it('swipe area has responder handlers attached', () => {
-        const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+        const { getByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
         const swipeArea = getByTestId('lesson-batch-swipe-area');
         // PanResponder attaches these handlers to enable gesture recognition
         expect(swipeArea.props.onResponderRelease).toBeDefined();
@@ -817,7 +826,7 @@ describe('LessonBatch', () => {
 
     describe('button navigation works alongside swipe area', () => {
       it('Next button advances to next item', () => {
-        const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+        const { getByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
 
         // First item should be "一"
         expect(getByTestId('lesson-card-characters').props.children).toBe('一');
@@ -830,7 +839,7 @@ describe('LessonBatch', () => {
       });
 
       it('Back button goes to previous item', () => {
-        const { getByTestId } = render(<LessonBatch {...defaultProps} />);
+        const { getByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
 
         // Navigate to third item
         fireEvent.press(getByTestId('lesson-card-next-button'));
@@ -848,7 +857,7 @@ describe('LessonBatch', () => {
 
       it('Next button on last item calls onBatchComplete', () => {
         const onBatchComplete = jest.fn();
-        const { getByTestId } = render(
+        const { getByTestId } = renderWithTheme(
           <LessonBatch {...defaultProps} onBatchComplete={onBatchComplete} />,
         );
 
@@ -869,7 +878,7 @@ describe('LessonBatch', () => {
       });
 
       it('Back button does nothing on first item (not rendered)', () => {
-        const { queryByTestId } = render(<LessonBatch {...defaultProps} />);
+        const { queryByTestId } = renderWithTheme(<LessonBatch {...defaultProps} />);
 
         // Back button should not be rendered on first item
         expect(queryByTestId('lesson-card-back-button')).toBeNull();
@@ -892,7 +901,7 @@ describe('LessonBatch', () => {
     );
 
     it('shows component kanji section for vocabulary items with componentSubjectIds', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonBatch
           items={[vocabWithComponents]}
           componentKanji={componentKanjiMap}
@@ -904,7 +913,7 @@ describe('LessonBatch', () => {
     });
 
     it('displays component kanji characters and meanings', () => {
-      const { getByText, getByTestId } = render(
+      const { getByText, getByTestId } = renderWithTheme(
         <LessonBatch
           items={[vocabWithComponents]}
           componentKanji={componentKanjiMap}
@@ -925,7 +934,7 @@ describe('LessonBatch', () => {
         'Big',
         'おおきい',
       );
-      const { queryByTestId } = render(
+      const { queryByTestId } = renderWithTheme(
         <LessonBatch
           items={[vocabNoComponents]}
           componentKanji={componentKanjiMap}
@@ -937,7 +946,7 @@ describe('LessonBatch', () => {
     });
 
     it('does not show component kanji when componentKanji map is not provided', () => {
-      const { queryByTestId } = render(
+      const { queryByTestId } = renderWithTheme(
         <LessonBatch
           items={[vocabWithComponents]}
           onBatchComplete={jest.fn()}
@@ -955,7 +964,7 @@ describe('LessonBatch', () => {
         'たいちゅう',
         [20, 999], // 999 doesn't exist in map
       );
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithTheme(
         <LessonBatch
           items={[vocabWithMissing]}
           componentKanji={componentKanjiMap}

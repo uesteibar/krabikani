@@ -1,6 +1,6 @@
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -25,6 +25,7 @@ import {
 } from '../storage';
 import { getUserLevel, syncSubjects, syncAssignments } from '../sync';
 import { COLORS, SPACING, FONT_SIZES } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
 import {
   checkPermissions,
   hasAskedForPermissions,
@@ -51,6 +52,7 @@ export type SettingsScreenState =
 
 export function SettingsScreen() {
   const navigation = useNavigation<SettingsScreenNavigationProp>();
+  const { colors } = useTheme();
   const [apiKey, setApiKey] = useState('');
   const [hasStoredKey, setHasStoredKey] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -62,6 +64,61 @@ export function SettingsScreen() {
   const [notificationsEnabled, setNotificationsEnabledState] = useState(false);
   const [notificationPermissionGranted, setNotificationPermissionGranted] =
     useState(false);
+
+  const dynamicStyles = useMemo(
+    () => ({
+      container: {
+        backgroundColor: colors.background.primary,
+      },
+      syncingContainer: {
+        backgroundColor: colors.background.primary,
+      },
+      syncingText: {
+        color: colors.text.secondary,
+      },
+      errorMessage: {
+        color: colors.text.secondary,
+      },
+      label: {
+        color: colors.text.primary,
+      },
+      hint: {
+        color: colors.text.secondary,
+      },
+      input: {
+        borderColor: colors.border.medium,
+        color: colors.text.primary,
+        backgroundColor: colors.background.input,
+      },
+      clearButton: {
+        backgroundColor: colors.background.primary,
+      },
+      buttonText: {
+        color: colors.text.inverse,
+      },
+      sectionDivider: {
+        backgroundColor: colors.border.light,
+      },
+      sectionTitle: {
+        color: colors.text.primary,
+      },
+      settingLabel: {
+        color: colors.text.primary,
+      },
+      settingDescription: {
+        color: colors.text.secondary,
+      },
+      settingDescriptionDisabled: {
+        color: colors.text.tertiary,
+      },
+    }),
+    [colors],
+  );
+
+  const switchTrackColor = useMemo(
+    () => ({ false: colors.border.medium, true: COLORS.subject.vocabulary }),
+    [colors.border.medium],
+  );
 
   const loadStoredKey = useCallback(async () => {
     setIsLoading(true);
@@ -270,8 +327,8 @@ export function SettingsScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#8f5bc4" />
+      <View style={[styles.container, dynamicStyles.container]}>
+        <ActivityIndicator size="large" color={COLORS.subject.vocabulary} />
       </View>
     );
   }
@@ -279,13 +336,13 @@ export function SettingsScreen() {
   // Show syncing UI after successful API key validation and save
   if (isSyncing) {
     return (
-      <View style={styles.syncingContainer} testID="syncing-view">
+      <View style={[styles.syncingContainer, dynamicStyles.syncingContainer]} testID="syncing-view">
         <ActivityIndicator
           size="large"
           color={COLORS.subject.vocabulary}
           testID="syncing-spinner"
         />
-        <Text style={styles.syncingText} testID="syncing-message">
+        <Text style={[styles.syncingText, dynamicStyles.syncingText]} testID="syncing-message">
           Syncing your WaniKani data...
         </Text>
       </View>
@@ -295,11 +352,11 @@ export function SettingsScreen() {
   // Show sync error UI with retry option
   if (syncError) {
     return (
-      <View style={styles.syncingContainer} testID="sync-error-view">
+      <View style={[styles.syncingContainer, dynamicStyles.syncingContainer]} testID="sync-error-view">
         <Text style={styles.errorTitle} testID="sync-error-title">
           Sync Failed
         </Text>
-        <Text style={styles.errorMessage} testID="sync-error-message">
+        <Text style={[styles.errorMessage, dynamicStyles.errorMessage]} testID="sync-error-message">
           {syncError}
         </Text>
         <TouchableOpacity
@@ -307,18 +364,18 @@ export function SettingsScreen() {
           onPress={handleRetry}
           testID="retry-button"
         >
-          <Text style={styles.buttonText}>Retry</Text>
+          <Text style={[styles.buttonText, dynamicStyles.buttonText]}>Retry</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, dynamicStyles.container]}>
       <View style={styles.content}>
-        <Text style={styles.label}>WaniKani API Key</Text>
+        <Text style={[styles.label, dynamicStyles.label]}>WaniKani API Key</Text>
         <Text
-          style={styles.hint}
+          style={[styles.hint, dynamicStyles.hint]}
           onPress={() =>
             Linking.openURL(
               'https://www.wanikani.com/settings/personal_access_tokens',
@@ -331,11 +388,11 @@ export function SettingsScreen() {
           </Text>
         </Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, dynamicStyles.input]}
           value={apiKey}
           onChangeText={setApiKey}
           placeholder="Enter your API key"
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.text.placeholder}
           autoCapitalize="none"
           autoCorrect={false}
           secureTextEntry
@@ -354,15 +411,15 @@ export function SettingsScreen() {
           testID="save-button"
         >
           {isSaving ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.text.inverse} />
           ) : (
-            <Text style={styles.buttonText}>Save API Key</Text>
+            <Text style={[styles.buttonText, dynamicStyles.buttonText]}>Save API Key</Text>
           )}
         </TouchableOpacity>
 
         {hasStoredKey && (
           <TouchableOpacity
-            style={[styles.button, styles.clearButton]}
+            style={[styles.button, styles.clearButton, dynamicStyles.clearButton]}
             onPress={handleClear}
             testID="clear-button"
           >
@@ -372,22 +429,22 @@ export function SettingsScreen() {
           </TouchableOpacity>
         )}
 
-        <View style={styles.sectionDivider} />
+        <View style={[styles.sectionDivider, dynamicStyles.sectionDivider]} />
 
-        <Text style={styles.sectionTitle}>Review Settings</Text>
+        <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Review Settings</Text>
 
         <View style={styles.settingRow} testID="zen-mode-setting">
           <View style={styles.settingInfo}>
-            <Text style={styles.settingLabel}>Zen Mode</Text>
-            <Text style={styles.settingDescription}>
+            <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>Zen Mode</Text>
+            <Text style={[styles.settingDescription, dynamicStyles.settingDescription]}>
               Hide progress bar and stats during reviews
             </Text>
           </View>
           <Switch
             value={zenModeEnabled}
             onValueChange={handleZenModeToggle}
-            trackColor={{ false: '#ddd', true: COLORS.subject.vocabulary }}
-            thumbColor="#fff"
+            trackColor={switchTrackColor}
+            thumbColor={COLORS.neutral.white}
             testID="zen-mode-toggle"
           />
         </View>
@@ -395,16 +452,16 @@ export function SettingsScreen() {
         {notificationPermissionGranted ? (
           <View style={styles.settingRow} testID="notifications-setting">
             <View style={styles.settingInfo}>
-              <Text style={styles.settingLabel}>Review Notifications</Text>
-              <Text style={styles.settingDescription}>
+              <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>Review Notifications</Text>
+              <Text style={[styles.settingDescription, dynamicStyles.settingDescription]}>
                 Get notified when you have reviews waiting
               </Text>
             </View>
             <Switch
               value={notificationsEnabled}
               onValueChange={handleNotificationsToggle}
-              trackColor={{ false: '#ddd', true: COLORS.subject.vocabulary }}
-              thumbColor="#fff"
+              trackColor={switchTrackColor}
+              thumbColor={COLORS.neutral.white}
               testID="notifications-toggle"
             />
           </View>
@@ -415,16 +472,16 @@ export function SettingsScreen() {
             testID="notifications-setting-disabled"
           >
             <View style={styles.settingInfo}>
-              <Text style={styles.settingLabel}>Review Notifications</Text>
-              <Text style={styles.settingDescriptionDisabled}>
+              <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>Review Notifications</Text>
+              <Text style={[styles.settingDescriptionDisabled, dynamicStyles.settingDescriptionDisabled]}>
                 Tap to open system settings
               </Text>
             </View>
             <Switch
               value={false}
               disabled
-              trackColor={{ false: '#ddd', true: COLORS.subject.vocabulary }}
-              thumbColor="#fff"
+              trackColor={switchTrackColor}
+              thumbColor={COLORS.neutral.white}
               testID="notifications-toggle-disabled"
             />
           </TouchableOpacity>
@@ -437,11 +494,9 @@ export function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   syncingContainer: {
     flex: 1,
-    backgroundColor: COLORS.background.primary,
     justifyContent: 'center',
     alignItems: 'center',
     padding: SPACING.lg,
@@ -449,7 +504,6 @@ const styles = StyleSheet.create({
   syncingText: {
     marginTop: SPACING.lg,
     fontSize: FONT_SIZES.lg,
-    color: COLORS.text.secondary,
     textAlign: 'center',
   },
   errorTitle: {
@@ -461,7 +515,6 @@ const styles = StyleSheet.create({
   },
   errorMessage: {
     fontSize: FONT_SIZES.base,
-    color: COLORS.text.secondary,
     textAlign: 'center',
     marginBottom: SPACING.xl,
     paddingHorizontal: SPACING.lg,
@@ -477,12 +530,10 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 8,
   },
   hint: {
     fontSize: 14,
-    color: '#666',
     marginBottom: 16,
   },
   hintLink: {
@@ -491,12 +542,9 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    color: '#333',
-    backgroundColor: '#f9f9f9',
     marginBottom: 16,
   },
   button: {
@@ -509,30 +557,26 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   saveButton: {
-    backgroundColor: '#8f5bc4',
+    backgroundColor: COLORS.subject.vocabulary,
   },
   clearButton: {
-    backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#e74c3c',
   },
   buttonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
   },
   clearButtonText: {
     color: '#e74c3c',
   },
   sectionDivider: {
     height: 1,
-    backgroundColor: '#eee',
     marginVertical: SPACING.lg,
   },
   sectionTitle: {
     fontSize: FONT_SIZES.lg,
     fontWeight: '600',
-    color: COLORS.text.primary,
     marginBottom: SPACING.md,
   },
   settingRow: {
@@ -548,16 +592,13 @@ const styles = StyleSheet.create({
   settingLabel: {
     fontSize: FONT_SIZES.base,
     fontWeight: '500',
-    color: COLORS.text.primary,
     marginBottom: 4,
   },
   settingDescription: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.text.secondary,
   },
   settingDescriptionDisabled: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.text.tertiary,
     fontStyle: 'italic',
   },
 });

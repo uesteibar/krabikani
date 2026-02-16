@@ -1,6 +1,6 @@
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   StyleSheet,
@@ -29,6 +29,15 @@ export function SyncScreen() {
   const { colors, shadow } = useTheme();
   const [error, setError] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(true);
+
+  const dynamicStyles = useMemo(
+    () => ({
+      retryButtonText: {
+        color: colors.text.inverse,
+      },
+    }),
+    [colors.text.inverse],
+  );
 
   const performSync = useCallback(async () => {
     setIsSyncing(true);
@@ -103,7 +112,7 @@ export function SyncScreen() {
               activeOpacity={0.8}
               testID="retry-button"
             >
-              <Text style={styles.retryButtonText}>Retry</Text>
+              <Text style={[styles.retryButtonText, dynamicStyles.retryButtonText]}>Retry</Text>
             </TouchableOpacity>
           </>
         )}
@@ -144,6 +153,5 @@ const styles = StyleSheet.create({
   retryButtonText: {
     fontSize: FONT_SIZES.lg,
     fontWeight: '600',
-    color: '#FFFFFF',
   },
 });

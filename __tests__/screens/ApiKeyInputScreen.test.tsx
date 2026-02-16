@@ -24,9 +24,12 @@ jest.mock('../../src/storage', () => ({
   saveApiKey: (...args: unknown[]) => mockSaveApiKey(...args),
 }));
 
-function renderWithTheme(ui: React.ReactElement) {
+function renderWithTheme(
+  ui: React.ReactElement,
+  colorScheme: 'light' | 'dark' = 'light',
+) {
   return render(
-    <ThemeProvider forcedColorScheme="light">{ui}</ThemeProvider>,
+    <ThemeProvider forcedColorScheme={colorScheme}>{ui}</ThemeProvider>,
   );
 }
 
@@ -111,6 +114,26 @@ describe('ApiKeyInputScreen', () => {
     await waitFor(() => {
       expect(mockSaveApiKey).toHaveBeenCalledWith('valid-key');
       expect(mockNavigate).toHaveBeenCalledWith('Sync');
+    });
+  });
+
+  describe('Theme-aware styling', () => {
+    it('should use light button text color in light mode', () => {
+      const { getByText } = renderWithTheme(<ApiKeyInputScreen />);
+      const buttonText = getByText('Validate & Connect');
+      const flatStyle = Array.isArray(buttonText.props.style)
+        ? Object.assign({}, ...buttonText.props.style.flat())
+        : buttonText.props.style;
+      expect(flatStyle.color).toBe('#FFFFFF');
+    });
+
+    it('should use dark button text color in dark mode', () => {
+      const { getByText } = renderWithTheme(<ApiKeyInputScreen />, 'dark');
+      const buttonText = getByText('Validate & Connect');
+      const flatStyle = Array.isArray(buttonText.props.style)
+        ? Object.assign({}, ...buttonText.props.style.flat())
+        : buttonText.props.style;
+      expect(flatStyle.color).toBe('#121212');
     });
   });
 });

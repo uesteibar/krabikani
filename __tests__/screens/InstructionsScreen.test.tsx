@@ -15,7 +15,10 @@ jest.mock('@react-navigation/native', () => ({
   }),
 }));
 
-function renderWithTheme(ui: React.ReactElement) {
+function renderWithTheme(
+  ui: React.ReactElement,
+  colorScheme: 'light' | 'dark' = 'light',
+) {
   return render(
     <SafeAreaProvider
       initialMetrics={{
@@ -23,7 +26,7 @@ function renderWithTheme(ui: React.ReactElement) {
         insets: { top: 47, left: 0, right: 0, bottom: 34 },
       }}
     >
-      <ThemeProvider forcedColorScheme="light">{ui}</ThemeProvider>
+      <ThemeProvider forcedColorScheme={colorScheme}>{ui}</ThemeProvider>
     </SafeAreaProvider>,
   );
 }
@@ -111,5 +114,25 @@ describe('InstructionsScreen', () => {
     expect(queryByTestId('next-button')).toBeNull();
     fireEvent.press(getByTestId('continue-button'));
     expect(mockNavigate).toHaveBeenCalledWith('ApiKeyInput');
+  });
+
+  describe('Theme-aware styling', () => {
+    it('should use light button text color in light mode', () => {
+      const { getByText } = renderWithTheme(<InstructionsScreen />);
+      const buttonText = getByText('Next');
+      const flatStyle = Array.isArray(buttonText.props.style)
+        ? Object.assign({}, ...buttonText.props.style.flat())
+        : buttonText.props.style;
+      expect(flatStyle.color).toBe('#FFFFFF');
+    });
+
+    it('should use dark button text color in dark mode', () => {
+      const { getByText } = renderWithTheme(<InstructionsScreen />, 'dark');
+      const buttonText = getByText('Next');
+      const flatStyle = Array.isArray(buttonText.props.style)
+        ? Object.assign({}, ...buttonText.props.style.flat())
+        : buttonText.props.style;
+      expect(flatStyle.color).toBe('#121212');
+    });
   });
 });

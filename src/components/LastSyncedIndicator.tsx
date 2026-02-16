@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
 
 export interface LastSyncedIndicatorProps {
   lastSyncedAt: Date | null;
@@ -56,16 +57,29 @@ export function LastSyncedIndicator({
   hasPendingContent = false,
   testID,
 }: LastSyncedIndicatorProps) {
+  const { colors } = useTheme();
   const timeString = formatTimeSince(lastSyncedAt);
   const accentColor = hasPendingContent
     ? COLORS.status.pendingSync
     : COLORS.feedback.correct;
 
+  const dynamicStyles = useMemo(
+    () => ({
+      badge: {
+        backgroundColor: colors.background.secondary,
+      },
+      label: {
+        color: colors.text.secondary,
+      },
+    }),
+    [colors],
+  );
+
   return (
     <View style={styles.container} testID={testID ?? 'last-synced-indicator'}>
-      <View style={styles.badge}>
+      <View style={[styles.badge, dynamicStyles.badge]}>
         <View style={[styles.dot, { backgroundColor: accentColor }]} />
-        <Text style={styles.label}>Last synced:</Text>
+        <Text style={[styles.label, dynamicStyles.label]}>Last synced:</Text>
         <Text style={[styles.value, { color: accentColor }]}>{timeString}</Text>
       </View>
     </View>
@@ -80,7 +94,6 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.background.secondary,
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
@@ -93,7 +106,6 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.text.secondary,
   },
   value: {
     fontSize: FONT_SIZES.base,

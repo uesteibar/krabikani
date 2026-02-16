@@ -17,11 +17,11 @@ import {
 
 import {
   getSubjectColor,
-  COLORS,
   BORDER_RADIUS,
   SPACING,
   FONT_SIZES,
 } from '../../theme';
+import { useTheme } from '../../theme/ThemeContext';
 import { SubjectDisplay } from '../SubjectDisplay';
 import {
   QuestionTypeLabel,
@@ -48,6 +48,20 @@ export interface QuizEngineProps {
 }
 
 export function QuizEngine({ config }: QuizEngineProps) {
+  const { colors } = useTheme();
+
+  const dynamicStyles = useMemo(
+    () => ({
+      container: {
+        backgroundColor: colors.background.primary,
+      },
+      input: {
+        backgroundColor: colors.background.input,
+      },
+    }),
+    [colors],
+  );
+
   const {
     questions: initialQuestions,
     questionLabelType,
@@ -437,7 +451,7 @@ export function QuizEngine({ config }: QuizEngineProps) {
   if (isComplete) {
     if (renderCompletion) {
       return (
-        <View style={styles.container} testID={`${testID}-complete`}>
+        <View style={[styles.container, dynamicStyles.container]} testID={`${testID}-complete`}>
           {renderCompletion()}
         </View>
       );
@@ -480,7 +494,7 @@ export function QuizEngine({ config }: QuizEngineProps) {
       showSrsBadge && getSrsBadge ? getSrsBadge(feedbackQuestion) : undefined;
 
     return (
-      <View style={styles.container} testID={`${testID}-incorrect-feedback`}>
+      <View style={[styles.container, dynamicStyles.container]} testID={`${testID}-incorrect-feedback`}>
         {renderProgressHeader()}
 
         <IncorrectFeedbackView
@@ -525,7 +539,7 @@ export function QuizEngine({ config }: QuizEngineProps) {
   // Active question view (also handles correct feedback inline to keep keyboard open)
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, dynamicStyles.container]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       testID={testID}
     >
@@ -554,12 +568,12 @@ export function QuizEngine({ config }: QuizEngineProps) {
       >
         <TextInput
           ref={inputRef}
-          style={[styles.input, { borderColor: backgroundColor }]}
+          style={[styles.input, dynamicStyles.input, { borderColor: backgroundColor }]}
           value={inputDisplayText}
           onChangeText={showCorrectFeedback ? undefined : handleTextChange}
           onSubmitEditing={handleSubmit}
           placeholder={placeholder}
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.text.placeholder}
           autoCapitalize="none"
           autoCorrect={false}
           autoComplete="off"
@@ -594,7 +608,6 @@ export function QuizEngine({ config }: QuizEngineProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background.primary,
   },
   inputContainer: {
     paddingHorizontal: SPACING.lg,
@@ -612,7 +625,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.lg,
     fontWeight: '600',
     textAlign: 'center',
-    backgroundColor: COLORS.background.input,
   },
   buttonRow: {
     flexDirection: 'row',

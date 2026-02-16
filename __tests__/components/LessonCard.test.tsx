@@ -8,7 +8,16 @@ import {
   ComponentKanji,
 } from '../../src/components/LessonCard';
 import type { Meaning, Reading, KanjiReading } from '../../src/api/types';
-import { SUBJECT_COLORS } from '../../src/theme';
+import { SUBJECT_COLORS, COLORS } from '../../src/theme';
+import { ThemeProvider } from '../../src/theme/ThemeContext';
+
+function renderWithTheme(ui: React.ReactElement, colorScheme?: 'light' | 'dark') {
+  return render(
+    <ThemeProvider forcedColorScheme={colorScheme ?? 'light'}>
+      {ui}
+    </ThemeProvider>,
+  );
+}
 
 // Helper to create test meanings
 function createMeanings(
@@ -102,44 +111,44 @@ describe('LessonCard', () => {
 
   describe('basic rendering', () => {
     it('renders the component with testID', () => {
-      const { getByTestId } = render(<LessonCard {...defaultRadicalProps} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...defaultRadicalProps} />);
       expect(getByTestId('lesson-card')).toBeTruthy();
     });
 
     it('renders the header with testID', () => {
-      const { getByTestId } = render(<LessonCard {...defaultRadicalProps} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...defaultRadicalProps} />);
       expect(getByTestId('lesson-card-header')).toBeTruthy();
     });
 
     it('renders the characters', () => {
-      const { getByTestId } = render(<LessonCard {...defaultRadicalProps} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...defaultRadicalProps} />);
       expect(getByTestId('lesson-card-characters').props.children).toBe('大');
     });
 
     it('renders the subject type', () => {
-      const { getByTestId } = render(<LessonCard {...defaultRadicalProps} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...defaultRadicalProps} />);
       expect(getByTestId('lesson-card-type').props.children).toBe('radical');
     });
 
     it('renders the next button', () => {
-      const { getByTestId } = render(<LessonCard {...defaultRadicalProps} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...defaultRadicalProps} />);
       expect(getByTestId('lesson-card-next-button')).toBeTruthy();
     });
 
     it('displays "Next" text on the button', () => {
-      const { getByText } = render(<LessonCard {...defaultRadicalProps} />);
+      const { getByText } = renderWithTheme(<LessonCard {...defaultRadicalProps} />);
       expect(getByText('Next')).toBeTruthy();
     });
   });
 
   describe('characters display', () => {
     it('displays characters for kanji', () => {
-      const { getByTestId } = render(<LessonCard {...defaultKanjiProps} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...defaultKanjiProps} />);
       expect(getByTestId('lesson-card-characters').props.children).toBe('大');
     });
 
     it('displays characters for vocabulary', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonCard {...defaultVocabularyProps} />,
       );
       expect(getByTestId('lesson-card-characters').props.children).toBe(
@@ -149,7 +158,7 @@ describe('LessonCard', () => {
 
     it('displays ? when characters is null and no characterImages', () => {
       const props = { ...defaultRadicalProps, characters: null };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
       expect(getByTestId('lesson-card-characters').props.children).toBe('?');
     });
 
@@ -166,7 +175,7 @@ describe('LessonCard', () => {
         characters: null,
         characterImages,
       };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
 
       // Should render RadicalImage component (container has the testID)
       expect(getByTestId('lesson-card-characters')).toBeTruthy();
@@ -187,7 +196,7 @@ describe('LessonCard', () => {
         characters: '大',
         characterImages,
       };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
       // When characters is provided, should use text not image
       expect(getByTestId('lesson-card-characters').props.children).toBe('大');
     });
@@ -195,7 +204,7 @@ describe('LessonCard', () => {
 
   describe('subject type colors', () => {
     it('uses blue background for radicals', () => {
-      const { getByTestId } = render(<LessonCard {...defaultRadicalProps} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...defaultRadicalProps} />);
       const header = getByTestId('lesson-card-header');
       expect(header.props.style).toEqual(
         expect.arrayContaining([
@@ -205,7 +214,7 @@ describe('LessonCard', () => {
     });
 
     it('uses pink background for kanji', () => {
-      const { getByTestId } = render(<LessonCard {...defaultKanjiProps} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...defaultKanjiProps} />);
       const header = getByTestId('lesson-card-header');
       expect(header.props.style).toEqual(
         expect.arrayContaining([
@@ -215,7 +224,7 @@ describe('LessonCard', () => {
     });
 
     it('uses purple background for vocabulary', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonCard {...defaultVocabularyProps} />,
       );
       const header = getByTestId('lesson-card-header');
@@ -233,7 +242,7 @@ describe('LessonCard', () => {
         ...defaultVocabularyProps,
         subjectType: 'kana_vocabulary' as const,
       };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
       const header = getByTestId('lesson-card-header');
       expect(header.props.style).toEqual(
         expect.arrayContaining([
@@ -247,17 +256,17 @@ describe('LessonCard', () => {
 
   describe('subject type display', () => {
     it('displays "radical" for radical type', () => {
-      const { getByTestId } = render(<LessonCard {...defaultRadicalProps} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...defaultRadicalProps} />);
       expect(getByTestId('lesson-card-type').props.children).toBe('radical');
     });
 
     it('displays "kanji" for kanji type', () => {
-      const { getByTestId } = render(<LessonCard {...defaultKanjiProps} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...defaultKanjiProps} />);
       expect(getByTestId('lesson-card-type').props.children).toBe('kanji');
     });
 
     it('displays "vocabulary" for vocabulary type', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonCard {...defaultVocabularyProps} />,
       );
       expect(getByTestId('lesson-card-type').props.children).toBe('vocabulary');
@@ -268,7 +277,7 @@ describe('LessonCard', () => {
         ...defaultVocabularyProps,
         subjectType: 'kana_vocabulary' as const,
       };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
       expect(getByTestId('lesson-card-type').props.children).toBe(
         'kana vocabulary',
       );
@@ -277,24 +286,24 @@ describe('LessonCard', () => {
 
   describe('meaning section', () => {
     it('renders the meaning section', () => {
-      const { getByTestId } = render(<LessonCard {...defaultRadicalProps} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...defaultRadicalProps} />);
       expect(getByTestId('lesson-card-meaning-section')).toBeTruthy();
     });
 
     it('displays Meaning section title', () => {
-      const { getByText } = render(<LessonCard {...defaultRadicalProps} />);
+      const { getByText } = renderWithTheme(<LessonCard {...defaultRadicalProps} />);
       expect(getByText('Meaning')).toBeTruthy();
     });
 
     it('displays the primary meaning', () => {
-      const { getByTestId } = render(<LessonCard {...defaultKanjiProps} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...defaultKanjiProps} />);
       expect(getByTestId('lesson-card-primary-meaning').props.children).toBe(
         'Big',
       );
     });
 
     it('displays other accepted meanings when more than one', () => {
-      const { getByTestId } = render(<LessonCard {...defaultKanjiProps} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...defaultKanjiProps} />);
       expect(getByTestId('lesson-card-other-meanings').props.children).toEqual([
         'Also:',
         ' ',
@@ -303,12 +312,12 @@ describe('LessonCard', () => {
     });
 
     it('does not display other meanings when only one accepted meaning', () => {
-      const { queryByTestId } = render(<LessonCard {...defaultRadicalProps} />);
+      const { queryByTestId } = renderWithTheme(<LessonCard {...defaultRadicalProps} />);
       expect(queryByTestId('lesson-card-other-meanings')).toBeNull();
     });
 
     it('displays multiple other meanings separated by commas', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonCard {...defaultVocabularyProps} />,
       );
       expect(getByTestId('lesson-card-other-meanings').props.children).toEqual([
@@ -323,7 +332,7 @@ describe('LessonCard', () => {
         ...defaultRadicalProps,
         meanings: createMeanings([{ meaning: 'First' }, { meaning: 'Second' }]),
       };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
       expect(getByTestId('lesson-card-primary-meaning').props.children).toBe(
         'First',
       );
@@ -332,36 +341,36 @@ describe('LessonCard', () => {
 
   describe('reading section (radicals)', () => {
     it('does not render reading section for radicals', () => {
-      const { queryByTestId } = render(<LessonCard {...defaultRadicalProps} />);
+      const { queryByTestId } = renderWithTheme(<LessonCard {...defaultRadicalProps} />);
       expect(queryByTestId('lesson-card-reading-section')).toBeNull();
     });
 
     it('does not render reading mnemonic section for radicals', () => {
-      const { queryByTestId } = render(<LessonCard {...defaultRadicalProps} />);
+      const { queryByTestId } = renderWithTheme(<LessonCard {...defaultRadicalProps} />);
       expect(queryByTestId('lesson-card-reading-mnemonic-section')).toBeNull();
     });
   });
 
   describe('reading section (kanji)', () => {
     it('renders reading section for kanji', () => {
-      const { getByTestId } = render(<LessonCard {...defaultKanjiProps} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...defaultKanjiProps} />);
       expect(getByTestId('lesson-card-reading-section')).toBeTruthy();
     });
 
     it('displays Reading section title', () => {
-      const { getByText } = render(<LessonCard {...defaultKanjiProps} />);
+      const { getByText } = renderWithTheme(<LessonCard {...defaultKanjiProps} />);
       expect(getByText('Reading')).toBeTruthy();
     });
 
     it('displays the primary reading', () => {
-      const { getByTestId } = render(<LessonCard {...defaultKanjiProps} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...defaultKanjiProps} />);
       expect(getByTestId('lesson-card-primary-reading').props.children).toBe(
         'おお',
       );
     });
 
     it('displays other accepted readings when more than one', () => {
-      const { getByTestId } = render(<LessonCard {...defaultKanjiProps} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...defaultKanjiProps} />);
       expect(getByTestId('lesson-card-other-readings').props.children).toEqual([
         'Also:',
         ' ',
@@ -372,14 +381,14 @@ describe('LessonCard', () => {
 
   describe('reading section (vocabulary)', () => {
     it('renders reading section for vocabulary', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonCard {...defaultVocabularyProps} />,
       );
       expect(getByTestId('lesson-card-reading-section')).toBeTruthy();
     });
 
     it('displays the primary reading', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonCard {...defaultVocabularyProps} />,
       );
       expect(getByTestId('lesson-card-primary-reading').props.children).toBe(
@@ -388,7 +397,7 @@ describe('LessonCard', () => {
     });
 
     it('does not display other readings when only one', () => {
-      const { queryByTestId } = render(
+      const { queryByTestId } = renderWithTheme(
         <LessonCard {...defaultVocabularyProps} />,
       );
       expect(queryByTestId('lesson-card-other-readings')).toBeNull();
@@ -401,24 +410,24 @@ describe('LessonCard', () => {
         ...defaultVocabularyProps,
         subjectType: 'kana_vocabulary' as const,
       };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
       expect(getByTestId('lesson-card-reading-section')).toBeTruthy();
     });
   });
 
   describe('meaning mnemonic section', () => {
     it('renders meaning mnemonic section', () => {
-      const { getByTestId } = render(<LessonCard {...defaultRadicalProps} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...defaultRadicalProps} />);
       expect(getByTestId('lesson-card-meaning-mnemonic-section')).toBeTruthy();
     });
 
     it('displays Meaning Mnemonic section title', () => {
-      const { getByText } = render(<LessonCard {...defaultRadicalProps} />);
+      const { getByText } = renderWithTheme(<LessonCard {...defaultRadicalProps} />);
       expect(getByText('Meaning Mnemonic')).toBeTruthy();
     });
 
     it('displays the meaning mnemonic text', () => {
-      const { getByText } = render(<LessonCard {...defaultRadicalProps} />);
+      const { getByText } = renderWithTheme(<LessonCard {...defaultRadicalProps} />);
       expect(
         getByText(
           'This radical looks like a big person with their arms spread wide.',
@@ -429,24 +438,24 @@ describe('LessonCard', () => {
 
   describe('reading mnemonic section', () => {
     it('renders reading mnemonic section for kanji', () => {
-      const { getByTestId } = render(<LessonCard {...defaultKanjiProps} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...defaultKanjiProps} />);
       expect(getByTestId('lesson-card-reading-mnemonic-section')).toBeTruthy();
     });
 
     it('displays Reading Mnemonic section title for kanji', () => {
-      const { getByText } = render(<LessonCard {...defaultKanjiProps} />);
+      const { getByText } = renderWithTheme(<LessonCard {...defaultKanjiProps} />);
       expect(getByText('Reading Mnemonic')).toBeTruthy();
     });
 
     it('displays the reading mnemonic text', () => {
-      const { getByText } = render(<LessonCard {...defaultKanjiProps} />);
+      const { getByText } = renderWithTheme(<LessonCard {...defaultKanjiProps} />);
       expect(
         getByText('When something is big, you say "OOH!" (おお) in amazement.'),
       ).toBeTruthy();
     });
 
     it('renders reading mnemonic section for vocabulary', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <LessonCard {...defaultVocabularyProps} />,
       );
       expect(getByTestId('lesson-card-reading-mnemonic-section')).toBeTruthy();
@@ -457,7 +466,7 @@ describe('LessonCard', () => {
         ...defaultKanjiProps,
         readingMnemonic: null,
       };
-      const { queryByTestId } = render(<LessonCard {...props} />);
+      const { queryByTestId } = renderWithTheme(<LessonCard {...props} />);
       expect(queryByTestId('lesson-card-reading-mnemonic-section')).toBeNull();
     });
   });
@@ -466,7 +475,7 @@ describe('LessonCard', () => {
     it('calls onNext when pressed', () => {
       const onNext = jest.fn();
       const props = { ...defaultRadicalProps, onNext };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
 
       fireEvent.press(getByTestId('lesson-card-next-button'));
       expect(onNext).toHaveBeenCalledTimes(1);
@@ -475,7 +484,7 @@ describe('LessonCard', () => {
     it('calls onNext for kanji', () => {
       const onNext = jest.fn();
       const props = { ...defaultKanjiProps, onNext };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
 
       fireEvent.press(getByTestId('lesson-card-next-button'));
       expect(onNext).toHaveBeenCalledTimes(1);
@@ -484,7 +493,7 @@ describe('LessonCard', () => {
     it('calls onNext for vocabulary', () => {
       const onNext = jest.fn();
       const props = { ...defaultVocabularyProps, onNext };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
 
       fireEvent.press(getByTestId('lesson-card-next-button'));
       expect(onNext).toHaveBeenCalledTimes(1);
@@ -493,28 +502,28 @@ describe('LessonCard', () => {
 
   describe('back button', () => {
     it('does not render back button when onBack is not provided', () => {
-      const { queryByTestId } = render(<LessonCard {...defaultRadicalProps} />);
+      const { queryByTestId } = renderWithTheme(<LessonCard {...defaultRadicalProps} />);
       expect(queryByTestId('lesson-card-back-button')).toBeNull();
     });
 
     it('renders back button when onBack is provided', () => {
       const onBack = jest.fn();
       const props = { ...defaultRadicalProps, onBack };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
       expect(getByTestId('lesson-card-back-button')).toBeTruthy();
     });
 
     it('displays "Back" text on the back button', () => {
       const onBack = jest.fn();
       const props = { ...defaultRadicalProps, onBack };
-      const { getByText } = render(<LessonCard {...props} />);
+      const { getByText } = renderWithTheme(<LessonCard {...props} />);
       expect(getByText('Back')).toBeTruthy();
     });
 
     it('calls onBack when back button is pressed', () => {
       const onBack = jest.fn();
       const props = { ...defaultRadicalProps, onBack };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
 
       fireEvent.press(getByTestId('lesson-card-back-button'));
       expect(onBack).toHaveBeenCalledTimes(1);
@@ -523,7 +532,7 @@ describe('LessonCard', () => {
     it('renders footer with both buttons when onBack is provided', () => {
       const onBack = jest.fn();
       const props = { ...defaultRadicalProps, onBack };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
 
       expect(getByTestId('lesson-card-footer')).toBeTruthy();
       expect(getByTestId('lesson-card-back-button')).toBeTruthy();
@@ -533,7 +542,7 @@ describe('LessonCard', () => {
     it('back button uses subject color for border', () => {
       const onBack = jest.fn();
       const props = { ...defaultRadicalProps, onBack };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
       const backButton = getByTestId('lesson-card-back-button');
 
       expect(backButton.props.style).toEqual(
@@ -544,7 +553,7 @@ describe('LessonCard', () => {
     it('back button uses subject color for text', () => {
       const onBack = jest.fn();
       const props = { ...defaultKanjiProps, onBack };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
       const backButton = getByTestId('lesson-card-back-button');
       const backButtonText = backButton.findByProps({ children: 'Back' });
 
@@ -564,45 +573,45 @@ describe('LessonCard', () => {
 
     it('renders component radicals section when provided for kanji', () => {
       const props = { ...defaultKanjiProps, componentRadicals };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
       expect(getByTestId('lesson-card-components')).toBeTruthy();
     });
 
     it('displays "Made up of:" title', () => {
       const props = { ...defaultKanjiProps, componentRadicals };
-      const { getByText } = render(<LessonCard {...props} />);
+      const { getByText } = renderWithTheme(<LessonCard {...props} />);
       expect(getByText('Made up of:')).toBeTruthy();
     });
 
     it('displays each component radical', () => {
       const props = { ...defaultKanjiProps, componentRadicals };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
       expect(getByTestId('lesson-card-component-1')).toBeTruthy();
       expect(getByTestId('lesson-card-component-3')).toBeTruthy();
     });
 
     it('displays component radical characters', () => {
       const props = { ...defaultKanjiProps, componentRadicals };
-      const { getByText } = render(<LessonCard {...props} />);
+      const { getByText } = renderWithTheme(<LessonCard {...props} />);
       expect(getByText('一')).toBeTruthy();
       expect(getByText('人')).toBeTruthy();
     });
 
     it('displays component radical meanings', () => {
       const props = { ...defaultKanjiProps, componentRadicals };
-      const { getByText } = render(<LessonCard {...props} />);
+      const { getByText } = renderWithTheme(<LessonCard {...props} />);
       expect(getByText('Ground')).toBeTruthy();
       expect(getByText('Person')).toBeTruthy();
     });
 
     it('does not render component radicals section when not provided', () => {
-      const { queryByTestId } = render(<LessonCard {...defaultKanjiProps} />);
+      const { queryByTestId } = renderWithTheme(<LessonCard {...defaultKanjiProps} />);
       expect(queryByTestId('lesson-card-components')).toBeNull();
     });
 
     it('does not render component radicals section when array is empty', () => {
       const props = { ...defaultKanjiProps, componentRadicals: [] };
-      const { queryByTestId } = render(<LessonCard {...props} />);
+      const { queryByTestId } = renderWithTheme(<LessonCard {...props} />);
       expect(queryByTestId('lesson-card-components')).toBeNull();
     });
 
@@ -614,7 +623,7 @@ describe('LessonCard', () => {
         ...defaultKanjiProps,
         componentRadicals: radicalsWithNull,
       };
-      const { getByTestId, getAllByText } = render(<LessonCard {...props} />);
+      const { getByTestId, getAllByText } = renderWithTheme(<LessonCard {...props} />);
       // Should use RadicalImage which falls back to meaning
       expect(getByTestId('lesson-card-component-50-image')).toBeTruthy();
       // The meaning appears twice - once in RadicalImage fallback and once as the label
@@ -636,7 +645,7 @@ describe('LessonCard', () => {
         ...defaultKanjiProps,
         componentRadicals: radicalsWithImages,
       };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
       // Should render a component with the RadicalImage
       expect(getByTestId('lesson-card-component-50')).toBeTruthy();
       expect(getByTestId('lesson-card-component-50-image')).toBeTruthy();
@@ -646,7 +655,7 @@ describe('LessonCard', () => {
   describe('edge cases', () => {
     it('handles empty meanings array', () => {
       const props = { ...defaultRadicalProps, meanings: [] };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
       expect(getByTestId('lesson-card-primary-meaning').props.children).toBe(
         '',
       );
@@ -654,7 +663,7 @@ describe('LessonCard', () => {
 
     it('handles empty readings array', () => {
       const props = { ...defaultKanjiProps, readings: [] };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
       expect(getByTestId('lesson-card-primary-reading').props.children).toBe(
         '',
       );
@@ -665,7 +674,7 @@ describe('LessonCard', () => {
         ...defaultRadicalProps,
         meanings: createMeanings([{ meaning: 'Test' }]),
       };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
       expect(getByTestId('lesson-card-primary-meaning').props.children).toBe(
         'Test',
       );
@@ -676,7 +685,7 @@ describe('LessonCard', () => {
         ...defaultKanjiProps,
         readings: createKanjiReadings([{ reading: 'てすと' }]),
       };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
       expect(getByTestId('lesson-card-primary-reading').props.children).toBe(
         'てすと',
       );
@@ -691,7 +700,7 @@ describe('LessonCard', () => {
           { meaning: 'Not Accepted', primary: false, accepted_answer: false },
         ],
       };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
       expect(getByTestId('lesson-card-other-meanings').props.children).toEqual([
         'Also:',
         ' ',
@@ -723,7 +732,7 @@ describe('LessonCard', () => {
           },
         ],
       };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
       expect(getByTestId('lesson-card-other-readings').props.children).toEqual([
         'Also:',
         ' ',
@@ -740,40 +749,40 @@ describe('LessonCard', () => {
 
     it('renders component kanji section for vocabulary items', () => {
       const props = { ...defaultVocabularyProps, componentKanji };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
       expect(getByTestId('lesson-card-components')).toBeTruthy();
     });
 
     it('displays "Made up of:" title for vocabulary', () => {
       const props = { ...defaultVocabularyProps, componentKanji };
-      const { getByText } = render(<LessonCard {...props} />);
+      const { getByText } = renderWithTheme(<LessonCard {...props} />);
       expect(getByText('Made up of:')).toBeTruthy();
     });
 
     it('displays each component kanji', () => {
       const props = { ...defaultVocabularyProps, componentKanji };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
       expect(getByTestId('lesson-card-component-10')).toBeTruthy();
       expect(getByTestId('lesson-card-component-11')).toBeTruthy();
     });
 
     it('displays component kanji characters', () => {
       const props = { ...defaultVocabularyProps, componentKanji };
-      const { getByText } = render(<LessonCard {...props} />);
+      const { getByText } = renderWithTheme(<LessonCard {...props} />);
       expect(getByText('大')).toBeTruthy();
       expect(getByText('小')).toBeTruthy();
     });
 
     it('displays component kanji meanings', () => {
       const props = { ...defaultVocabularyProps, componentKanji };
-      const { getAllByText, getByText } = render(<LessonCard {...props} />);
+      const { getAllByText, getByText } = renderWithTheme(<LessonCard {...props} />);
       // "Big" appears both as primary meaning and component meaning
       expect(getAllByText('Big').length).toBeGreaterThanOrEqual(2);
       expect(getByText('Small')).toBeTruthy();
     });
 
     it('does not render component kanji section when not provided', () => {
-      const { queryByTestId } = render(
+      const { queryByTestId } = renderWithTheme(
         <LessonCard {...defaultVocabularyProps} />,
       );
       expect(queryByTestId('lesson-card-components')).toBeNull();
@@ -781,13 +790,13 @@ describe('LessonCard', () => {
 
     it('does not render component kanji section when array is empty', () => {
       const props = { ...defaultVocabularyProps, componentKanji: [] };
-      const { queryByTestId } = render(<LessonCard {...props} />);
+      const { queryByTestId } = renderWithTheme(<LessonCard {...props} />);
       expect(queryByTestId('lesson-card-components')).toBeNull();
     });
 
     it('uses kanji background color for component items', () => {
       const props = { ...defaultVocabularyProps, componentKanji };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
       const component = getByTestId('lesson-card-component-10');
       expect(component.props.style).toEqual(
         expect.arrayContaining([
@@ -799,7 +808,7 @@ describe('LessonCard', () => {
     it('calls onComponentPress when a component kanji is pressed', () => {
       const onComponentPress = jest.fn();
       const props = { ...defaultVocabularyProps, componentKanji, onComponentPress };
-      const { getByTestId } = render(<LessonCard {...props} />);
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />);
       fireEvent.press(getByTestId('lesson-card-component-10'));
       expect(onComponentPress).toHaveBeenCalledWith(10);
     });
@@ -807,7 +816,7 @@ describe('LessonCard', () => {
 
   describe('radicals do not show Made up of', () => {
     it('does not show components section for radical items', () => {
-      const { queryByTestId } = render(<LessonCard {...defaultRadicalProps} />);
+      const { queryByTestId } = renderWithTheme(<LessonCard {...defaultRadicalProps} />);
       expect(queryByTestId('lesson-card-components')).toBeNull();
     });
 
@@ -816,8 +825,79 @@ describe('LessonCard', () => {
         ...defaultRadicalProps,
         componentRadicals: [{ id: 1, characters: '一', meaning: 'Ground' }],
       };
-      const { queryByTestId } = render(<LessonCard {...props} />);
+      const { queryByTestId } = renderWithTheme(<LessonCard {...props} />);
       expect(queryByTestId('lesson-card-components')).toBeNull();
+    });
+  });
+
+  describe('theme-awareness', () => {
+    const componentRadicals: ComponentRadical[] = [
+      { id: 1, characters: '一', meaning: 'Ground' },
+      { id: 3, characters: '人', meaning: 'Person' },
+    ];
+
+    it('uses light componentSection.background for components container in light mode', () => {
+      const props = { ...defaultKanjiProps, componentRadicals };
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />, 'light');
+      const container = getByTestId('lesson-card-components');
+      expect(container.props.style).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ backgroundColor: COLORS.componentSection.background }),
+        ]),
+      );
+    });
+
+    it('uses dark componentSection.background for components container in dark mode', () => {
+      const props = { ...defaultKanjiProps, componentRadicals };
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />, 'dark');
+      const container = getByTestId('lesson-card-components');
+      expect(container.props.style).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ backgroundColor: '#1A2A3A' }),
+        ]),
+      );
+    });
+
+    it('uses dark componentSection.border in dark mode', () => {
+      const props = { ...defaultKanjiProps, componentRadicals };
+      const { getByTestId } = renderWithTheme(<LessonCard {...props} />, 'dark');
+      const container = getByTestId('lesson-card-components');
+      expect(container.props.style).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ borderBottomColor: '#2A3A4A' }),
+        ]),
+      );
+    });
+
+    it('uses dark background.primary for container in dark mode', () => {
+      const { getByTestId } = renderWithTheme(<LessonCard {...defaultRadicalProps} />, 'dark');
+      const container = getByTestId('lesson-card');
+      expect(container.props.style).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ backgroundColor: '#121212' }),
+        ]),
+      );
+    });
+
+    it('uses dark text.primary for primary text in dark mode', () => {
+      const { getByTestId } = renderWithTheme(<LessonCard {...defaultKanjiProps} />, 'dark');
+      const primaryMeaning = getByTestId('lesson-card-primary-meaning');
+      expect(primaryMeaning.props.style).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ color: '#E0E0E0' }),
+        ]),
+      );
+    });
+
+    it('uses dark text.secondary for section title in dark mode', () => {
+      const { getByTestId } = renderWithTheme(<LessonCard {...defaultRadicalProps} />, 'dark');
+      const section = getByTestId('lesson-card-meaning-section');
+      const sectionTitle = section.children[0];
+      expect((sectionTitle as any).props.style).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ color: '#AAAAAA' }),
+        ]),
+      );
     });
   });
 });

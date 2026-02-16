@@ -3,6 +3,7 @@ import { render, waitFor, fireEvent } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
 
 import { PracticeScreen } from '../../src/screens/PracticeScreen';
+import { ThemeProvider } from '../../src/theme/ThemeContext';
 import * as storage from '../../src/storage';
 
 // Mock dependencies
@@ -31,7 +32,11 @@ jest.mock('@react-navigation/native', () => {
 const mockRandom = jest.spyOn(Math, 'random');
 
 function renderWithNavigation(component: React.ReactElement) {
-  return render(<NavigationContainer>{component}</NavigationContainer>);
+  return render(
+    <ThemeProvider forcedColorScheme="light">
+      <NavigationContainer>{component}</NavigationContainer>
+    </ThemeProvider>,
+  );
 }
 
 // Sample data

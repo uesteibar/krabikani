@@ -2,10 +2,20 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 
 import { DashboardStats } from '../../src/components/DashboardStats';
+import { ThemeProvider } from '../../src/theme/ThemeContext';
+import { COLORS } from '../../src/theme';
+
+function renderWithTheme(ui: React.ReactElement, colorScheme?: 'light' | 'dark') {
+  return render(
+    <ThemeProvider forcedColorScheme={colorScheme ?? 'light'}>
+      {ui}
+    </ThemeProvider>,
+  );
+}
 
 describe('DashboardStats', () => {
   it('renders lessons count', () => {
-    const { getByText } = render(
+    const { getByText } = renderWithTheme(
       <DashboardStats lessonsCount={5} reviewsCount={10} />,
     );
     expect(getByText(/5/)).toBeTruthy();
@@ -13,7 +23,7 @@ describe('DashboardStats', () => {
   });
 
   it('renders reviews count', () => {
-    const { getByText } = render(
+    const { getByText } = renderWithTheme(
       <DashboardStats lessonsCount={5} reviewsCount={10} />,
     );
     expect(getByText(/10/)).toBeTruthy();
@@ -21,7 +31,7 @@ describe('DashboardStats', () => {
   });
 
   it('renders zero counts correctly', () => {
-    const { getByTestId } = render(
+    const { getByTestId } = renderWithTheme(
       <DashboardStats lessonsCount={0} reviewsCount={0} />,
     );
     expect(getByTestId('lessons-count')).toBeTruthy();
@@ -29,7 +39,7 @@ describe('DashboardStats', () => {
   });
 
   it('renders large counts correctly', () => {
-    const { getByText } = render(
+    const { getByText } = renderWithTheme(
       <DashboardStats lessonsCount={150} reviewsCount={500} />,
     );
     expect(getByText(/150/)).toBeTruthy();
@@ -37,14 +47,14 @@ describe('DashboardStats', () => {
   });
 
   it('has dashboard-stats testID', () => {
-    const { getByTestId } = render(
+    const { getByTestId } = renderWithTheme(
       <DashboardStats lessonsCount={0} reviewsCount={0} />,
     );
     expect(getByTestId('dashboard-stats')).toBeTruthy();
   });
 
   it('displays lessons label inside button', () => {
-    const { getByText, getByTestId } = render(
+    const { getByText, getByTestId } = renderWithTheme(
       <DashboardStats lessonsCount={5} reviewsCount={0} />,
     );
     const lessonsButton = getByTestId('lessons-button');
@@ -54,7 +64,7 @@ describe('DashboardStats', () => {
   });
 
   it('displays reviews label inside button', () => {
-    const { getByText, getByTestId } = render(
+    const { getByText, getByTestId } = renderWithTheme(
       <DashboardStats lessonsCount={0} reviewsCount={10} />,
     );
     const reviewsButton = getByTestId('reviews-button');
@@ -66,7 +76,7 @@ describe('DashboardStats', () => {
   describe('press handlers', () => {
     it('calls onLessonsPress when lessons button is pressed and count > 0', () => {
       const onLessonsPress = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <DashboardStats
           lessonsCount={5}
           reviewsCount={0}
@@ -80,7 +90,7 @@ describe('DashboardStats', () => {
 
     it('does not call onLessonsPress when lessons count is 0', () => {
       const onLessonsPress = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <DashboardStats
           lessonsCount={0}
           reviewsCount={0}
@@ -94,7 +104,7 @@ describe('DashboardStats', () => {
 
     it('calls onReviewsPress when reviews button is pressed and count > 0', () => {
       const onReviewsPress = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <DashboardStats
           lessonsCount={0}
           reviewsCount={10}
@@ -108,7 +118,7 @@ describe('DashboardStats', () => {
 
     it('does not call onReviewsPress when reviews count is 0', () => {
       const onReviewsPress = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <DashboardStats
           lessonsCount={0}
           reviewsCount={0}
@@ -121,7 +131,7 @@ describe('DashboardStats', () => {
     });
 
     it('renders buttons as testIDs', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <DashboardStats lessonsCount={0} reviewsCount={0} />,
       );
 
@@ -130,9 +140,59 @@ describe('DashboardStats', () => {
     });
   });
 
+  describe('theme-aware styling', () => {
+    it('uses light theme background color in light mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <DashboardStats lessonsCount={5} reviewsCount={10} />,
+        'light',
+      );
+      const lessonsButton = getByTestId('lessons-button');
+      const flattenedStyle = Array.isArray(lessonsButton.props.style)
+        ? Object.assign({}, ...lessonsButton.props.style)
+        : lessonsButton.props.style;
+      expect(flattenedStyle.backgroundColor).toBe(COLORS.background.primary);
+    });
+
+    it('uses dark theme background color in dark mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <DashboardStats lessonsCount={5} reviewsCount={10} />,
+        'dark',
+      );
+      const lessonsButton = getByTestId('lessons-button');
+      const flattenedStyle = Array.isArray(lessonsButton.props.style)
+        ? Object.assign({}, ...lessonsButton.props.style)
+        : lessonsButton.props.style;
+      expect(flattenedStyle.backgroundColor).toBe('#121212');
+    });
+
+    it('uses dark theme text colors in dark mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <DashboardStats lessonsCount={5} reviewsCount={10} />,
+        'dark',
+      );
+      const lessonsCount = getByTestId('lessons-count');
+      const flattenedStyle = Array.isArray(lessonsCount.props.style)
+        ? Object.assign({}, ...lessonsCount.props.style)
+        : lessonsCount.props.style;
+      expect(flattenedStyle.color).toBe('#AAAAAA');
+    });
+
+    it('uses dark theme empty text colors in dark mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <DashboardStats lessonsCount={0} reviewsCount={0} />,
+        'dark',
+      );
+      const lessonsCount = getByTestId('lessons-count');
+      const flattenedStyle = Array.isArray(lessonsCount.props.style)
+        ? Object.assign({}, ...lessonsCount.props.style)
+        : lessonsCount.props.style;
+      expect(flattenedStyle.color).toBe('#888888');
+    });
+  });
+
   describe('outlined button styling', () => {
     it('lessons button has border styling', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <DashboardStats lessonsCount={5} reviewsCount={0} />,
       );
       const lessonsButton = getByTestId('lessons-button');
@@ -145,7 +205,7 @@ describe('DashboardStats', () => {
     });
 
     it('reviews button has border styling', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <DashboardStats lessonsCount={0} reviewsCount={10} />,
       );
       const reviewsButton = getByTestId('reviews-button');
@@ -158,7 +218,7 @@ describe('DashboardStats', () => {
     });
 
     it('maintains minimum touch target size', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <DashboardStats lessonsCount={5} reviewsCount={10} />,
       );
       const lessonsButton = getByTestId('lessons-button');

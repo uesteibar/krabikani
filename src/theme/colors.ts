@@ -163,6 +163,8 @@ export const COLORS = {
     pendingSync: '#F57C00',
     /** Orange background for pending sync */
     pendingSyncBackground: '#FFF3E0',
+    /** Darker orange for pending sync text (better contrast) */
+    pendingSyncText: '#E65100',
   },
 
   // Neutral colors
@@ -204,6 +206,20 @@ export const COLORS = {
     light: '#EEEEEE',
     medium: '#DDDDDD',
     dark: '#CCCCCC',
+  },
+
+  // Link color
+  link: '#007AFF',
+
+  // Component section colors (e.g., "Made up of" sections in LessonCard)
+  componentSection: {
+    background: '#E8F4FF',
+    border: '#B8D4F0',
+  },
+
+  // Chart colors
+  chart: {
+    barBackground: '#E8E8E8',
   },
 
   // Shadow (for elevation)

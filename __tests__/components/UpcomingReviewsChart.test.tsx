@@ -2,7 +2,17 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 
 import { UpcomingReviewsChart } from '../../src/components/UpcomingReviewsChart';
+import { ThemeProvider } from '../../src/theme/ThemeContext';
+import { COLORS } from '../../src/theme';
 import type { UpcomingReviewsHourBucket } from '../../src/storage';
+
+function renderWithTheme(ui: React.ReactElement, colorScheme?: 'light' | 'dark') {
+  return render(
+    <ThemeProvider forcedColorScheme={colorScheme ?? 'light'}>
+      {ui}
+    </ThemeProvider>,
+  );
+}
 
 // Helper to create test data (starts from next hour, matching getUpcomingReviewsByHour)
 function createTestData(counts: number[]): UpcomingReviewsHourBucket[] {
@@ -21,7 +31,7 @@ describe('UpcomingReviewsChart', () => {
     it('should render the container', () => {
       const data = createTestData([5, 10, 3, 0, 0, 0, 8, 2, 0, 0, 0, 0]);
 
-      const { getByTestId } = render(<UpcomingReviewsChart data={data} />);
+      const { getByTestId } = renderWithTheme(<UpcomingReviewsChart data={data} />);
 
       expect(getByTestId('upcoming-reviews-chart')).toBeTruthy();
     });
@@ -29,7 +39,7 @@ describe('UpcomingReviewsChart', () => {
     it('should render the title', () => {
       const data = createTestData([5, 10, 3, 0, 0, 0, 8, 2, 0, 0, 0, 0]);
 
-      const { getByText } = render(<UpcomingReviewsChart data={data} />);
+      const { getByText } = renderWithTheme(<UpcomingReviewsChart data={data} />);
 
       expect(getByText('Upcoming Reviews')).toBeTruthy();
     });
@@ -37,7 +47,7 @@ describe('UpcomingReviewsChart', () => {
     it('should render 12 rows', () => {
       const data = createTestData([5, 10, 3, 0, 0, 0, 8, 2, 0, 0, 0, 0]);
 
-      const { getByTestId } = render(<UpcomingReviewsChart data={data} />);
+      const { getByTestId } = renderWithTheme(<UpcomingReviewsChart data={data} />);
 
       // Check all 12 rows are rendered
       for (let i = 0; i < 12; i++) {
@@ -50,7 +60,7 @@ describe('UpcomingReviewsChart', () => {
     it('should show new count with + prefix for rows with reviews', () => {
       const data = createTestData([5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 
-      const { getByText } = render(<UpcomingReviewsChart data={data} />);
+      const { getByText } = renderWithTheme(<UpcomingReviewsChart data={data} />);
 
       // Should show "+5"
       expect(getByText('+5')).toBeTruthy();
@@ -59,7 +69,7 @@ describe('UpcomingReviewsChart', () => {
     it('should show cumulative total in parentheses', () => {
       const data = createTestData([5, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 
-      const { getByText } = render(<UpcomingReviewsChart data={data} />);
+      const { getByText } = renderWithTheme(<UpcomingReviewsChart data={data} />);
 
       // First row: +5 (5)
       expect(getByText('+5')).toBeTruthy();
@@ -72,7 +82,7 @@ describe('UpcomingReviewsChart', () => {
     it('should show dash for rows with no new reviews', () => {
       const data = createTestData([5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 
-      const { getAllByText } = render(<UpcomingReviewsChart data={data} />);
+      const { getAllByText } = renderWithTheme(<UpcomingReviewsChart data={data} />);
 
       // Should have dashes for rows without new reviews
       const dashes = getAllByText('-');
@@ -84,7 +94,7 @@ describe('UpcomingReviewsChart', () => {
     it('should calculate cumulative totals correctly', () => {
       const data = createTestData([5, 10, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 
-      const { getByText } = render(<UpcomingReviewsChart data={data} />);
+      const { getByText } = renderWithTheme(<UpcomingReviewsChart data={data} />);
 
       // Row 0: +5 (5)
       expect(getByText('(5)')).toBeTruthy();
@@ -97,7 +107,7 @@ describe('UpcomingReviewsChart', () => {
     it('should handle scattered non-zero values', () => {
       const data = createTestData([0, 5, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0]);
 
-      const { getByText } = render(<UpcomingReviewsChart data={data} />);
+      const { getByText } = renderWithTheme(<UpcomingReviewsChart data={data} />);
 
       // Row 1: +5 (5)
       expect(getByText('+5')).toBeTruthy();
@@ -110,7 +120,7 @@ describe('UpcomingReviewsChart', () => {
     it('should include currentPendingCount in cumulative totals', () => {
       const data = createTestData([5, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 
-      const { getByText } = render(
+      const { getByText } = renderWithTheme(
         <UpcomingReviewsChart data={data} currentPendingCount={10} />,
       );
 
@@ -125,7 +135,7 @@ describe('UpcomingReviewsChart', () => {
     it('should work with zero currentPendingCount (default behavior)', () => {
       const data = createTestData([5, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 
-      const { getByText } = render(
+      const { getByText } = renderWithTheme(
         <UpcomingReviewsChart data={data} currentPendingCount={0} />,
       );
 
@@ -139,7 +149,7 @@ describe('UpcomingReviewsChart', () => {
     it('should show empty state when all counts are zero', () => {
       const data = createTestData([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 
-      const { getByTestId, getByText } = render(
+      const { getByTestId, getByText } = renderWithTheme(
         <UpcomingReviewsChart data={data} />,
       );
 
@@ -153,7 +163,7 @@ describe('UpcomingReviewsChart', () => {
       const nextReviewAt = new Date();
       nextReviewAt.setTime(nextReviewAt.getTime() + 3 * 24 * 60 * 60 * 1000);
 
-      const { getByTestId, getByText } = render(
+      const { getByTestId, getByText } = renderWithTheme(
         <UpcomingReviewsChart data={data} nextReviewAt={nextReviewAt} />,
       );
 
@@ -166,7 +176,7 @@ describe('UpcomingReviewsChart', () => {
       const nextReviewAt = new Date();
       nextReviewAt.setTime(nextReviewAt.getTime() + 15 * 60 * 60 * 1000);
 
-      const { getByText } = render(
+      const { getByText } = renderWithTheme(
         <UpcomingReviewsChart data={data} nextReviewAt={nextReviewAt} />,
       );
 
@@ -178,7 +188,7 @@ describe('UpcomingReviewsChart', () => {
       const nextReviewAt = new Date();
       nextReviewAt.setTime(nextReviewAt.getTime() + 30 * 60 * 1000);
 
-      const { getByText } = render(
+      const { getByText } = renderWithTheme(
         <UpcomingReviewsChart data={data} nextReviewAt={nextReviewAt} />,
       );
 
@@ -188,7 +198,7 @@ describe('UpcomingReviewsChart', () => {
     it('should not show next review time when not provided', () => {
       const data = createTestData([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 
-      const { queryByTestId } = render(<UpcomingReviewsChart data={data} />);
+      const { queryByTestId } = renderWithTheme(<UpcomingReviewsChart data={data} />);
 
       expect(queryByTestId('next-review-time')).toBeNull();
     });
@@ -196,7 +206,7 @@ describe('UpcomingReviewsChart', () => {
     it('should show celebration emoji in empty state', () => {
       const data = createTestData([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 
-      const { getByText } = render(<UpcomingReviewsChart data={data} />);
+      const { getByText } = renderWithTheme(<UpcomingReviewsChart data={data} />);
 
       expect(getByText('🎉')).toBeTruthy();
     });
@@ -206,7 +216,7 @@ describe('UpcomingReviewsChart', () => {
     it('should handle empty data array', () => {
       const data: UpcomingReviewsHourBucket[] = [];
 
-      const { getByTestId, getByText } = render(
+      const { getByTestId, getByText } = renderWithTheme(
         <UpcomingReviewsChart data={data} />,
       );
 
@@ -217,7 +227,7 @@ describe('UpcomingReviewsChart', () => {
     it('should handle data with fewer than 12 items', () => {
       const data = createTestData([5, 10, 3]);
 
-      const { getByTestId } = render(<UpcomingReviewsChart data={data} />);
+      const { getByTestId } = renderWithTheme(<UpcomingReviewsChart data={data} />);
 
       expect(getByTestId('review-row-0')).toBeTruthy();
       expect(getByTestId('review-row-1')).toBeTruthy();
@@ -229,10 +239,72 @@ describe('UpcomingReviewsChart', () => {
         1000, 500, 250, 100, 50, 25, 10, 5, 2, 1, 0, 0,
       ]);
 
-      const { getByText } = render(<UpcomingReviewsChart data={data} />);
+      const { getByText } = renderWithTheme(<UpcomingReviewsChart data={data} />);
 
       expect(getByText('+1000')).toBeTruthy();
       expect(getByText('(1000)')).toBeTruthy();
+    });
+  });
+
+  describe('theme-aware styling', () => {
+    it('uses light theme background color for bar container in light mode', () => {
+      const data = createTestData([5, 10, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+
+      const { getByTestId } = renderWithTheme(
+        <UpcomingReviewsChart data={data} />,
+        'light',
+      );
+
+      const barContainer = getByTestId('review-bar-container-0');
+      const flattenedStyle = Array.isArray(barContainer.props.style)
+        ? Object.assign({}, ...barContainer.props.style)
+        : barContainer.props.style;
+      expect(flattenedStyle.backgroundColor).toBe(COLORS.chart.barBackground);
+    });
+
+    it('uses dark theme bar background color in dark mode', () => {
+      const data = createTestData([5, 10, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+
+      const { getByTestId } = renderWithTheme(
+        <UpcomingReviewsChart data={data} />,
+        'dark',
+      );
+
+      const barContainer = getByTestId('review-bar-container-0');
+      const flattenedStyle = Array.isArray(barContainer.props.style)
+        ? Object.assign({}, ...barContainer.props.style)
+        : barContainer.props.style;
+      expect(flattenedStyle.backgroundColor).toBe('#333333');
+    });
+
+    it('uses dark theme text colors in dark mode for title', () => {
+      const data = createTestData([5, 10, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+
+      const { getByText } = renderWithTheme(
+        <UpcomingReviewsChart data={data} />,
+        'dark',
+      );
+
+      const title = getByText('Upcoming Reviews');
+      const flattenedStyle = Array.isArray(title.props.style)
+        ? Object.assign({}, ...title.props.style)
+        : title.props.style;
+      expect(flattenedStyle.color).toBe('#AAAAAA');
+    });
+
+    it('uses dark theme background for empty state container in dark mode', () => {
+      const data = createTestData([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+
+      const { getByText } = renderWithTheme(
+        <UpcomingReviewsChart data={data} />,
+        'dark',
+      );
+
+      const emptyTitle = getByText('All caught up!');
+      const flattenedStyle = Array.isArray(emptyTitle.props.style)
+        ? Object.assign({}, ...emptyTitle.props.style)
+        : emptyTitle.props.style;
+      expect(flattenedStyle.color).toBe('#E0E0E0');
     });
   });
 });

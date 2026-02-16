@@ -23,9 +23,12 @@ const notificationService =
     typeof import('../../src/services/notificationService')
   >;
 
-function renderWithTheme(ui: React.ReactElement) {
+function renderWithTheme(
+  ui: React.ReactElement,
+  colorScheme: 'light' | 'dark' = 'light',
+) {
   return render(
-    <ThemeProvider forcedColorScheme="light">{ui}</ThemeProvider>,
+    <ThemeProvider forcedColorScheme={colorScheme}>{ui}</ThemeProvider>,
   );
 }
 
@@ -130,6 +133,29 @@ describe('WizardNotificationScreen', () => {
 
     await waitFor(() => {
       expect(getByText('Requesting...')).toBeTruthy();
+    });
+  });
+
+  describe('Theme-aware styling', () => {
+    it('should use light button text color in light mode', () => {
+      const { getByText } = renderWithTheme(<WizardNotificationScreen />);
+      const buttonText = getByText('Enable Notifications');
+      const flatStyle = Array.isArray(buttonText.props.style)
+        ? Object.assign({}, ...buttonText.props.style.flat())
+        : buttonText.props.style;
+      expect(flatStyle.color).toBe('#FFFFFF');
+    });
+
+    it('should use dark button text color in dark mode', () => {
+      const { getByText } = renderWithTheme(
+        <WizardNotificationScreen />,
+        'dark',
+      );
+      const buttonText = getByText('Enable Notifications');
+      const flatStyle = Array.isArray(buttonText.props.style)
+        ? Object.assign({}, ...buttonText.props.style.flat())
+        : buttonText.props.style;
+      expect(flatStyle.color).toBe('#121212');
     });
   });
 });
