@@ -1,15 +1,15 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 
 import {
   DASHBOARD_COLORS,
-  COLORS,
   BORDER_RADIUS,
   SPACING,
   FONT_SIZES,
   MIN_TOUCH_TARGET,
 } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
 
 export interface DashboardStatsProps {
   lessonsCount: number;
@@ -32,16 +32,39 @@ export function DashboardStats({
   onLessonsPress,
   onReviewsPress,
 }: DashboardStatsProps) {
+  const { colors } = useTheme();
   const lessonsEmpty = lessonsCount === 0;
   const reviewsEmpty = reviewsCount === 0;
+
+  const dynamicStyles = useMemo(
+    () => ({
+      statBox: {
+        backgroundColor: colors.background.primary,
+      },
+      emptyBox: {
+        borderColor: colors.border.medium,
+      },
+      emptyCountText: {
+        color: colors.text.tertiary,
+      },
+      labelText: {
+        color: colors.text.secondary,
+      },
+      emptyLabelText: {
+        color: colors.text.tertiary,
+      },
+    }),
+    [colors],
+  );
 
   return (
     <View style={styles.container} testID="dashboard-stats">
       <TouchableOpacity
         style={[
           styles.statBox,
+          dynamicStyles.statBox,
           styles.lessonsBox,
-          lessonsEmpty && styles.emptyBox,
+          lessonsEmpty && dynamicStyles.emptyBox,
         ]}
         onPress={onLessonsPress}
         disabled={!onLessonsPress || lessonsEmpty}
@@ -49,13 +72,19 @@ export function DashboardStats({
         testID="lessons-button"
       >
         <Text
-          style={[styles.labelText, lessonsEmpty && styles.emptyLabelText]}
+          style={[
+            styles.labelText,
+            dynamicStyles.labelText,
+            lessonsEmpty && dynamicStyles.emptyLabelText,
+          ]}
           testID="lessons-count"
         >
           <Text
             style={[
               styles.countText,
-              lessonsEmpty ? styles.emptyCountText : styles.lessonsCountText,
+              lessonsEmpty
+                ? dynamicStyles.emptyCountText
+                : styles.lessonsCountText,
             ]}
           >
             {lessonsCount}
@@ -73,8 +102,9 @@ export function DashboardStats({
       <TouchableOpacity
         style={[
           styles.statBox,
+          dynamicStyles.statBox,
           styles.reviewsBox,
-          reviewsEmpty && styles.emptyBox,
+          reviewsEmpty && dynamicStyles.emptyBox,
         ]}
         onPress={onReviewsPress}
         disabled={!onReviewsPress || reviewsEmpty}
@@ -82,13 +112,19 @@ export function DashboardStats({
         testID="reviews-button"
       >
         <Text
-          style={[styles.labelText, reviewsEmpty && styles.emptyLabelText]}
+          style={[
+            styles.labelText,
+            dynamicStyles.labelText,
+            reviewsEmpty && dynamicStyles.emptyLabelText,
+          ]}
           testID="reviews-count"
         >
           <Text
             style={[
               styles.countText,
-              reviewsEmpty ? styles.emptyCountText : styles.reviewsCountText,
+              reviewsEmpty
+                ? dynamicStyles.emptyCountText
+                : styles.reviewsCountText,
             ]}
           >
             {reviewsCount}
@@ -124,7 +160,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.md,
-    backgroundColor: COLORS.background.primary,
     borderWidth: BORDER_WIDTH,
   },
   lessonsBox: {
@@ -132,9 +167,6 @@ const styles = StyleSheet.create({
   },
   reviewsBox: {
     borderColor: DASHBOARD_COLORS.reviews,
-  },
-  emptyBox: {
-    borderColor: COLORS.border.medium,
   },
   countText: {
     fontSize: FONT_SIZES.lg,
@@ -146,15 +178,8 @@ const styles = StyleSheet.create({
   reviewsCountText: {
     color: DASHBOARD_COLORS.reviews,
   },
-  emptyCountText: {
-    color: COLORS.text.tertiary,
-  },
   labelText: {
     fontSize: FONT_SIZES.lg,
     fontWeight: '600',
-    color: COLORS.text.secondary,
-  },
-  emptyLabelText: {
-    color: COLORS.text.tertiary,
   },
 });

@@ -5,6 +5,16 @@ import {
   LastSyncedIndicator,
   formatTimeSince,
 } from '../../src/components/LastSyncedIndicator';
+import { ThemeProvider } from '../../src/theme/ThemeContext';
+import { COLORS } from '../../src/theme';
+
+function renderWithTheme(ui: React.ReactElement, colorScheme?: 'light' | 'dark') {
+  return render(
+    <ThemeProvider forcedColorScheme={colorScheme ?? 'light'}>
+      {ui}
+    </ThemeProvider>,
+  );
+}
 
 describe('formatTimeSince', () => {
   it('returns "Never synced" for null', () => {
@@ -68,14 +78,14 @@ describe('formatTimeSince', () => {
 
 describe('LastSyncedIndicator', () => {
   it('displays "Never synced" when lastSyncedAt is null', () => {
-    const { getByText } = render(<LastSyncedIndicator lastSyncedAt={null} />);
+    const { getByText } = renderWithTheme(<LastSyncedIndicator lastSyncedAt={null} />);
     expect(getByText('Last synced:')).toBeTruthy();
     expect(getByText('Never synced')).toBeTruthy();
   });
 
   it('displays relative time for recent sync', () => {
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    const { getByText } = render(
+    const { getByText } = renderWithTheme(
       <LastSyncedIndicator lastSyncedAt={fiveMinutesAgo} />,
     );
     expect(getByText('Last synced:')).toBeTruthy();
@@ -84,7 +94,7 @@ describe('LastSyncedIndicator', () => {
 
   it('displays "Just now" for very recent sync', () => {
     const justNow = new Date();
-    const { getByText } = render(
+    const { getByText } = renderWithTheme(
       <LastSyncedIndicator lastSyncedAt={justNow} />,
     );
     expect(getByText('Last synced:')).toBeTruthy();
@@ -92,14 +102,42 @@ describe('LastSyncedIndicator', () => {
   });
 
   it('has default testID', () => {
-    const { getByTestId } = render(<LastSyncedIndicator lastSyncedAt={null} />);
+    const { getByTestId } = renderWithTheme(<LastSyncedIndicator lastSyncedAt={null} />);
     expect(getByTestId('last-synced-indicator')).toBeTruthy();
   });
 
   it('accepts custom testID', () => {
-    const { getByTestId } = render(
+    const { getByTestId } = renderWithTheme(
       <LastSyncedIndicator lastSyncedAt={null} testID="custom-sync" />,
     );
     expect(getByTestId('custom-sync')).toBeTruthy();
+  });
+
+  describe('theme-aware styling', () => {
+    it('uses light theme background color in light mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <LastSyncedIndicator lastSyncedAt={null} testID="sync-light" />,
+        'light',
+      );
+      const container = getByTestId('sync-light');
+      const badge = container.children[0] as any;
+      const flattenedStyle = Array.isArray(badge.props.style)
+        ? Object.assign({}, ...badge.props.style)
+        : badge.props.style;
+      expect(flattenedStyle.backgroundColor).toBe(COLORS.background.secondary);
+    });
+
+    it('uses dark theme background color in dark mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <LastSyncedIndicator lastSyncedAt={null} testID="sync-dark" />,
+        'dark',
+      );
+      const container = getByTestId('sync-dark');
+      const badge = container.children[0] as any;
+      const flattenedStyle = Array.isArray(badge.props.style)
+        ? Object.assign({}, ...badge.props.style)
+        : badge.props.style;
+      expect(flattenedStyle.backgroundColor).toBe('#1E1E1E');
+    });
   });
 });

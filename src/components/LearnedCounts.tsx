@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View, AccessibilityInfo } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -9,12 +9,12 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import {
-  COLORS,
   SUBJECT_COLORS,
   SPACING,
   FONT_SIZES,
   BORDER_RADIUS,
 } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
 
 export interface LearnedCountsProps {
   kanjiCount: number;
@@ -38,9 +38,22 @@ function AnimatedCounter({
   color,
   testID,
 }: AnimatedCounterProps) {
+  const { colors } = useTheme();
   const [displayCount, setDisplayCount] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(false);
   const animatedProgress = useSharedValue(0);
+
+  const dynamicStyles = useMemo(
+    () => ({
+      countBadge: {
+        backgroundColor: colors.background.secondary,
+      },
+      labelText: {
+        color: colors.text.secondary,
+      },
+    }),
+    [colors],
+  );
 
   // Check reduced motion setting
   useEffect(() => {
@@ -121,9 +134,11 @@ function AnimatedCounter({
 
   return (
     <View style={styles.counterContainer} testID={testID}>
-      <Animated.View style={[styles.countBadge, animatedStyle]}>
+      <Animated.View
+        style={[styles.countBadge, dynamicStyles.countBadge, animatedStyle]}
+      >
         <View style={[styles.colorDot, { backgroundColor: color }]} />
-        <Text style={styles.labelText}>{label}</Text>
+        <Text style={[styles.labelText, dynamicStyles.labelText]}>{label}</Text>
         <Text
           style={[styles.countText, { color }]}
           testID={testID ? `${testID}-value` : undefined}
@@ -175,7 +190,6 @@ const styles = StyleSheet.create({
   countBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.background.secondary,
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
@@ -188,7 +202,6 @@ const styles = StyleSheet.create({
   },
   labelText: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.text.secondary,
   },
   countText: {
     fontSize: FONT_SIZES.base,
