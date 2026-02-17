@@ -1,3 +1,9 @@
+// Mock WearDataModule
+const mockSendReviewData = jest.fn().mockResolvedValue(undefined);
+jest.mock('../../src/native/WearDataModule', () => ({
+  sendReviewData: (...args: unknown[]) => mockSendReviewData(...args),
+}));
+
 // Mock the modules
 jest.mock('@react-native-community/netinfo');
 jest.mock('@op-engineering/op-sqlite');
@@ -126,6 +132,7 @@ describe('HomeScreen', () => {
     _resetNetworkStatus();
     _resetDatabaseInstance();
     _resetAppStateSync();
+    mockSendReviewData.mockClear();
 
     // Initialize fresh database
     await initializeDatabase();
@@ -1033,6 +1040,69 @@ describe('HomeScreen', () => {
         const indicator = getByTestId('pending-sync-indicator');
         expect(indicator).toBeTruthy();
         expect(getByText('Will sync automatically when online')).toBeTruthy();
+      });
+    });
+  });
+
+  describe('wear data push', () => {
+    it('calls sendReviewData after loadDashboardData with review count and next review time', async () => {
+      // Add a review-ready assignment
+      await upsertSubject({
+        id: 100,
+        object_type: 'kanji',
+        characters: '一',
+        meanings: JSON.stringify([
+          { meaning: 'one', primary: true, accepted_answer: true },
+        ]),
+        readings: JSON.stringify([
+          { reading: 'いち', primary: true, accepted_answer: true },
+        ]),
+        meaning_mnemonic: 'Test mnemonic',
+        reading_mnemonic: 'Reading mnemonic',
+        level: 1,
+        component_subject_ids: null,
+        character_images: null,
+        auxiliary_meanings: null,
+        data_updated_at: null,
+      });
+
+      const pastTime = new Date(Date.now() - 60000).toISOString();
+      await upsertAssignment({
+        id: 1,
+        subject_id: 100,
+        srs_stage: 5,
+        available_at: pastTime,
+        started_at: pastTime,
+        unlocked_at: pastTime,
+        data_updated_at: null,
+      });
+
+      renderWithNavigation(<HomeScreen />);
+
+      await waitFor(() => {
+        expect(mockSendReviewData).toHaveBeenCalledWith(
+          1,
+          expect.anything(),
+        );
+      });
+    });
+
+    it('calls sendReviewData with zero count when no reviews', async () => {
+      renderWithNavigation(<HomeScreen />);
+
+      await waitFor(() => {
+        expect(mockSendReviewData).toHaveBeenCalledWith(0, null);
+      });
+    });
+
+    it('does not crash when sendReviewData fails', async () => {
+      mockSendReviewData.mockRejectedValue(new Error('Wearable not connected'));
+
+      const { getByTestId } = renderWithNavigation(<HomeScreen />);
+
+      // Dashboard should still render normally
+      await waitFor(() => {
+        expect(getByTestId('dashboard-stats')).toBeTruthy();
       });
     });
   });

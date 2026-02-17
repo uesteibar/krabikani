@@ -26,6 +26,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { WaniKaniClient } from '../api/wanikaniApi';
+import { sendReviewData } from '../native/WearDataModule';
 import {
   OfflineIndicator,
   LastSyncedIndicator,
@@ -236,6 +237,9 @@ export function HomeScreen() {
       setUpcomingReviewsData({
         hourlyBuckets: upcomingReviews,
       });
+
+      // Push review data to Wear OS (fire-and-forget)
+      sendReviewData(reviews.length, nextReviewTimeStr).catch(() => {});
 
       // Check if we're offline with no cached data
       const online = isOnline();
