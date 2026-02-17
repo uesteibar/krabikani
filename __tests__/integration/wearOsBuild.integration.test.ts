@@ -167,7 +167,7 @@ describe('IT-002: Wear APK build without RN dependencies', () => {
   it('wear/build.gradle includes required Wear OS dependencies', () => {
     expect(wearBuildGradle).toContain('androidx.wear.tiles:tiles:1.5.0');
     expect(wearBuildGradle).toContain(
-      'androidx.wear.protolayout:protolayout-material:1.5.0',
+      'androidx.wear.protolayout:protolayout-material:1.3.0',
     );
     expect(wearBuildGradle).toContain(
       'com.google.android.gms:play-services-wearable:19.0.0',
