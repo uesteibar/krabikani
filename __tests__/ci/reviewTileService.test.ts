@@ -86,8 +86,8 @@ describe('Wear OS ReviewTileService', () => {
       expect(content).toContain('Timeline');
     });
 
-    it('uses Futures.immediateFuture for returning tile', () => {
-      expect(content).toContain('Futures.immediateFuture');
+    it('uses CallbackToFutureAdapter for returning tile', () => {
+      expect(content).toContain('CallbackToFutureAdapter.getFuture');
     });
   });
 

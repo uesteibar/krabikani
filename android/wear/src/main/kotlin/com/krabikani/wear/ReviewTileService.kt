@@ -1,7 +1,9 @@
 package com.krabikani.wear
 
 import android.content.Context
+import android.net.Uri
 import android.util.Log
+import androidx.concurrent.futures.CallbackToFutureAdapter
 import androidx.wear.protolayout.ColorBuilders
 import androidx.wear.protolayout.DimensionBuilders
 import androidx.wear.protolayout.LayoutElementBuilders
@@ -16,7 +18,6 @@ import androidx.wear.tiles.TileService
 import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.Wearable
-import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -43,24 +44,30 @@ class ReviewTileService : TileService() {
             buildNoDataLayout(this, requestParams.deviceConfiguration)
         }
 
-        return Futures.immediateFuture(
-            TileBuilders.Tile.Builder()
-                .setResourcesVersion(RESOURCES_VERSION)
-                .setTileTimeline(
-                    TimelineBuilders.Timeline.fromLayoutElement(layout)
-                )
-                .build()
-        )
+        val tile = TileBuilders.Tile.Builder()
+            .setResourcesVersion(RESOURCES_VERSION)
+            .setTileTimeline(
+                TimelineBuilders.Timeline.fromLayoutElement(layout)
+            )
+            .build()
+
+        return CallbackToFutureAdapter.getFuture { completer ->
+            completer.set(tile)
+            "onTileRequest"
+        }
     }
 
     override fun onTileResourcesRequest(
         requestParams: RequestBuilders.ResourcesRequest
     ): ListenableFuture<ResourceBuilders.Resources> {
-        return Futures.immediateFuture(
-            ResourceBuilders.Resources.Builder()
-                .setVersion(RESOURCES_VERSION)
-                .build()
-        )
+        val resources = ResourceBuilders.Resources.Builder()
+            .setVersion(RESOURCES_VERSION)
+            .build()
+
+        return CallbackToFutureAdapter.getFuture { completer ->
+            completer.set(resources)
+            "onTileResourcesRequest"
+        }
     }
 
     private data class ReviewData(
@@ -74,9 +81,7 @@ class ReviewTileService : TileService() {
             val dataClient = Wearable.getDataClient(this)
             val dataItemResult = Tasks.await(
                 dataClient.getDataItem(
-                    com.google.android.gms.wearable.Uri.parse(
-                        "wear://*$DATA_PATH"
-                    )
+                    Uri.parse("wear://*$DATA_PATH")
                 ),
                 5, TimeUnit.SECONDS
             )
