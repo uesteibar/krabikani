@@ -1293,6 +1293,41 @@ export async function getPendingReviewCount(): Promise<number> {
   return (result.rows[0] as { count: number }).count;
 }
 
+const REVIEWS_DONE_TODAY_KEY = 'reviewsDoneToday';
+
+/**
+ * Gets the number of reviews completed today.
+ * Reads from a settings-based daily counter that resets each day.
+ */
+export async function getReviewsDoneToday(): Promise<number> {
+  const stored = await getSetting(REVIEWS_DONE_TODAY_KEY);
+  if (stored == null || typeof stored !== 'string') {
+    return 0;
+  }
+  try {
+    const { date, count } = JSON.parse(stored);
+    const today = new Date().toISOString().slice(0, 10);
+    return date === today ? count : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Increments the daily review counter by the given amount.
+ * Resets automatically when the date changes.
+ */
+export async function incrementReviewsDoneToday(
+  count: number,
+): Promise<void> {
+  const today = new Date().toISOString().slice(0, 10);
+  const current = await getReviewsDoneToday();
+  await setSetting(
+    REVIEWS_DONE_TODAY_KEY,
+    JSON.stringify({ date: today, count: current + count }),
+  );
+}
+
 // ============================================
 // Pending Lesson CRUD Operations
 // ============================================

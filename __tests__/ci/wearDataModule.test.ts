@@ -51,6 +51,10 @@ describe('Phone-side WearDataModule native module', () => {
       expect(content).toContain('available_reviews');
     });
 
+    it('includes reviews_done_today field in DataMap', () => {
+      expect(content).toContain('reviews_done_today');
+    });
+
     it('includes next_review_time field in DataMap', () => {
       expect(content).toContain('next_review_time');
     });

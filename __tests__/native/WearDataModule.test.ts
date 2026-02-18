@@ -20,18 +20,25 @@ describe('WearDataModule', () => {
   });
 
   describe('sendReviewData on Android', () => {
-    it('calls NativeModules.WearDataModule.sendReviewData with count and nextReviewISO', async () => {
-      await sendReviewData(5, '2026-01-01T00:00:00Z');
+    it('calls NativeModules.WearDataModule.sendReviewData with count, nextReviewISO, and reviewsDoneToday', async () => {
+      await sendReviewData(5, '2026-01-01T00:00:00Z', 12);
       expect(
         NativeModules.WearDataModule.sendReviewData,
-      ).toHaveBeenCalledWith(5, '2026-01-01T00:00:00Z');
+      ).toHaveBeenCalledWith(5, '2026-01-01T00:00:00Z', 12);
     });
 
     it('passes null nextReviewISO when not provided', async () => {
+      await sendReviewData(3, null, 0);
+      expect(
+        NativeModules.WearDataModule.sendReviewData,
+      ).toHaveBeenCalledWith(3, null, 0);
+    });
+
+    it('defaults reviewsDoneToday to 0 when omitted', async () => {
       await sendReviewData(3, null);
       expect(
         NativeModules.WearDataModule.sendReviewData,
-      ).toHaveBeenCalledWith(3, null);
+      ).toHaveBeenCalledWith(3, null, 0);
     });
 
     it('resolves without error on success', async () => {

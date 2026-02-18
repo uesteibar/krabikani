@@ -46,28 +46,24 @@ describe('Wear OS ReviewTileService', () => {
       expect(content).toContain('available_reviews');
     });
 
-    it('reads next_review_time from DataMap', () => {
-      expect(content).toContain('next_review_time');
-    });
-
-    it('reads last_updated from DataMap', () => {
-      expect(content).toContain('last_updated');
+    it('reads reviews_done_today from DataMap', () => {
+      expect(content).toContain('reviews_done_today');
     });
 
     it('displays no-data message when data is missing', () => {
-      expect(content).toMatch(/No data|open Krabikani on your phone/i);
+      expect(content).toContain('on your phone');
     });
 
     it('uses brand purple color #AA00FF', () => {
       expect(content).toMatch(/AA00FF/i);
     });
 
-    it('includes staleness check for data older than 1 hour', () => {
-      expect(content).toMatch(/3600|3_600|ONE_HOUR|STALE/i);
+    it('displays reviews available label', () => {
+      expect(content).toMatch(/reviews available/i);
     });
 
-    it('displays pending reviews label', () => {
-      expect(content).toMatch(/pending reviews/i);
+    it('displays done today label', () => {
+      expect(content).toMatch(/done today/i);
     });
 
     it('uses PrimaryLayout for tile layout', () => {
@@ -89,6 +85,23 @@ describe('Wear OS ReviewTileService', () => {
     it('uses CallbackToFutureAdapter for returning tile', () => {
       expect(content).toContain('CallbackToFutureAdapter.getFuture');
     });
+
+    it('loads app icon resource in onTileResourcesRequest', () => {
+      expect(content).toContain('ic_app_icon');
+    });
+
+    it('uses AndroidImageResourceByResId for icon mapping', () => {
+      expect(content).toContain('AndroidImageResourceByResId');
+    });
+
+    it('renders app icon Image element in layout', () => {
+      expect(content).toContain('Image.Builder');
+    });
+
+    it('shows encouragement text when no reviews done today', () => {
+      expect(content).toContain('Start your first review!');
+    });
+
   });
 
   describe('AndroidManifest.xml tile service declaration', () => {
@@ -146,6 +159,16 @@ describe('Wear OS ReviewTileService', () => {
 
     it('contains tile label string', () => {
       expect(content).toContain('tile_label');
+    });
+  });
+
+  describe('app icon drawable', () => {
+    it('ic_app_icon.png exists in wear drawable resources', () => {
+      const iconPath = path.join(
+        WEAR_DIR,
+        'src/main/res/drawable/ic_app_icon.png',
+      );
+      expect(fs.existsSync(iconPath)).toBe(true);
     });
   });
 

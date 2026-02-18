@@ -20,11 +20,12 @@ class WearDataModule(reactContext: ReactApplicationContext) :
     override fun getName(): String = "WearDataModule"
 
     @ReactMethod
-    fun sendReviewData(reviewCount: Int, nextReviewISO: String?, promise: Promise) {
+    fun sendReviewData(reviewCount: Int, nextReviewISO: String?, reviewsDoneToday: Int, promise: Promise) {
         try {
             val putDataMapRequest = PutDataMapRequest.create(DATA_PATH)
             putDataMapRequest.dataMap.apply {
                 putInt("available_reviews", reviewCount)
+                putInt("reviews_done_today", reviewsDoneToday)
                 putString("next_review_time", nextReviewISO ?: "")
                 putLong("last_updated", System.currentTimeMillis())
             }

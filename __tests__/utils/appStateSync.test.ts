@@ -31,9 +31,10 @@ jest.mock('../../src/native/WearDataModule', () => ({
   sendReviewData: (...args: unknown[]) => mockSendReviewData(...args),
 }));
 
-// Mock getAvailableReviews and getNextReviewTime for wear data push
+// Mock getAvailableReviews, getNextReviewTime, and getReviewsDoneToday for wear data push
 const mockGetAvailableReviews = jest.fn().mockResolvedValue([]);
 const mockGetNextReviewTime = jest.fn().mockResolvedValue(null);
+const mockGetReviewsDoneToday = jest.fn().mockResolvedValue(0);
 
 // Mock the storage and API modules
 jest.mock('../../src/storage/secureStorage', () => ({
@@ -56,6 +57,7 @@ jest.mock('../../src/storage/database', () => ({
   deleteAllPendingReviews: jest.fn().mockResolvedValue(undefined),
   getAvailableReviews: jest.fn().mockImplementation(() => mockGetAvailableReviews()),
   getNextReviewTime: jest.fn().mockImplementation(() => mockGetNextReviewTime()),
+  getReviewsDoneToday: jest.fn().mockImplementation(() => mockGetReviewsDoneToday()),
 }));
 
 // Mock AppState
@@ -336,11 +338,13 @@ describe('appStateSync', () => {
       mockSendReviewData.mockClear();
       mockGetAvailableReviews.mockClear();
       mockGetNextReviewTime.mockClear();
+      mockGetReviewsDoneToday.mockClear();
     });
 
     it('should call sendReviewData after successful background sync', async () => {
       mockGetAvailableReviews.mockResolvedValue([{ id: 1 }, { id: 2 }, { id: 3 }]);
       mockGetNextReviewTime.mockResolvedValue('2026-02-18T10:00:00Z');
+      mockGetReviewsDoneToday.mockResolvedValue(7);
 
       initializeAppStateSync();
 
@@ -354,12 +358,13 @@ describe('appStateSync', () => {
       // Allow microtasks to flush
       await new Promise(resolve => setImmediate(resolve));
 
-      expect(mockSendReviewData).toHaveBeenCalledWith(3, '2026-02-18T10:00:00Z');
+      expect(mockSendReviewData).toHaveBeenCalledWith(3, '2026-02-18T10:00:00Z', 7);
     });
 
     it('should pass null nextReviewTime when no upcoming reviews', async () => {
       mockGetAvailableReviews.mockResolvedValue([{ id: 1 }]);
       mockGetNextReviewTime.mockResolvedValue(null);
+      mockGetReviewsDoneToday.mockResolvedValue(0);
 
       initializeAppStateSync();
 
@@ -368,7 +373,7 @@ describe('appStateSync', () => {
       await handler('active');
       await new Promise(resolve => setImmediate(resolve));
 
-      expect(mockSendReviewData).toHaveBeenCalledWith(1, null);
+      expect(mockSendReviewData).toHaveBeenCalledWith(1, null, 0);
     });
 
     it('should not block sync completion when wear push fails', async () => {

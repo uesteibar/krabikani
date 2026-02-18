@@ -3,6 +3,7 @@ package com.krabikani.wear
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import com.krabikani.R
 import androidx.concurrent.futures.CallbackToFutureAdapter
 import androidx.wear.protolayout.ColorBuilders
 import androidx.wear.protolayout.DimensionBuilders
@@ -15,44 +16,64 @@ import androidx.wear.protolayout.material.layouts.PrimaryLayout
 import androidx.wear.tiles.RequestBuilders
 import androidx.wear.tiles.TileBuilders
 import androidx.wear.tiles.TileService
-import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.Wearable
 import com.google.common.util.concurrent.ListenableFuture
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.util.concurrent.TimeUnit
 
 class ReviewTileService : TileService() {
 
     companion object {
         private const val TAG = "ReviewTileService"
         private const val DATA_PATH = "/krabikani/review-summary"
-        private const val RESOURCES_VERSION = "1"
-        private const val STALE_THRESHOLD_MS = 3_600_000L // 1 hour
+        private const val RESOURCES_VERSION = "2"
         private const val BRAND_PURPLE = 0xFFAA00FF.toInt()
+        private const val SUBTLE_WHITE = 0xB3FFFFFF.toInt() // 70% white
+        private const val DIM_WHITE = 0x80FFFFFF.toInt() // 50% white
+        private const val APP_ICON_ID = "app_icon"
+        private const val APP_ICON_SIZE_DP = 24
+        private const val APP_ICON_LARGE_SIZE_DP = 48
     }
 
     override fun onTileRequest(
         requestParams: RequestBuilders.TileRequest
     ): ListenableFuture<TileBuilders.Tile> {
-        val reviewData = readReviewData()
-        val layout = if (reviewData != null) {
-            buildDataLayout(this, requestParams.deviceConfiguration, reviewData)
-        } else {
-            buildNoDataLayout(this, requestParams.deviceConfiguration)
-        }
-
-        val tile = TileBuilders.Tile.Builder()
-            .setResourcesVersion(RESOURCES_VERSION)
-            .setTileTimeline(
-                TimelineBuilders.Timeline.fromLayoutElement(layout)
-            )
-            .build()
-
         return CallbackToFutureAdapter.getFuture { completer ->
-            completer.set(tile)
+            val dataClient = Wearable.getDataClient(this)
+            dataClient.getDataItems(Uri.parse("wear://*$DATA_PATH"))
+                .addOnSuccessListener { dataItems ->
+                    try {
+                        val reviewData = if (dataItems.count > 0) {
+                            val dataMap = DataMapItem.fromDataItem(dataItems[0]).dataMap
+                            ReviewData(
+                                availableReviews = dataMap.getInt("available_reviews"),
+                                reviewsDoneToday = dataMap.getInt("reviews_done_today", 0)
+                            )
+                        } else {
+                            null
+                        }
+                        dataItems.release()
+
+                        val layout = if (reviewData != null) {
+                            buildDataLayout(this, requestParams.deviceConfiguration, reviewData)
+                        } else {
+                            buildNoDataLayout(this, requestParams.deviceConfiguration)
+                        }
+
+                        completer.set(
+                            TileBuilders.Tile.Builder()
+                                .setResourcesVersion(RESOURCES_VERSION)
+                                .setTileTimeline(TimelineBuilders.Timeline.fromLayoutElement(layout))
+                                .build()
+                        )
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Error building tile layout", e)
+                        completer.set(buildFallbackTile(requestParams.deviceConfiguration))
+                    }
+                }
+                .addOnFailureListener { e ->
+                    Log.w(TAG, "Failed to read review data", e)
+                    completer.set(buildFallbackTile(requestParams.deviceConfiguration))
+                }
             "onTileRequest"
         }
     }
@@ -62,6 +83,16 @@ class ReviewTileService : TileService() {
     ): ListenableFuture<ResourceBuilders.Resources> {
         val resources = ResourceBuilders.Resources.Builder()
             .setVersion(RESOURCES_VERSION)
+            .addIdToImageMapping(
+                APP_ICON_ID,
+                ResourceBuilders.ImageResource.Builder()
+                    .setAndroidResourceByResId(
+                        ResourceBuilders.AndroidImageResourceByResId.Builder()
+                            .setResourceId(R.drawable.ic_app_icon)
+                            .build()
+                    )
+                    .build()
+            )
             .build()
 
         return CallbackToFutureAdapter.getFuture { completer ->
@@ -72,38 +103,20 @@ class ReviewTileService : TileService() {
 
     private data class ReviewData(
         val availableReviews: Int,
-        val nextReviewTime: String,
-        val lastUpdated: Long
+        val reviewsDoneToday: Int
     )
 
-    private fun readReviewData(): ReviewData? {
-        return try {
-            val dataClient = Wearable.getDataClient(this)
-            val dataItems = Tasks.await(
-                dataClient.getDataItems(
-                    Uri.parse("wear://*$DATA_PATH")
-                ),
-                5, TimeUnit.SECONDS
+    private fun buildFallbackTile(
+        deviceConfig: androidx.wear.protolayout.DeviceParametersBuilders.DeviceParameters
+    ): TileBuilders.Tile {
+        return TileBuilders.Tile.Builder()
+            .setResourcesVersion(RESOURCES_VERSION)
+            .setTileTimeline(
+                TimelineBuilders.Timeline.fromLayoutElement(
+                    buildNoDataLayout(this, deviceConfig)
+                )
             )
-
-            try {
-                if (dataItems.count > 0) {
-                    val dataMap = DataMapItem.fromDataItem(dataItems[0]).dataMap
-                    ReviewData(
-                        availableReviews = dataMap.getInt("available_reviews"),
-                        nextReviewTime = dataMap.getString("next_review_time") ?: "",
-                        lastUpdated = dataMap.getLong("last_updated")
-                    )
-                } else {
-                    null
-                }
-            } finally {
-                dataItems.release()
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to read review data", e)
-            null
-        }
+            .build()
     }
 
     private fun buildDataLayout(
@@ -111,17 +124,17 @@ class ReviewTileService : TileService() {
         deviceConfig: androidx.wear.protolayout.DeviceParametersBuilders.DeviceParameters,
         data: ReviewData
     ): LayoutElementBuilders.LayoutElement {
-        val isStale = System.currentTimeMillis() - data.lastUpdated > STALE_THRESHOLD_MS
-        val updatedText = formatTimestamp(data.lastUpdated)
-        val nextReview = if (data.nextReviewTime.isNotEmpty()) {
-            "Next: ${data.nextReviewTime}"
+        val todayText = if (data.reviewsDoneToday > 0) {
+            "${data.reviewsDoneToday} done today"
         } else {
-            ""
+            "Start your first review!"
         }
 
-        val columnBuilder = LayoutElementBuilders.Column.Builder()
+        val content = LayoutElementBuilders.Column.Builder()
             .setWidth(DimensionBuilders.expand())
             .setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER)
+            .addContent(appIcon(APP_ICON_SIZE_DP))
+            .addContent(spacer(4))
             .addContent(
                 Text.Builder(context, data.availableReviews.toString())
                     .setTypography(Typography.TYPOGRAPHY_DISPLAY1)
@@ -129,36 +142,23 @@ class ReviewTileService : TileService() {
                     .build()
             )
             .addContent(
-                Text.Builder(context, "pending reviews")
-                    .setTypography(Typography.TYPOGRAPHY_CAPTION1)
+                Text.Builder(context, "reviews available")
+                    .setTypography(Typography.TYPOGRAPHY_BODY2)
+                    .setColor(ColorBuilders.argb(SUBTLE_WHITE))
                     .build()
             )
+            .addContent(spacer(12))
             .addContent(
-                Text.Builder(context, updatedText)
-                    .setTypography(Typography.TYPOGRAPHY_CAPTION2)
+                Text.Builder(context, todayText)
+                    .setTypography(Typography.TYPOGRAPHY_CAPTION1)
+                    .setColor(ColorBuilders.argb(DIM_WHITE))
                     .build()
             )
-
-        if (nextReview.isNotEmpty()) {
-            columnBuilder.addContent(
-                Text.Builder(context, nextReview)
-                    .setTypography(Typography.TYPOGRAPHY_CAPTION2)
-                    .build()
-            )
-        }
-
-        if (isStale) {
-            columnBuilder.addContent(
-                Text.Builder(context, "\u26A0 STALE")
-                    .setTypography(Typography.TYPOGRAPHY_CAPTION2)
-                    .setColor(ColorBuilders.argb(0xFFFFAB00.toInt()))
-                    .build()
-            )
-        }
+            .build()
 
         return PrimaryLayout.Builder(deviceConfig)
             .setResponsiveContentInsetEnabled(true)
-            .setContent(columnBuilder.build())
+            .setContent(content)
             .build()
     }
 
@@ -169,16 +169,35 @@ class ReviewTileService : TileService() {
         return PrimaryLayout.Builder(deviceConfig)
             .setResponsiveContentInsetEnabled(true)
             .setContent(
-                Text.Builder(context, "No data \u2014 open Krabikani on your phone")
-                    .setTypography(Typography.TYPOGRAPHY_CAPTION1)
-                    .setMaxLines(3)
+                LayoutElementBuilders.Column.Builder()
+                    .setWidth(DimensionBuilders.expand())
+                    .setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER)
+                    .addContent(appIcon(APP_ICON_LARGE_SIZE_DP))
+                    .addContent(spacer(8))
+                    .addContent(
+                        Text.Builder(context, "Open Krabikani\non your phone")
+                            .setTypography(Typography.TYPOGRAPHY_CAPTION1)
+                            .setColor(ColorBuilders.argb(SUBTLE_WHITE))
+                            .setMaxLines(2)
+                            .build()
+                    )
                     .build()
             )
             .build()
     }
 
-    private fun formatTimestamp(millis: Long): String {
-        val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
-        return "Updated ${formatter.format(Date(millis))}"
+    private fun appIcon(sizeDp: Int): LayoutElementBuilders.LayoutElement {
+        return LayoutElementBuilders.Image.Builder()
+            .setResourceId(APP_ICON_ID)
+            .setWidth(DimensionBuilders.dp(sizeDp.toFloat()))
+            .setHeight(DimensionBuilders.dp(sizeDp.toFloat()))
+            .build()
     }
+
+    private fun spacer(heightDp: Int): LayoutElementBuilders.LayoutElement {
+        return LayoutElementBuilders.Spacer.Builder()
+            .setHeight(DimensionBuilders.dp(heightDp.toFloat()))
+            .build()
+    }
+
 }

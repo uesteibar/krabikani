@@ -61,6 +61,7 @@ import {
   getKanjiPassedAtLevel,
   getTotalKanjiAtLevel,
   getUpcomingReviewsByHour,
+  getReviewsDoneToday,
   type UpcomingReviewsHourBucket,
 } from '../storage';
 import {
@@ -191,6 +192,7 @@ export function HomeScreen() {
         kanjiLearned,
         vocabularyLearned,
         upcomingReviews,
+        reviewsDoneToday,
       ] = await Promise.all([
         getSyncStatus(),
         getSubjectCount(),
@@ -203,6 +205,7 @@ export function HomeScreen() {
         getLearnedCount('kanji'),
         getLearnedCount('vocabulary'),
         getUpcomingReviewsByHour(12),
+        getReviewsDoneToday(),
       ]);
 
       const lastSync =
@@ -239,7 +242,7 @@ export function HomeScreen() {
       });
 
       // Push review data to Wear OS (fire-and-forget)
-      sendReviewData(reviews.length, nextReviewTimeStr).catch(() => {});
+      sendReviewData(reviews.length, nextReviewTimeStr, reviewsDoneToday).catch(() => {});
 
       // Check if we're offline with no cached data
       const online = isOnline();

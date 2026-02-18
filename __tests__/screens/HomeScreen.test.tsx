@@ -1083,6 +1083,7 @@ describe('HomeScreen', () => {
         expect(mockSendReviewData).toHaveBeenCalledWith(
           1,
           expect.anything(),
+          expect.any(Number),
         );
       });
     });
@@ -1091,7 +1092,7 @@ describe('HomeScreen', () => {
       renderWithNavigation(<HomeScreen />);
 
       await waitFor(() => {
-        expect(mockSendReviewData).toHaveBeenCalledWith(0, null);
+        expect(mockSendReviewData).toHaveBeenCalledWith(0, null, 0);
       });
     });
 

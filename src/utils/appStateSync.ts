@@ -7,7 +7,7 @@ import { AppState, AppStateStatus } from 'react-native';
 
 import { WaniKaniClient } from '../api/wanikaniApi';
 import { sendReviewData } from '../native/WearDataModule';
-import { getSyncStatus, getAvailableReviews, getNextReviewTime } from '../storage/database';
+import { getSyncStatus, getAvailableReviews, getNextReviewTime, getReviewsDoneToday } from '../storage/database';
 import { getApiKey } from '../storage/secureStorage';
 import { backgroundSync, type BackgroundSyncResult } from '../sync';
 import { isOnline } from './networkStatus';
@@ -140,11 +140,12 @@ function notifySyncErrorListeners(error: Error): void {
 function pushReviewDataToWear(): void {
   (async () => {
     try {
-      const [reviews, nextReview] = await Promise.all([
+      const [reviews, nextReview, doneToday] = await Promise.all([
         getAvailableReviews(),
         getNextReviewTime(),
+        getReviewsDoneToday(),
       ]);
-      await sendReviewData(reviews.length, nextReview);
+      await sendReviewData(reviews.length, nextReview, doneToday);
     } catch {
       // Wear data push is best-effort
     }
