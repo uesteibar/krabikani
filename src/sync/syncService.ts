@@ -22,6 +22,7 @@ import {
   deletePendingReview,
   deleteAllPendingReviews,
   saveCachedUserLevel,
+  incrementReviewsDoneToday,
   getPendingSynonyms,
   deletePendingSynonymBySubjectAndSynonym,
   deleteAllPendingSynonyms,
@@ -910,6 +911,8 @@ export async function submitReviews(
         onProgress?.(i + 1, reviews.length);
       }
 
+      await incrementReviewsDoneToday(reviews.length);
+
       return {
         success: true,
         submittedCount: 0,
@@ -958,6 +961,8 @@ export async function submitReviews(
       submittedCount++;
       onProgress?.(submittedCount, reviews.length);
     }
+
+    await incrementReviewsDoneToday(submittedCount);
 
     return {
       success: true,

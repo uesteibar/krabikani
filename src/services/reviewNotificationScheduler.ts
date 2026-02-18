@@ -3,7 +3,6 @@
  * Handles hourly checks for reviews and schedules notifications when appropriate.
  */
 import notifee, {
-  AndroidImportance,
   EventType,
   TriggerType,
 } from '@notifee/react-native';
@@ -16,7 +15,9 @@ import {
 } from '../storage';
 import {
   NOTIFICATION_CHANNEL_ID,
+  TRIGGER_CHANNEL_ID,
   setupNotificationChannel,
+  setupTriggerChannel,
 } from './notificationConfig';
 import {
   checkPermissions,
@@ -78,57 +79,56 @@ export function isAppInForeground(): boolean {
  * This is called when the scheduled trigger fires.
  */
 export async function performHourlyReviewCheck(): Promise<void> {
-  const foreground = isAppInForeground();
+  try {
+    const foreground = isAppInForeground();
 
-  // Check if notifications are enabled (both permission and user setting)
-  const permissionStatus = await checkPermissions();
-  if (permissionStatus !== 'granted') {
-    await scheduleNextHourlyCheck();
-    return;
-  }
-
-  const notificationsEnabled = await getNotificationsEnabled();
-  if (!notificationsEnabled) {
-    await scheduleNextHourlyCheck();
-    return;
-  }
-
-  // Get current review count
-  const currentReviews = await getAvailableReviews();
-  const reviewCount = currentReviews.length;
-
-  // Update app badge to current review count (0 clears the badge)
-  await setBadgeCount(reviewCount);
-
-  // Skip notification if no new reviews became available this hour
-  const newReviews = await getNewReviewCountThisHour();
-  if (newReviews === 0) {
-    await scheduleNextHourlyCheck();
-    return;
-  }
-
-  // Only show notification if count >= 20 and app is in background
-  if (!foreground && reviewCount >= MIN_REVIEWS_FOR_NOTIFICATION) {
-    // Ensure channel exists on Android
-    if (Platform.OS === 'android') {
-      await setupNotificationChannel();
+    // Check if notifications are enabled (both permission and user setting)
+    const permissionStatus = await checkPermissions();
+    if (permissionStatus !== 'granted') {
+      return;
     }
 
-    // Display the notification
-    await notifee.displayNotification({
-      title: 'Krabikani',
-      body: `${reviewCount} reviews ready! Time to level up your Japanese`,
-      android: {
-        channelId: NOTIFICATION_CHANNEL_ID,
-        pressAction: {
-          id: 'default',
-        },
-      },
-    });
-  }
+    const notificationsEnabled = await getNotificationsEnabled();
+    if (!notificationsEnabled) {
+      return;
+    }
 
-  // Schedule next hourly check
-  await scheduleNextHourlyCheck();
+    // Get current review count
+    const currentReviews = await getAvailableReviews();
+    const reviewCount = currentReviews.length;
+
+    // Update app badge to current review count (0 clears the badge)
+    await setBadgeCount(reviewCount);
+
+    // Skip notification if no new reviews became available this hour
+    const newReviews = await getNewReviewCountThisHour();
+    if (newReviews === 0) {
+      return;
+    }
+
+    // Only show notification if count >= 20 and app is in background
+    if (!foreground && reviewCount >= MIN_REVIEWS_FOR_NOTIFICATION) {
+      // Ensure channel exists on Android
+      if (Platform.OS === 'android') {
+        await setupNotificationChannel();
+      }
+
+      // Display the notification
+      await notifee.displayNotification({
+        title: 'Krabikani',
+        body: `${reviewCount} reviews ready! Time to level up your Japanese`,
+        android: {
+          channelId: NOTIFICATION_CHANNEL_ID,
+          pressAction: {
+            id: 'default',
+          },
+        },
+      });
+    }
+  } finally {
+    // Always schedule the next check, even if the current one failed
+    await scheduleNextHourlyCheck();
+  }
 }
 
 /**
@@ -141,20 +141,19 @@ export async function scheduleNextHourlyCheck(): Promise<void> {
 
   const triggerTimestamp = getNextHourTimestamp();
 
-  // Ensure channel exists on Android
+  // Ensure the silent trigger channel exists on Android (NONE importance = invisible)
   if (Platform.OS === 'android') {
-    await setupNotificationChannel();
+    await setupTriggerChannel();
   }
 
   // Schedule a silent trigger notification that will fire at the next hour.
-  // This notification is not visible to the user — it only triggers the background check.
+  // Uses a separate NONE-importance channel so it is never visible to the user.
   await notifee.createTriggerNotification(
     {
       id: HOURLY_CHECK_NOTIFICATION_ID,
       title: '',
       android: {
-        channelId: NOTIFICATION_CHANNEL_ID,
-        importance: AndroidImportance.MIN,
+        channelId: TRIGGER_CHANNEL_ID,
         asForegroundService: false,
       },
     },

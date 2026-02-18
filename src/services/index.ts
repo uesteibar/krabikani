@@ -1,7 +1,10 @@
 export {
   NOTIFICATION_CHANNEL_ID,
   NOTIFICATION_CHANNEL_NAME,
+  TRIGGER_CHANNEL_ID,
+  TRIGGER_CHANNEL_NAME,
   setupNotificationChannel,
+  setupTriggerChannel,
   displayTestNotification,
 } from './notificationConfig';
 

@@ -7,6 +7,8 @@
     "android:install": "cd android && ./gradlew assembleRelease && adb install -r app/build/outputs/apk/release/app-release.apk",
     "android:install:emu": "cd android && ./gradlew assembleRelease -PreactNativeArchitectures=x86_64 && adb install -r app/build/outputs/apk/release/app-release.apk",
     "android:install:all-arch": "cd android && ./gradlew assembleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a,x86,x86_64 && adb install -r app/build/outputs/apk/release/app-release.apk",
+    "wear:debug": "cd android && ./gradlew :wear:assembleDebug && WATCH=$(adb devices | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+:[0-9]+' | head -1) && adb -s $WATCH install -r wear/build/outputs/apk/debug/wear-debug.apk",
+    "wear:install": "cd android && ./gradlew :wear:assembleRelease && WATCH=$(adb devices | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+:[0-9]+' | head -1) && adb -s $WATCH install -r wear/build/outputs/apk/release/wear-release.apk",
     "android:clean": "cd android && rm -rf app/.cxx app/build .gradle build && cd .. && rm -rf node_modules/**/android/build",
     "ios": "react-native run-ios",
     "lint": "eslint .",

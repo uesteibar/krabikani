@@ -118,4 +118,23 @@ describe('release-apk.yml workflow', () => {
     );
     expect(createStep.run).toContain('github.sha');
   });
+
+  it('builds wear release APK', () => {
+    const steps = workflow.jobs['release-apk'].steps;
+    const buildSteps = steps.filter(
+      (s: any) => s.run && s.run.includes('assembleRelease'),
+    );
+    const buildsWear = buildSteps.some((s: any) =>
+      s.run.includes(':wear:assembleRelease'),
+    );
+    expect(buildsWear).toBe(true);
+  });
+
+  it('attaches wear APK to the GitHub release', () => {
+    const steps = workflow.jobs['release-apk'].steps;
+    const createStep = steps.find(
+      (s: any) => s.run && s.run.includes('gh release create latest'),
+    );
+    expect(createStep.run).toContain('wear-release.apk');
+  });
 });

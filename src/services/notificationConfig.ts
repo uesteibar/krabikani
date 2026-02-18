@@ -7,6 +7,9 @@ import { Platform } from 'react-native';
 export const NOTIFICATION_CHANNEL_ID = 'review-reminders';
 export const NOTIFICATION_CHANNEL_NAME = 'Review Reminders';
 
+export const TRIGGER_CHANNEL_ID = 'review-check-triggers';
+export const TRIGGER_CHANNEL_NAME = 'Review Check Triggers';
+
 export async function setupNotificationChannel(): Promise<void> {
   if (Platform.OS === 'android') {
     await notifee.createChannel({
@@ -16,6 +19,18 @@ export async function setupNotificationChannel(): Promise<void> {
       visibility: AndroidVisibility.PUBLIC,
       vibration: true,
       sound: undefined, // No sound, vibration only
+    });
+  }
+}
+
+export async function setupTriggerChannel(): Promise<void> {
+  if (Platform.OS === 'android') {
+    await notifee.createChannel({
+      id: TRIGGER_CHANNEL_ID,
+      name: TRIGGER_CHANNEL_NAME,
+      importance: AndroidImportance.NONE,
+      visibility: AndroidVisibility.SECRET,
+      vibration: false,
     });
   }
 }

@@ -17,6 +17,10 @@ import { name as appName } from './app.json';
  */
 notifee.onBackgroundEvent(async ({ type, detail }) => {
   try {
+    // Database must be initialized before any storage queries in background/headless mode
+    const { initializeDatabaseWithMigrations } = await import('./src/storage');
+    await initializeDatabaseWithMigrations();
+
     const { handleNotificationEvent } = await import('./src/services/reviewNotificationScheduler');
     await handleNotificationEvent(type, detail.notification?.id);
   } catch (error) {

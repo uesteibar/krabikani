@@ -112,6 +112,9 @@ dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 
+    // Wearable Data Layer API for pushing data to Wear OS
+    implementation("com.google.android.gms:play-services-wearable:19.0.0")
+
     // Animated GIF support
     implementation("com.facebook.fresco:animated-gif:3.6.0")
 

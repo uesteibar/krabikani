@@ -53,6 +53,9 @@ export {
   deletePendingReview,
   deleteAllPendingReviews,
   getPendingReviewCount,
+  // Reviews done today
+  getReviewsDoneToday,
+  incrementReviewsDoneToday,
   // Pending Lesson CRUD
   insertPendingLesson,
   insertPendingLessons,

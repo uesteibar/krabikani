@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Krabikani</string>
+    <string name="tile_label">Krabikani Reviews</string>
+    <string name="tile_description">Shows your pending review count and next review time</string>
+</resources>

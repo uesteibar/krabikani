@@ -42,7 +42,11 @@ jobs:
 
       - name: Build release APK
         working-directory: android
-        run: ./gradlew assembleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a
+        run: ./gradlew :app:assembleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a
+
+      - name: Build wear release APK
+        working-directory: android
+        run: ./gradlew :wear:assembleRelease
 
       - name: Delete existing latest release
         continue-on-error: true
@@ -54,6 +58,7 @@ jobs:
         run: |
           gh release create latest \
             android/app/build/outputs/apk/release/app-release.apk \
+            android/wear/build/outputs/apk/release/wear-release.apk \
             --title "Latest Build" \
             --notes "Built from commit ${{ github.sha }}" \
             --prerelease

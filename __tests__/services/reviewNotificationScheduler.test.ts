@@ -1,5 +1,4 @@
 import notifee, {
-  AndroidImportance,
   AuthorizationStatus,
   TriggerType,
   EventType,
@@ -47,7 +46,9 @@ jest.mock('../../src/services/notificationService', () => ({
 }));
 jest.mock('../../src/services/notificationConfig', () => ({
   NOTIFICATION_CHANNEL_ID: 'review-reminders',
+  TRIGGER_CHANNEL_ID: 'review-check-triggers',
   setupNotificationChannel: jest.fn(),
+  setupTriggerChannel: jest.fn(),
 }));
 
 describe('reviewNotificationScheduler', () => {
@@ -322,6 +323,28 @@ describe('reviewNotificationScheduler', () => {
 
       expect(setBadgeCount).not.toHaveBeenCalled();
     });
+
+    it('schedules next check even when an error is thrown', async () => {
+      (checkPermissions as jest.Mock).mockRejectedValue(
+        new Error('DB not initialized'),
+      );
+
+      await expect(performHourlyReviewCheck()).rejects.toThrow(
+        'DB not initialized',
+      );
+
+      expect(notifee.createTriggerNotification).toHaveBeenCalled();
+    });
+
+    it('schedules next check even when getAvailableReviews throws', async () => {
+      (getAvailableReviews as jest.Mock).mockRejectedValue(
+        new Error('Storage error'),
+      );
+
+      await expect(performHourlyReviewCheck()).rejects.toThrow('Storage error');
+
+      expect(notifee.createTriggerNotification).toHaveBeenCalled();
+    });
   });
 
   describe('scheduleNextHourlyCheck', () => {
@@ -333,7 +356,7 @@ describe('reviewNotificationScheduler', () => {
       ]);
     });
 
-    it('creates a silent trigger notification with no visible content', async () => {
+    it('creates a silent trigger notification using the trigger channel', async () => {
       await scheduleNextHourlyCheck();
 
       const call = (notifee.createTriggerNotification as jest.Mock).mock
@@ -342,7 +365,7 @@ describe('reviewNotificationScheduler', () => {
 
       expect(notification.title).toBe('');
       expect(notification.body).toBeUndefined();
-      expect(notification.android.importance).toBe(AndroidImportance.MIN);
+      expect(notification.android.channelId).toBe('review-check-triggers');
       expect(notification.android.asForegroundService).toBe(false);
     });
 

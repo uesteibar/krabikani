@@ -6,7 +6,8 @@
 import { AppState, AppStateStatus } from 'react-native';
 
 import { WaniKaniClient } from '../api/wanikaniApi';
-import { getSyncStatus } from '../storage/database';
+import { sendReviewData } from '../native/WearDataModule';
+import { getSyncStatus, getAvailableReviews, getNextReviewTime, getReviewsDoneToday } from '../storage/database';
 import { getApiKey } from '../storage/secureStorage';
 import { backgroundSync, type BackgroundSyncResult } from '../sync';
 import { isOnline } from './networkStatus';
@@ -134,6 +135,24 @@ function notifySyncErrorListeners(error: Error): void {
 }
 
 /**
+ * Pushes current review data to Wear OS. Fire-and-forget — never throws.
+ */
+function pushReviewDataToWear(): void {
+  (async () => {
+    try {
+      const [reviews, nextReview, doneToday] = await Promise.all([
+        getAvailableReviews(),
+        getNextReviewTime(),
+        getReviewsDoneToday(),
+      ]);
+      await sendReviewData(reviews.length, nextReview, doneToday);
+    } catch {
+      // Wear data push is best-effort
+    }
+  })();
+}
+
+/**
  * Triggers a background sync if conditions are met.
  * @param isColdStart Whether this is a cold start sync (bypasses throttle)
  */
@@ -177,6 +196,9 @@ async function triggerBackgroundSync(isColdStart = false): Promise<void> {
         // Ignore listener errors
       }
     });
+
+    // Push review data to Wear OS (fire-and-forget)
+    pushReviewDataToWear();
   } catch (error) {
     // Notify error listeners
     notifySyncErrorListeners(

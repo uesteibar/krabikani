@@ -1,6 +1,6 @@
-const fs = require('fs');
-const path = require('path');
-const YAML = require('yaml');
+import fs from 'fs';
+import path from 'path';
+import YAML from 'yaml';
 
 const WORKFLOW_PATH = path.resolve(
   __dirname,
@@ -119,13 +119,14 @@ describe('build-apk.yml workflow', () => {
     expect(script).not.toContain('context.runId');
   });
 
-  it('comment body contains a Download artifact link', () => {
+  it('comment body contains download links for both APKs', () => {
     const steps = workflow.jobs['build-apk'].steps;
     const commentStep = steps.find(
       (s: any) => s.uses && s.uses.startsWith('actions/github-script@'),
     );
     const script = commentStep.with.script;
-    expect(script).toContain('[Download artifact]');
+    expect(script).toContain('[Download phone APK]');
+    expect(script).toContain('[Download wear APK]');
   });
 
   it('uses a marker comment for update-in-place behavior', () => {
@@ -149,5 +150,37 @@ describe('build-apk.yml workflow', () => {
   it('has pull-requests write permission for commenting', () => {
     const permissions = workflow.permissions;
     expect(permissions['pull-requests']).toBe('write');
+  });
+
+  it('builds wear release APK', () => {
+    const steps = workflow.jobs['build-apk'].steps;
+    const buildSteps = steps.filter(
+      (s: any) => s.run && s.run.includes('assembleRelease'),
+    );
+    const buildsWear = buildSteps.some((s: any) =>
+      s.run.includes(':wear:assembleRelease'),
+    );
+    expect(buildsWear).toBe(true);
+  });
+
+  it('uploads wear APK as a GitHub Actions artifact', () => {
+    const steps = workflow.jobs['build-apk'].steps;
+    const uploadSteps = steps.filter(
+      (s: any) => s.uses && s.uses.startsWith('actions/upload-artifact@'),
+    );
+    const wearUpload = uploadSteps.find(
+      (s: any) => s.with.path && s.with.path.includes('wear'),
+    );
+    expect(wearUpload).toBeDefined();
+    expect(wearUpload.with.name).toContain('wear');
+  });
+
+  it('PR comment includes wear APK artifact link', () => {
+    const steps = workflow.jobs['build-apk'].steps;
+    const commentStep = steps.find(
+      (s: any) => s.uses && s.uses.startsWith('actions/github-script@'),
+    );
+    const script = commentStep.with.script;
+    expect(script).toContain('WEAR_ARTIFACT_URL');
   });
 });

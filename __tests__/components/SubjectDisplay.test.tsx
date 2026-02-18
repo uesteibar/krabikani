@@ -149,15 +149,19 @@ describe('SubjectDisplay', () => {
       expect(getByText('kanji')).toBeTruthy();
     });
 
-    it('hides subject type label when feedback is active', () => {
-      const { queryByTestId } = render(
+    it('keeps subject type label in layout but invisible when feedback is active', () => {
+      const { getByTestId } = render(
         <SubjectDisplay
           {...defaultProps}
           subjectTypeLabel="kanji"
           feedbackState="correct"
         />,
       );
-      expect(queryByTestId('subject-type-label')).toBeNull();
+      const label = getByTestId('subject-type-label');
+      expect(label).toBeTruthy();
+      expect(label.props.style).toEqual(
+        expect.arrayContaining([expect.objectContaining({ opacity: 0 })]),
+      );
     });
   });
 
