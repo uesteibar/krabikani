@@ -79,22 +79,26 @@ class ReviewTileService : TileService() {
     private fun readReviewData(): ReviewData? {
         return try {
             val dataClient = Wearable.getDataClient(this)
-            val dataItemResult = Tasks.await(
-                dataClient.getDataItem(
+            val dataItems = Tasks.await(
+                dataClient.getDataItems(
                     Uri.parse("wear://*$DATA_PATH")
                 ),
                 5, TimeUnit.SECONDS
             )
 
-            if (dataItemResult != null) {
-                val dataMap = DataMapItem.fromDataItem(dataItemResult).dataMap
-                ReviewData(
-                    availableReviews = dataMap.getInt("available_reviews"),
-                    nextReviewTime = dataMap.getString("next_review_time") ?: "",
-                    lastUpdated = dataMap.getLong("last_updated")
-                )
-            } else {
-                null
+            try {
+                if (dataItems.count > 0) {
+                    val dataMap = DataMapItem.fromDataItem(dataItems[0]).dataMap
+                    ReviewData(
+                        availableReviews = dataMap.getInt("available_reviews"),
+                        nextReviewTime = dataMap.getString("next_review_time") ?: "",
+                        lastUpdated = dataMap.getLong("last_updated")
+                    )
+                } else {
+                    null
+                }
+            } finally {
+                dataItems.release()
             }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to read review data", e)
