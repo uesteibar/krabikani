@@ -5,9 +5,12 @@ import notifee, {
 } from '@notifee/react-native';
 import {
   setupNotificationChannel,
+  setupTriggerChannel,
   displayTestNotification,
   NOTIFICATION_CHANNEL_ID,
   NOTIFICATION_CHANNEL_NAME,
+  TRIGGER_CHANNEL_ID,
+  TRIGGER_CHANNEL_NAME,
 } from '../../src/services/notificationConfig';
 
 jest.mock('@notifee/react-native');
@@ -62,6 +65,30 @@ describe('notificationConfig', () => {
     });
   });
 
+  describe('setupTriggerChannel', () => {
+    it('creates Android channel with NONE importance and SECRET visibility', async () => {
+      Platform.OS = 'android';
+
+      await setupTriggerChannel();
+
+      expect(notifee.createChannel).toHaveBeenCalledWith({
+        id: TRIGGER_CHANNEL_ID,
+        name: TRIGGER_CHANNEL_NAME,
+        importance: AndroidImportance.NONE,
+        visibility: AndroidVisibility.SECRET,
+        vibration: false,
+      });
+    });
+
+    it('does nothing on iOS', async () => {
+      Platform.OS = 'ios';
+
+      await setupTriggerChannel();
+
+      expect(notifee.createChannel).not.toHaveBeenCalled();
+    });
+  });
+
   describe('constants', () => {
     it('has correct channel ID', () => {
       expect(NOTIFICATION_CHANNEL_ID).toBe('review-reminders');
@@ -69,6 +96,14 @@ describe('notificationConfig', () => {
 
     it('has correct channel name', () => {
       expect(NOTIFICATION_CHANNEL_NAME).toBe('Review Reminders');
+    });
+
+    it('has correct trigger channel ID', () => {
+      expect(TRIGGER_CHANNEL_ID).toBe('review-check-triggers');
+    });
+
+    it('has correct trigger channel name', () => {
+      expect(TRIGGER_CHANNEL_NAME).toBe('Review Check Triggers');
     });
   });
 });
