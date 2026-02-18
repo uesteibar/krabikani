@@ -101,10 +101,12 @@ export function QuizEngine({ config }: QuizEngineProps) {
   const [completedQuestionIds, setCompletedQuestionIds] = useState<Set<string>>(
     new Set(),
   );
-  // Ref mirror so advanceToNextQuestion always reads the latest set,
+  // Ref mirrors so advanceToNextQuestion always reads the latest values,
   // even when called from a stale setTimeout closure in handleSubmit.
   const completedIdsRef = useRef(completedQuestionIds);
   completedIdsRef.current = completedQuestionIds;
+  const shouldSkipRef = useRef(shouldSkipQuestion);
+  shouldSkipRef.current = shouldSkipQuestion;
   const originalQuestionCount = useMemo(
     () => initialQuestions.length,
     [initialQuestions],
@@ -202,8 +204,9 @@ export function QuizEngine({ config }: QuizEngineProps) {
       if (queue.length === 0) return 0;
 
       const completed = completedIdsRef.current;
+      const skipFn = shouldSkipRef.current;
       const shouldSkip = (q: Question): boolean =>
-        completed.has(q.id) || (shouldSkipQuestion?.(q) ?? false);
+        completed.has(q.id) || (skipFn?.(q) ?? false);
 
       // First pass: search from startIndex to end
       let idx = startIndex;
@@ -227,7 +230,7 @@ export function QuizEngine({ config }: QuizEngineProps) {
       // No valid question found anywhere
       return queue.length;
     },
-    [shouldSkipQuestion],
+    [],
   );
 
   // Advance to next question
@@ -434,6 +437,17 @@ export function QuizEngine({ config }: QuizEngineProps) {
     );
   };
 
+  // Safety net: if the queue index is past end but the session isn't complete,
+  // retry from the start with fresh skip logic. A React state update
+  // (e.g. itemProgress change) may have made previously-skipped questions valid.
+  useEffect(() => {
+    if (currentQuestion || isComplete) return;
+    const retryIndex = findNextValidIndex(0, questionQueue);
+    if (retryIndex < questionQueue.length) {
+      setCurrentQuestionIndex(retryIndex);
+    }
+  }, [currentQuestion, isComplete, findNextValidIndex, questionQueue]);
+
   // Get question label type
   const getQuestionLabelType = (question: Question): QuestionTypeLabelType => {
     if (questionLabelType) return questionLabelType(question);
@@ -459,7 +473,6 @@ export function QuizEngine({ config }: QuizEngineProps) {
     return <LoadingView testID={`${testID}-complete`} />;
   }
 
-  // No current question (queue exhausted without completion)
   if (!currentQuestion) {
     return <LoadingView testID={`${testID}-empty`} />;
   }
