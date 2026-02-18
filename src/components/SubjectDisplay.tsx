@@ -99,8 +99,14 @@ export function SubjectDisplay({
         </Text>
       )}
 
-      {!feedbackState && subjectTypeLabel && (
-        <Text style={styles.subjectTypeLabel} testID="subject-type-label">
+      {subjectTypeLabel && (
+        <Text
+          style={[
+            styles.subjectTypeLabel,
+            feedbackState != null && styles.hidden,
+          ]}
+          testID="subject-type-label"
+        >
           {subjectTypeLabel}
         </Text>
       )}
@@ -166,6 +172,9 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.8)',
     marginTop: SPACING.sm,
     textTransform: 'capitalize',
+  },
+  hidden: {
+    opacity: 0,
   },
   srsBadgeContainer: {
     position: 'absolute',
