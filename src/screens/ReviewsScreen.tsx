@@ -411,6 +411,7 @@ export function ReviewsScreen() {
                 subjectId,
                 incorrectMeaningAnswers: progress.incorrectMeaningAnswers,
                 incorrectReadingAnswers: progress.incorrectReadingAnswers,
+                currentSrsStage: assignment.srs_stage,
               });
             }
           } else if (isStarted) {
@@ -531,6 +532,7 @@ export function ReviewsScreen() {
               subjectId,
               incorrectMeaningAnswers: progress.incorrectMeaningAnswers,
               incorrectReadingAnswers: progress.incorrectReadingAnswers,
+              currentSrsStage: assignment.srs_stage,
             });
           }
         }

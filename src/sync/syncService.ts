@@ -1,4 +1,5 @@
 import { WaniKaniClient } from '../api/wanikaniApi';
+import { computeOptimisticAssignment } from '../utils/srs';
 import type {
   SubjectData,
   WaniKaniResource,
@@ -20,6 +21,7 @@ import {
   insertPendingReview,
   getAllPendingReviews,
   deletePendingReview,
+  getAssignmentById,
   deleteAllPendingReviews,
   saveCachedUserLevel,
   incrementReviewsDoneToday,
@@ -845,6 +847,8 @@ export interface ReviewToSubmit {
   incorrectMeaningAnswers: number;
   /** Number of incorrect reading answers */
   incorrectReadingAnswers: number;
+  /** Current SRS stage of the assignment (used for optimistic offline updates) */
+  currentSrsStage: number;
 }
 
 export interface SubmitReviewsOptions {
@@ -908,6 +912,27 @@ export async function submitReviews(
           incorrect_reading_answers: review.incorrectReadingAnswers,
         };
         await insertPendingReview(pendingReview);
+
+        // Optimistically update the local assignment so dashboard reflects the review
+        const existingAssignment = await getAssignmentById(review.assignmentId);
+        if (existingAssignment !== null) {
+          const { newStage, availableAt } = computeOptimisticAssignment(
+            review.currentSrsStage,
+            review.incorrectMeaningAnswers,
+            review.incorrectReadingAnswers,
+          );
+          await upsertAssignment({
+            id: existingAssignment.id,
+            subject_id: existingAssignment.subject_id,
+            srs_stage: newStage,
+            available_at:
+              availableAt !== null ? new Date(availableAt).toISOString() : null,
+            started_at: existingAssignment.started_at,
+            unlocked_at: existingAssignment.unlocked_at,
+            data_updated_at: existingAssignment.data_updated_at,
+          });
+        }
+
         onProgress?.(i + 1, reviews.length);
       }
 

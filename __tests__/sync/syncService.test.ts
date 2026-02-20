@@ -41,6 +41,7 @@ import {
   getPendingSynonyms,
   addUserSynonym,
   getUserSynonymsBySubjectId,
+  upsertAssignment,
 } from '../../src/storage/database';
 
 jest.mock('@op-engineering/op-sqlite');
@@ -1416,6 +1417,7 @@ describe('syncService', () => {
           subjectId: 1,
           incorrectMeaningAnswers: 1,
           incorrectReadingAnswers: 0,
+          currentSrsStage: 1,
         },
       ]);
 
@@ -1452,12 +1454,14 @@ describe('syncService', () => {
           subjectId: 1,
           incorrectMeaningAnswers: 1,
           incorrectReadingAnswers: 0,
+          currentSrsStage: 1,
         },
         {
           assignmentId: 101,
           subjectId: 2,
           incorrectMeaningAnswers: 0,
           incorrectReadingAnswers: 1,
+          currentSrsStage: 2,
         },
       ]);
 
@@ -1473,12 +1477,14 @@ describe('syncService', () => {
           subjectId: 1,
           incorrectMeaningAnswers: 1,
           incorrectReadingAnswers: 0,
+          currentSrsStage: 1,
         },
         {
           assignmentId: 101,
           subjectId: 2,
           incorrectMeaningAnswers: 2,
           incorrectReadingAnswers: 1,
+          currentSrsStage: 3,
         },
       ]);
 
@@ -1524,12 +1530,14 @@ describe('syncService', () => {
             subjectId: 1,
             incorrectMeaningAnswers: 0,
             incorrectReadingAnswers: 0,
+            currentSrsStage: 1,
           },
           {
             assignmentId: 101,
             subjectId: 2,
             incorrectMeaningAnswers: 0,
             incorrectReadingAnswers: 0,
+            currentSrsStage: 2,
           },
         ],
         { onProgress },
@@ -1570,12 +1578,14 @@ describe('syncService', () => {
           subjectId: 1,
           incorrectMeaningAnswers: 0,
           incorrectReadingAnswers: 0,
+          currentSrsStage: 1,
         },
         {
           assignmentId: 101,
           subjectId: 2,
           incorrectMeaningAnswers: 0,
           incorrectReadingAnswers: 0,
+          currentSrsStage: 2,
         },
       ]);
 
@@ -1599,6 +1609,7 @@ describe('syncService', () => {
           subjectId: 1,
           incorrectMeaningAnswers: 3,
           incorrectReadingAnswers: 2,
+          currentSrsStage: 1,
         },
       ]);
 
@@ -1609,6 +1620,158 @@ describe('syncService', () => {
       expect(body.review.assignment_id).toBe(100);
       expect(body.review.incorrect_meaning_answers).toBe(3);
       expect(body.review.incorrect_reading_answers).toBe(2);
+    });
+
+    it('should optimistically update assignment when offline (all correct)', async () => {
+      // Insert a test assignment at srs_stage=3, available_at in the past
+      await upsertAssignment({
+        id: 100,
+        subject_id: 1,
+        srs_stage: 3,
+        available_at: '2024-01-01T00:00:00.000000Z',
+        started_at: '2024-01-01T00:00:00.000000Z',
+        unlocked_at: '2024-01-01T00:00:00.000000Z',
+        data_updated_at: '2024-01-01T00:00:00.000000Z',
+      });
+
+      const result = await submitReviews(null, [
+        {
+          assignmentId: 100,
+          subjectId: 1,
+          incorrectMeaningAnswers: 0,
+          incorrectReadingAnswers: 0,
+          currentSrsStage: 3,
+        },
+      ]);
+
+      expect(result.success).toBe(true);
+      expect(result.queuedCount).toBe(1);
+
+      // Verify assignment was optimistically updated
+      const assignment = await getAssignmentById(100);
+      expect(assignment).not.toBeNull();
+      expect(assignment!.srs_stage).toBe(4);
+      // available_at should be in the future
+      expect(new Date(assignment!.available_at!).getTime()).toBeGreaterThan(
+        Date.now() - 5000,
+      );
+      // Other fields should be preserved
+      expect(assignment!.subject_id).toBe(1);
+      expect(assignment!.started_at).toBe('2024-01-01T00:00:00.000000Z');
+      expect(assignment!.unlocked_at).toBe('2024-01-01T00:00:00.000000Z');
+      expect(assignment!.data_updated_at).toBe('2024-01-01T00:00:00.000000Z');
+    });
+
+    it('should optimistically update assignment with incorrect answers', async () => {
+      await upsertAssignment({
+        id: 100,
+        subject_id: 1,
+        srs_stage: 5,
+        available_at: '2024-01-01T00:00:00.000000Z',
+        started_at: '2024-01-01T00:00:00.000000Z',
+        unlocked_at: '2024-01-01T00:00:00.000000Z',
+        data_updated_at: '2024-01-01T00:00:00.000000Z',
+      });
+
+      await submitReviews(null, [
+        {
+          assignmentId: 100,
+          subjectId: 1,
+          incorrectMeaningAnswers: 1,
+          incorrectReadingAnswers: 0,
+          currentSrsStage: 5,
+        },
+      ]);
+
+      const assignment = await getAssignmentById(100);
+      expect(assignment).not.toBeNull();
+      // Guru 1 (5) with incorrect → Apprentice 4 (4)
+      expect(assignment!.srs_stage).toBe(4);
+    });
+
+    it('should set available_at to future after offline submission so item is no longer due', async () => {
+      // Insert assignment with available_at in the past (available for review)
+      await upsertAssignment({
+        id: 100,
+        subject_id: 1,
+        srs_stage: 3,
+        available_at: '2024-01-01T00:00:00.000000Z',
+        started_at: '2024-01-01T00:00:00.000000Z',
+        unlocked_at: '2024-01-01T00:00:00.000000Z',
+        data_updated_at: '2024-01-01T00:00:00.000000Z',
+      });
+
+      // Verify available_at is in the past (would be returned by getAvailableReviews)
+      let assignment = await getAssignmentById(100);
+      expect(
+        new Date(assignment!.available_at!).getTime(),
+      ).toBeLessThan(Date.now());
+
+      // Submit review offline
+      await submitReviews(null, [
+        {
+          assignmentId: 100,
+          subjectId: 1,
+          incorrectMeaningAnswers: 0,
+          incorrectReadingAnswers: 0,
+          currentSrsStage: 3,
+        },
+      ]);
+
+      // Verify available_at is now in the future (getAvailableReviews filters by available_at <= now)
+      assignment = await getAssignmentById(100);
+      expect(
+        new Date(assignment!.available_at!).getTime(),
+      ).toBeGreaterThan(Date.now());
+    });
+
+    it('should skip optimistic update when assignment not found in DB', async () => {
+      // No assignment inserted for id 99999
+      const result = await submitReviews(null, [
+        {
+          assignmentId: 99999,
+          subjectId: 1,
+          incorrectMeaningAnswers: 0,
+          incorrectReadingAnswers: 0,
+          currentSrsStage: 3,
+        },
+      ]);
+
+      // Review should still be queued successfully
+      expect(result.success).toBe(true);
+      expect(result.queuedCount).toBe(1);
+
+      const pendingReviews = await getAllPendingReviews();
+      expect(pendingReviews).toHaveLength(1);
+      expect(pendingReviews[0].assignment_id).toBe(99999);
+    });
+
+    it('should set burned items to available_at null after offline submission', async () => {
+      // Stage 8 (Enlightened) with all correct → stage 9 (Burned)
+      await upsertAssignment({
+        id: 100,
+        subject_id: 1,
+        srs_stage: 8,
+        available_at: '2024-01-01T00:00:00.000000Z',
+        started_at: '2024-01-01T00:00:00.000000Z',
+        unlocked_at: '2024-01-01T00:00:00.000000Z',
+        data_updated_at: '2024-01-01T00:00:00.000000Z',
+      });
+
+      await submitReviews(null, [
+        {
+          assignmentId: 100,
+          subjectId: 1,
+          incorrectMeaningAnswers: 0,
+          incorrectReadingAnswers: 0,
+          currentSrsStage: 8,
+        },
+      ]);
+
+      const assignment = await getAssignmentById(100);
+      expect(assignment).not.toBeNull();
+      expect(assignment!.srs_stage).toBe(9);
+      expect(assignment!.available_at).toBeNull();
     });
   });
 
@@ -1668,6 +1831,7 @@ describe('syncService', () => {
           subjectId: 1,
           incorrectMeaningAnswers: 1,
           incorrectReadingAnswers: 0,
+          currentSrsStage: 1,
         },
       ]);
 
@@ -1713,12 +1877,14 @@ describe('syncService', () => {
           subjectId: 1,
           incorrectMeaningAnswers: 0,
           incorrectReadingAnswers: 0,
+          currentSrsStage: 1,
         },
         {
           assignmentId: 101,
           subjectId: 2,
           incorrectMeaningAnswers: 0,
           incorrectReadingAnswers: 0,
+          currentSrsStage: 1,
         },
       ]);
 
@@ -1756,6 +1922,7 @@ describe('syncService', () => {
           subjectId: 1,
           incorrectMeaningAnswers: 0,
           incorrectReadingAnswers: 0,
+          currentSrsStage: 1,
         },
       ]);
 
@@ -1774,6 +1941,51 @@ describe('syncService', () => {
       expect(assignment?.srs_stage).toBe(5);
       expect(assignment?.available_at).toBe('2024-01-15T18:00:00.000000Z');
     });
+
+    it('should overwrite optimistic values with server data after sync', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      // Insert assignment and submit offline (creates optimistic update)
+      await upsertAssignment({
+        id: 100,
+        subject_id: 1,
+        srs_stage: 3,
+        available_at: '2024-01-01T00:00:00.000000Z',
+        started_at: '2024-01-01T00:00:00.000000Z',
+        unlocked_at: '2024-01-01T00:00:00.000000Z',
+        data_updated_at: '2024-01-01T00:00:00.000000Z',
+      });
+
+      await submitReviews(null, [
+        {
+          assignmentId: 100,
+          subjectId: 1,
+          incorrectMeaningAnswers: 0,
+          incorrectReadingAnswers: 0,
+          currentSrsStage: 3,
+        },
+      ]);
+
+      // Verify optimistic update was applied
+      let assignment = await getAssignmentById(100);
+      expect(assignment!.srs_stage).toBe(4);
+
+      // Mock API response with different server values
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => createMockReviewResponse(1000, 100, 1, 5),
+      });
+
+      // Sync pending reviews
+      await syncPendingReviews(client);
+
+      // Verify server values overwrite optimistic ones
+      assignment = await getAssignmentById(100);
+      expect(assignment).not.toBeNull();
+      expect(assignment!.srs_stage).toBe(5);
+      expect(assignment!.available_at).toBe('2024-01-15T18:00:00.000000Z');
+    });
   });
 
   describe('clearPendingReviews', () => {
@@ -1785,12 +1997,14 @@ describe('syncService', () => {
           subjectId: 1,
           incorrectMeaningAnswers: 0,
           incorrectReadingAnswers: 0,
+          currentSrsStage: 1,
         },
         {
           assignmentId: 101,
           subjectId: 2,
           incorrectMeaningAnswers: 1,
           incorrectReadingAnswers: 1,
+          currentSrsStage: 3,
         },
       ]);
 
@@ -1861,6 +2075,7 @@ describe('syncService', () => {
           subjectId: 2,
           incorrectMeaningAnswers: 0,
           incorrectReadingAnswers: 0,
+          currentSrsStage: 1,
         },
       ]);
 
@@ -1916,6 +2131,7 @@ describe('syncService', () => {
           subjectId: 2,
           incorrectMeaningAnswers: 0,
           incorrectReadingAnswers: 0,
+          currentSrsStage: 1,
         },
       ]);
 
@@ -1964,12 +2180,14 @@ describe('syncService', () => {
           subjectId: 1,
           incorrectMeaningAnswers: 1,
           incorrectReadingAnswers: 0,
+          currentSrsStage: 1,
         },
         {
           assignmentId: 101,
           subjectId: 2,
           incorrectMeaningAnswers: 0,
           incorrectReadingAnswers: 1,
+          currentSrsStage: 2,
         },
       ]);
 
