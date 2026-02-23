@@ -76,3 +76,9 @@ export {
   isWithinDistance,
   type DistanceOptions,
 } from './stringDistance';
+
+export {
+  SRS_INTERVALS,
+  calculateSrsStageAfterIncorrect,
+  computeOptimisticAssignment,
+} from './srs';

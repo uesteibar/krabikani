@@ -788,6 +788,7 @@ describe('ReviewsScreen', () => {
             subjectId: 2,
             incorrectMeaningAnswers: 0,
             incorrectReadingAnswers: 0,
+            currentSrsStage: 2,
           }),
         ]),
       );
@@ -919,6 +920,7 @@ describe('ReviewsScreen', () => {
             subjectId: 1,
             incorrectMeaningAnswers: 1, // 1 incorrect answer
             incorrectReadingAnswers: 0,
+            currentSrsStage: 1,
           }),
         ]),
       );
@@ -1052,6 +1054,7 @@ describe('ReviewsScreen', () => {
               assignmentId: 1002,
               subjectId: 2,
               incorrectMeaningAnswers: 1,
+              currentSrsStage: 2,
             }),
           ]),
         );
@@ -1063,6 +1066,7 @@ describe('ReviewsScreen', () => {
               assignmentId: 1002,
               subjectId: 2,
               incorrectReadingAnswers: 1,
+              currentSrsStage: 2,
             }),
           ]),
         );

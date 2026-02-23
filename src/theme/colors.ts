@@ -94,37 +94,8 @@ export function getSrsLevelInfo(stage: number): SrsLevelInfo | null {
   return null;
 }
 
-/**
- * Calculate the new SRS stage after an incorrect answer.
- * WaniKani SRS penalty rules:
- * - Apprentice 1-4 (stages 1-4): drop to Apprentice 1 (stage 1)
- * - Guru 1-2 (stages 5-6): drop to Apprentice 4 (stage 4)
- * - Master (stage 7): drop to Guru 1 (stage 5)
- * - Enlightened (stage 8): drop to Guru 1 (stage 5)
- * - Burned (stage 9): doesn't get reviewed (return stage 9)
- *
- * @param currentStage - The current SRS stage (1-9)
- * @returns The new stage after an incorrect answer
- */
-export function calculateSrsStageAfterIncorrect(currentStage: number): number {
-  if (currentStage < 1 || currentStage > 9) {
-    return currentStage;
-  }
-
-  if (currentStage <= 4) {
-    // Apprentice 1-4: drop to Apprentice 1
-    return 1;
-  } else if (currentStage <= 6) {
-    // Guru 1-2: drop to Apprentice 4
-    return 4;
-  } else if (currentStage <= 8) {
-    // Master or Enlightened: drop to Guru 1
-    return 5;
-  }
-
-  // Burned (stage 9): doesn't change (shouldn't be reviewed anyway)
-  return 9;
-}
+// Re-exported from src/utils/srs.ts to avoid breaking existing imports
+export { calculateSrsStageAfterIncorrect } from '../utils/srs';
 
 /**
  * Get the color for a subject type.
