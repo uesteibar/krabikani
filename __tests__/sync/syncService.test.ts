@@ -1622,6 +1622,55 @@ describe('syncService', () => {
       expect(body.review.incorrect_reading_answers).toBe(2);
     });
 
+    it('should optimistically update assignment before API call when online', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      // Insert assignment at srs_stage=3, available_at in the past
+      await upsertAssignment({
+        id: 100,
+        subject_id: 1,
+        srs_stage: 3,
+        available_at: '2024-01-01T00:00:00.000000Z',
+        started_at: '2024-01-01T00:00:00.000000Z',
+        unlocked_at: '2024-01-01T00:00:00.000000Z',
+        data_updated_at: '2024-01-01T00:00:00.000000Z',
+      });
+
+      // Track when getAssignmentById sees the optimistic update vs API call
+      let assignmentBeforeApiCall: Awaited<ReturnType<typeof getAssignmentById>> = null;
+      mockFetch.mockImplementationOnce(async () => {
+        // Capture assignment state at the moment the API is called
+        assignmentBeforeApiCall = await getAssignmentById(100);
+        return {
+          ok: true,
+          status: 200,
+          json: async () => createMockReviewResponse(1000, 100, 1, 5),
+        };
+      });
+
+      await submitReviews(client, [
+        {
+          assignmentId: 100,
+          subjectId: 1,
+          incorrectMeaningAnswers: 0,
+          incorrectReadingAnswers: 0,
+          currentSrsStage: 3,
+        },
+      ]);
+
+      // Optimistic update should have been applied BEFORE the API call
+      expect(assignmentBeforeApiCall).not.toBeNull();
+      expect(assignmentBeforeApiCall!.srs_stage).toBe(4); // stage 3 → 4
+      expect(
+        new Date(assignmentBeforeApiCall!.available_at!).getTime(),
+      ).toBeGreaterThan(Date.now() - 5000);
+
+      // After API response, server values should overwrite optimistic ones
+      const finalAssignment = await getAssignmentById(100);
+      expect(finalAssignment!.srs_stage).toBe(5); // server says 5
+      expect(finalAssignment!.available_at).toBe('2024-01-15T18:00:00.000000Z');
+    });
+
     it('should optimistically update assignment when offline (all correct)', async () => {
       // Insert a test assignment at srs_stage=3, available_at in the past
       await upsertAssignment({

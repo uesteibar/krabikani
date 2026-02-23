@@ -960,6 +960,29 @@ export async function submitReviews(
   // Online mode: submit immediately with retry support (handled by WaniKaniClient)
   let submittedCount = 0;
 
+  // Optimistically update all local assignments before API calls so the
+  // dashboard shows accurate counts even if the user navigates away mid-sync
+  for (const review of reviews) {
+    const existingAssignment = await getAssignmentById(review.assignmentId);
+    if (existingAssignment !== null) {
+      const { newStage, availableAt } = computeOptimisticAssignment(
+        review.currentSrsStage,
+        review.incorrectMeaningAnswers,
+        review.incorrectReadingAnswers,
+      );
+      await upsertAssignment({
+        id: existingAssignment.id,
+        subject_id: existingAssignment.subject_id,
+        srs_stage: newStage,
+        available_at:
+          availableAt !== null ? new Date(availableAt).toISOString() : null,
+        started_at: existingAssignment.started_at,
+        unlocked_at: existingAssignment.unlocked_at,
+        data_updated_at: existingAssignment.data_updated_at,
+      });
+    }
+  }
+
   try {
     for (let i = 0; i < reviews.length; i++) {
       const review = reviews[i];
@@ -971,7 +994,7 @@ export async function submitReviews(
         incorrect_reading_answers: review.incorrectReadingAnswers,
       });
 
-      // Update local database with the assignment from the response
+      // Overwrite optimistic values with authoritative server data
       const updatedAssignment = response.resources_updated.assignment;
       await upsertAssignment({
         id: updatedAssignment.id,
