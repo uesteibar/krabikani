@@ -1240,6 +1240,102 @@ describe('syncService', () => {
       expect(result.completedCount).toBe(1);
       expect(result.error).toBeDefined();
     });
+
+    it('should apply optimistic updates before API calls in online mode', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      // First, insert an assignment to update
+      await upsertAssignment({
+        id: 100,
+        subject_id: 1,
+        srs_stage: 0,
+        available_at: null,
+        started_at: null,
+        unlocked_at: '2024-01-01T00:00:00.000000Z',
+        data_updated_at: '2024-01-01T00:00:00.000000Z',
+      });
+
+      // Mock the API to delay response so we can check optimistic updates
+      let apiCallMade = false;
+      mockFetch.mockImplementationOnce(async () => {
+        apiCallMade = true;
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            id: 100,
+            object: 'assignment',
+            data_updated_at: '2024-01-15T10:00:00.000000Z',
+            data: {
+              subject_id: 1,
+              srs_stage: 1,
+              available_at: '2024-01-15T14:00:00.000000Z',
+              started_at: '2024-01-15T10:00:00.000000Z',
+              unlocked_at: '2024-01-01T00:00:00.000000Z',
+            },
+          }),
+        };
+      });
+
+      const result = await completeLessons(client, [
+        { assignmentId: 100, subjectId: 1 },
+      ]);
+
+      // Verify API was called
+      expect(apiCallMade).toBe(true);
+
+      // Verify assignment was updated with API data
+      const assignment = await getAssignmentById(100);
+      expect(assignment).not.toBeNull();
+      expect(assignment?.started_at).toBe('2024-01-15T10:00:00.000000Z');
+      expect(assignment?.srs_stage).toBe(1);
+
+      // Verify pending lesson was removed after successful sync
+      const pendingCount = await getPendingLessonCount();
+      expect(pendingCount).toBe(0);
+
+      expect(result.success).toBe(true);
+      expect(result.completedCount).toBe(1);
+    });
+
+    it('should keep optimistic updates in pending queue if API fails', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      // Insert assignment
+      await upsertAssignment({
+        id: 100,
+        subject_id: 1,
+        srs_stage: 0,
+        available_at: null,
+        started_at: null,
+        unlocked_at: '2024-01-01T00:00:00.000000Z',
+        data_updated_at: '2024-01-01T00:00:00.000000Z',
+      });
+
+      // Mock API to fail
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+      });
+
+      const result = await completeLessons(client, [
+        { assignmentId: 100, subjectId: 1 },
+      ]);
+
+      // API call should have failed
+      expect(result.success).toBe(false);
+      expect(result.completedCount).toBe(0);
+
+      // But optimistic updates should remain
+      const assignment = await getAssignmentById(100);
+      expect(assignment).not.toBeNull();
+      expect(assignment?.started_at).not.toBeNull(); // Optimistic update applied
+      expect(assignment?.srs_stage).toBe(1); // Optimistic SRS stage
+
+      // Lesson should remain in pending queue for retry
+      const pendingCount = await getPendingLessonCount();
+      expect(pendingCount).toBe(1);
+    });
   });
 
   describe('syncPendingLessons', () => {
