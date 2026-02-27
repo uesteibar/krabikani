@@ -374,36 +374,41 @@ export function LessonsScreen() {
     // Show completion immediately — don't block on sync
     setPhase('complete');
 
-    try {
-      // Prepare lessons to complete
-      const lessonsToComplete: LessonToComplete[] =
-        currentBatch.assignments.map(assignment => ({
-          assignmentId: assignment.id,
-          subjectId: assignment.subject_id,
-        }));
+    // Prepare lessons to complete
+    const lessonsToComplete: LessonToComplete[] =
+      currentBatch.assignments.map(assignment => ({
+        assignmentId: assignment.id,
+        subjectId: assignment.subject_id,
+      }));
 
-      // Get API key and check if online
-      const apiKey = await getApiKey();
-      const online = isOnline();
+    // Start background sync without blocking UI
+    // This is fire-and-forget - we don't await it
+    (async () => {
+      try {
+        // Get API key and check if online
+        const apiKey = await getApiKey();
+        const online = isOnline();
 
-      // Create client if online and have API key
-      const client =
-        online && apiKey ? new WaniKaniClient(apiKey, { maxRetries: 3 }) : null;
+        // Create client if online and have API key
+        const client =
+          online && apiKey ? new WaniKaniClient(apiKey, { maxRetries: 3 }) : null;
 
-      // Complete the lessons
-      const result = await completeLessons(client, lessonsToComplete);
+        // Complete the lessons in background
+        const result = await completeLessons(client, lessonsToComplete);
 
-      if (
-        result.success ||
-        result.completedCount > 0 ||
-        result.queuedCount > 0
-      ) {
-        setSyncedOnline(result.completedCount > 0);
+        // Update sync status after background sync completes
+        if (
+          result.success ||
+          result.completedCount > 0 ||
+          result.queuedCount > 0
+        ) {
+          setSyncedOnline(result.completedCount > 0);
+        }
+      } catch {
+        // Sync failure is not critical — lessons are queued locally
+        setSyncedOnline(false);
       }
-    } catch {
-      // Sync failure is not critical — lessons are queued locally
-      setSyncedOnline(false);
-    }
+    })();
   }, [session, currentBatch.assignments]);
 
   // Handle return to dashboard

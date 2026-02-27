@@ -711,10 +711,33 @@ export async function completeLessons(
     }
   }
 
-  // Online mode: sync immediately with WaniKani API
+  // Online mode: apply optimistic updates first, then sync with API
   let completedCount = 0;
 
   try {
+    // First, insert into pending_lessons and update local assignments optimistically
+    // This ensures instant UI updates even if API calls fail partway through
+    const pendingLessons: PendingLessonInput[] = lessons.map(lesson => ({
+      assignment_id: lesson.assignmentId,
+      subject_id: lesson.subjectId,
+      started_at: startedAt,
+    }));
+    await insertPendingLessons(pendingLessons);
+
+    // Optimistically update all local assignments before API calls
+    for (const lesson of lessons) {
+      await upsertAssignment({
+        id: lesson.assignmentId,
+        subject_id: lesson.subjectId,
+        srs_stage: 1, // Initial SRS stage after lesson
+        available_at: startedAt,
+        started_at: startedAt,
+        unlocked_at: startedAt,
+        data_updated_at: startedAt,
+      });
+    }
+
+    // Now sync with API and overwrite with authoritative data
     for (let i = 0; i < lessons.length; i++) {
       const lesson = lessons[i];
 
@@ -723,7 +746,7 @@ export async function completeLessons(
         started_at: startedAt,
       });
 
-      // Update local database with the API response
+      // Overwrite optimistic values with authoritative server data
       await upsertAssignment({
         id: response.id,
         subject_id: response.data.subject_id,
@@ -733,6 +756,9 @@ export async function completeLessons(
         unlocked_at: response.data.unlocked_at,
         data_updated_at: response.data_updated_at,
       });
+
+      // Remove from pending queue after successful sync
+      await deletePendingLessonByAssignmentId(lesson.assignmentId);
 
       completedCount++;
       onProgress?.(completedCount, lessons.length);
@@ -748,6 +774,7 @@ export async function completeLessons(
       error instanceof Error
         ? error.message
         : 'Unknown error completing lessons';
+    // Note: optimistic updates remain even if API fails, lessons stay in pending queue for retry
     return {
       success: false,
       completedCount,
