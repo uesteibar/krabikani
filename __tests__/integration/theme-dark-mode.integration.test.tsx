@@ -795,3 +795,691 @@ describe('IT-007: Build and TypeScript integrity', () => {
     expect(capturedTheme!.colorScheme).toBe('light');
   });
 });
+
+// ============================================
+// IT-009: Comprehensive TextInput dark mode behavior
+// ============================================
+
+import { FocusableInput } from '../../src/components/FocusableInput';
+import { SearchScreen } from '../../src/screens/SearchScreen';
+import { QuizEngine } from '../../src/components/quiz/QuizEngine';
+import type { Question, QuizEngineConfig } from '../../src/components/quiz/types';
+import { CorrectFeedbackView } from '../../src/components/CorrectFeedbackView';
+
+jest.mock('../../src/storage', () => ({
+  ...jest.requireActual('../../src/storage'),
+  getSubjectsWithAvailableReviews: jest.fn().mockResolvedValue([]),
+}));
+
+jest.mock('../../src/hooks/useShakeAnimation', () => ({
+  useShakeAnimation: () => ({
+    shakeStyle: {},
+    triggerShake: jest.fn(),
+  }),
+}));
+
+jest.mock('../../src/hooks/useAutoFocus', () => ({
+  useAutoFocus: jest.fn(),
+}));
+
+jest.mock('../../src/components/quiz/answerValidation', () => ({
+  validateInput: jest.fn().mockReturnValue({ valid: true }),
+  validateAnswer: jest.fn().mockReturnValue({
+    status: 'correct',
+    userAnswer: 'big',
+    correctAnswer: 'big',
+  }),
+}));
+
+describe('IT-009: Comprehensive TextInput dark mode behavior', () => {
+  describe('FocusableInput component', () => {
+    it('uses theme.colors.text.primary for text color in dark mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <FocusableInput
+          testID="test-input"
+          value="test"
+          onChangeText={() => {}}
+        />,
+        'dark',
+      );
+
+      const input = getByTestId('test-input');
+      const flatStyle = flattenStyle(input.props.style);
+      expect(flatStyle.color).toBe('#E0E0E0');
+    });
+
+    it('uses theme.colors.background.input for background color in dark mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <FocusableInput
+          testID="test-input"
+          value="test"
+          onChangeText={() => {}}
+        />,
+        'dark',
+      );
+
+      const input = getByTestId('test-input');
+      const flatStyle = flattenStyle(input.props.style);
+      expect(flatStyle.backgroundColor).toBe('#2A2A2A');
+    });
+
+    it('uses theme.colors.text.placeholder for placeholder text in dark mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <FocusableInput
+          testID="test-input"
+          value=""
+          onChangeText={() => {}}
+          placeholder="Enter text"
+        />,
+        'dark',
+      );
+
+      const input = getByTestId('test-input');
+      expect(input.props.placeholderTextColor).toBe('#666666');
+    });
+
+    it('uses theme.colors.text.primary for cursor color in dark mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <FocusableInput
+          testID="test-input"
+          value="test"
+          onChangeText={() => {}}
+        />,
+        'dark',
+      );
+
+      const input = getByTestId('test-input');
+      expect(input.props.cursorColor).toBe('#E0E0E0');
+    });
+
+    it('does not use hardcoded color values in dark mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <FocusableInput
+          testID="test-input"
+          value="test"
+          onChangeText={() => {}}
+        />,
+        'dark',
+      );
+
+      const input = getByTestId('test-input');
+      const flatStyle = flattenStyle(input.props.style);
+      expect(flatStyle.color).not.toBe('#333');
+      expect(flatStyle.color).not.toBe('#333333');
+      expect(flatStyle.backgroundColor).not.toBe('#fff');
+      expect(flatStyle.backgroundColor).not.toBe('#FFFFFF');
+    });
+  });
+
+  describe('SearchScreen component', () => {
+    it('TextInput uses theme.colors.text.primary for text color in dark mode', async () => {
+      const { getByTestId } = renderWithTheme(
+        <SearchScreen />,
+        'dark',
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('search-input')).toBeTruthy();
+      });
+
+      const input = getByTestId('search-input');
+      const flatStyle = flattenStyle(input.props.style);
+      expect(flatStyle.color).toBe('#E0E0E0');
+    });
+
+    it('TextInput uses theme.colors.text.placeholder for placeholder text in dark mode', async () => {
+      const { getByTestId } = renderWithTheme(
+        <SearchScreen />,
+        'dark',
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('search-input')).toBeTruthy();
+      });
+
+      const input = getByTestId('search-input');
+      expect(input.props.placeholderTextColor).toBe('#666666');
+    });
+
+    it('TextInput uses theme.colors.text.primary for cursor color in dark mode', async () => {
+      const { getByTestId } = renderWithTheme(
+        <SearchScreen />,
+        'dark',
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('search-input')).toBeTruthy();
+      });
+
+      const input = getByTestId('search-input');
+      expect(input.props.cursorColor).toBe('#E0E0E0');
+    });
+
+    it('does not use hardcoded color values in dark mode', async () => {
+      const { getByTestId } = renderWithTheme(
+        <SearchScreen />,
+        'dark',
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('search-input')).toBeTruthy();
+      });
+
+      const input = getByTestId('search-input');
+      const flatStyle = flattenStyle(input.props.style);
+      expect(flatStyle.color).not.toBe('#333');
+      expect(flatStyle.color).not.toBe('#333333');
+    });
+  });
+
+  describe('QuizEngine component', () => {
+    const mockQuestion: Question = {
+      id: 'q1-meaning',
+      subjectId: 1,
+      subjectType: 'kanji',
+      displayText: '大',
+      displayMode: 'characters',
+      correctAnswers: ['big', 'large'],
+      questionType: 'meaning',
+      mnemonic: 'A person with arms spread wide is big',
+      mnemonicLabel: 'Meaning Mnemonic:',
+      meanings: [
+        { meaning: 'big', primary: true, accepted_answer: true },
+        { meaning: 'large', primary: false, accepted_answer: true },
+      ],
+      readings: [],
+      auxiliaryMeanings: [],
+      userSynonyms: [],
+    };
+
+    const makeConfig = (overrides: Partial<QuizEngineConfig> = {}): QuizEngineConfig => ({
+      questions: [mockQuestion],
+      progressMode: { mode: 'none' },
+      completionMode: 'allQuestions',
+      allowMarkCorrect: false,
+      allowAddSynonym: false,
+      requeueIncorrect: false,
+      showSrsBadge: false,
+      showSubjectTypeLabel: false,
+      testID: 'quiz-engine',
+      ...overrides,
+    });
+
+    it('TextInput uses theme.colors.text.primary for text color in dark mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <QuizEngine config={makeConfig()} />,
+        'dark',
+      );
+
+      const input = getByTestId('quiz-engine-input');
+      const flatStyle = flattenStyle(input.props.style);
+      expect(flatStyle.color).toBe('#E0E0E0');
+    });
+
+    it('TextInput uses theme.colors.background.input for background color in dark mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <QuizEngine config={makeConfig()} />,
+        'dark',
+      );
+
+      const input = getByTestId('quiz-engine-input');
+      const flatStyle = flattenStyle(input.props.style);
+      expect(flatStyle.backgroundColor).toBe('#2A2A2A');
+    });
+
+    it('TextInput uses theme.colors.text.placeholder for placeholder text in dark mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <QuizEngine config={makeConfig()} />,
+        'dark',
+      );
+
+      const input = getByTestId('quiz-engine-input');
+      expect(input.props.placeholderTextColor).toBe('#666666');
+    });
+
+    it('TextInput uses theme.colors.text.primary for cursor color in dark mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <QuizEngine config={makeConfig()} />,
+        'dark',
+      );
+
+      const input = getByTestId('quiz-engine-input');
+      expect(input.props.cursorColor).toBe('#E0E0E0');
+    });
+
+    it('does not use hardcoded color values in dark mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <QuizEngine config={makeConfig()} />,
+        'dark',
+      );
+
+      const input = getByTestId('quiz-engine-input');
+      const flatStyle = flattenStyle(input.props.style);
+      expect(flatStyle.color).not.toBe('#333');
+      expect(flatStyle.color).not.toBe('#333333');
+      expect(flatStyle.backgroundColor).not.toBe('#fff');
+      expect(flatStyle.backgroundColor).not.toBe('#FFFFFF');
+    });
+  });
+
+  describe('CorrectFeedbackView component', () => {
+    it('TextInput uses theme.colors.text.primary for text color in dark mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <CorrectFeedbackView
+          subjectType="kanji"
+          displayText="大"
+          displayMode="characters"
+          feedbackState="correct"
+          questionType="meaning"
+          inputValue="big"
+          testID="feedback-view"
+        />,
+        'dark',
+      );
+
+      const input = getByTestId('correct-feedback-input');
+      const flatStyle = flattenStyle(input.props.style);
+      expect(flatStyle.color).toBe('#E0E0E0');
+    });
+
+    it('TextInput uses theme.colors.background.input for background color in dark mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <CorrectFeedbackView
+          subjectType="kanji"
+          displayText="大"
+          displayMode="characters"
+          feedbackState="correct"
+          questionType="meaning"
+          inputValue="big"
+          testID="feedback-view"
+        />,
+        'dark',
+      );
+
+      const input = getByTestId('correct-feedback-input');
+      const flatStyle = flattenStyle(input.props.style);
+      expect(flatStyle.backgroundColor).toBe('#2A2A2A');
+    });
+
+    it('TextInput uses theme.colors.text.primary for cursor color in dark mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <CorrectFeedbackView
+          subjectType="kanji"
+          displayText="大"
+          displayMode="characters"
+          feedbackState="correct"
+          questionType="meaning"
+          inputValue="big"
+          testID="feedback-view"
+        />,
+        'dark',
+      );
+
+      const input = getByTestId('correct-feedback-input');
+      expect(input.props.cursorColor).toBe('#E0E0E0');
+    });
+
+    it('does not use hardcoded color values in dark mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <CorrectFeedbackView
+          subjectType="kanji"
+          displayText="大"
+          displayMode="characters"
+          feedbackState="correct"
+          questionType="meaning"
+          inputValue="big"
+          testID="feedback-view"
+        />,
+        'dark',
+      );
+
+      const input = getByTestId('correct-feedback-input');
+      const flatStyle = flattenStyle(input.props.style);
+      expect(flatStyle.color).not.toBe('#333');
+      expect(flatStyle.color).not.toBe('#333333');
+      expect(flatStyle.backgroundColor).not.toBe('#fff');
+      expect(flatStyle.backgroundColor).not.toBe('#FFFFFF');
+    });
+  });
+
+  describe('Cross-component consistency', () => {
+    it('all TextInput components use the same dark mode text color', async () => {
+      const darkTextColor = '#E0E0E0';
+
+      // FocusableInput
+      const { getByTestId: getFocusable } = renderWithTheme(
+        <FocusableInput
+          testID="focusable-input"
+          value="test"
+          onChangeText={() => {}}
+        />,
+        'dark',
+      );
+      const focusableInput = getFocusable('focusable-input');
+      const focusableStyle = flattenStyle(focusableInput.props.style);
+      expect(focusableStyle.color).toBe(darkTextColor);
+
+      // SearchScreen
+      const { getByTestId: getSearch } = renderWithTheme(
+        <SearchScreen />,
+        'dark',
+      );
+      await waitFor(() => {
+        expect(getSearch('search-input')).toBeTruthy();
+      });
+      const searchInput = getSearch('search-input');
+      const searchStyle = flattenStyle(searchInput.props.style);
+      expect(searchStyle.color).toBe(darkTextColor);
+
+      // SettingsScreen (already tested in IT-003)
+      const { getByTestId: getSettings } = renderSettingsWithNavigation('dark');
+      await waitFor(() => {
+        expect(getSettings('api-key-input')).toBeTruthy();
+      });
+      const settingsInput = getSettings('api-key-input');
+      const settingsStyle = flattenStyle(settingsInput.props.style);
+      expect(settingsStyle.color).toBe(darkTextColor);
+
+      // ApiKeyInputScreen (already tested in IT-006)
+      const { getByTestId: getApiKey } = renderWithTheme(<ApiKeyInputScreen />, 'dark');
+      const apiKeyInput = getApiKey('api-key-input');
+      const apiKeyStyle = flattenStyle(apiKeyInput.props.style);
+      expect(apiKeyStyle.color).toBe(darkTextColor);
+
+      // QuizEngine
+      const mockQuestion: Question = {
+        id: 'q1-meaning',
+        subjectId: 1,
+        subjectType: 'kanji',
+        displayText: '大',
+        displayMode: 'characters',
+        correctAnswers: ['big'],
+        questionType: 'meaning',
+        mnemonic: 'Test',
+        mnemonicLabel: 'Meaning Mnemonic:',
+        meanings: [{ meaning: 'big', primary: true, accepted_answer: true }],
+        readings: [],
+        auxiliaryMeanings: [],
+        userSynonyms: [],
+      };
+      const quizConfig: QuizEngineConfig = {
+        questions: [mockQuestion],
+        progressMode: { mode: 'none' },
+        completionMode: 'allQuestions',
+        allowMarkCorrect: false,
+        allowAddSynonym: false,
+        requeueIncorrect: false,
+        showSrsBadge: false,
+        showSubjectTypeLabel: false,
+        testID: 'quiz-engine',
+      };
+      const { getByTestId: getQuiz } = renderWithTheme(
+        <QuizEngine config={quizConfig} />,
+        'dark',
+      );
+      const quizInput = getQuiz('quiz-engine-input');
+      const quizStyle = flattenStyle(quizInput.props.style);
+      expect(quizStyle.color).toBe(darkTextColor);
+    });
+
+    it('all TextInput components use the same dark mode placeholder color', async () => {
+      const darkPlaceholderColor = '#666666';
+
+      // FocusableInput
+      const { getByTestId: getFocusable } = renderWithTheme(
+        <FocusableInput
+          testID="focusable-input"
+          value=""
+          onChangeText={() => {}}
+          placeholder="Enter text"
+        />,
+        'dark',
+      );
+      const focusableInput = getFocusable('focusable-input');
+      expect(focusableInput.props.placeholderTextColor).toBe(darkPlaceholderColor);
+
+      // SearchScreen
+      const { getByTestId: getSearch } = renderWithTheme(
+        <SearchScreen />,
+        'dark',
+      );
+      await waitFor(() => {
+        expect(getSearch('search-input')).toBeTruthy();
+      });
+      const searchInput = getSearch('search-input');
+      expect(searchInput.props.placeholderTextColor).toBe(darkPlaceholderColor);
+
+      // SettingsScreen
+      const { getByTestId: getSettings } = renderSettingsWithNavigation('dark');
+      await waitFor(() => {
+        expect(getSettings('api-key-input')).toBeTruthy();
+      });
+      const settingsInput = getSettings('api-key-input');
+      expect(settingsInput.props.placeholderTextColor).toBe(darkPlaceholderColor);
+
+      // ApiKeyInputScreen
+      const { getByTestId: getApiKey } = renderWithTheme(<ApiKeyInputScreen />, 'dark');
+      const apiKeyInput = getApiKey('api-key-input');
+      expect(apiKeyInput.props.placeholderTextColor).toBe(darkPlaceholderColor);
+
+      // QuizEngine
+      const mockQuestion2: Question = {
+        id: 'q1-meaning',
+        subjectId: 1,
+        subjectType: 'kanji',
+        displayText: '大',
+        displayMode: 'characters',
+        correctAnswers: ['big'],
+        questionType: 'meaning',
+        mnemonic: 'Test',
+        mnemonicLabel: 'Meaning Mnemonic:',
+        meanings: [{ meaning: 'big', primary: true, accepted_answer: true }],
+        readings: [],
+        auxiliaryMeanings: [],
+        userSynonyms: [],
+      };
+      const quizConfig2: QuizEngineConfig = {
+        questions: [mockQuestion2],
+        progressMode: { mode: 'none' },
+        completionMode: 'allQuestions',
+        allowMarkCorrect: false,
+        allowAddSynonym: false,
+        requeueIncorrect: false,
+        showSrsBadge: false,
+        showSubjectTypeLabel: false,
+        testID: 'quiz-engine',
+      };
+      const { getByTestId: getQuiz } = renderWithTheme(
+        <QuizEngine config={quizConfig2} />,
+        'dark',
+      );
+      const quizInput = getQuiz('quiz-engine-input');
+      expect(quizInput.props.placeholderTextColor).toBe(darkPlaceholderColor);
+    });
+
+    it('all TextInput components use the same dark mode background color', async () => {
+      const darkBackgroundColor = '#2A2A2A';
+
+      // FocusableInput
+      const { getByTestId: getFocusable } = renderWithTheme(
+        <FocusableInput
+          testID="focusable-input"
+          value="test"
+          onChangeText={() => {}}
+        />,
+        'dark',
+      );
+      const focusableInput = getFocusable('focusable-input');
+      const focusableStyle = flattenStyle(focusableInput.props.style);
+      expect(focusableStyle.backgroundColor).toBe(darkBackgroundColor);
+
+      // SettingsScreen
+      const { getByTestId: getSettings } = renderSettingsWithNavigation('dark');
+      await waitFor(() => {
+        expect(getSettings('api-key-input')).toBeTruthy();
+      });
+      const settingsInput = getSettings('api-key-input');
+      const settingsStyle = flattenStyle(settingsInput.props.style);
+      expect(settingsStyle.backgroundColor).toBe(darkBackgroundColor);
+
+      // ApiKeyInputScreen
+      const { getByTestId: getApiKey } = renderWithTheme(<ApiKeyInputScreen />, 'dark');
+      const apiKeyInput = getApiKey('api-key-input');
+      const apiKeyStyle = flattenStyle(apiKeyInput.props.style);
+      expect(apiKeyStyle.backgroundColor).toBe(darkBackgroundColor);
+
+      // QuizEngine
+      const mockQuestion3: Question = {
+        id: 'q1-meaning',
+        subjectId: 1,
+        subjectType: 'kanji',
+        displayText: '大',
+        displayMode: 'characters',
+        correctAnswers: ['big'],
+        questionType: 'meaning',
+        mnemonic: 'Test',
+        mnemonicLabel: 'Meaning Mnemonic:',
+        meanings: [{ meaning: 'big', primary: true, accepted_answer: true }],
+        readings: [],
+        auxiliaryMeanings: [],
+        userSynonyms: [],
+      };
+      const quizConfig3: QuizEngineConfig = {
+        questions: [mockQuestion3],
+        progressMode: { mode: 'none' },
+        completionMode: 'allQuestions',
+        allowMarkCorrect: false,
+        allowAddSynonym: false,
+        requeueIncorrect: false,
+        showSrsBadge: false,
+        showSubjectTypeLabel: false,
+        testID: 'quiz-engine',
+      };
+      const { getByTestId: getQuiz } = renderWithTheme(
+        <QuizEngine config={quizConfig3} />,
+        'dark',
+      );
+      const quizInput = getQuiz('quiz-engine-input');
+      const quizStyle = flattenStyle(quizInput.props.style);
+      expect(quizStyle.backgroundColor).toBe(darkBackgroundColor);
+
+      // CorrectFeedbackView
+      const { getByTestId: getFeedback } = renderWithTheme(
+        <CorrectFeedbackView
+          subjectType="kanji"
+          displayText="大"
+          displayMode="characters"
+          feedbackState="correct"
+          questionType="meaning"
+          inputValue="big"
+          testID="feedback-view"
+        />,
+        'dark',
+      );
+      const feedbackInput = getFeedback('correct-feedback-input');
+      const feedbackStyle = flattenStyle(feedbackInput.props.style);
+      expect(feedbackStyle.backgroundColor).toBe(darkBackgroundColor);
+    });
+
+    it('verifies no hardcoded color values remain across all TextInput components', async () => {
+      const hardcodedValues = ['#333', '#333333', '#fff', '#FFFFFF', '#000', '#000000'];
+
+      // FocusableInput
+      const { getByTestId: getFocusable } = renderWithTheme(
+        <FocusableInput
+          testID="focusable-input"
+          value="test"
+          onChangeText={() => {}}
+        />,
+        'dark',
+      );
+      const focusableInput = getFocusable('focusable-input');
+      const focusableStyle = flattenStyle(focusableInput.props.style);
+      expect(hardcodedValues).not.toContain(focusableStyle.color);
+      expect(hardcodedValues).not.toContain(focusableStyle.backgroundColor);
+
+      // SearchScreen
+      const { getByTestId: getSearch } = renderWithTheme(
+        <SearchScreen />,
+        'dark',
+      );
+      await waitFor(() => {
+        expect(getSearch('search-input')).toBeTruthy();
+      });
+      const searchInput = getSearch('search-input');
+      const searchStyle = flattenStyle(searchInput.props.style);
+      expect(hardcodedValues).not.toContain(searchStyle.color);
+
+      // SettingsScreen
+      const { getByTestId: getSettings } = renderSettingsWithNavigation('dark');
+      await waitFor(() => {
+        expect(getSettings('api-key-input')).toBeTruthy();
+      });
+      const settingsInput = getSettings('api-key-input');
+      const settingsStyle = flattenStyle(settingsInput.props.style);
+      expect(hardcodedValues).not.toContain(settingsStyle.color);
+      expect(hardcodedValues).not.toContain(settingsStyle.backgroundColor);
+
+      // ApiKeyInputScreen
+      const { getByTestId: getApiKey } = renderWithTheme(<ApiKeyInputScreen />, 'dark');
+      const apiKeyInput = getApiKey('api-key-input');
+      const apiKeyStyle = flattenStyle(apiKeyInput.props.style);
+      expect(hardcodedValues).not.toContain(apiKeyStyle.color);
+      expect(hardcodedValues).not.toContain(apiKeyStyle.backgroundColor);
+
+      // QuizEngine
+      const mockQuestion4: Question = {
+        id: 'q1-meaning',
+        subjectId: 1,
+        subjectType: 'kanji',
+        displayText: '大',
+        displayMode: 'characters',
+        correctAnswers: ['big'],
+        questionType: 'meaning',
+        mnemonic: 'Test',
+        mnemonicLabel: 'Meaning Mnemonic:',
+        meanings: [{ meaning: 'big', primary: true, accepted_answer: true }],
+        readings: [],
+        auxiliaryMeanings: [],
+        userSynonyms: [],
+      };
+      const quizConfig4: QuizEngineConfig = {
+        questions: [mockQuestion4],
+        progressMode: { mode: 'none' },
+        completionMode: 'allQuestions',
+        allowMarkCorrect: false,
+        allowAddSynonym: false,
+        requeueIncorrect: false,
+        showSrsBadge: false,
+        showSubjectTypeLabel: false,
+        testID: 'quiz-engine',
+      };
+      const { getByTestId: getQuiz } = renderWithTheme(
+        <QuizEngine config={quizConfig4} />,
+        'dark',
+      );
+      const quizInput = getQuiz('quiz-engine-input');
+      const quizStyle = flattenStyle(quizInput.props.style);
+      expect(hardcodedValues).not.toContain(quizStyle.color);
+      expect(hardcodedValues).not.toContain(quizStyle.backgroundColor);
+
+      // CorrectFeedbackView
+      const { getByTestId: getFeedback } = renderWithTheme(
+        <CorrectFeedbackView
+          subjectType="kanji"
+          displayText="大"
+          displayMode="characters"
+          feedbackState="correct"
+          questionType="meaning"
+          inputValue="big"
+          testID="feedback-view"
+        />,
+        'dark',
+      );
+      const feedbackInput = getFeedback('correct-feedback-input');
+      const feedbackStyle = flattenStyle(feedbackInput.props.style);
+      expect(hardcodedValues).not.toContain(feedbackStyle.color);
+      expect(hardcodedValues).not.toContain(feedbackStyle.backgroundColor);
+    });
+  });
+});
