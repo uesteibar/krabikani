@@ -3,6 +3,16 @@ import { StyleSheet } from 'react-native';
 import { render } from '@testing-library/react-native';
 
 import { CorrectFeedbackView } from '../../src/components/CorrectFeedbackView';
+import { ThemeProvider } from '../../src/theme/ThemeContext';
+
+// Helper to wrap components with ThemeProvider
+const renderWithTheme = (component: React.ReactElement, colorScheme: 'light' | 'dark' = 'light') => {
+  return render(
+    <ThemeProvider forcedColorScheme={colorScheme}>
+      {component}
+    </ThemeProvider>,
+  );
+};
 
 describe('CorrectFeedbackView', () => {
   const defaultProps = {
@@ -15,7 +25,7 @@ describe('CorrectFeedbackView', () => {
   };
 
   it('renders SubjectDisplay with correct feedback state', () => {
-    const { getByTestId } = render(
+    const { getByTestId } = renderWithTheme(
       <CorrectFeedbackView {...defaultProps} />,
     );
 
@@ -26,7 +36,7 @@ describe('CorrectFeedbackView', () => {
   });
 
   it('renders SubjectDisplay with fuzzyMatch feedback state', () => {
-    const { getByTestId } = render(
+    const { getByTestId } = renderWithTheme(
       <CorrectFeedbackView {...defaultProps} feedbackState="fuzzyMatch" />,
     );
 
@@ -35,7 +45,7 @@ describe('CorrectFeedbackView', () => {
   });
 
   it('renders QuestionTypeLabel', () => {
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = renderWithTheme(
       <CorrectFeedbackView {...defaultProps} />,
     );
 
@@ -44,7 +54,7 @@ describe('CorrectFeedbackView', () => {
   });
 
   it('renders QuestionTypeLabel for reading type', () => {
-    const { getByText } = render(
+    const { getByText } = renderWithTheme(
       <CorrectFeedbackView {...defaultProps} questionType="reading" />,
     );
 
@@ -52,7 +62,7 @@ describe('CorrectFeedbackView', () => {
   });
 
   it('renders disabled input with user answer', () => {
-    const { getByTestId } = render(
+    const { getByTestId } = renderWithTheme(
       <CorrectFeedbackView {...defaultProps} />,
     );
 
@@ -62,7 +72,7 @@ describe('CorrectFeedbackView', () => {
   });
 
   it('renders SRS badge when provided', () => {
-    const { getByTestId } = render(
+    const { getByTestId } = renderWithTheme(
       <CorrectFeedbackView
         {...defaultProps}
         srsBadge={{ type: 'static', stage: 5 }}
@@ -73,7 +83,7 @@ describe('CorrectFeedbackView', () => {
   });
 
   it('does not render SRS badge when not provided', () => {
-    const { queryByTestId } = render(
+    const { queryByTestId } = renderWithTheme(
       <CorrectFeedbackView {...defaultProps} />,
     );
 
@@ -81,7 +91,7 @@ describe('CorrectFeedbackView', () => {
   });
 
   it('forwards custom testID', () => {
-    const { getByTestId } = render(
+    const { getByTestId } = renderWithTheme(
       <CorrectFeedbackView {...defaultProps} testID="custom-test-id" />,
     );
 
@@ -89,7 +99,7 @@ describe('CorrectFeedbackView', () => {
   });
 
   it('uses default testID when not provided', () => {
-    const { getByTestId } = render(
+    const { getByTestId } = renderWithTheme(
       <CorrectFeedbackView {...defaultProps} />,
     );
 
@@ -98,7 +108,7 @@ describe('CorrectFeedbackView', () => {
 
   describe('layout alignment with QuizEngine', () => {
     it('input uses fixed height: 56 matching QuizEngine input dimensions', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <CorrectFeedbackView {...defaultProps} />,
       );
 
@@ -109,7 +119,7 @@ describe('CorrectFeedbackView', () => {
     });
 
     it('includes a spacer with flex: 1 between input and button row placeholder', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <CorrectFeedbackView {...defaultProps} />,
       );
 
@@ -119,7 +129,7 @@ describe('CorrectFeedbackView', () => {
     });
 
     it('includes a button row placeholder to match QuizEngine vertical layout', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <CorrectFeedbackView {...defaultProps} />,
       );
 
@@ -127,13 +137,85 @@ describe('CorrectFeedbackView', () => {
     });
 
     it('root container uses flex: 1 to fill available space', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <CorrectFeedbackView {...defaultProps} />,
       );
 
       const root = getByTestId('correct-feedback-view');
       const flatStyle = StyleSheet.flatten(root.props.style);
       expect(flatStyle.flex).toBe(1);
+    });
+  });
+
+  describe('theme colors', () => {
+    describe('light mode', () => {
+      it('uses theme.colors.text.primary for text color', () => {
+        const { getByTestId } = renderWithTheme(
+          <CorrectFeedbackView {...defaultProps} />,
+          'light',
+        );
+
+        const input = getByTestId('correct-feedback-input');
+        const flatStyle = StyleSheet.flatten(input.props.style);
+        expect(flatStyle.color).toBe('#333333');
+      });
+
+      it('uses theme.colors.background.input for background color', () => {
+        const { getByTestId } = renderWithTheme(
+          <CorrectFeedbackView {...defaultProps} />,
+          'light',
+        );
+
+        const input = getByTestId('correct-feedback-input');
+        const flatStyle = StyleSheet.flatten(input.props.style);
+        expect(flatStyle.backgroundColor).toBe('#FAFAFA');
+      });
+    });
+
+    describe('dark mode', () => {
+      it('uses theme.colors.text.primary for text color in dark mode', () => {
+        const { getByTestId } = renderWithTheme(
+          <CorrectFeedbackView {...defaultProps} />,
+          'dark',
+        );
+
+        const input = getByTestId('correct-feedback-input');
+        const flatStyle = StyleSheet.flatten(input.props.style);
+        expect(flatStyle.color).toBe('#E0E0E0');
+      });
+
+      it('uses theme.colors.background.input for background color in dark mode', () => {
+        const { getByTestId } = renderWithTheme(
+          <CorrectFeedbackView {...defaultProps} />,
+          'dark',
+        );
+
+        const input = getByTestId('correct-feedback-input');
+        const flatStyle = StyleSheet.flatten(input.props.style);
+        expect(flatStyle.backgroundColor).toBe('#2A2A2A');
+      });
+
+      it('uses theme.colors.text.primary for cursor color in dark mode', () => {
+        const { getByTestId } = renderWithTheme(
+          <CorrectFeedbackView {...defaultProps} />,
+          'dark',
+        );
+
+        const input = getByTestId('correct-feedback-input');
+        expect(input.props.cursorColor).toBe('#E0E0E0');
+      });
+    });
+
+    describe('cursor color', () => {
+      it('uses theme.colors.text.primary for cursor color in light mode', () => {
+        const { getByTestId } = renderWithTheme(
+          <CorrectFeedbackView {...defaultProps} />,
+          'light',
+        );
+
+        const input = getByTestId('correct-feedback-input');
+        expect(input.props.cursorColor).toBe('#333333');
+      });
     });
   });
 });

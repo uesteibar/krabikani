@@ -57,6 +57,7 @@ export function QuizEngine({ config }: QuizEngineProps) {
       },
       input: {
         backgroundColor: colors.background.input,
+        color: colors.text.primary,
       },
     }),
     [colors],
@@ -587,6 +588,7 @@ export function QuizEngine({ config }: QuizEngineProps) {
           onSubmitEditing={handleSubmit}
           placeholder={placeholder}
           placeholderTextColor={colors.text.placeholder}
+          cursorColor={colors.text.primary}
           autoCapitalize="none"
           autoCorrect={false}
           autoComplete="off"

@@ -3,11 +3,21 @@ import { render, fireEvent } from '@testing-library/react-native';
 
 import { FocusableInput } from '../../src/components/FocusableInput';
 import { COLORS } from '../../src/theme';
+import { ThemeProvider } from '../../src/theme/ThemeContext';
+
+// Helper to wrap components with ThemeProvider
+const renderWithTheme = (component: React.ReactElement, colorScheme: 'light' | 'dark' = 'light') => {
+  return render(
+    <ThemeProvider forcedColorScheme={colorScheme}>
+      {component}
+    </ThemeProvider>,
+  );
+};
 
 describe('FocusableInput', () => {
   describe('rendering', () => {
     it('renders correctly', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <FocusableInput testID="input" />,
       );
 
@@ -15,7 +25,7 @@ describe('FocusableInput', () => {
     });
 
     it('renders with placeholder', () => {
-      const { getByPlaceholderText } = render(
+      const { getByPlaceholderText } = renderWithTheme(
         <FocusableInput placeholder="Enter text..." />,
       );
 
@@ -23,7 +33,7 @@ describe('FocusableInput', () => {
     });
 
     it('renders with containerTestID', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <FocusableInput containerTestID="container" testID="input" />,
       );
 
@@ -37,7 +47,7 @@ describe('FocusableInput', () => {
       const focusColor = '#FF0000';
       const unfocusColor = '#CCCCCC';
 
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <FocusableInput
           testID="input"
           focusColor={focusColor}
@@ -75,7 +85,7 @@ describe('FocusableInput', () => {
       const focusColor = '#FF0000';
       const unfocusColor = '#CCCCCC';
 
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <FocusableInput
           testID="input"
           focusColor={focusColor}
@@ -117,7 +127,7 @@ describe('FocusableInput', () => {
     it('applies glow effect on focus when showGlow is true', () => {
       const focusColor = '#FF0000';
 
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <FocusableInput
           testID="input"
           containerTestID="container"
@@ -140,7 +150,7 @@ describe('FocusableInput', () => {
     it('does not apply glow effect when showGlow is false', () => {
       const focusColor = '#FF0000';
 
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <FocusableInput
           testID="input"
           containerTestID="container"
@@ -163,7 +173,7 @@ describe('FocusableInput', () => {
 
   describe('default values', () => {
     it('uses default focusColor', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <FocusableInput testID="input" />,
       );
 
@@ -183,7 +193,7 @@ describe('FocusableInput', () => {
     });
 
     it('uses default unfocusColor', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <FocusableInput testID="input" />,
       );
 
@@ -202,7 +212,7 @@ describe('FocusableInput', () => {
 
   describe('text input props', () => {
     it('passes through value prop', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <FocusableInput testID="input" value="test value" />,
       );
 
@@ -211,7 +221,7 @@ describe('FocusableInput', () => {
     });
 
     it('passes through editable prop', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <FocusableInput testID="input" editable={false} />,
       );
 
@@ -222,7 +232,7 @@ describe('FocusableInput', () => {
     it('handles onChangeText', () => {
       const onChangeText = jest.fn();
 
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <FocusableInput testID="input" onChangeText={onChangeText} />,
       );
 
@@ -233,7 +243,7 @@ describe('FocusableInput', () => {
     });
 
     it('sets placeholderTextColor', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <FocusableInput testID="input" placeholder="test" />,
       );
 
@@ -246,7 +256,7 @@ describe('FocusableInput', () => {
     it('applies containerStyle prop', () => {
       const customStyle = { marginTop: 20 };
 
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <FocusableInput
           testID="input"
           containerTestID="container"
@@ -260,6 +270,120 @@ describe('FocusableInput', () => {
           expect.objectContaining(customStyle),
         ]),
       );
+    });
+  });
+
+  describe('theme colors', () => {
+    it('uses theme.colors.text.primary for text color in light mode', () => {
+      const { getByTestId } = render(
+        <ThemeProvider forcedColorScheme="light">
+          <FocusableInput testID="input" />
+        </ThemeProvider>,
+      );
+
+      const input = getByTestId('input');
+      expect(input.props.style).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            color: '#333333', // Light mode text.primary
+          }),
+        ]),
+      );
+    });
+
+    it('uses theme.colors.text.primary for text color in dark mode', () => {
+      const { getByTestId } = render(
+        <ThemeProvider forcedColorScheme="dark">
+          <FocusableInput testID="input" />
+        </ThemeProvider>,
+      );
+
+      const input = getByTestId('input');
+      expect(input.props.style).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            color: '#E0E0E0', // Dark mode text.primary
+          }),
+        ]),
+      );
+    });
+
+    it('uses theme.colors.background.input for background color in light mode', () => {
+      const { getByTestId } = render(
+        <ThemeProvider forcedColorScheme="light">
+          <FocusableInput testID="input" />
+        </ThemeProvider>,
+      );
+
+      const input = getByTestId('input');
+      expect(input.props.style).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            backgroundColor: '#FAFAFA', // Light mode background.input
+          }),
+        ]),
+      );
+    });
+
+    it('uses theme.colors.background.input for background color in dark mode', () => {
+      const { getByTestId } = render(
+        <ThemeProvider forcedColorScheme="dark">
+          <FocusableInput testID="input" />
+        </ThemeProvider>,
+      );
+
+      const input = getByTestId('input');
+      expect(input.props.style).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            backgroundColor: '#2A2A2A', // Dark mode background.input
+          }),
+        ]),
+      );
+    });
+
+    it('uses theme.colors.text.placeholder for placeholder text in light mode', () => {
+      const { getByTestId } = render(
+        <ThemeProvider forcedColorScheme="light">
+          <FocusableInput testID="input" placeholder="test" />
+        </ThemeProvider>,
+      );
+
+      const input = getByTestId('input');
+      expect(input.props.placeholderTextColor).toBe('#999999'); // Light mode text.placeholder
+    });
+
+    it('uses theme.colors.text.placeholder for placeholder text in dark mode', () => {
+      const { getByTestId } = render(
+        <ThemeProvider forcedColorScheme="dark">
+          <FocusableInput testID="input" placeholder="test" />
+        </ThemeProvider>,
+      );
+
+      const input = getByTestId('input');
+      expect(input.props.placeholderTextColor).toBe('#666666'); // Dark mode text.placeholder
+    });
+
+    it('uses theme.colors.text.primary for cursor color in light mode', () => {
+      const { getByTestId } = render(
+        <ThemeProvider forcedColorScheme="light">
+          <FocusableInput testID="input" />
+        </ThemeProvider>,
+      );
+
+      const input = getByTestId('input');
+      expect(input.props.cursorColor).toBe('#333333'); // Light mode text.primary
+    });
+
+    it('uses theme.colors.text.primary for cursor color in dark mode', () => {
+      const { getByTestId } = render(
+        <ThemeProvider forcedColorScheme="dark">
+          <FocusableInput testID="input" />
+        </ThemeProvider>,
+      );
+
+      const input = getByTestId('input');
+      expect(input.props.cursorColor).toBe('#E0E0E0'); // Dark mode text.primary
     });
   });
 });

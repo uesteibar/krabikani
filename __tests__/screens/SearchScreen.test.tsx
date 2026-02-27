@@ -289,4 +289,72 @@ describe('SearchScreen', () => {
       expect(getByText('3 results')).toBeTruthy();
     });
   });
+
+  describe('Theme Color Usage', () => {
+    it('should use theme.colors.text.primary for text color', () => {
+      const { getByTestId } = renderSearchScreen();
+      const input = getByTestId('search-input');
+
+      // Check that input has the correct text color from theme
+      expect(input.props.style).toContainEqual(
+        expect.objectContaining({
+          color: expect.any(String),
+        })
+      );
+    });
+
+    it('should use theme.colors.background.secondary for background color', () => {
+      const { getByTestId } = renderSearchScreen();
+      const input = getByTestId('search-input');
+
+      // Check that input has the correct background color from theme
+      expect(input.props.style).toContainEqual(
+        expect.objectContaining({
+          backgroundColor: expect.any(String),
+        })
+      );
+    });
+
+    it('should use theme.colors.text.placeholder for placeholder text color', () => {
+      const { getByTestId } = renderSearchScreen();
+      const input = getByTestId('search-input');
+
+      // The placeholder text color should match theme.colors.text.placeholder
+      // In the default theme, this should be '#999999' (light mode)
+      expect(input.props.placeholderTextColor).toBe('#999999');
+    });
+
+    it('should use theme.colors.text.primary for cursor color in light mode', () => {
+      const { getByTestId } = renderSearchScreen();
+      const input = getByTestId('search-input');
+
+      // The cursor color should match theme.colors.text.primary in light mode
+      expect(input.props.cursorColor).toBe('#333333');
+    });
+  });
+
+  describe('Dark Mode Theme Color Usage', () => {
+    function renderSearchScreenDark() {
+      return render(
+        <ThemeProvider forcedColorScheme="dark">
+          <NavigationContainer>
+            <Stack.Navigator>
+              <Stack.Screen name="Search" component={SearchScreen} />
+              <Stack.Screen name="RadicalDetail" component={MockDetailScreen} />
+              <Stack.Screen name="KanjiDetail" component={MockDetailScreen} />
+              <Stack.Screen name="VocabularyDetail" component={MockDetailScreen} />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </ThemeProvider>,
+      );
+    }
+
+    it('should use theme.colors.text.primary for cursor color in dark mode', () => {
+      const { getByTestId } = renderSearchScreenDark();
+      const input = getByTestId('search-input');
+
+      // The cursor color should match theme.colors.text.primary in dark mode
+      expect(input.props.cursorColor).toBe('#E0E0E0');
+    });
+  });
 });
