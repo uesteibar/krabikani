@@ -1,14 +1,14 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 
 import type { SubjectType } from '../api/types';
 import {
   BORDER_RADIUS,
-  COLORS,
   FONT_SIZES,
   SPACING,
   getSubjectColor,
 } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
 import { SubjectDisplay, type FeedbackState, type SrsBadge } from './SubjectDisplay';
 import { QuestionTypeLabel, type QuestionTypeLabelType } from './QuestionTypeLabel';
 
@@ -34,6 +34,17 @@ export function CorrectFeedbackView({
   testID,
 }: CorrectFeedbackViewProps) {
   const borderColor = getSubjectColor(subjectType);
+  const { colors } = useTheme();
+
+  const dynamicStyles = useMemo(
+    () => ({
+      input: {
+        backgroundColor: colors.background.input,
+        color: colors.text.primary,
+      },
+    }),
+    [colors]
+  );
 
   return (
     <View style={styles.container} testID={testID ?? 'correct-feedback-view'}>
@@ -50,7 +61,7 @@ export function CorrectFeedbackView({
 
       <View style={styles.inputContainer}>
         <TextInput
-          style={[styles.input, { borderColor }]}
+          style={[styles.input, dynamicStyles.input, { borderColor }]}
           value={inputValue}
           editable={false}
           testID="correct-feedback-input"
@@ -84,7 +95,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.lg,
     fontWeight: '600',
     textAlign: 'center',
-    backgroundColor: COLORS.background.input,
   },
   spacer: {
     flex: 1,
