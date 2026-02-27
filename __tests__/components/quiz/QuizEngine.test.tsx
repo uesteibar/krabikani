@@ -988,5 +988,43 @@ describe('QuizEngine', () => {
         );
       expect(flatStyles.backgroundColor).toBe('#2A2A2A');
     });
+
+    it('should use light text color in light mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <QuizEngine config={makeConfig()} />,
+        'light',
+      );
+      const input = getByTestId('quiz-engine-input');
+      const flatStyles = input.props.style
+        .flat(Infinity)
+        .filter(Boolean)
+        .reduce(
+          (acc: Record<string, unknown>, style: Record<string, unknown>) => ({
+            ...acc,
+            ...style,
+          }),
+          {},
+        );
+      expect(flatStyles.color).toBe(COLORS.text.primary);
+    });
+
+    it('should use dark text color in dark mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <QuizEngine config={makeConfig()} />,
+        'dark',
+      );
+      const input = getByTestId('quiz-engine-input');
+      const flatStyles = input.props.style
+        .flat(Infinity)
+        .filter(Boolean)
+        .reduce(
+          (acc: Record<string, unknown>, style: Record<string, unknown>) => ({
+            ...acc,
+            ...style,
+          }),
+          {},
+        );
+      expect(flatStyles.color).toBe('#E0E0E0');
+    });
   });
 });

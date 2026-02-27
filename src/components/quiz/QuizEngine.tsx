@@ -57,6 +57,7 @@ export function QuizEngine({ config }: QuizEngineProps) {
       },
       input: {
         backgroundColor: colors.background.input,
+        color: colors.text.primary,
       },
     }),
     [colors],
