@@ -295,6 +295,17 @@ describe('IT-003: SettingsScreen dark mode rendering', () => {
     expect(flatStyle.color).toBe('#E0E0E0');
   });
 
+  it('placeholder text uses dark text.placeholder color', async () => {
+    const { getByTestId } = renderSettingsWithNavigation('dark');
+
+    await waitFor(() => {
+      expect(getByTestId('api-key-input')).toBeTruthy();
+    });
+
+    const input = getByTestId('api-key-input');
+    expect(input.props.placeholderTextColor).toBe('#666666');
+  });
+
   it('no hardcoded #fff or #333 hex values appear in dark mode input styles', async () => {
     const { getByTestId } = renderSettingsWithNavigation('dark');
 
