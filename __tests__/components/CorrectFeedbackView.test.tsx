@@ -194,6 +194,28 @@ describe('CorrectFeedbackView', () => {
         const flatStyle = StyleSheet.flatten(input.props.style);
         expect(flatStyle.backgroundColor).toBe('#2A2A2A');
       });
+
+      it('uses theme.colors.text.primary for cursor color in dark mode', () => {
+        const { getByTestId } = renderWithTheme(
+          <CorrectFeedbackView {...defaultProps} />,
+          'dark',
+        );
+
+        const input = getByTestId('correct-feedback-input');
+        expect(input.props.cursorColor).toBe('#E0E0E0');
+      });
+    });
+
+    describe('cursor color', () => {
+      it('uses theme.colors.text.primary for cursor color in light mode', () => {
+        const { getByTestId } = renderWithTheme(
+          <CorrectFeedbackView {...defaultProps} />,
+          'light',
+        );
+
+        const input = getByTestId('correct-feedback-input');
+        expect(input.props.cursorColor).toBe('#333333');
+      });
     });
   });
 });

@@ -393,6 +393,7 @@ export function SettingsScreen() {
           onChangeText={setApiKey}
           placeholder="Enter your API key"
           placeholderTextColor={colors.text.placeholder}
+          cursorColor={colors.text.primary}
           autoCapitalize="none"
           autoCorrect={false}
           secureTextEntry

@@ -64,6 +64,7 @@ export function CorrectFeedbackView({
           style={[styles.input, dynamicStyles.input, { borderColor }]}
           value={inputValue}
           editable={false}
+          cursorColor={colors.text.primary}
           testID="correct-feedback-input"
         />
       </View>

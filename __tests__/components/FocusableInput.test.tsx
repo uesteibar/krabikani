@@ -363,5 +363,27 @@ describe('FocusableInput', () => {
       const input = getByTestId('input');
       expect(input.props.placeholderTextColor).toBe('#666666'); // Dark mode text.placeholder
     });
+
+    it('uses theme.colors.text.primary for cursor color in light mode', () => {
+      const { getByTestId } = render(
+        <ThemeProvider forcedColorScheme="light">
+          <FocusableInput testID="input" />
+        </ThemeProvider>,
+      );
+
+      const input = getByTestId('input');
+      expect(input.props.cursorColor).toBe('#333333'); // Light mode text.primary
+    });
+
+    it('uses theme.colors.text.primary for cursor color in dark mode', () => {
+      const { getByTestId } = render(
+        <ThemeProvider forcedColorScheme="dark">
+          <FocusableInput testID="input" />
+        </ThemeProvider>,
+      );
+
+      const input = getByTestId('input');
+      expect(input.props.cursorColor).toBe('#E0E0E0'); // Dark mode text.primary
+    });
   });
 });

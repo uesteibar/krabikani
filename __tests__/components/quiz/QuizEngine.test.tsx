@@ -1026,5 +1026,23 @@ describe('QuizEngine', () => {
         );
       expect(flatStyles.color).toBe('#E0E0E0');
     });
+
+    it('should use light cursor color in light mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <QuizEngine config={makeConfig()} />,
+        'light',
+      );
+      const input = getByTestId('quiz-engine-input');
+      expect(input.props.cursorColor).toBe('#333333');
+    });
+
+    it('should use dark cursor color in dark mode', () => {
+      const { getByTestId } = renderWithTheme(
+        <QuizEngine config={makeConfig()} />,
+        'dark',
+      );
+      const input = getByTestId('quiz-engine-input');
+      expect(input.props.cursorColor).toBe('#E0E0E0');
+    });
   });
 });

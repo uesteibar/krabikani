@@ -588,6 +588,7 @@ export function QuizEngine({ config }: QuizEngineProps) {
           onSubmitEditing={handleSubmit}
           placeholder={placeholder}
           placeholderTextColor={colors.text.placeholder}
+          cursorColor={colors.text.primary}
           autoCapitalize="none"
           autoCorrect={false}
           autoComplete="off"

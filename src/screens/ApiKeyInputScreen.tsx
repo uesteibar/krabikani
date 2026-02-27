@@ -105,6 +105,7 @@ export function ApiKeyInputScreen() {
           }}
           placeholder="Paste your API key here"
           placeholderTextColor={colors.text.placeholder}
+          cursorColor={colors.text.primary}
           secureTextEntry
           autoCapitalize="none"
           autoCorrect={false}

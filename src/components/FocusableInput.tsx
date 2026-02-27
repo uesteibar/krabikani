@@ -120,6 +120,7 @@ export const FocusableInput = forwardRef<TextInput, FocusableInputProps>(
           onFocus={handleFocus}
           onBlur={handleBlur}
           placeholderTextColor={colors.text.placeholder}
+          cursorColor={colors.text.primary}
           {...textInputProps}
         />
       </View>

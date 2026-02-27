@@ -306,6 +306,17 @@ describe('IT-003: SettingsScreen dark mode rendering', () => {
     expect(input.props.placeholderTextColor).toBe('#666666');
   });
 
+  it('cursor color uses dark text.primary color', async () => {
+    const { getByTestId } = renderSettingsWithNavigation('dark');
+
+    await waitFor(() => {
+      expect(getByTestId('api-key-input')).toBeTruthy();
+    });
+
+    const input = getByTestId('api-key-input');
+    expect(input.props.cursorColor).toBe('#E0E0E0');
+  });
+
   it('no hardcoded #fff or #333 hex values appear in dark mode input styles', async () => {
     const { getByTestId } = renderSettingsWithNavigation('dark');
 
@@ -630,6 +641,20 @@ describe('IT-006: Onboarding screens button text dark mode', () => {
 
     const input = getByTestId('api-key-input');
     expect(input.props.placeholderTextColor).toBe('#666666');
+  });
+
+  it('ApiKeyInputScreen TextInput cursor color uses theme.colors.text.primary in light mode', () => {
+    const { getByTestId } = renderWithTheme(<ApiKeyInputScreen />, 'light');
+
+    const input = getByTestId('api-key-input');
+    expect(input.props.cursorColor).toBe('#333333');
+  });
+
+  it('ApiKeyInputScreen TextInput cursor color uses theme.colors.text.primary in dark mode', () => {
+    const { getByTestId } = renderWithTheme(<ApiKeyInputScreen />, 'dark');
+
+    const input = getByTestId('api-key-input');
+    expect(input.props.cursorColor).toBe('#E0E0E0');
   });
 
   it('ApiKeyInputScreen button text uses text.inverse in light mode (#FFFFFF)', () => {
