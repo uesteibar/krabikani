@@ -272,7 +272,7 @@ export function SearchScreen() {
           ref={inputRef}
           style={[styles.input, dynamicStyles.input]}
           placeholder="Search radicals, kanji, vocabulary..."
-          placeholderTextColor={theme.colors.text.tertiary}
+          placeholderTextColor={theme.colors.text.placeholder}
           autoCapitalize="none"
           autoCorrect={false}
           returnKeyType="search"

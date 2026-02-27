@@ -289,4 +289,39 @@ describe('SearchScreen', () => {
       expect(getByText('3 results')).toBeTruthy();
     });
   });
+
+  describe('Theme Color Usage', () => {
+    it('should use theme.colors.text.primary for text color', () => {
+      const { getByTestId } = renderSearchScreen();
+      const input = getByTestId('search-input');
+
+      // Check that input has the correct text color from theme
+      expect(input.props.style).toContainEqual(
+        expect.objectContaining({
+          color: expect.any(String),
+        })
+      );
+    });
+
+    it('should use theme.colors.background.secondary for background color', () => {
+      const { getByTestId } = renderSearchScreen();
+      const input = getByTestId('search-input');
+
+      // Check that input has the correct background color from theme
+      expect(input.props.style).toContainEqual(
+        expect.objectContaining({
+          backgroundColor: expect.any(String),
+        })
+      );
+    });
+
+    it('should use theme.colors.text.placeholder for placeholder text color', () => {
+      const { getByTestId } = renderSearchScreen();
+      const input = getByTestId('search-input');
+
+      // The placeholder text color should match theme.colors.text.placeholder
+      // In the default theme, this should be '#999999' (light mode)
+      expect(input.props.placeholderTextColor).toBe('#999999');
+    });
+  });
 });
