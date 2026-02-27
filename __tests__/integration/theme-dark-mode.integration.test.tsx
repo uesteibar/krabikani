@@ -586,6 +586,52 @@ describe('IT-006: Onboarding screens button text dark mode', () => {
     jest.clearAllMocks();
   });
 
+  it('ApiKeyInputScreen TextInput uses theme.colors.text.primary in light mode', () => {
+    const { getByTestId } = renderWithTheme(<ApiKeyInputScreen />, 'light');
+
+    const input = getByTestId('api-key-input');
+    const flatStyle = flattenStyle(input.props.style);
+    expect(flatStyle.color).toBe('#333333');
+  });
+
+  it('ApiKeyInputScreen TextInput uses theme.colors.text.primary in dark mode', () => {
+    const { getByTestId } = renderWithTheme(<ApiKeyInputScreen />, 'dark');
+
+    const input = getByTestId('api-key-input');
+    const flatStyle = flattenStyle(input.props.style);
+    expect(flatStyle.color).toBe('#E0E0E0');
+  });
+
+  it('ApiKeyInputScreen TextInput uses theme.colors.background.input in light mode', () => {
+    const { getByTestId } = renderWithTheme(<ApiKeyInputScreen />, 'light');
+
+    const input = getByTestId('api-key-input');
+    const flatStyle = flattenStyle(input.props.style);
+    expect(flatStyle.backgroundColor).toBe('#FAFAFA');
+  });
+
+  it('ApiKeyInputScreen TextInput uses theme.colors.background.input in dark mode', () => {
+    const { getByTestId } = renderWithTheme(<ApiKeyInputScreen />, 'dark');
+
+    const input = getByTestId('api-key-input');
+    const flatStyle = flattenStyle(input.props.style);
+    expect(flatStyle.backgroundColor).toBe('#2A2A2A');
+  });
+
+  it('ApiKeyInputScreen TextInput placeholder uses theme.colors.text.placeholder in light mode', () => {
+    const { getByTestId } = renderWithTheme(<ApiKeyInputScreen />, 'light');
+
+    const input = getByTestId('api-key-input');
+    expect(input.props.placeholderTextColor).toBe('#999999');
+  });
+
+  it('ApiKeyInputScreen TextInput placeholder uses theme.colors.text.placeholder in dark mode', () => {
+    const { getByTestId } = renderWithTheme(<ApiKeyInputScreen />, 'dark');
+
+    const input = getByTestId('api-key-input');
+    expect(input.props.placeholderTextColor).toBe('#666666');
+  });
+
   it('ApiKeyInputScreen button text uses text.inverse in light mode (#FFFFFF)', () => {
     const { getByTestId } = renderWithTheme(<ApiKeyInputScreen />, 'light');
 
