@@ -3,7 +3,7 @@
  * Enhanced TextInput with visual feedback when focused.
  */
 
-import React, { useState, forwardRef, useCallback } from 'react';
+import React, { useState, forwardRef, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   TextInput,
@@ -13,7 +13,8 @@ import {
   StyleProp,
 } from 'react-native';
 
-import { COLORS, BORDER_RADIUS, SPACING, FONT_SIZES } from '../theme';
+import { BORDER_RADIUS, SPACING, FONT_SIZES } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
 
 // ============================================
 // Types
@@ -48,8 +49,8 @@ export interface FocusableInputProps extends Omit<TextInputProps, 'style'> {
 export const FocusableInput = forwardRef<TextInput, FocusableInputProps>(
   function FocusableInput(
     {
-      focusColor = COLORS.subject.kanji,
-      unfocusColor = COLORS.border.medium,
+      focusColor,
+      unfocusColor,
       showGlow = true,
       containerStyle,
       containerTestID,
@@ -60,6 +61,11 @@ export const FocusableInput = forwardRef<TextInput, FocusableInputProps>(
     ref,
   ) {
     const [isFocused, setIsFocused] = useState(false);
+    const { colors } = useTheme();
+
+    // Use theme colors with fallbacks for focus/unfocus colors
+    const effectiveFocusColor = focusColor ?? colors.subject.kanji;
+    const effectiveUnfocusColor = unfocusColor ?? colors.border.medium;
 
     const handleFocus = useCallback(
       () => {
@@ -75,8 +81,19 @@ export const FocusableInput = forwardRef<TextInput, FocusableInputProps>(
       [],
     );
 
-    const borderColor = isFocused ? focusColor : unfocusColor;
+    const borderColor = isFocused ? effectiveFocusColor : effectiveUnfocusColor;
     const borderWidth = isFocused ? 3 : 2;
+
+    // Dynamic styles based on theme
+    const dynamicStyles = useMemo(
+      () => ({
+        input: {
+          backgroundColor: colors.background.input,
+          color: colors.text.primary,
+        },
+      }),
+      [colors],
+    );
 
     return (
       <View
@@ -84,7 +101,7 @@ export const FocusableInput = forwardRef<TextInput, FocusableInputProps>(
           styles.container,
           isFocused && showGlow && [
             styles.focusedContainer,
-            { shadowColor: focusColor },
+            { shadowColor: effectiveFocusColor },
           ],
           containerStyle,
         ]}
@@ -94,6 +111,7 @@ export const FocusableInput = forwardRef<TextInput, FocusableInputProps>(
           ref={ref}
           style={[
             styles.input,
+            dynamicStyles.input,
             {
               borderColor,
               borderWidth,
@@ -101,7 +119,7 @@ export const FocusableInput = forwardRef<TextInput, FocusableInputProps>(
           ]}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          placeholderTextColor={COLORS.text.placeholder}
+          placeholderTextColor={colors.text.placeholder}
           {...textInputProps}
         />
       </View>
@@ -129,7 +147,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     fontSize: FONT_SIZES.lg,
     textAlign: 'center',
-    backgroundColor: COLORS.background.input,
-    color: COLORS.text.primary,
+    // backgroundColor and color are now applied via dynamicStyles
   },
 });
