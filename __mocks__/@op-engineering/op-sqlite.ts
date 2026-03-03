@@ -256,6 +256,26 @@ function executeSqlImpl(
       if (table) {
         let rows = [...table.rows];
 
+        // Handle JOIN: filter rows where the join column exists in the joined table
+        const joinMatch = sql.match(
+          /JOIN\s+(\w+)\s+\w+\s+ON\s+\w+\.(\w+)\s*=\s*\w+\.(\w+)/i,
+        );
+        if (joinMatch) {
+          const joinTableName = joinMatch[1];
+          const mainCol = joinMatch[2];
+          const joinCol = joinMatch[3];
+          const joinTable = mockDatabase.tables[joinTableName];
+          if (joinTable) {
+            const joinValues = new Set(
+              joinTable.rows.map(r => r[joinCol]),
+            );
+            rows = rows.filter(r => joinValues.has(r[mainCol]));
+          } else {
+            // Joined table doesn't exist — no rows can match
+            rows = [];
+          }
+        }
+
         // Handle WHERE clause
         const whereCondition = parseWhereClause(sql, params);
         if (whereCondition) {
@@ -304,11 +324,14 @@ function executeSqlImpl(
           return createQueryResult([{ count: rows.length }]);
         }
 
-        // Handle MIN(column)
-        if (sql.match(/MIN\s*\(\s*(\w+)\s*\)/i)) {
-          const minMatch = sql.match(/MIN\s*\(\s*(\w+)\s*\)\s+as\s+(\w+)/i);
+        // Handle MIN(column) - supports table-aliased columns like a.available_at
+        if (sql.match(/MIN\s*\(\s*([\w.]+)\s*\)/i)) {
+          const minMatch = sql.match(/MIN\s*\(\s*([\w.]+)\s*\)\s+as\s+(\w+)/i);
           if (minMatch) {
-            const column = minMatch[1];
+            // Strip table alias (e.g., "a.available_at" -> "available_at")
+            const column = minMatch[1].includes('.')
+              ? minMatch[1].split('.')[1]
+              : minMatch[1];
             const alias = minMatch[2];
             const values = rows.map(r => r[column]).filter(v => v !== null) as (
               | string

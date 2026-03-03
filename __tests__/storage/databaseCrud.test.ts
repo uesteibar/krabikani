@@ -968,6 +968,56 @@ describe('Database CRUD Operations', () => {
         // Mock doesn't support complex WHERE clauses, so just verify the function runs
         expect(reviews).toBeDefined();
       });
+
+      it('should exclude assignments whose subject_id has no matching row in subjects', async () => {
+        const pastTime = new Date(Date.now() - 60000).toISOString();
+
+        // Subject 100 exists locally
+        __insertRow('subjects', {
+          id: 100,
+          object_type: 'kanji',
+          characters: '大',
+          meanings: '["big"]',
+          readings: '["たい"]',
+          meaning_mnemonic: 'test',
+          reading_mnemonic: null,
+          level: 1,
+          component_subject_ids: null,
+          character_images: null,
+          auxiliary_meanings: null,
+          data_updated_at: null,
+          created_at: '',
+        });
+
+        // Assignment with locally-synced subject (should be included)
+        __insertRow('assignments', {
+          id: 1,
+          subject_id: 100,
+          srs_stage: 5,
+          available_at: pastTime,
+          started_at: '2023-01-01T00:00:00.000Z',
+          unlocked_at: '2023-01-01T00:00:00.000Z',
+          data_updated_at: null,
+          created_at: '',
+        });
+
+        // Assignment without locally-synced subject (should be excluded)
+        __insertRow('assignments', {
+          id: 2,
+          subject_id: 999,
+          srs_stage: 5,
+          available_at: pastTime,
+          started_at: '2023-01-01T00:00:00.000Z',
+          unlocked_at: '2023-01-01T00:00:00.000Z',
+          data_updated_at: null,
+          created_at: '',
+        });
+
+        const reviews = await getAvailableReviews();
+
+        expect(reviews).toHaveLength(1);
+        expect(reviews[0].id).toBe(1);
+      });
     });
 
     describe('getAvailableLessons', () => {
