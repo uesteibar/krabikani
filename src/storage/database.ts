@@ -896,12 +896,13 @@ export async function getAssignmentBySubjectId(
 export async function getAvailableReviews(): Promise<DatabaseAssignment[]> {
   const now = new Date().toISOString();
   const result = await executeSql(
-    `SELECT * FROM assignments
-     WHERE available_at IS NOT NULL
-       AND available_at <= ?
-       AND started_at IS NOT NULL
-       AND srs_stage > 0
-     ORDER BY available_at`,
+    `SELECT a.* FROM assignments a
+     JOIN subjects s ON a.subject_id = s.id
+     WHERE a.available_at IS NOT NULL
+       AND a.available_at <= ?
+       AND a.started_at IS NOT NULL
+       AND a.srs_stage > 0
+     ORDER BY a.available_at`,
     [now],
   );
   return result.rows as unknown as DatabaseAssignment[];
@@ -917,12 +918,13 @@ export async function getNewReviewCountThisHour(): Promise<number> {
   hourStart.setMinutes(0, 0, 0);
 
   const result = await executeSql(
-    `SELECT COUNT(*) as count FROM assignments
-     WHERE available_at IS NOT NULL
-       AND available_at > ?
-       AND available_at <= ?
-       AND started_at IS NOT NULL
-       AND srs_stage > 0`,
+    `SELECT COUNT(*) as count FROM assignments a
+     JOIN subjects s ON a.subject_id = s.id
+     WHERE a.available_at IS NOT NULL
+       AND a.available_at > ?
+       AND a.available_at <= ?
+       AND a.started_at IS NOT NULL
+       AND a.srs_stage > 0`,
     [hourStart.toISOString(), now.toISOString()],
   );
   return (result.rows[0] as { count: number }).count;
@@ -1069,12 +1071,13 @@ export async function getReversePracticeItemCount(): Promise<number> {
 export async function getNextReviewTime(): Promise<string | null> {
   const now = new Date().toISOString();
   const result = await executeSql(
-    `SELECT MIN(available_at) as next_review
-     FROM assignments
-     WHERE available_at IS NOT NULL
-       AND available_at > ?
-       AND started_at IS NOT NULL
-       AND srs_stage > 0`,
+    `SELECT MIN(a.available_at) as next_review
+     FROM assignments a
+     JOIN subjects s ON a.subject_id = s.id
+     WHERE a.available_at IS NOT NULL
+       AND a.available_at > ?
+       AND a.started_at IS NOT NULL
+       AND a.srs_stage > 0`,
     [now],
   );
   const row = result.rows[0] as { next_review: string | null } | undefined;
@@ -1181,14 +1184,15 @@ export async function getUpcomingReviewsByHour(
   // Query assignments that become available within the time range
   // Only include started assignments (not lessons) with active SRS stages (1-8)
   const result = await executeSql(
-    `SELECT available_at
-     FROM assignments
-     WHERE available_at IS NOT NULL
-       AND available_at > ?
-       AND available_at < ?
-       AND started_at IS NOT NULL
-       AND srs_stage > 0
-       AND srs_stage < 9`,
+    `SELECT a.available_at
+     FROM assignments a
+     JOIN subjects s ON a.subject_id = s.id
+     WHERE a.available_at IS NOT NULL
+       AND a.available_at > ?
+       AND a.available_at < ?
+       AND a.started_at IS NOT NULL
+       AND a.srs_stage > 0
+       AND a.srs_stage < 9`,
     [now.toISOString(), endTime.toISOString()],
   );
 

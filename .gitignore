@@ -83,6 +83,7 @@ yarn-error.log
 # Ralph
 .ralph/worktrees/
 .ralph/state/
+.ralph/logs/
 
 # Ralph
 .ralph/workspaces/
