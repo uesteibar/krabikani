@@ -82,6 +82,8 @@ export {
   deleteAllSettings,
   // Learned counts
   getLearnedCount,
+  getLearnedKanjiCharacters,
+  getWaniKaniVocabCharacters,
   getKanjiPassedAtLevel,
   getTotalKanjiAtLevel,
   // Upcoming reviews
@@ -113,3 +115,10 @@ export {
   type KanjiUsingRadical,
   type DatabaseUserSynonym,
 } from './database';
+
+export {
+  getDictionaryDatabase,
+  closeDictionaryDatabase,
+  _resetDictionaryInstance as _resetDictionaryDatabaseInstance,
+  getIntuitionPracticeItems,
+} from './dictionary';

@@ -1127,6 +1127,42 @@ export async function getLearnedCount(
   return (result.rows[0] as { count: number }).count;
 }
 
+/**
+ * Returns the set of kanji characters the user has learned (srs_stage >= 5).
+ */
+export async function getLearnedKanjiCharacters(): Promise<Set<string>> {
+  const result = await executeSql(
+    `SELECT s.characters FROM subjects s
+     JOIN assignments a ON a.subject_id = s.id
+     WHERE s.object_type = 'kanji'
+       AND a.srs_stage >= 5
+       AND s.characters IS NOT NULL`,
+    [],
+  );
+  const kanji = new Set<string>();
+  for (const row of result.rows) {
+    kanji.add((row as { characters: string }).characters);
+  }
+  return kanji;
+}
+
+/**
+ * Returns the set of all WaniKani vocabulary characters (to exclude from intuition practice).
+ */
+export async function getWaniKaniVocabCharacters(): Promise<Set<string>> {
+  const result = await executeSql(
+    `SELECT characters FROM subjects
+     WHERE object_type IN ('vocabulary', 'kana_vocabulary')
+       AND characters IS NOT NULL`,
+    [],
+  );
+  const vocab = new Set<string>();
+  for (const row of result.rows) {
+    vocab.add((row as { characters: string }).characters);
+  }
+  return vocab;
+}
+
 export async function getKanjiPassedAtLevel(level: number): Promise<number> {
   const result = await executeSql(
     `SELECT COUNT(*) as count
