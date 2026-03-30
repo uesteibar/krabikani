@@ -1090,6 +1090,7 @@ describe('HomeScreen', () => {
       expect(getByTestId('search-button')).toBeTruthy();
       expect(getByTestId('practice-button')).toBeTruthy();
       expect(getByTestId('reverse-practice-button')).toBeTruthy();
+      expect(getByTestId('intuition-practice-button')).toBeTruthy();
       expect(getByTestId('settings-button')).toBeTruthy();
     });
 
