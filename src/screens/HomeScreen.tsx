@@ -582,6 +582,29 @@ export function HomeScreen() {
                 styles.outlineButton,
                 { borderColor: theme.colors.text.tertiary },
               ]}
+              onPress={() => navigation.navigate('IntuitionPractice')}
+              activeOpacity={0.6}
+              testID="intuition-practice-button"
+            >
+              <Text
+                style={[
+                  styles.outlineButtonText,
+                  { color: theme.colors.text.primary },
+                ]}
+              >
+                Intuition
+              </Text>
+              <MaterialDesignIcons
+                name="lightbulb-outline"
+                size={FONT_SIZES.xxl}
+                color={theme.colors.text.tertiary}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.outlineButton,
+                { borderColor: theme.colors.text.tertiary },
+              ]}
               onPress={() => navigation.navigate('Settings')}
               activeOpacity={0.6}
               testID="settings-button"

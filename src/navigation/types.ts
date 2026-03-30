@@ -11,6 +11,7 @@ export type RootStackParamList = {
   Reviews: undefined;
   Practice: undefined;
   ReversePractice: undefined;
+  IntuitionPractice: undefined;
   Search: undefined;
   ItemDetail: { subjectId: number };
   RadicalDetail: { subjectId: number };

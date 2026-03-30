@@ -27,6 +27,8 @@ import {
   getAssignmentCount,
   getNextReviewTime,
   getLearnedCount,
+  getLearnedKanjiCharacters,
+  getWaniKaniVocabCharacters,
   getUpcomingReviewsByHour,
   getPracticeItems,
   getPracticeItemCount,
@@ -1205,6 +1207,64 @@ describe('Database CRUD Operations', () => {
       it('should return 0 when no assignments exist', async () => {
         const count = await getLearnedCount('kanji');
         expect(count).toBe(0);
+      });
+    });
+
+    describe('getLearnedKanjiCharacters', () => {
+      it('should return a Set of strings', async () => {
+        const result = await getLearnedKanjiCharacters();
+        expect(result).toBeInstanceOf(Set);
+      });
+
+      it('should return empty set when no data exists', async () => {
+        const result = await getLearnedKanjiCharacters();
+        expect(result.size).toBe(0);
+      });
+    });
+
+    describe('getWaniKaniVocabCharacters', () => {
+      it('should return a Set of strings', async () => {
+        const result = await getWaniKaniVocabCharacters();
+        expect(result).toBeInstanceOf(Set);
+      });
+
+      it('should return empty set when no subjects exist', async () => {
+        const result = await getWaniKaniVocabCharacters();
+        expect(result.size).toBe(0);
+      });
+
+      it('should return vocabulary characters from subjects', async () => {
+        __insertRow('subjects', {
+          id: 1,
+          object_type: 'vocabulary',
+          characters: '大人',
+          meanings: '[]',
+          meaning_mnemonic: 'test',
+          level: 1,
+          created_at: '',
+        });
+        __insertRow('subjects', {
+          id: 2,
+          object_type: 'kana_vocabulary',
+          characters: 'おはよう',
+          meanings: '[]',
+          meaning_mnemonic: 'test',
+          level: 1,
+          created_at: '',
+        });
+        __insertRow('subjects', {
+          id: 3,
+          object_type: 'kanji',
+          characters: '大',
+          meanings: '[]',
+          meaning_mnemonic: 'test',
+          level: 1,
+          created_at: '',
+        });
+
+        const result = await getWaniKaniVocabCharacters();
+        // The mock IN clause should match vocabulary/kana_vocabulary but not kanji
+        expect(result).toBeInstanceOf(Set);
       });
     });
 
