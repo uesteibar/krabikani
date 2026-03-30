@@ -71,6 +71,7 @@ import {
   updateSyncStatus,
   insertPendingReview,
   insertPendingLesson,
+  saveVacationStartedAt,
 } from '../../src/storage/database';
 import type { RootStackParamList } from '../../src/navigation/types';
 
@@ -1040,6 +1041,99 @@ describe('HomeScreen', () => {
         const indicator = getByTestId('pending-sync-indicator');
         expect(indicator).toBeTruthy();
         expect(getByText('Will sync automatically when online')).toBeTruthy();
+      });
+    });
+  });
+
+  describe('vacation mode', () => {
+    it('shows VacationModeCallout when vacation status is set', async () => {
+      await saveVacationStartedAt('2026-03-15T10:00:00.000Z');
+
+      const { getByTestId, queryByTestId } = renderWithNavigation(
+        <HomeScreen />,
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('vacation-mode-callout')).toBeTruthy();
+      });
+
+      // Stats should be hidden
+      expect(queryByTestId('dashboard-stats')).toBeNull();
+    });
+
+    it('hides DashboardStats, LevelIndicator, LearnedCounts when on vacation', async () => {
+      await saveVacationStartedAt('2026-03-15T10:00:00.000Z');
+      await updateSyncStatus({ user_level: 5 });
+
+      const { getByTestId, queryByTestId } = renderWithNavigation(
+        <HomeScreen />,
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('vacation-mode-callout')).toBeTruthy();
+      });
+
+      expect(queryByTestId('dashboard-stats')).toBeNull();
+      expect(queryByTestId('level-indicator')).toBeNull();
+      expect(queryByTestId('learned-counts')).toBeNull();
+    });
+
+    it('keeps bottom navigation buttons visible during vacation mode', async () => {
+      await saveVacationStartedAt('2026-03-15T10:00:00.000Z');
+
+      const { getByTestId } = renderWithNavigation(<HomeScreen />);
+
+      await waitFor(() => {
+        expect(getByTestId('vacation-mode-callout')).toBeTruthy();
+      });
+
+      expect(getByTestId('search-button')).toBeTruthy();
+      expect(getByTestId('practice-button')).toBeTruthy();
+      expect(getByTestId('reverse-practice-button')).toBeTruthy();
+      expect(getByTestId('settings-button')).toBeTruthy();
+    });
+
+    it('shows normal dashboard when vacation status is null', async () => {
+      await saveVacationStartedAt(null);
+
+      const { getByTestId, queryByTestId } = renderWithNavigation(
+        <HomeScreen />,
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('dashboard-stats')).toBeTruthy();
+      });
+
+      expect(queryByTestId('vacation-mode-callout')).toBeNull();
+    });
+
+    it('updates vacation display on pull-to-refresh', async () => {
+      // Start without vacation mode
+      const { getByTestId, queryByTestId } = renderWithNavigation(
+        <HomeScreen />,
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('dashboard-stats')).toBeTruthy();
+      });
+
+      // Simulate vacation mode being set during sync
+      await saveVacationStartedAt('2026-03-20T08:00:00.000Z');
+
+      // Trigger a data reload (simulating what happens after pull-to-refresh sync completes)
+      const scrollView = getByTestId('home-scroll-view');
+      const refreshControl = scrollView.props.refreshControl;
+
+      await act(async () => {
+        // refreshData calls loadDashboardData after sync, but since we're offline
+        // by default in this test and the mock sync won't save vacation status,
+        // we directly call loadDashboardData by triggering a background sync complete
+        mockBackgroundSyncListeners.forEach(listener => listener());
+      });
+
+      await waitFor(() => {
+        expect(getByTestId('vacation-mode-callout')).toBeTruthy();
+        expect(queryByTestId('dashboard-stats')).toBeNull();
       });
     });
   });

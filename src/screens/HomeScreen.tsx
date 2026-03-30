@@ -37,6 +37,7 @@ import {
   UpcomingReviewsChart,
   SyncProgressBar,
   SyncErrorToast,
+  VacationModeCallout,
 } from '../components';
 import {
   COLORS,
@@ -62,6 +63,7 @@ import {
   getTotalKanjiAtLevel,
   getUpcomingReviewsByHour,
   getReviewsDoneToday,
+  getVacationStartedAt,
   type UpcomingReviewsHourBucket,
 } from '../storage';
 import {
@@ -174,6 +176,9 @@ export function HomeScreen() {
     useState<UpcomingReviewsData>({
       hourlyBuckets: [],
     });
+  const [vacationStartedAt, setVacationStartedAt] = useState<string | null>(
+    null,
+  );
   const [isBackgroundSyncing, setIsBackgroundSyncing] = useState(false);
   const [showSyncError, setShowSyncError] = useState(false);
   const isSyncingPending = useRef(false);
@@ -193,6 +198,7 @@ export function HomeScreen() {
         vocabularyLearned,
         upcomingReviews,
         reviewsDoneToday,
+        vacationStatus,
       ] = await Promise.all([
         getSyncStatus(),
         getSubjectCount(),
@@ -206,6 +212,7 @@ export function HomeScreen() {
         getLearnedCount('vocabulary'),
         getUpcomingReviewsByHour(12),
         getReviewsDoneToday(),
+        getVacationStartedAt(),
       ]);
 
       const lastSync =
@@ -240,6 +247,7 @@ export function HomeScreen() {
       setUpcomingReviewsData({
         hourlyBuckets: upcomingReviews,
       });
+      setVacationStartedAt(vacationStatus);
 
       // Push review data to Wear OS (fire-and-forget)
       sendReviewData(reviews.length, nextReviewTimeStr, reviewsDoneToday).catch(() => {});
@@ -465,30 +473,36 @@ export function HomeScreen() {
               testID="home-logo"
             />
           </Pressable>
-          <View style={styles.dashboardContainer}>
-            <DashboardStats
-              lessonsCount={dashboardData.lessonsCount}
-              reviewsCount={dashboardData.reviewsCount}
-              onLessonsPress={handleLessonsPress}
-              onReviewsPress={handleReviewsPress}
-            />
-            <LevelIndicator
-              level={userLevel}
-              kanjiPassed={kanjiProgress?.passed ?? null}
-              kanjiTotal={kanjiProgress?.total ?? null}
-            />
-            <LearnedCounts
-              kanjiCount={learnedData.kanjiLearned}
-              vocabularyCount={learnedData.vocabularyLearned}
-            />
-            {upcomingReviewsData.hourlyBuckets.length > 0 && (
-              <UpcomingReviewsChart
-                data={upcomingReviewsData.hourlyBuckets}
-                nextReviewAt={dashboardData.nextReviewAt}
-                currentPendingCount={dashboardData.reviewsCount}
+          {vacationStartedAt !== null ? (
+            <View style={styles.dashboardContainer}>
+              <VacationModeCallout />
+            </View>
+          ) : (
+            <View style={styles.dashboardContainer}>
+              <DashboardStats
+                lessonsCount={dashboardData.lessonsCount}
+                reviewsCount={dashboardData.reviewsCount}
+                onLessonsPress={handleLessonsPress}
+                onReviewsPress={handleReviewsPress}
               />
-            )}
-          </View>
+              <LevelIndicator
+                level={userLevel}
+                kanjiPassed={kanjiProgress?.passed ?? null}
+                kanjiTotal={kanjiProgress?.total ?? null}
+              />
+              <LearnedCounts
+                kanjiCount={learnedData.kanjiLearned}
+                vocabularyCount={learnedData.vocabularyLearned}
+              />
+              {upcomingReviewsData.hourlyBuckets.length > 0 && (
+                <UpcomingReviewsChart
+                  data={upcomingReviewsData.hourlyBuckets}
+                  nextReviewAt={dashboardData.nextReviewAt}
+                  currentPendingCount={dashboardData.reviewsCount}
+                />
+              )}
+            </View>
+          )}
           <PendingSyncIndicator
             pendingLessonsCount={pendingData.pendingLessonsCount}
             pendingReviewsCount={pendingData.pendingReviewsCount}
