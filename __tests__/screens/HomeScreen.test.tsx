@@ -1121,13 +1121,7 @@ describe('HomeScreen', () => {
       await saveVacationStartedAt('2026-03-20T08:00:00.000Z');
 
       // Trigger a data reload (simulating what happens after pull-to-refresh sync completes)
-      const scrollView = getByTestId('home-scroll-view');
-      const refreshControl = scrollView.props.refreshControl;
-
       await act(async () => {
-        // refreshData calls loadDashboardData after sync, but since we're offline
-        // by default in this test and the mock sync won't save vacation status,
-        // we directly call loadDashboardData by triggering a background sync complete
         mockBackgroundSyncListeners.forEach(listener => listener());
       });
 
