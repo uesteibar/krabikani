@@ -161,3 +161,8 @@ export {
   type SwipableCarouselProps,
   type SwipableCarouselRef,
 } from './SwipableCarousel';
+
+export {
+  VacationModeCallout,
+  type VacationModeCalloutProps,
+} from './VacationModeCallout';

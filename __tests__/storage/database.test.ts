@@ -28,7 +28,7 @@ describe('database', () => {
 
   describe('getDatabaseVersion', () => {
     it('should return the current database version', () => {
-      expect(getDatabaseVersion()).toBe(7);
+      expect(getDatabaseVersion()).toBe(8);
     });
   });
 

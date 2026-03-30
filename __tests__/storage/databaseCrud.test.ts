@@ -71,6 +71,8 @@ import {
   getSyncStatus,
   updateSyncStatus,
   resetSyncStatus,
+  getVacationStartedAt,
+  saveVacationStartedAt,
   // User Settings CRUD
   getSetting,
   setSetting,
@@ -2276,6 +2278,59 @@ describe('Database CRUD Operations', () => {
         expect(status?.last_assignments_sync).toBeNull();
         expect(status?.last_summary_sync).toBeNull();
       });
+
+      it('should reset vacation_started_at to null', async () => {
+        await updateSyncStatus({
+          vacation_started_at: '2023-06-01T00:00:00.000Z',
+        });
+
+        await resetSyncStatus();
+
+        const status = await getSyncStatus();
+        expect(status?.vacation_started_at).toBeNull();
+      });
+    });
+
+    describe('getVacationStartedAt', () => {
+      it('should return null when no vacation is set', async () => {
+        const result = await getVacationStartedAt();
+        expect(result).toBeNull();
+      });
+
+      it('should return the vacation started at timestamp', async () => {
+        await saveVacationStartedAt('2023-06-01T00:00:00.000Z');
+
+        const result = await getVacationStartedAt();
+        expect(result).toBe('2023-06-01T00:00:00.000Z');
+      });
+    });
+
+    describe('saveVacationStartedAt', () => {
+      it('should save a vacation started at timestamp', async () => {
+        await saveVacationStartedAt('2023-06-01T00:00:00.000Z');
+
+        const status = await getSyncStatus();
+        expect(status?.vacation_started_at).toBe('2023-06-01T00:00:00.000Z');
+      });
+
+      it('should clear vacation started at when set to null', async () => {
+        await saveVacationStartedAt('2023-06-01T00:00:00.000Z');
+        await saveVacationStartedAt(null);
+
+        const result = await getVacationStartedAt();
+        expect(result).toBeNull();
+      });
+    });
+
+    describe('updateSyncStatus with vacation_started_at', () => {
+      it('should update vacation_started_at', async () => {
+        await updateSyncStatus({
+          vacation_started_at: '2023-06-01T00:00:00.000Z',
+        });
+
+        const status = await getSyncStatus();
+        expect(status?.vacation_started_at).toBe('2023-06-01T00:00:00.000Z');
+      });
     });
   });
 
@@ -2523,8 +2578,8 @@ describe('Database CRUD Operations', () => {
 
         const result = await runMigrations();
 
-        // For fresh database, should set to DATABASE_VERSION (7)
-        expect(result.currentVersion).toBe(7);
+        // For fresh database, should set to DATABASE_VERSION (8)
+        expect(result.currentVersion).toBe(8);
         expect(result.applied).toEqual([]);
       });
 

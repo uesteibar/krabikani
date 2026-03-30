@@ -72,6 +72,8 @@ export {
   resetSyncStatus,
   getCachedUserLevel,
   saveCachedUserLevel,
+  getVacationStartedAt,
+  saveVacationStartedAt,
   // User Settings CRUD
   getSetting,
   setSetting,
