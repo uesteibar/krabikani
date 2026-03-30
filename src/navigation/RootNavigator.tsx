@@ -10,6 +10,7 @@ import { NotificationPermissionScreen } from '../screens/NotificationPermissionS
 import { RadicalDetailScreen } from '../screens/RadicalDetailScreen';
 import { PracticeScreen } from '../screens/PracticeScreen';
 import { ReversePracticeScreen } from '../screens/ReversePracticeScreen';
+import { IntuitionPracticeScreen } from '../screens/IntuitionPracticeScreen';
 import { ReviewsScreen } from '../screens/ReviewsScreen';
 import { SearchScreen } from '../screens/SearchScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
@@ -127,6 +128,11 @@ export function RootNavigator() {
         name="ReversePractice"
         component={ReversePracticeScreen}
         options={{ title: 'Reverse Practice' }}
+      />
+      <Stack.Screen
+        name="IntuitionPractice"
+        component={IntuitionPracticeScreen}
+        options={{ title: 'Intuition' }}
       />
       <Stack.Screen
         name="Search"
