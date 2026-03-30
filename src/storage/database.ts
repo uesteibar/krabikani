@@ -5,7 +5,7 @@ const DATABASE_NAME = 'wanikani.db';
 // DATABASE_VERSION should match the latest migration version.
 // Fresh databases are created with all schema changes included, so they
 // start at this version and skip migrations that are already in the schema.
-const DATABASE_VERSION = 7;
+const DATABASE_VERSION = 8;
 
 // Current database instance
 let db: DB | null = null;
@@ -241,6 +241,7 @@ export interface DatabaseSyncStatus {
   last_summary_sync: string | null;
   last_study_materials_sync: string | null;
   user_level: number | null;
+  vacation_started_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -1689,6 +1690,7 @@ export interface SyncStatusUpdate {
   last_summary_sync?: string | null;
   last_study_materials_sync?: string | null;
   user_level?: number | null;
+  vacation_started_at?: string | null;
 }
 
 /**
@@ -1721,6 +1723,10 @@ export async function updateSyncStatus(
     updates.push('user_level = ?');
     values.push(update.user_level);
   }
+  if (update.vacation_started_at !== undefined) {
+    updates.push('vacation_started_at = ?');
+    values.push(update.vacation_started_at);
+  }
 
   if (updates.length === 0) return;
 
@@ -1748,6 +1754,17 @@ export async function saveCachedUserLevel(level: number): Promise<void> {
   await updateSyncStatus({ user_level: level });
 }
 
+export async function getVacationStartedAt(): Promise<string | null> {
+  const status = await getSyncStatus();
+  return status?.vacation_started_at ?? null;
+}
+
+export async function saveVacationStartedAt(
+  value: string | null,
+): Promise<void> {
+  await updateSyncStatus({ vacation_started_at: value });
+}
+
 /**
  * Resets all sync timestamps and user level to null.
  */
@@ -1759,6 +1776,7 @@ export async function resetSyncStatus(): Promise<void> {
        last_summary_sync = NULL,
        last_study_materials_sync = NULL,
        user_level = NULL,
+       vacation_started_at = NULL,
        updated_at = CURRENT_TIMESTAMP
      WHERE id = 1`,
     [],
@@ -1923,6 +1941,11 @@ const MIGRATIONS: Migration[] = [
     description: 'Add auxiliary_meanings column to subjects table',
     up: ['ALTER TABLE subjects ADD COLUMN auxiliary_meanings TEXT'],
   },
+  {
+    version: 8,
+    description: 'Add vacation_started_at column to sync_status table',
+    up: ['ALTER TABLE sync_status ADD COLUMN vacation_started_at TEXT'],
+  },
 ];
 
 /**
@@ -2065,6 +2088,19 @@ async function ensureSchemaIntegrity(): Promise<void> {
     console.log('[Database] Adding missing auxiliary_meanings column');
     await executeSql(
       'ALTER TABLE subjects ADD COLUMN auxiliary_meanings TEXT',
+      [],
+    );
+  }
+
+  // Check and add vacation_started_at column to sync_status table
+  const hasVacationStartedAt = await columnExists(
+    'sync_status',
+    'vacation_started_at',
+  );
+  if (!hasVacationStartedAt) {
+    console.log('[Database] Adding missing vacation_started_at column');
+    await executeSql(
+      'ALTER TABLE sync_status ADD COLUMN vacation_started_at TEXT',
       [],
     );
   }
