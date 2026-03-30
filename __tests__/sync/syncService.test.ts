@@ -42,6 +42,7 @@ import {
   addUserSynonym,
   getUserSynonymsBySubjectId,
   upsertAssignment,
+  getVacationStartedAt,
 } from '../../src/storage/database';
 
 jest.mock('@op-engineering/op-sqlite');
@@ -638,6 +639,93 @@ describe('syncService', () => {
       });
 
       await expect(getUserLevel(client)).rejects.toThrow(WaniKaniApiError);
+    });
+
+    it('should save vacation_started_at when user is on vacation', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+      const vacationTimestamp = '2024-06-15T10:30:00.000000Z';
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          object: 'user',
+          url: 'https://api.wanikani.com/v2/user',
+          data_updated_at: '2024-01-01T00:00:00.000000Z',
+          data: {
+            id: '12345',
+            username: 'testuser',
+            level: 10,
+            profile_url: 'https://www.wanikani.com/users/testuser',
+            started_at: '2020-01-01T00:00:00.000000Z',
+            current_vacation_started_at: vacationTimestamp,
+            subscription: {
+              active: true,
+              type: 'lifetime',
+              max_level_granted: 60,
+              period_ends_at: null,
+            },
+            preferences: {
+              default_voice_actor_id: 1,
+              extra_study_autoplay_audio: false,
+              lessons_autoplay_audio: false,
+              lessons_batch_size: 5,
+              lessons_presentation_order: 'ascending_level_then_subject',
+              reviews_autoplay_audio: false,
+              reviews_display_srs_indicator: true,
+              reviews_presentation_order: 'shuffled',
+            },
+          },
+        }),
+      });
+
+      await getUserLevel(client);
+
+      const savedValue = await getVacationStartedAt();
+      expect(savedValue).toBe(vacationTimestamp);
+    });
+
+    it('should save null when user is not on vacation', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          object: 'user',
+          url: 'https://api.wanikani.com/v2/user',
+          data_updated_at: '2024-01-01T00:00:00.000000Z',
+          data: {
+            id: '12345',
+            username: 'testuser',
+            level: 10,
+            profile_url: 'https://www.wanikani.com/users/testuser',
+            started_at: '2020-01-01T00:00:00.000000Z',
+            current_vacation_started_at: null,
+            subscription: {
+              active: true,
+              type: 'lifetime',
+              max_level_granted: 60,
+              period_ends_at: null,
+            },
+            preferences: {
+              default_voice_actor_id: 1,
+              extra_study_autoplay_audio: false,
+              lessons_autoplay_audio: false,
+              lessons_batch_size: 5,
+              lessons_presentation_order: 'ascending_level_then_subject',
+              reviews_autoplay_audio: false,
+              reviews_display_srs_indicator: true,
+              reviews_presentation_order: 'shuffled',
+            },
+          },
+        }),
+      });
+
+      await getUserLevel(client);
+
+      const savedValue = await getVacationStartedAt();
+      expect(savedValue).toBeNull();
     });
   });
 

@@ -32,6 +32,7 @@ import {
   addUserSynonym,
   getUserSynonymsBySubjectId,
   deleteUserSynonym,
+  saveVacationStartedAt,
   type SubjectInput,
   type AssignmentInput,
   type PendingLessonInput,
@@ -406,6 +407,9 @@ export async function getUserLevel(client: WaniKaniClient): Promise<number> {
 
   // Cache the level for display on home screen
   await saveCachedUserLevel(level);
+
+  // Cache vacation status for offline access
+  await saveVacationStartedAt(user.data.current_vacation_started_at);
 
   return level;
 }

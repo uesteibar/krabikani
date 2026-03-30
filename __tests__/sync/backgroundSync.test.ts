@@ -29,6 +29,7 @@ jest.mock('../../src/storage/database', () => ({
   markSynonymSynced: jest.fn().mockResolvedValue(undefined),
   addUserSynonym: jest.fn().mockResolvedValue(1),
   getUserSynonymsBySubjectId: jest.fn().mockResolvedValue([]),
+  saveVacationStartedAt: jest.fn().mockResolvedValue(undefined),
 }));
 
 // Create a mock fetch for API tests
