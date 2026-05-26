@@ -416,6 +416,18 @@ export class WaniKaniClient {
   }
 
   /**
+   * Creates multiple reviews concurrently.
+   *
+   * The WaniKani API documents one review per POST, so this batches at the
+   * client boundary while preserving the official request shape.
+   */
+  async createReviews(
+    params: CreateReviewParams[],
+  ): Promise<CreateReviewResponse[]> {
+    return Promise.all(params.map(review => this.createReview(review)));
+  }
+
+  /**
    * Gets study materials with optional filters
    */
   async getStudyMaterials(params?: {

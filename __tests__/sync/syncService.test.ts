@@ -1654,6 +1654,55 @@ describe('syncService', () => {
       expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
+    it('should start all online review submissions before waiting for the first response', async () => {
+      const client = new WaniKaniClient('test-api-key', { maxRetries: 0 });
+      let resolveFirst: (value: Response) => void = () => {};
+      const firstResponse = new Promise<Response>(resolve => {
+        resolveFirst = resolve;
+      });
+
+      mockFetch
+        .mockReturnValueOnce(firstResponse)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => createMockReviewResponse(1001, 101, 2, 3),
+        });
+
+      const submitPromise = submitReviews(client, [
+        {
+          assignmentId: 100,
+          subjectId: 1,
+          incorrectMeaningAnswers: 1,
+          incorrectReadingAnswers: 0,
+          currentSrsStage: 1,
+        },
+        {
+          assignmentId: 101,
+          subjectId: 2,
+          incorrectMeaningAnswers: 0,
+          incorrectReadingAnswers: 1,
+          currentSrsStage: 2,
+        },
+      ]);
+
+      for (let i = 0; i < 20 && mockFetch.mock.calls.length === 0; i++) {
+        await Promise.resolve();
+      }
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+
+      resolveFirst({
+        ok: true,
+        status: 200,
+        json: async () => createMockReviewResponse(1000, 100, 1, 2),
+      } as Response);
+
+      const result = await submitPromise;
+      expect(result.success).toBe(true);
+      expect(result.submittedCount).toBe(2);
+    });
+
     it('should queue reviews when offline (client is null)', async () => {
       const result = await submitReviews(null, [
         {
