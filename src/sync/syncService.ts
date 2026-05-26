@@ -1015,18 +1015,26 @@ export async function submitReviews(
   }
 
   try {
-    for (let i = 0; i < reviews.length; i++) {
-      const review = reviews[i];
+    const reviewRequests = reviews.map(review => ({
+      assignment_id: review.assignmentId,
+      incorrect_meaning_answers: review.incorrectMeaningAnswers,
+      incorrect_reading_answers: review.incorrectReadingAnswers,
+    }));
 
-      // Call the WaniKani API to create the review
-      const response = await client.createReview({
-        assignment_id: review.assignmentId,
-        incorrect_meaning_answers: review.incorrectMeaningAnswers,
-        incorrect_reading_answers: review.incorrectReadingAnswers,
-      });
+    const results = await Promise.allSettled(
+      reviewRequests.map(review => client.createReview(review)),
+    );
+    const firstRejection = results.find(
+      (result): result is PromiseRejectedResult => result.status === 'rejected',
+    );
+
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        continue;
+      }
 
       // Overwrite optimistic values with authoritative server data
-      const updatedAssignment = response.resources_updated.assignment;
+      const updatedAssignment = result.value.resources_updated.assignment;
       await upsertAssignment({
         id: updatedAssignment.id,
         subject_id: updatedAssignment.data.subject_id,
@@ -1042,6 +1050,20 @@ export async function submitReviews(
     }
 
     await incrementReviewsDoneToday(submittedCount);
+
+    if (firstRejection !== undefined) {
+      const error = firstRejection.reason;
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Unknown error submitting reviews';
+      return {
+        success: false,
+        submittedCount,
+        queuedCount: 0,
+        error: errorMessage,
+      };
+    }
 
     return {
       success: true,

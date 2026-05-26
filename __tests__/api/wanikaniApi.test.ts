@@ -677,6 +677,50 @@ describe('wanikaniApi', () => {
       });
     });
 
+    describe('createReviews', () => {
+      it('should create multiple reviews without waiting for each response sequentially', async () => {
+        let resolveFirst: (value: Response) => void = () => {};
+        const firstResponse = new Promise<Response>(resolve => {
+          resolveFirst = resolve;
+        });
+
+        const secondResponse = {
+          ok: true,
+          status: 200,
+          json: async () => ({ id: 2 }),
+        } as Response;
+
+        mockFetch
+          .mockReturnValueOnce(firstResponse)
+          .mockResolvedValueOnce(secondResponse);
+
+        const reviewsPromise = client.createReviews([
+          {
+            assignment_id: 123,
+            incorrect_meaning_answers: 0,
+            incorrect_reading_answers: 1,
+          },
+          {
+            assignment_id: 124,
+            incorrect_meaning_answers: 2,
+            incorrect_reading_answers: 0,
+          },
+        ]);
+
+        await Promise.resolve();
+
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+
+        resolveFirst({
+          ok: true,
+          status: 200,
+          json: async () => ({ id: 1 }),
+        } as Response);
+
+        await expect(reviewsPromise).resolves.toEqual([{ id: 1 }, { id: 2 }]);
+      });
+    });
+
     describe('getStudyMaterials', () => {
       it('should fetch study materials without filters', async () => {
         const mockStudyMaterials = {
