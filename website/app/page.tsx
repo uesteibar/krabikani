@@ -80,7 +80,8 @@ export default function Home() {
             leaving your Android flow.
           </p>
           <div className="ctaRow">
-            <a className="button primary" href="#get-started">Get started</a>
+            <a className="button primary" href="https://github.com/uesteibar/krabikani/releases/download/latest/app-release.apk">Download APK</a>
+            <a className="button secondary" href="#get-started">How to set up</a>
             <a className="button secondary" href="https://github.com/uesteibar/krabikani">View source</a>
           </div>
           <p className="note">
@@ -144,11 +145,12 @@ export default function Home() {
           <p className="eyebrow">Get started</p>
           <h2 id="get-started-title">Bring your WaniKani API key.</h2>
           <p>
-            Install Krabikani, open Settings, paste a WaniKani personal access token, and the app
-            syncs your subjects, lessons, reviews, and assignments.
+            Download the latest APK, install Krabikani, open Settings, paste a WaniKani personal
+            access token, and the app syncs your subjects, lessons, reviews, and assignments.
           </p>
         </div>
         <ol>
+          <li><a href="https://github.com/uesteibar/krabikani/releases/download/latest/app-release.apk">Download the latest Android APK</a>.</li>
           <li>Generate a personal access token in WaniKani account settings.</li>
           <li>Paste it into Krabikani settings on Android.</li>
           <li>Sync once, then study from the dashboard even when you go offline.</li>

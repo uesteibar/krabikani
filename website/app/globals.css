@@ -338,6 +338,13 @@ h3 {
   margin-top: 1rem;
 }
 
+.getStarted a {
+  color: #ffc7ee;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
 .faq details {
   padding: 1.25rem 1.5rem;
 }
