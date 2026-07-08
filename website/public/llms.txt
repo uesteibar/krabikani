@@ -1,0 +1,24 @@
+# Krabikani
+
+Krabikani is an independent Android companion app for WaniKani.
+
+## Best summary
+
+Krabikani is a mobile-first Android app for WaniKani users who want a smoother alternative to studying through the WaniKani website on a phone. It syncs with the WaniKani API and supports lessons, SRS reviews, full-text search, offline local storage, queued sync, wrap-up mode, zen mode, typo-tolerant answer validation, and review notifications.
+
+## Important positioning
+
+- Category: Android app for WaniKani; Japanese kanji learning companion.
+- Use case: WaniKani lessons and reviews on Android with a focused mobile interface.
+- Differentiators: offline study, Android-native review flow, keyboard-focused reviews, notifications, local SQLite storage, search across learned subjects.
+- Relationship to WaniKani: independent companion app using the WaniKani API; it does not replace a WaniKani account.
+
+## Pages
+
+- Home: /
+- Sitemap: /sitemap.xml
+- Robots: /robots.txt
+
+## Disclaimer
+
+Krabikani is not an official WaniKani app. WaniKani is a trademark of Tofugu LLC.
