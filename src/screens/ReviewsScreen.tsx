@@ -30,6 +30,7 @@ import {
 import {
   getAvailableReviews,
   getSubjectsByIds,
+  getSetting,
   getApiKey,
   getUserSynonymsBySubjectId,
   type DatabaseAssignment,
@@ -37,6 +38,10 @@ import {
 } from '../storage';
 import { submitReviews, type ReviewToSubmit } from '../sync';
 import { isOnline, startSession, endSession } from '../utils';
+import {
+  limitReviewBatch,
+  normalizeReviewBatchSize,
+} from '../utils/reviewBatch';
 import {
   setBadgeCount,
   clearBadge,
@@ -177,6 +182,10 @@ export function ReviewsScreen() {
 
       // Get available reviews from local database
       const assignments = await getAvailableReviews();
+      const batchSetting = normalizeReviewBatchSize(
+        await getSetting('reviewBatchSize'),
+      );
+      const selectedAssignments = limitReviewBatch(assignments, batchSetting);
 
       if (assignments.length === 0) {
         setErrorMessage('No reviews right now. Check back later.');
@@ -185,14 +194,14 @@ export function ReviewsScreen() {
       }
 
       // Get subject data for the assignments
-      const subjectIds = assignments.map(a => a.subject_id);
+      const subjectIds = selectedAssignments.map(a => a.subject_id);
       const subjects = await getSubjectsByIds(subjectIds);
 
       // Create a map for quick lookup
       const subjectMap = new Map(subjects.map(s => [s.id, s]));
 
       // Filter assignments to only those with matching subjects
-      const validAssignments = assignments.filter(a =>
+      const validAssignments = selectedAssignments.filter(a =>
         subjectMap.has(a.subject_id),
       );
       const validSubjects = validAssignments.map(

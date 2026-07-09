@@ -38,6 +38,11 @@ import {
 } from '../services/notificationService';
 import { scheduleNextHourlyCheck } from '../services/reviewNotificationScheduler';
 import { addAppStateChangeListener } from '../utils/appStateSync';
+import {
+  DEFAULT_REVIEW_BATCH_SIZE,
+  normalizeReviewBatchSize,
+  type ReviewBatchSize,
+} from '../utils/reviewBatch';
 
 type SettingsScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -65,6 +70,9 @@ export function SettingsScreen() {
   const [notificationsEnabled, setNotificationsEnabledState] = useState(false);
   const [notificationPermissionGranted, setNotificationPermissionGranted] =
     useState(false);
+  const [reviewBatchSize, setReviewBatchSize] = useState<ReviewBatchSize>(
+    DEFAULT_REVIEW_BATCH_SIZE,
+  );
 
   const dynamicStyles = useMemo(
     () => ({
@@ -141,11 +149,13 @@ export function SettingsScreen() {
         storedKey,
         zenModeSetting,
         notificationsSetting,
+        reviewBatchSetting,
         permissionStatus,
       ] = await Promise.all([
         getApiKey(),
         getSetting('zenMode'),
         getNotificationsEnabled(),
+        getSetting('reviewBatchSize'),
         checkPermissions(),
       ]);
       if (storedKey) {
@@ -159,6 +169,7 @@ export function SettingsScreen() {
       }
       setZenModeEnabled(zenModeSetting === true);
       setNotificationsEnabledState(notificationsSetting);
+      setReviewBatchSize(normalizeReviewBatchSize(reviewBatchSetting));
       setNotificationPermissionGranted(permissionStatus === 'granted');
     } finally {
       setIsLoading(false);
@@ -250,6 +261,11 @@ export function SettingsScreen() {
   const handleZenModeToggle = useCallback(async (value: boolean) => {
     setZenModeEnabled(value);
     await setSetting('zenMode', value);
+  }, []);
+
+  const handleReviewBatchSizeChange = useCallback(async (value: ReviewBatchSize) => {
+    setReviewBatchSize(value);
+    await setSetting('reviewBatchSize', value);
   }, []);
 
   const handleNotificationsToggle = useCallback(async (value: boolean) => {
@@ -484,6 +500,27 @@ export function SettingsScreen() {
         <View style={[styles.sectionDivider, dynamicStyles.sectionDivider]} />
 
         <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Review Settings</Text>
+
+        <View style={styles.settingRow} testID="review-batch-size-setting">
+          <View style={styles.settingInfo}>
+            <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>Review Batch Size</Text>
+            <Text style={[styles.settingDescription, dynamicStyles.settingDescription]}>Reviews loaded at a time</Text>
+          </View>
+          <View style={styles.themeSegmentedControl} testID="review-batch-size-selector">
+            {([10, 25, 50, 'all'] as ReviewBatchSize[]).map(value => (
+              <TouchableOpacity
+                key={String(value)}
+                style={[styles.themeSegment, dynamicStyles.themeSegment, reviewBatchSize === value && dynamicStyles.themeSegmentActive]}
+                onPress={() => handleReviewBatchSizeChange(value)}
+                testID={`review-batch-size-${value}`}
+              >
+                <Text style={[styles.themeSegmentText, dynamicStyles.themeSegmentText, reviewBatchSize === value && dynamicStyles.themeSegmentActiveText]}>
+                  {value === 'all' ? 'All' : value}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
 
         <View style={styles.settingRow} testID="zen-mode-setting">
           <View style={styles.settingInfo}>
