@@ -1,12 +1,21 @@
 /**
  * Theme context for dark mode support.
- * Respects system color scheme preference.
+ * Respects system color scheme preference, with an optional in-app override.
  */
 
-import React, { createContext, useContext, useMemo, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useMemo,
+  useState,
+  useEffect,
+  useCallback,
+  ReactNode,
+} from 'react';
 import { useColorScheme } from 'react-native';
 
 import { COLORS, SUBJECT_COLORS, DASHBOARD_COLORS, PROGRESS_COLORS, SHADOW } from './colors';
+import { getSetting, setSetting } from '../storage/database';
 
 // ============================================
 // Dark Mode Color Overrides
@@ -84,6 +93,11 @@ const DARK_SHADOW = {
 // ============================================
 
 export type ColorScheme = 'light' | 'dark';
+
+/** User's theme preference: follow system, always light, or always dark. */
+export type ThemePreference = 'system' | 'light' | 'dark';
+
+const THEME_PREFERENCE_SETTING_KEY = 'themePreference';
 
 /** Semantic text colors */
 export interface TextColors {
@@ -167,6 +181,10 @@ export interface Theme {
   progressColors: typeof PROGRESS_COLORS;
   shadow: ShadowStyle;
   isDark: boolean;
+  /** The current user preference ('system' | 'light' | 'dark'). */
+  themePreference: ThemePreference;
+  /** Persist and apply a new theme preference immediately. */
+  setThemePreference: (pref: ThemePreference) => void;
 }
 
 // ============================================
@@ -177,17 +195,42 @@ const ThemeContext = createContext<Theme | null>(null);
 
 export interface ThemeProviderProps {
   children: ReactNode;
-  /** Force a specific color scheme (for testing) */
+  /** Force a specific color scheme (for testing). Overrides all preferences. */
   forcedColorScheme?: ColorScheme;
 }
 
 /**
  * ThemeProvider component that provides theme context to children.
- * Automatically detects system color scheme and provides appropriate colors.
+ * Loads the persisted themePreference on mount and merges with system scheme.
  */
 export function ThemeProvider({ children, forcedColorScheme }: ThemeProviderProps) {
   const systemColorScheme = useColorScheme();
-  const colorScheme: ColorScheme = forcedColorScheme ?? (systemColorScheme === 'dark' ? 'dark' : 'light');
+  const [themePreference, setThemePreferenceState] = useState<ThemePreference>('system');
+
+  // Load persisted preference on mount (skip when forcedColorScheme is set, e.g. in tests)
+  useEffect(() => {
+    if (forcedColorScheme != null) return;
+    getSetting(THEME_PREFERENCE_SETTING_KEY).then(value => {
+      if (value === 'light' || value === 'dark' || value === 'system') {
+        setThemePreferenceState(value);
+      }
+    });
+  }, [forcedColorScheme]);
+
+  const setThemePreference = useCallback((pref: ThemePreference) => {
+    setThemePreferenceState(pref);
+    setSetting(THEME_PREFERENCE_SETTING_KEY, pref);
+  }, []);
+
+  // Resolve effective color scheme:
+  // forcedColorScheme wins (tests), then user preference, then system.
+  const colorScheme: ColorScheme = useMemo(() => {
+    if (forcedColorScheme != null) return forcedColorScheme;
+    if (themePreference === 'light') return 'light';
+    if (themePreference === 'dark') return 'dark';
+    return systemColorScheme === 'dark' ? 'dark' : 'light';
+  }, [forcedColorScheme, themePreference, systemColorScheme]);
+
   const isDark = colorScheme === 'dark';
 
   const theme: Theme = useMemo(() => {
@@ -213,8 +256,10 @@ export function ThemeProvider({ children, forcedColorScheme }: ThemeProviderProp
       progressColors: PROGRESS_COLORS,
       shadow,
       isDark,
+      themePreference,
+      setThemePreference,
     };
-  }, [colorScheme, isDark]);
+  }, [colorScheme, isDark, themePreference, setThemePreference]);
 
   return (
     <ThemeContext.Provider value={theme}>

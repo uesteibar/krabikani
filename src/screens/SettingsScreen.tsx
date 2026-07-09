@@ -24,8 +24,9 @@ import {
   setSetting,
 } from '../storage';
 import { getUserLevel, syncSubjects, syncAssignments } from '../sync';
-import { COLORS, SPACING, FONT_SIZES } from '../theme';
+import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../theme';
 import { useTheme } from '../theme/ThemeContext';
+import type { ThemePreference } from '../theme/ThemeContext';
 import {
   checkPermissions,
   hasAskedForPermissions,
@@ -52,7 +53,7 @@ export type SettingsScreenState =
 
 export function SettingsScreen() {
   const navigation = useNavigation<SettingsScreenNavigationProp>();
-  const { colors } = useTheme();
+  const { colors, themePreference, setThemePreference } = useTheme();
   const [apiKey, setApiKey] = useState('');
   const [hasStoredKey, setHasStoredKey] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -110,6 +111,19 @@ export function SettingsScreen() {
       },
       settingDescriptionDisabled: {
         color: colors.text.tertiary,
+      },
+      themeSegment: {
+        borderColor: colors.border.medium,
+        backgroundColor: colors.background.input,
+      },
+      themeSegmentActive: {
+        backgroundColor: COLORS.subject.vocabulary,
+      },
+      themeSegmentText: {
+        color: colors.text.secondary,
+      },
+      themeSegmentActiveText: {
+        color: COLORS.neutral.white,
       },
     }),
     [colors],
@@ -432,6 +446,43 @@ export function SettingsScreen() {
 
         <View style={[styles.sectionDivider, dynamicStyles.sectionDivider]} />
 
+        <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Appearance</Text>
+
+        <View style={styles.settingRow} testID="appearance-setting">
+          <View style={styles.settingInfo}>
+            <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>Theme</Text>
+            <Text style={[styles.settingDescription, dynamicStyles.settingDescription]}>
+              Choose light, dark, or follow system
+            </Text>
+          </View>
+          <View style={styles.themeSegmentedControl} testID="theme-segmented-control">
+            {(['system', 'light', 'dark'] as ThemePreference[]).map(pref => (
+              <TouchableOpacity
+                key={pref}
+                style={[
+                  styles.themeSegment,
+                  dynamicStyles.themeSegment,
+                  themePreference === pref && dynamicStyles.themeSegmentActive,
+                ]}
+                onPress={() => setThemePreference(pref)}
+                testID={`theme-option-${pref}`}
+              >
+                <Text
+                  style={[
+                    styles.themeSegmentText,
+                    dynamicStyles.themeSegmentText,
+                    themePreference === pref && dynamicStyles.themeSegmentActiveText,
+                  ]}
+                >
+                  {pref.charAt(0).toUpperCase() + pref.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={[styles.sectionDivider, dynamicStyles.sectionDivider]} />
+
         <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Review Settings</Text>
 
         <View style={styles.settingRow} testID="zen-mode-setting">
@@ -601,5 +652,19 @@ const styles = StyleSheet.create({
   settingDescriptionDisabled: {
     fontSize: FONT_SIZES.sm,
     fontStyle: 'italic',
+  },
+  themeSegmentedControl: {
+    flexDirection: 'row',
+    borderRadius: BORDER_RADIUS.md,
+    overflow: 'hidden',
+  },
+  themeSegment: {
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    borderWidth: 1,
+  },
+  themeSegmentText: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '500',
   },
 });

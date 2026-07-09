@@ -3,6 +3,18 @@ import { render, fireEvent } from '@testing-library/react-native';
 import { Text, View } from 'react-native';
 
 import { ExpandableDetails } from '../../src/components/ExpandableDetails';
+import { ThemeProvider } from '../../src/theme';
+
+function renderWithTheme(ui: React.ReactElement) {
+  return render(ui, {
+    wrapper: ({ children }) => (
+      <ThemeProvider forcedColorScheme="light">{children}</ThemeProvider>
+    ),
+  });
+}
+
+
+
 
 describe('ExpandableDetails', () => {
   const TestContent = () => (
@@ -13,7 +25,7 @@ describe('ExpandableDetails', () => {
 
   describe('rendering', () => {
     it('should render the component', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ExpandableDetails>
           <TestContent />
         </ExpandableDetails>,
@@ -23,7 +35,7 @@ describe('ExpandableDetails', () => {
     });
 
     it('should render with custom testID', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ExpandableDetails testID="custom-expandable">
           <TestContent />
         </ExpandableDetails>,
@@ -33,7 +45,7 @@ describe('ExpandableDetails', () => {
     });
 
     it('should render the toggle button', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ExpandableDetails>
           <TestContent />
         </ExpandableDetails>,
@@ -43,7 +55,7 @@ describe('ExpandableDetails', () => {
     });
 
     it('should render the chevron', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ExpandableDetails>
           <TestContent />
         </ExpandableDetails>,
@@ -53,7 +65,7 @@ describe('ExpandableDetails', () => {
     });
 
     it('should render the content container', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ExpandableDetails>
           <TestContent />
         </ExpandableDetails>,
@@ -65,7 +77,7 @@ describe('ExpandableDetails', () => {
 
   describe('toggle text', () => {
     it('should show "Show full details" when collapsed', () => {
-      const { getByText } = render(
+      const { getByText } = renderWithTheme(
         <ExpandableDetails>
           <TestContent />
         </ExpandableDetails>,
@@ -75,7 +87,7 @@ describe('ExpandableDetails', () => {
     });
 
     it('should show "Hide details" when expanded', () => {
-      const { getByText, getByTestId } = render(
+      const { getByText, getByTestId } = renderWithTheme(
         <ExpandableDetails>
           <TestContent />
         </ExpandableDetails>,
@@ -91,7 +103,7 @@ describe('ExpandableDetails', () => {
     });
 
     it('should toggle back to "Show full details" when collapsed again', () => {
-      const { getByText, getByTestId } = render(
+      const { getByText, getByTestId } = renderWithTheme(
         <ExpandableDetails>
           <TestContent />
         </ExpandableDetails>,
@@ -109,7 +121,7 @@ describe('ExpandableDetails', () => {
 
   describe('toggle behavior', () => {
     it('should start collapsed by default', () => {
-      const { getByText } = render(
+      const { getByText } = renderWithTheme(
         <ExpandableDetails>
           <TestContent />
         </ExpandableDetails>,
@@ -120,7 +132,7 @@ describe('ExpandableDetails', () => {
     });
 
     it('should expand when toggle is pressed', () => {
-      const { getByText, getByTestId } = render(
+      const { getByText, getByTestId } = renderWithTheme(
         <ExpandableDetails>
           <TestContent />
         </ExpandableDetails>,
@@ -133,7 +145,7 @@ describe('ExpandableDetails', () => {
     });
 
     it('should collapse when toggle is pressed again', () => {
-      const { getByText, getByTestId } = render(
+      const { getByText, getByTestId } = renderWithTheme(
         <ExpandableDetails>
           <TestContent />
         </ExpandableDetails>,
@@ -151,7 +163,7 @@ describe('ExpandableDetails', () => {
 
   describe('resetKey behavior', () => {
     it('should reset to collapsed state when resetKey changes', () => {
-      const { getByText, getByTestId, rerender } = render(
+      const { getByText, getByTestId, rerender } = renderWithTheme(
         <ExpandableDetails resetKey="key-1">
           <TestContent />
         </ExpandableDetails>,
@@ -173,7 +185,7 @@ describe('ExpandableDetails', () => {
     });
 
     it('should stay expanded when resetKey stays the same', () => {
-      const { getByText, getByTestId, rerender } = render(
+      const { getByText, getByTestId, rerender } = renderWithTheme(
         <ExpandableDetails resetKey="key-1">
           <TestContent />
         </ExpandableDetails>,
@@ -197,7 +209,7 @@ describe('ExpandableDetails', () => {
 
   describe('children rendering', () => {
     it('should render children content', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ExpandableDetails>
           <TestContent />
         </ExpandableDetails>,
@@ -207,7 +219,7 @@ describe('ExpandableDetails', () => {
     });
 
     it('should render multiple children', () => {
-      const { getByText } = render(
+      const { getByText } = renderWithTheme(
         <ExpandableDetails>
           <Text>First child</Text>
           <Text>Second child</Text>
@@ -221,7 +233,7 @@ describe('ExpandableDetails', () => {
 
   describe('testID variants', () => {
     it('should use custom testID prefix for toggle', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ExpandableDetails testID="my-details">
           <TestContent />
         </ExpandableDetails>,
@@ -231,7 +243,7 @@ describe('ExpandableDetails', () => {
     });
 
     it('should use custom testID prefix for chevron', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ExpandableDetails testID="my-details">
           <TestContent />
         </ExpandableDetails>,
@@ -241,7 +253,7 @@ describe('ExpandableDetails', () => {
     });
 
     it('should use custom testID prefix for content', () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithTheme(
         <ExpandableDetails testID="my-details">
           <TestContent />
         </ExpandableDetails>,

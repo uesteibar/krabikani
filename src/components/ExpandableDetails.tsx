@@ -14,7 +14,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
-import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../theme';
+import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS, useTheme } from '../theme';
 
 export interface ExpandableDetailsProps {
   /** Unique key to reset expanded state (e.g., item ID or question key) */
@@ -104,16 +104,18 @@ export function ExpandableDetails({
     };
   });
 
+  const { colors } = useTheme();
+
   return (
     <View style={styles.container} testID={testID ?? 'expandable-details'}>
       {/* Toggle button */}
       <TouchableOpacity
-        style={styles.toggleButton}
+        style={[styles.toggleButton, { backgroundColor: colors.background.secondary }]}
         onPress={handleToggle}
         activeOpacity={0.7}
         testID={testID ? `${testID}-toggle` : 'expandable-details-toggle'}
       >
-        <Text style={styles.toggleText}>
+        <Text style={[styles.toggleText, { color: colors.text.secondary }]}>
           {isExpanded ? 'Hide details' : 'Show full details'}
         </Text>
         <Animated.View
@@ -123,7 +125,7 @@ export function ExpandableDetails({
           <MaterialDesignIcons
             name="chevron-down"
             size={FONT_SIZES.base}
-            color={COLORS.text.secondary}
+            color={colors.text.secondary}
           />
         </Animated.View>
       </TouchableOpacity>
@@ -152,7 +154,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.md,
-    backgroundColor: COLORS.background.secondary,
     borderRadius: BORDER_RADIUS.md,
     gap: SPACING.xs,
   },

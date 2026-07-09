@@ -20,6 +20,7 @@ import {
   FONT_SIZES,
   BORDER_RADIUS,
   getSubjectColor,
+  useTheme,
 } from '../theme';
 
 type ItemDetailScreenNavigationProp = NativeStackNavigationProp<
@@ -74,6 +75,7 @@ export function ItemDetailScreen() {
   const navigation = useNavigation<ItemDetailScreenNavigationProp>();
   const route = useRoute<ItemDetailScreenRouteProp>();
   const { subjectId } = route.params;
+  const { colors } = useTheme();
 
   const [phase, setPhase] = useState<DetailPhase>('loading');
   const [data, setData] = useState<ItemDetailData | null>(null);
@@ -173,9 +175,9 @@ export function ItemDetailScreen() {
   // Loading state
   if (phase === 'loading') {
     return (
-      <View style={styles.centerContainer} testID="item-detail-loading">
-        <ActivityIndicator size="large" color={COLORS.text.primary} />
-        <Text style={styles.loadingText}>Loading...</Text>
+      <View style={[styles.centerContainer, { backgroundColor: colors.background.primary }]} testID="item-detail-loading">
+        <ActivityIndicator size="large" color={colors.text.primary} />
+        <Text style={[styles.loadingText, { color: colors.text.secondary }]}>Loading...</Text>
       </View>
     );
   }
@@ -183,14 +185,14 @@ export function ItemDetailScreen() {
   // Error state
   if (phase === 'error' || !data) {
     return (
-      <View style={styles.centerContainer} testID="item-detail-error">
+      <View style={[styles.centerContainer, { backgroundColor: colors.background.primary }]} testID="item-detail-error">
         <Text style={styles.errorText}>{errorMessage ?? 'An error occurred'}</Text>
         <TouchableOpacity
-          style={styles.backButton}
+          style={[styles.backButton, { backgroundColor: colors.neutral.gray200 }]}
           onPress={handleGoBack}
           testID="item-detail-back-button"
         >
-          <Text style={styles.backButtonText}>Go Back</Text>
+          <Text style={[styles.backButtonText, { color: colors.text.primary }]}>Go Back</Text>
         </TouchableOpacity>
       </View>
     );
@@ -201,7 +203,7 @@ export function ItemDetailScreen() {
   const primaryMeaning = meanings.find(m => m.primary)?.meaning ?? meanings[0]?.meaning ?? '';
 
   return (
-    <ScrollView style={styles.container} testID="item-detail-screen">
+    <ScrollView style={[styles.container, { backgroundColor: colors.background.primary }]} testID="item-detail-screen">
       {/* Header with character and subject type */}
       <View style={[styles.header, { backgroundColor: subjectColor }]} testID="item-detail-header">
         {subject.characters ? (
@@ -242,14 +244,12 @@ export function ItemDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background.primary,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: SPACING.xl,
-    backgroundColor: COLORS.background.primary,
   },
   loadingText: {
     marginTop: SPACING.md,
@@ -265,12 +265,10 @@ const styles = StyleSheet.create({
   backButton: {
     paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.md,
-    backgroundColor: COLORS.neutral.gray200,
     borderRadius: BORDER_RADIUS.md,
   },
   backButtonText: {
     fontSize: FONT_SIZES.base,
-    color: COLORS.text.primary,
     fontWeight: '600',
   },
   header: {

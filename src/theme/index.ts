@@ -28,6 +28,7 @@ export {
 
 export type {
   ColorScheme,
+  ThemePreference,
   ThemeColors,
   Theme,
   ThemeProviderProps,

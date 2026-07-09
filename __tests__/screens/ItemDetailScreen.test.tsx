@@ -7,6 +7,7 @@ import { ItemDetailScreen } from '../../src/screens/ItemDetailScreen';
 import * as database from '../../src/storage/database';
 import type { RootStackParamList } from '../../src/navigation/types';
 import type { DatabaseSubject } from '../../src/storage/database';
+import { ThemeProvider } from '../../src/theme';
 
 jest.mock('../../src/storage/database');
 
@@ -16,15 +17,17 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function renderWithNavigation(subjectId: number) {
   return render(
-    <NavigationContainer>
-      <Stack.Navigator>
-        <Stack.Screen
-          name="ItemDetail"
-          component={ItemDetailScreen}
-          initialParams={{ subjectId }}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>,
+    <ThemeProvider forcedColorScheme="light">
+      <NavigationContainer>
+        <Stack.Navigator>
+          <Stack.Screen
+            name="ItemDetail"
+            component={ItemDetailScreen}
+            initialParams={{ subjectId }}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </ThemeProvider>,
   );
 }
 

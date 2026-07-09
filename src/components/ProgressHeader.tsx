@@ -7,6 +7,7 @@ import {
   SPACING,
   FONT_SIZES,
   BORDER_RADIUS,
+  useTheme,
 } from '../theme';
 
 type ProgressModeProps = {
@@ -37,28 +38,35 @@ export type ProgressHeaderProps =
   | NoneModeProps;
 
 export function ProgressHeader(props: ProgressHeaderProps) {
+  const { colors } = useTheme();
+
   if (props.mode === 'none') {
     return null;
   }
 
+  const bannerStyle = {
+    backgroundColor: colors.background.secondary,
+    borderBottomColor: colors.border.light,
+  };
+
   if (props.mode === 'zen') {
     return (
-      <View style={styles.modeBanner} testID="progress-header-zen">
-        <MaterialDesignIcons name="meditation" size={FONT_SIZES.base} />
-        <Text style={styles.modeBannerText}>Zen Mode</Text>
+      <View style={[styles.modeBanner, bannerStyle]} testID="progress-header-zen">
+        <MaterialDesignIcons name="meditation" size={FONT_SIZES.base} color={colors.text.secondary} />
+        <Text style={[styles.modeBannerText, { color: colors.text.secondary }]}>Zen Mode</Text>
       </View>
     );
   }
 
   if (props.mode === 'practice') {
     return (
-      <View style={styles.modeBanner} testID="progress-header-practice">
+      <View style={[styles.modeBanner, bannerStyle]} testID="progress-header-practice">
         <MaterialDesignIcons
           name={props.icon}
           size={FONT_SIZES.base}
-          color={COLORS.text.tertiary}
+          color={colors.text.tertiary}
         />
-        <Text style={styles.practiceBannerText}>{props.phrase}</Text>
+        <Text style={[styles.practiceBannerText, { color: colors.text.secondary }]}>{props.phrase}</Text>
       </View>
     );
   }
@@ -69,9 +77,9 @@ export function ProgressHeader(props: ProgressHeaderProps) {
   const remaining = total - current;
 
   return (
-    <View style={styles.progressContainer} testID="progress-header-progress">
+    <View style={[styles.progressContainer, bannerStyle]} testID="progress-header-progress">
       <View style={styles.progressTextRow}>
-        <Text style={styles.progressText} testID="progress-header-count">
+        <Text style={[styles.progressText, { color: colors.text.secondary }]} testID="progress-header-count">
           {current} / {total}
         </Text>
         {isWrappingUp ? (
@@ -79,7 +87,7 @@ export function ProgressHeader(props: ProgressHeaderProps) {
             Wrapping up: {wrapUpRemaining} remaining
           </Text>
         ) : (
-          <Text style={styles.remainingText} testID="progress-header-remaining">
+          <Text style={[styles.remainingText, { color: colors.text.tertiary }]} testID="progress-header-remaining">
             {remaining} remaining
           </Text>
         )}
@@ -103,9 +111,7 @@ const styles = StyleSheet.create({
     height: 50,
     justifyContent: 'center',
     paddingHorizontal: SPACING.lg,
-    backgroundColor: COLORS.background.secondary,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border.light,
   },
   progressTextRow: {
     flexDirection: 'row',
@@ -115,12 +121,10 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.text.secondary,
     fontWeight: '500',
   },
   remainingText: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.text.tertiary,
   },
   wrapUpText: {
     fontSize: FONT_SIZES.sm,
@@ -147,18 +151,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: SPACING.sm,
-    backgroundColor: COLORS.background.secondary,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border.light,
   },
   modeBannerText: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.text.secondary,
     fontWeight: '600',
   },
   practiceBannerText: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.text.secondary,
     fontWeight: '600',
     fontStyle: 'italic',
   },

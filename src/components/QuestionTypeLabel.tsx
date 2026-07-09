@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { COLORS, FONT_SIZES, SPACING } from '../theme';
+import { COLORS, FONT_SIZES, SPACING, useTheme } from '../theme';
 
 export type QuestionTypeLabelType = 'meaning' | 'reading' | 'kanji';
 
@@ -19,18 +19,24 @@ export const QuestionTypeLabel: React.FC<QuestionTypeLabelProps> = ({
   type,
   testID,
 }) => {
+  const { colors } = useTheme();
   const isReading = type === 'reading';
 
   return (
     <View
       style={[
         styles.container,
-        isReading ? styles.containerReading : styles.containerDefault,
+        isReading
+          ? styles.containerReading
+          : { backgroundColor: colors.background.primary },
       ]}
       testID="question-type-label-container"
     >
       <Text
-        style={[styles.label, isReading && styles.labelReading]}
+        style={[
+          styles.label,
+          { color: isReading ? COLORS.text.inverse : colors.text.tertiary },
+        ]}
         testID={testID}
       >
         {LABEL_MAP[type]}
@@ -45,19 +51,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     alignItems: 'center' as const,
   },
-  containerDefault: {
-    backgroundColor: COLORS.neutral.white,
-  },
   containerReading: {
     backgroundColor: COLORS.neutral.black,
   },
   label: {
     fontSize: FONT_SIZES.sm,
     fontWeight: '700',
-    color: COLORS.text.tertiary,
     letterSpacing: 2,
-  },
-  labelReading: {
-    color: COLORS.text.inverse,
   },
 });
