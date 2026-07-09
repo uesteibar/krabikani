@@ -210,7 +210,7 @@ export function ThemeProvider({ children, forcedColorScheme }: ThemeProviderProp
   // Load persisted preference on mount (skip when forcedColorScheme is set, e.g. in tests)
   useEffect(() => {
     if (forcedColorScheme != null) return;
-    getSetting(THEME_PREFERENCE_SETTING_KEY).then(value => {
+    Promise.resolve(getSetting(THEME_PREFERENCE_SETTING_KEY)).then(value => {
       if (value === 'light' || value === 'dark' || value === 'system') {
         setThemePreferenceState(value);
       }

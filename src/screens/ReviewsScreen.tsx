@@ -183,7 +183,9 @@ export function ReviewsScreen() {
       // Get available reviews from local database
       const assignments = await getAvailableReviews();
       const batchSetting = normalizeReviewBatchSize(
-        await getSetting('reviewBatchSize'),
+        typeof getSetting === 'function'
+          ? await getSetting('reviewBatchSize')
+          : null,
       );
       const selectedAssignments = limitReviewBatch(assignments, batchSetting);
 
