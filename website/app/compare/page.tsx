@@ -123,7 +123,19 @@ export default function Compare() {
 
       <section className="section" style={{ paddingTop: '2rem' }}>
         <h2>Quick comparison</h2>
-        <div className="comparisonList" style={{ marginTop: '1.5rem' }}>
+        <div style={{
+          marginTop: '1.5rem',
+          border: '1px solid var(--border)',
+          borderRadius: '1.5rem',
+          overflow: 'hidden',
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr',
+        }}>
+          <div style={{ padding: '1rem 0.75rem', color: 'var(--muted)', fontSize: '0.85rem', fontWeight: 600 }}></div>
+          <div style={{ padding: '1rem 0.75rem', fontWeight: 800, fontSize: '0.9rem', textAlign: 'center' }}>Smouldering Durtles</div>
+          <div style={{ padding: '1rem 0.75rem', fontWeight: 800, fontSize: '0.9rem', textAlign: 'center', color: '#ffc7ee' }}>Krabikani</div>
+          <div style={{ padding: '1rem 0.75rem', fontWeight: 800, fontSize: '0.9rem', textAlign: 'center' }}>Mina</div>
+          <div style={{ padding: '1rem 0.75rem', fontWeight: 800, fontSize: '0.9rem', textAlign: 'center' }}>Hakubun</div>
           {[
             ['Open source', 'No', 'Yes', 'No', 'No'],
             ['Offline study', 'Yes', 'Yes', 'Partial', 'Partial'],
@@ -134,21 +146,51 @@ export default function Compare() {
             ['Play Store', 'Yes', 'No', 'Yes', 'No'],
             ['Direct APK', 'No', 'Yes', 'No', 'Yes'],
             ['Cross-platform', 'No', 'No', 'No', 'Yes'],
-          ].map(([feature, smouldering, krabikani, mina, hakubun]) => (
-            <div className="comparisonItem" key={feature}>
-              <strong>{feature}</strong>
-              <span style={{ display: 'flex', gap: '2rem' }}>
-                <span>{smouldering}</span>
-                <span>{krabikani}</span>
-                <span>{mina}</span>
-                <span>{hakubun}</span>
-              </span>
-            </div>
+          ].map(([feature, smouldering, krabikani, mina, hakubun], i) => (
+            <>
+              <div style={{
+                padding: '0.75rem',
+                fontWeight: 600,
+                fontSize: '0.9rem',
+                borderTop: '1px solid var(--border)',
+                background: i % 2 === 1 ? 'rgba(255,255,255,0.03)' : 'transparent',
+              }}>{feature}</div>
+              <div style={{
+                padding: '0.75rem',
+                textAlign: 'center',
+                color: 'var(--muted)',
+                fontSize: '0.9rem',
+                borderTop: '1px solid var(--border)',
+                background: i % 2 === 1 ? 'rgba(255,255,255,0.03)' : 'transparent',
+              }}>{smouldering}</div>
+              <div style={{
+                padding: '0.75rem',
+                textAlign: 'center',
+                color: '#ffc7ee',
+                fontWeight: 500,
+                fontSize: '0.9rem',
+                borderTop: '1px solid var(--border)',
+                background: i % 2 === 1 ? 'rgba(255,255,255,0.03)' : 'transparent',
+              }}>{krabikani}</div>
+              <div style={{
+                padding: '0.75rem',
+                textAlign: 'center',
+                color: 'var(--muted)',
+                fontSize: '0.9rem',
+                borderTop: '1px solid var(--border)',
+                background: i % 2 === 1 ? 'rgba(255,255,255,0.03)' : 'transparent',
+              }}>{mina}</div>
+              <div style={{
+                padding: '0.75rem',
+                textAlign: 'center',
+                color: 'var(--muted)',
+                fontSize: '0.9rem',
+                borderTop: '1px solid var(--border)',
+                background: i % 2 === 1 ? 'rgba(255,255,255,0.03)' : 'transparent',
+              }}>{hakubun}</div>
+            </>
           ))}
         </div>
-        <p className="note" style={{ marginTop: '1rem' }}>
-          Smouldering Durtles · Krabikani · Mina · Hakubun
-        </p>
       </section>
 
       <section className="section" style={{ paddingTop: '2rem' }}>
