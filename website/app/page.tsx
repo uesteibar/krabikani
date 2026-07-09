@@ -80,7 +80,14 @@ export default function Home() {
             leaving your Android flow.
           </p>
           <div className="ctaRow">
-            <a className="button primary" href="https://github.com/uesteibar/krabikani/releases/download/latest/app-release.apk">Download APK</a>
+            <a
+              className="button primary"
+              href="https://github.com/uesteibar/krabikani/releases/download/latest/app-release.apk"
+              data-rybbit-event="download_apk_clicked"
+              data-rybbit-prop-location="hero"
+            >
+              Download APK
+            </a>
             <a className="button secondary" href="#get-started">How to set up</a>
             <a className="button secondary" href="https://github.com/uesteibar/krabikani">View source</a>
           </div>
@@ -150,7 +157,16 @@ export default function Home() {
           </p>
         </div>
         <ol>
-          <li><a href="https://github.com/uesteibar/krabikani/releases/download/latest/app-release.apk">Download the latest Android APK</a>.</li>
+          <li>
+            <a
+              href="https://github.com/uesteibar/krabikani/releases/download/latest/app-release.apk"
+              data-rybbit-event="download_apk_clicked"
+              data-rybbit-prop-location="get_started"
+            >
+              Download the latest Android APK
+            </a>
+            .
+          </li>
           <li>Generate a personal access token in WaniKani account settings.</li>
           <li>Paste it into Krabikani settings on Android.</li>
           <li>Sync once, then study from the dashboard even when you go offline.</li>
