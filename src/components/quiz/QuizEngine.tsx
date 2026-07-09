@@ -12,7 +12,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Animated,
-  requireNativeComponent,
   type TextInput as TextInputType,
 } from 'react-native';
 
@@ -36,17 +35,6 @@ import { useShakeAnimation } from '../../hooks/useShakeAnimation';
 import { useAutoFocus } from '../../hooks/useAutoFocus';
 import { useQuestionInput } from '../../hooks/useQuestionInput';
 import { validateInput, validateAnswer } from './answerValidation';
-import { getSetting } from '../../storage';
-import { getAnswerKeyboardType } from '../../utils/keyboardConfig';
-import { normalizePreferKanaKeyboard } from '../../utils/kanaKeyboard';
-
-const KanaHintTextInput = Platform.OS === 'android'
-  ? requireNativeComponent<TextInputProps>('KanaHintTextInput')
-  : TextInput;
-
-type TextInputProps = React.ComponentProps<typeof TextInput> & {
-  hintJapaneseKeyboard?: boolean;
-};
 import type { Question, QuizEngineConfig, AnswerResult } from './types';
 
 interface IncorrectFeedbackState {
@@ -109,11 +97,6 @@ export function QuizEngine({ config }: QuizEngineProps) {
   const [questionQueue, setQuestionQueue] =
     useState<Question[]>(initialQuestions);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [preferKanaKeyboard, setPreferKanaKeyboard] = useState(true);
-
-  useEffect(() => {
-    getSetting('preferKanaKeyboard').then(value => setPreferKanaKeyboard(normalizePreferKanaKeyboard(value)));
-  }, []);
 
   // Track completed question IDs (for allQuestions completion mode)
   const [completedQuestionIds, setCompletedQuestionIds] = useState<Set<string>>(
@@ -597,7 +580,7 @@ export function QuizEngine({ config }: QuizEngineProps) {
         style={[styles.inputContainer, shakeStyle]}
         testID={`${testID}-input-container`}
       >
-        <KanaHintTextInput
+        <TextInput
           ref={inputRef}
           style={[styles.input, dynamicStyles.input, { borderColor: backgroundColor }]}
           value={inputDisplayText}
@@ -609,8 +592,11 @@ export function QuizEngine({ config }: QuizEngineProps) {
           autoCapitalize="none"
           autoCorrect={false}
           autoComplete="off"
-          keyboardType={getAnswerKeyboardType(currentQuestion.questionType, preferKanaKeyboard)}
-          hintJapaneseKeyboard={currentQuestion.questionType === 'reading' && preferKanaKeyboard}
+          keyboardType={
+            currentQuestion.questionType === 'reading'
+              ? 'ascii-capable'
+              : 'default'
+          }
           returnKeyType="done"
           blurOnSubmit={false}
           caretHidden={true}

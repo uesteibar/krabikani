@@ -25,7 +25,6 @@ import {
 } from '../storage';
 import { getUserLevel, syncSubjects, syncAssignments } from '../sync';
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../theme';
-import { normalizePreferKanaKeyboard } from '../utils/kanaKeyboard';
 import { useTheme } from '../theme/ThemeContext';
 import type { ThemePreference } from '../theme/ThemeContext';
 import {
@@ -71,7 +70,6 @@ export function SettingsScreen() {
   const [notificationsEnabled, setNotificationsEnabledState] = useState(false);
   const [notificationPermissionGranted, setNotificationPermissionGranted] =
     useState(false);
-  const [preferKanaKeyboard, setPreferKanaKeyboard] = useState(true);
   const [reviewBatchSize, setReviewBatchSize] = useState<ReviewBatchSize>(
     DEFAULT_REVIEW_BATCH_SIZE,
   );
@@ -152,14 +150,12 @@ export function SettingsScreen() {
         zenModeSetting,
         notificationsSetting,
         reviewBatchSetting,
-        preferKanaKeyboardSetting,
         permissionStatus,
       ] = await Promise.all([
         getApiKey(),
         getSetting('zenMode'),
         getNotificationsEnabled(),
         getSetting('reviewBatchSize'),
-        getSetting('preferKanaKeyboard'),
         checkPermissions(),
       ]);
       if (storedKey) {
@@ -174,7 +170,6 @@ export function SettingsScreen() {
       setZenModeEnabled(zenModeSetting === true);
       setNotificationsEnabledState(notificationsSetting);
       setReviewBatchSize(normalizeReviewBatchSize(reviewBatchSetting));
-      setPreferKanaKeyboard(normalizePreferKanaKeyboard(preferKanaKeyboardSetting));
       setNotificationPermissionGranted(permissionStatus === 'granted');
     } finally {
       setIsLoading(false);
@@ -266,11 +261,6 @@ export function SettingsScreen() {
   const handleZenModeToggle = useCallback(async (value: boolean) => {
     setZenModeEnabled(value);
     await setSetting('zenMode', value);
-  }, []);
-
-  const handlePreferKanaKeyboardToggle = useCallback(async (value: boolean) => {
-    setPreferKanaKeyboard(value);
-    await setSetting('preferKanaKeyboard', value);
   }, []);
 
   const handleReviewBatchSizeChange = useCallback(async (value: ReviewBatchSize) => {
@@ -530,14 +520,6 @@ export function SettingsScreen() {
               </TouchableOpacity>
             ))}
           </View>
-        </View>
-
-        <View style={styles.settingRow} testID="prefer-kana-keyboard-setting">
-          <View style={styles.settingInfo}>
-            <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>Prefer Japanese keyboard</Text>
-            <Text style={[styles.settingDescription, dynamicStyles.settingDescription]}>Hint Japanese keyboard for reading answers</Text>
-          </View>
-          <Switch value={preferKanaKeyboard} onValueChange={handlePreferKanaKeyboardToggle} trackColor={switchTrackColor} thumbColor={COLORS.neutral.white} testID="prefer-kana-keyboard-toggle" />
         </View>
 
         <View style={styles.settingRow} testID="zen-mode-setting">
