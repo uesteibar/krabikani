@@ -20,6 +20,7 @@ import type {
   KanjiReading,
   AuxiliaryMeaning,
 } from '../api/types';
+import { hasReadingQuestion } from '../utils/subjectHelpers';
 import type {
   ReviewItem,
   ReviewComponentRadical,
@@ -124,7 +125,8 @@ function generatePracticeQuestions(items: ReviewItem[]): PracticeQuestion[] {
   for (const item of shuffledItems) {
     const meaningFirst = Math.random() < 0.5;
 
-    if (item.subjectType === 'radical') {
+    if (!hasReadingQuestion(item.subjectType)) {
+      // Radicals and kana vocabulary only have meaning questions
       questions.push({
         item,
         type: 'meaning',

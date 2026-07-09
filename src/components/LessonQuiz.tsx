@@ -23,6 +23,7 @@ import {
   SPACING,
   FONT_SIZES,
 } from '../theme';
+import { hasReadingQuestion } from '../utils/subjectHelpers';
 import { ExpandableDetails } from './ExpandableDetails';
 import { ItemDetails } from './ItemDetails';
 import { QuizEngine } from './quiz/QuizEngine';
@@ -137,8 +138,8 @@ export function generateQuizQuestions(items: QuizItem[]): QuizQuestion[] {
       key: `${item.id}-meaning`,
     });
 
-    // Non-radicals also have a reading question
-    if (item.subjectType !== 'radical') {
+    // Items with readings (kanji and regular vocabulary) also have a reading question
+    if (hasReadingQuestion(item.subjectType)) {
       questions.push({
         item,
         type: 'reading',

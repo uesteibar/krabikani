@@ -24,6 +24,7 @@ import {
   insertPendingSynonym,
   getSetting,
 } from '../storage/database';
+import { hasReadingQuestion } from '../utils/subjectHelpers';
 import {
   COLORS,
   BORDER_RADIUS,
@@ -182,7 +183,8 @@ export function generateReviewQuestions(items: ReviewItem[]): ReviewQuestion[] {
   for (const item of shuffledItems) {
     const meaningFirst = Math.random() < 0.5;
 
-    if (item.subjectType === 'radical') {
+    if (!hasReadingQuestion(item.subjectType)) {
+      // Radicals and kana vocabulary only have meaning questions
       questions.push({
         item,
         type: 'meaning',
@@ -300,7 +302,7 @@ export function ReviewSession({
     for (const item of items) {
       progress.set(item.id, {
         meaningCorrect: false,
-        readingCorrect: item.subjectType === 'radical',
+        readingCorrect: !hasReadingQuestion(item.subjectType),
         incorrectMeaningAnswers: 0,
         incorrectReadingAnswers: 0,
       });
@@ -372,7 +374,7 @@ export function ReviewSession({
     for (const item of items) {
       newProgress.set(item.id, {
         meaningCorrect: false,
-        readingCorrect: item.subjectType === 'radical',
+        readingCorrect: !hasReadingQuestion(item.subjectType),
         incorrectMeaningAnswers: 0,
         incorrectReadingAnswers: 0,
       });

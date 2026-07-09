@@ -223,15 +223,13 @@ describe('ReviewSession', () => {
       expect(types).toContain('reading');
     });
 
-    it('should generate two questions for kana_vocabulary (meaning and reading)', () => {
+    it('should generate only meaning question for kana_vocabulary (no reading)', () => {
       (Math.random as jest.Mock).mockReturnValue(0.1);
 
       const questions = generateReviewQuestions([sampleKanaVocabulary]);
 
-      expect(questions.length).toBe(2);
-      const types = questions.map(q => q.type);
-      expect(types).toContain('meaning');
-      expect(types).toContain('reading');
+      expect(questions.length).toBe(1);
+      expect(questions[0].type).toBe('meaning');
     });
 
     it('should generate correct total questions for mixed items', () => {
@@ -239,8 +237,8 @@ describe('ReviewSession', () => {
 
       const questions = generateReviewQuestions(fiveItems);
 
-      // 2 radicals (1 question each) + 3 non-radicals (2 questions each) = 8 questions
-      expect(questions.length).toBe(8);
+      // 2 radicals (1 each) + 1 kanji (2) + 1 vocabulary (2) + 1 kana_vocabulary (1) = 7 questions
+      expect(questions.length).toBe(7);
     });
 
     it('should have unique keys for each question', () => {
@@ -2707,6 +2705,60 @@ describe('ReviewSession', () => {
       expect(
         queryByTestId('review-session-item-details-components'),
       ).toBeNull();
+    });
+
+    it('kana_vocabulary does not generate reading question and accepts correct meaning', () => {
+      const kanaVocab: ReviewItem = {
+        id: 400,
+        assignmentId: 4000,
+        subjectType: 'kana_vocabulary',
+        srsStage: 1,
+        characters: 'する',
+        meanings: createMeanings([{ meaning: 'To Do', primary: true }]),
+        readings: createReadings([{ reading: 'する', primary: true }]),
+        meaningMnemonic: 'Mnemonic for to do',
+        readingMnemonic: null,
+        componentKanji: [],
+      };
+
+      const onAnswer = jest.fn();
+      const onSessionComplete = jest.fn();
+      const { getByTestId } = renderWithTheme(
+        <ReviewSession
+          items={[kanaVocab]}
+          onAnswer={onAnswer}
+          onSessionComplete={onSessionComplete}
+          autoAdvanceDelay={100}
+        />,
+      );
+
+      // Should only have a meaning question
+      const questionType = getByTestId('review-session-question-type');
+      expect(questionType.props.children).toBe('MEANING');
+
+      // Submit correct meaning answer
+      const input = getByTestId('review-session-input');
+      fireEvent.changeText(input, 'to do');
+      fireEvent(input, 'submitEditing');
+
+      act(() => {
+        jest.advanceTimersByTime(100);
+      });
+
+      // Should auto-advance and show completion screen (no more questions for kana_vocabulary)
+      expect(getByTestId('review-completion')).toBeTruthy();
+
+      // Should have called onSessionComplete with correct progress
+      expect(onSessionComplete).toHaveBeenCalledWith(expect.any(Map));
+      const progressMap = onSessionComplete.mock.calls[0][0];
+      expect(progressMap.get(400)).toEqual(
+        expect.objectContaining({
+          meaningCorrect: true,
+          readingCorrect: true, // Always true for kana_vocabulary (no reading question)
+          incorrectMeaningAnswers: 0,
+          incorrectReadingAnswers: 0,
+        }),
+      );
     });
   });
 

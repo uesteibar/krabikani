@@ -210,21 +210,19 @@ describe('LessonQuiz', () => {
       expect(types).toContain('reading');
     });
 
-    it('generates both meaning and reading questions for kana_vocabulary', () => {
+    it('generates only meaning question for kana_vocabulary (no reading)', () => {
       const items = [sampleKanaVocabulary];
       const questions = generateQuizQuestions(items);
 
-      expect(questions.length).toBe(2);
-      const types = questions.map(q => q.type);
-      expect(types).toContain('meaning');
-      expect(types).toContain('reading');
+      expect(questions.length).toBe(1);
+      expect(questions[0].type).toBe('meaning');
     });
 
     it('generates correct total questions for mixed items', () => {
-      // 2 radicals (1 question each) + 3 non-radicals (2 questions each) = 8 questions
+      // 2 radicals (1 each) + 1 kanji (2) + 1 vocabulary (2) + 1 kana_vocabulary (1) = 7 questions
       const questions = generateQuizQuestions(fiveItems);
 
-      expect(questions.length).toBe(8);
+      expect(questions.length).toBe(7);
     });
 
     it('assigns unique keys to each question', () => {
@@ -249,8 +247,8 @@ describe('LessonQuiz', () => {
     });
 
     it('shuffles the quiz questions (not always in item order)', () => {
-      // With 5 items producing 8 questions, the chance of a shuffle
-      // returning the exact original order is 1/8! = 1/40320.
+      // With 5 items producing 7 questions, the chance of a shuffle
+      // returning the exact original order is 1/7! = 1/5040.
       // Running 5 trials makes a false-negative astronomically unlikely.
       const items = fiveItems;
       const unshuffledKeys = [
@@ -259,8 +257,7 @@ describe('LessonQuiz', () => {
         `${items[1].id}-reading`,
         `${items[2].id}-meaning`,
         `${items[2].id}-reading`,
-        `${items[3].id}-meaning`,
-        `${items[3].id}-reading`,
+        `${items[3].id}-meaning`, // kana_vocabulary - only meaning
         `${items[4].id}-meaning`,
       ];
 
@@ -1204,9 +1201,9 @@ describe('LessonQuiz', () => {
     it('generates correct question count for full batch', () => {
       const { getByText } = renderWithTheme(<LessonQuiz {...defaultProps} />);
 
-      // 5 items: 2 radicals (1 each) + 3 non-radicals (2 each) = 8 questions
-      // ProgressHeader shows "1 / 8"
-      expect(getByText(/1 \/ 8/)).toBeTruthy();
+      // 2 radicals (1 each) + 1 kanji (2) + 1 vocabulary (2) + 1 kana_vocabulary (1) = 7 questions
+      // ProgressHeader shows "1 / 7"
+      expect(getByText(/1 \/ 7/)).toBeTruthy();
     });
   });
 

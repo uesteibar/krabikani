@@ -88,3 +88,5 @@ yarn-error.log
 
 # Ralph
 .ralph/workspaces/
+
+.pi-subagents/
