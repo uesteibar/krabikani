@@ -65,7 +65,7 @@ export default function Home() {
         </div>
         <div className="navLinks">
           <a href="#features">Features</a>
-          <a href="#screenshots">Screenshots</a>
+          <a href="/compare">Compare</a>
           <a href="#faq">FAQ</a>
         </div>
       </nav>
