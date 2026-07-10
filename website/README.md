@@ -1,6 +1,6 @@
 # Krabikani website
 
-Next.js landing page for Krabikani, optimized for searches like “WaniKani Android app” and “Android app for WaniKani”.
+Next.js landing page for Krabikani, optimized for searches related to independent third-party Android companions for WaniKani users.
 
 ## Local development
 

@@ -8,14 +8,14 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://unai-dogfood-krabik
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: 'Krabikani — Android app for WaniKani reviews and lessons',
+    default: 'Krabikani — Independent third-party companion for WaniKani users',
     template: '%s | Krabikani',
   },
   description:
     'Krabikani is a fast Android companion app for WaniKani with offline study, review flow, lessons, search, notifications, and a focused mobile interface.',
   keywords: [
-    'WaniKani Android app',
-    'Android app for WaniKani',
+    'independent third-party Android companion for WaniKani users',
+    'independent third-party app for WaniKani users',
     'WaniKani mobile app',
     'WaniKani alternative',
     'WaniKani reviews Android',
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     canonical: '/',
   },
   openGraph: {
-    title: 'Krabikani — Android app for WaniKani',
+    title: 'Krabikani — Independent third-party companion for WaniKani users',
     description:
       'A mobile-first WaniKani companion for Android, built for focused reviews, lessons, search, and offline study.',
     url: '/',
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
         url: '/images/og.png',
         width: 1200,
         height: 630,
-        alt: 'Krabikani Android app for WaniKani',
+        alt: 'Krabikani independent third-party Android companion for WaniKani users',
       },
     ],
     locale: 'en_US',
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Krabikani — Android app for WaniKani',
+    title: 'Krabikani — Independent third-party companion for WaniKani users',
     description:
       'A mobile-first WaniKani companion for Android, built for focused reviews, lessons, search, and offline study.',
     images: ['/images/og.png'],

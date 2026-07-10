@@ -3,14 +3,14 @@ import { CrabLogo } from '../CrabLogo';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'Best WaniKani Android Apps Compared',
+  title: 'Best Third-Party Android Companions for WaniKani Compared',
   description:
-    'An honest look at WaniKani Android companion apps: Smouldering Durtles, Krabikani, Mina, and Hakubun. Offline support, notifications, open source, and which one fits your study style.',
+    'An honest look at independent third-party Android companion apps for WaniKani users: Smouldering Durtles, Krabikani, Mina, and Hakubun. Offline support, notifications, open source, and which one fits your study style.',
   alternates: {
     canonical: '/compare',
   },
   openGraph: {
-    title: 'Best WaniKani Android Apps for WaniKani Reviews',
+    title: 'Best Third-Party Android Companions for WaniKani Reviews',
     description:
       'Compare Smouldering Durtles, Krabikani, Mina, and Hakubun for offline study, notifications, and review flow on Android.',
     url: '/compare',
@@ -112,8 +112,8 @@ export default function Compare() {
       </nav>
 
       <section className="section">
-        <p className="eyebrow">WaniKani Android apps</p>
-        <h1>Which WaniKani Android app should you use?</h1>
+        <p className="eyebrow">Independent third-party Android companion apps</p>
+        <h1>Which third-party Android companion should you use?</h1>
         <p className="lede">
           If you study kanji with WaniKani on your phone, the mobile website works but a dedicated
           Android app can feel faster, work offline, and send you notifications when reviews pile up.

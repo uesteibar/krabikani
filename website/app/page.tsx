@@ -72,8 +72,8 @@ export default function Home() {
 
       <section id="top" className="hero section">
         <div className="heroText">
-          <p className="eyebrow">Android app for WaniKani</p>
-          <h1>A WaniKani Android app for focused reviews.</h1>
+          <p className="eyebrow">Third-party app for WaniKani users</p>
+          <h1>An independent third-party Android companion for focused reviews.</h1>
           <p className="lede">
             Krabikani syncs with WaniKani and gives you a mobile-first alternative to using
             the web version on your phone: lessons, reviews, search, and offline study without
@@ -104,7 +104,7 @@ export default function Home() {
       <section className="section intro" aria-labelledby="why-title">
         <div>
           <p className="eyebrow">Why Krabikani?</p>
-          <h2 id="why-title">A WaniKani Android app for people who actually review on their phone.</h2>
+          <h2 id="why-title">An independent third-party Android companion for people who actually review on their phone.</h2>
         </div>
         <p>
           The official WaniKani website is great, but mobile browser study is not always the smoothest
