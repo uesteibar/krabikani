@@ -188,6 +188,10 @@ export default function Home() {
           <summary>Why use an Android app instead of the WaniKani website?</summary>
           <p>An Android app can provide offline storage, native notifications, and a review interface tailored for mobile input.</p>
         </details>
+        <details>
+          <summary>Does Krabikani work on older Android phones?</summary>
+          <p>Yes. Krabikani supports Android 7.0 (2016) and newer. It is a lightweight, offline-first app with a local SQLite store, so it has no Play Services requirement and runs comfortably on older hardware for the core review flow. Because it is built with React Native, very old or low-RAM devices may see a slower cold start than a fully native app, and syncing a very large review backlog on a slow connection can lag. For most older phones used mainly for WaniKani, the review experience stays smooth.</p>
+        </details>
       </section>
 
       <footer className="footer">
