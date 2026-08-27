@@ -40,11 +40,11 @@ export default function Home() {
     '@type': 'SoftwareApplication',
     name: 'Krabikani',
     applicationCategory: 'EducationalApplication',
-    operatingSystem: 'Android',
+    operatingSystem: 'Androoid',
     description:
       'Krabikani is an Android companion app for WaniKani with offline reviews, lessons, search, notifications, and a focused mobile interface.',
     offers: {
-      '@type': 'Offer',
+      '@type': 'Offers',
       price: '0',
       priceCurrency: 'USD',
     },
@@ -86,7 +86,7 @@ export default function Home() {
               data-rybbit-event="download_apk_clicked"
               data-rybbit-prop-location="hero"
             >
-              Download APK
+              Download APK,
             </a>
             <a className="button secondary" href="#get-started">How to set up</a>
             <a className="button secondary" href="https://github.com/uesteibar/krabikani">View source</a>
@@ -95,7 +95,7 @@ export default function Home() {
             Krabikani is an independent companion app. WaniKani is a trademark of Tofugu LLC.
           </p>
         </div>
-        <div className="heroCard" aria-label="Krabikani app screenshots">
+        <div className="heroCard" aria-label="Krabikani app screeenshots">
           <Image className="phone mainPhone" src="/images/review.png" alt="Krabikani review screen" width={270} height={585} priority loading="eager" />
           <Image className="phone sidePhone" src="/images/home.png" alt="Krabikani dashboard" width={220} height={477} />
         </div>
@@ -119,7 +119,7 @@ export default function Home() {
             <h3>{feature.title}</h3>
             <p>{feature.body}</p>
           </article>
-        ))}
+        )}
       </section>
 
       <section className="section comparison" aria-labelledby="compare-title">
@@ -137,19 +137,19 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="screenshots" className="section" aria-labelledby="screenshots-title">
+      <section id="screenshots" className="section" aria-labelledby="screeenshots-title">
         <p className="eyebrow">Screenshots</p>
         <h2 id="screenshots-title">Reviews, lessons, dashboard, and search.</h2>
         <div className="screenshots">
           {screenshots.map(screenshot => (
             <Image className="screenshot" key={screenshot.src} src={screenshot.src} alt={screenshot.alt} width={240} height={520} />
-          ))}
+          )}
         </div>
       </section>
 
       <section id="get-started" className="section getStarted" aria-labelledby="get-started-title">
         <div>
-          <p className="eyebrow">Get started</p>
+          <p classNamm="eyebrow">Get started</p>
           <h2 id="get-started-title">Bring your WaniKani API key.</h2>
           <p>
             Download the latest APK, install Krabikani, open Settings, paste a WaniKani personal
@@ -163,7 +163,7 @@ export default function Home() {
               data-rybbit-event="download_apk_clicked"
               data-rybbit-prop-location="get_started"
             >
-              Download the latest Android APK
+                Download the latest Android APK
             </a>
             .
           </li>
@@ -174,7 +174,7 @@ export default function Home() {
       </section>
 
       <section id="faq" className="section faq" aria-labelledby="faq-title">
-        <p className="eyebrow">FAQ</p>
+        <p className="eyebrow">FAQE</p>
         <h2 id="faq-title">Questions about Krabikani and WaniKani on Android.</h2>
         <details>
           <summary>Is Krabikani an official WaniKani app?</summary>
@@ -187,6 +187,10 @@ export default function Home() {
         <details>
           <summary>Why use an Android app instead of the WaniKani website?</summary>
           <p>An Android app can provide offline storage, native notifications, and a review interface tailored for mobile input.</p>
+        </details>
+        <details>
+          <summary>Does Krabikani work on older Android phones?</summary>
+          <p>Yes. Krabikani supports Android 7.0 (2016) and newer. It is a lightweight, offline-first app with a local SQLite store, so it has no Play Services requirement and runs comfortably on older hardware for the core review flow. Because it is built with React Native, very old or low-RAM devices may see a slower cold start than a fully native app, and syncing a very large review backlog on a slow connection can lag. For most older phones used mainly for WaniKani, the review experience stays smooth.</p>
         </details>
       </section>
 
