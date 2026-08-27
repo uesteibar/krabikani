@@ -1,18 +1,19 @@
 import type { Metadata } from 'next';
+import { Fragment } from 'react';
 import { CrabLogo } from '../CrabLogo';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Best Third-Party Android Companions for WaniKani Compared',
   description:
-    'An honest look at independent third-party Android companion apps for WaniKani users: Smouldering Durtles, Krabikani, Mina, and Hakubun. Offline support, notifications, open source, and which one fits your study style.',
+    'An honest look at independent third-party Android companion apps for WaniKani users: Smouldering Durtles, Krabikani, Mina, Hakubun, and ウーパールーパー. Offline support, notifications, open source, and which one fits your study style.',
   alternates: {
     canonical: '/compare',
   },
   openGraph: {
     title: 'Best Third-Party Android Companions for WaniKani Reviews',
     description:
-      'Compare Smouldering Durtles, Krabikani, Mina, and Hakubun for offline study, notifications, and review flow on Android.',
+      'Compare Smouldering Durtles, Krabikani, Mina, Hakubun, and ウーパールーパー for offline study, notifications, and review flow on Android.',
     url: '/compare',
   },
 };
@@ -94,6 +95,27 @@ const apps = [
     ],
     bestFor: 'Early adopters who want a consistent experience across Android and iOS.',
   },
+  {
+    name: 'ウーパールーパー',
+    url: 'https://play.google.com/store/apps/details?id=com.barandiaran.ruupa',
+    description:
+      'A newer WaniKani companion available on both Google Play and the App Store. It focuses on a polished, modern interface with light and dark modes, detailed progress statistics, subject search, and offline support.',
+    pros: [
+      'Available on both Google Play and the App Store',
+      '10K+ downloads on Google Play',
+      'Polished, modern interface with light and dark modes',
+      'Detailed progress statistics and subject search',
+      'Can accept any valid kanji reading',
+      'Offline support',
+    ],
+    cons: [
+      'Closed source, no public source code',
+      'In-app purchases',
+      'Android install is Play Store only, no direct APK',
+      'Newer project with a smaller community',
+    ],
+    bestFor: 'Users who want a polished, multi-platform WaniKani companion with a storefront install.',
+  },
 ];
 
 export default function Compare() {
@@ -129,25 +151,26 @@ export default function Compare() {
           borderRadius: '1.5rem',
           overflow: 'hidden',
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr',
+          gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr',
         }}>
           <div style={{ padding: '1rem 0.75rem', color: 'var(--muted)', fontSize: '0.85rem', fontWeight: 600 }}></div>
           <div style={{ padding: '1rem 0.75rem', fontWeight: 800, fontSize: '0.9rem', textAlign: 'center' }}>Smouldering Durtles</div>
           <div style={{ padding: '1rem 0.75rem', fontWeight: 800, fontSize: '0.9rem', textAlign: 'center', color: '#ffc7ee' }}>Krabikani</div>
           <div style={{ padding: '1rem 0.75rem', fontWeight: 800, fontSize: '0.9rem', textAlign: 'center' }}>Mina</div>
           <div style={{ padding: '1rem 0.75rem', fontWeight: 800, fontSize: '0.9rem', textAlign: 'center' }}>Hakubun</div>
+          <div style={{ padding: '1rem 0.75rem', fontWeight: 800, fontSize: '0.9rem', textAlign: 'center' }}>ウーパールーパー</div>
           {[
-            ['Open source', 'No', 'Yes', 'No', 'No'],
-            ['Offline study', 'Yes', 'Yes', 'Partial', 'Partial'],
-            ['Push notifications', 'Yes', 'Yes', 'No', 'No'],
-            ['Wear OS', 'No', 'Yes', 'No', 'No'],
-            ['Typo tolerance', 'Via undo', 'Fuzzy match', 'No', 'No'],
-            ['Zen / focus mode', 'No', 'Yes', 'No', 'No'],
-            ['Play Store', 'Yes', 'No', 'Yes', 'No'],
-            ['Direct APK', 'No', 'Yes', 'No', 'Yes'],
-            ['Cross-platform', 'No', 'No', 'No', 'Yes'],
-          ].map(([feature, smouldering, krabikani, mina, hakubun], i) => (
-            <>
+            ['Open source', 'No', 'Yes', 'No', 'No', 'No'],
+            ['Offline study', 'Yes', 'Yes', 'Partial', 'Partial', 'Yes'],
+            ['Push notifications', 'Yes', 'Yes', 'No', 'No', 'Not advertised'],
+            ['Wear OS', 'No', 'Yes', 'No', 'No', 'Not advertised'],
+            ['Typo tolerance', 'Via undo', 'Fuzzy match', 'No', 'No', 'No'],
+            ['Zen / focus mode', 'No', 'Yes', 'No', 'No', 'Not advertised'],
+            ['Play Store', 'Yes', 'No', 'Yes', 'No', 'Yes'],
+            ['Direct APK', 'No', 'Yes', 'No', 'Yes', 'No'],
+            ['Cross-platform', 'No', 'No', 'No', 'Yes', 'Yes'],
+          ].map(([feature, smouldering, krabikani, mina, hakubun, ruupa], i) => (
+            <Fragment key={i}>
               <div style={{
                 padding: '0.75rem',
                 fontWeight: 600,
@@ -188,7 +211,15 @@ export default function Compare() {
                 borderTop: '1px solid var(--border)',
                 background: i % 2 === 1 ? 'rgba(255,255,255,0.03)' : 'transparent',
               }}>{hakubun}</div>
-            </>
+              <div style={{
+                padding: '0.75rem',
+                textAlign: 'center',
+                color: 'var(--muted)',
+                fontSize: '0.9rem',
+                borderTop: '1px solid var(--border)',
+                background: i % 2 === 1 ? 'rgba(255,255,255,0.03)' : 'transparent',
+              }}>{ruupa}</div>
+            </Fragment>
           ))}
         </div>
       </section>
